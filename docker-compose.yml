@@ -1,0 +1,29 @@
+version: "3.7"
+services:
+  db:
+    image: postgres:14.1-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${PSQL_USERNAME}
+      POSTGRES_PASSWORD: ${PSQL_PASSWORD}
+      POSTGRES_DB: ${PSQL_DATABASE}
+      POSTGRES_PORT: ${PSQL_PORT}
+      TZ: 'US/Pacific'
+      PGTZ: 'US/Pacific'
+    ports:
+      - "${PSQL_PORT}:${PSQL_PORT}"
+    command: postgres -c config_file=/etc/postgresql.conf -c hba_file=/etc/pg_hba.conf
+    volumes:
+      - "./db/postgresql.conf:/etc/postgresql.conf"
+      - "./db/pg_hba.conf:/etc/pg_hba.conf"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${PSQL_USERNAME}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - caltech-curation-network
+
+networks:
+  caltech-curation-network:
+
