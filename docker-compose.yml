@@ -24,6 +24,18 @@ services:
     networks:
       - caltech-curation-network
 
+  grafana:
+    image: grafana/grafana
+    restart: unless-stopped
+    ports:
+      - "${GRAFANA_PORT}:${GRAFANA_PORT}"
+    volumes:
+      - grafana_storage:/var/lib/grafana
+    networks:
+      - caltech-curation-network
+
 networks:
   caltech-curation-network:
 
+volumes:
+  grafana_storage:
