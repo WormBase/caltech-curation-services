@@ -56,7 +56,7 @@ services:
     image: grafana/grafana
     restart: unless-stopped
     ports:
-      - "${GRAFANA_PORT}:${GRAFANA_PORT}"
+      - "${GRAFANA_PORT}:3000"
     volumes:
       - grafana_storage:/var/lib/grafana
     depends_on:
