@@ -1,6 +1,7 @@
 version: "3.7"
 services:
   db:
+    container_name: curation_db
     image: postgres:13-alpine
     restart: always
     environment:
@@ -16,6 +17,7 @@ services:
     volumes:
       - "./db/postgresql.conf:/etc/postgresql.conf"
       - "./db/pg_hba.conf:/etc/pg_hba.conf"
+      - curation_db_storage:/var/lib/postgresql/data/
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${PSQL_USERNAME}" ]
       interval: 10s
@@ -23,19 +25,50 @@ services:
       retries: 5
     networks:
       - caltech-curation-network
+    hostname: curation_db
+
+  postgres_prom_exporter:
+    container_name: postgres_prom_exporter
+    image: wrouesnel/postgres_exporter
+    environment:
+      DATA_SOURCE_URI: curation_db:${PSQL_PORT}?sslmode=disable
+      DATA_SOURCE_USER: ${PSQL_USERNAME}
+      DATA_SOURCE_PASS: ${PSQL_PASSWORD}
+    depends_on:
+      - db
+    networks:
+      - caltech-curation-network
+    hostname: postgres_prom_exporter
+
+  prometheus:
+    container_name: prometheus
+    image: prom/prometheus
+    volumes:
+      - "./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml"
+    depends_on:
+      - postgres_prom_exporter
+    networks:
+      - caltech-curation-network
+    hostname: prometheus
 
   grafana:
+    container_name: grafana
     image: grafana/grafana
     restart: unless-stopped
     ports:
       - "${GRAFANA_PORT}:${GRAFANA_PORT}"
     volumes:
       - grafana_storage:/var/lib/grafana
+    depends_on:
+      - db
+      - prometheus
     networks:
       - caltech-curation-network
 
 networks:
   caltech-curation-network:
+    name: caltech-curation-network
 
 volumes:
   grafana_storage:
+  curation_db_storage:
