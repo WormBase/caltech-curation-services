@@ -30,7 +30,7 @@ my $configLoaded = 'wormOA';			# which MOD-specific perl module has been loaded
 # my $configLoaded = 'testOA';			# which MOD-specific perl module has been loaded
 
 
-my $dbh = DBI->connect ( "dbi:Pg:dbname=%ENV{PSQL_DATABASE};host=%ENV{PSQL_HOST};port=%ENV{PSQL_PORT}", %ENV{PSQL_USERNAME}, %ENV{PSQL_PASSWORD}) or die "Cannot connect to database!\n";
+my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST};port=$ENV{PSQL_PORT}", "$ENV{PSQL_USERNAME}", "$ENV{PSQL_PASSWORD}") or die "Cannot connect to database!\n";
 # $dbh->{pg_enable_utf8} = -1;
 # binmode STDOUT, ":encoding(utf8)";
 

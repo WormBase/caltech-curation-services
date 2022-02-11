@@ -78,6 +78,7 @@ services:
       - db
     networks:
       - caltech-curation-network
+    hostname: curation_forms
 
 networks:
   caltech-curation-network:
