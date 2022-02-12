@@ -6,7 +6,7 @@ use strict;
 use Tie::IxHash;
 
 
-my $directory = '/home/postgres/public_html/cgi-bin/oa/';
+my $directory = '/usr/lib/cgi-bin/oa/';
 chdir ($directory) or die "Cannot chdir to $directory : $!";
 
 `pod2html ontology_annotator.cgi > docs/ontology_annotator_CGI.html`;

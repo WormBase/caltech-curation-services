@@ -6,8 +6,10 @@
 use strict;
 use diagnostics;
 use DBI;
+use Dotenv -load => '/usr/lib/cgi-bin/.env';
 
-my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n"; 
+my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST};port=$ENV{PSQL_PORT}", "$ENV{PSQL_USERNAME}", "$ENV{PSQL_PASSWORD}") or die "Cannot connect to database!\n";
+
 my $result;
 
 # put postgres users that should have 'all' access to the table.

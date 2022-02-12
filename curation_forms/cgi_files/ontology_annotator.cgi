@@ -17,7 +17,7 @@ use Tie::IxHash;				# allow hashes ordered by item added
 use URI::Escape;
 use Sys::Hostname;
 use utf8;					# for non-ascii characters to not append an A^ when going through uri_unescape
-use Dotenv -load => '.env';
+use Dotenv -load => '/usr/lib/cgi-bin/.env';
 
 my $host = hostname();
 
