@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl -w
 
 # create <datatype>_<table> table, <datatype>_<table>_hst history table, <datatype>_<table>_idx index, <datatype>_<table>_hst_idx index. 
 

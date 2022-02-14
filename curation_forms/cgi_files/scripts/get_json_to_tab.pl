@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
 # take a jsonFieldQuery the OA would make, and convert to tab-delimited file with headers.
 # leaves in <span>

@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
 # generate documentation for ontology annotator-specific perl-based and javascript code.
 

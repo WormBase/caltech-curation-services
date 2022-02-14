@@ -6,7 +6,7 @@ RUN cpanm install DBI Bundle::CPAN Mail::Mailer MIME::Lite Tie::IxHash JSON LWP 
 RUN a2enmod headers
 RUN a2enmod rewrite
 RUN a2enmod cgid
-RUN ln -f -s /usr/local/bin/perl /usr/bin/perl
+#RUN ln -f -s /usr/local/bin/perl /usr/bin/perl
 
 RUN mkdir -p /usr/lib/cgi-bin/oa
 COPY curation_forms/cgi_files/ /usr/lib/cgi-bin/oa

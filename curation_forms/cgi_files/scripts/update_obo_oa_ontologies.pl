@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl -w
 
 # Populate obo_{name|syn|data}_<obotable> tables in postgres based off webpages where the obos are stored.  
 

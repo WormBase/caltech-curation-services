@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl -w
 
 # create oac_column_<width|order|showhide>  2011 01 28
 

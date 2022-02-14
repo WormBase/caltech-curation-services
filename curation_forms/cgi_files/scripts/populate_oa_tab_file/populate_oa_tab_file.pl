@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
 # use LWP to hit the OA like the OA does with javascript, to populate new rows and update fields, based on a tab-delimited flatfile.
 # doing it this way instead of the old way because this allows use of the OA URLs that create new rows, and can run this script 
