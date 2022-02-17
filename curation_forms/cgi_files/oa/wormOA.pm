@@ -5737,7 +5737,7 @@ sub getAnyWBPaperTermInfo {
     elsif (scalar(@journal) > 0) { 
       $to_print .= "Journal: $journal[0]<br />\n"; 
       my %journal_has_permission;			# for image_overview below
-      my $infile = '/home/acedb/draciti/picture_curatable/journal_with_permission';
+      my $infile = '/etc/user_files/picture_curation/journal_with_permission';
       open (IN, "$infile") or die "Cannot open $infile : $!";
       while (my $line = <IN>) { chomp $line; $journal_has_permission{$line}++; }
       close (IN) or die "Cannot close $infile : $!";

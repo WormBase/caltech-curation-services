@@ -18,6 +18,7 @@ COPY curation_forms/Jex.pm /usr/share/perl/5.18.2/Jex.pm
 RUN chown -R www-data:www-data /usr/lib/cgi-bin/
 RUN find /usr/lib/cgi-bin/ \( -name "*.cgi" -o -name "*.pl" \) -exec chmod +x {} \;
 RUN chmod -R a+r /usr/lib/cgi-bin/
+RUN mkdir -p /etc/user_files
 
 ENV APACHE_RUN_USER www-data
 ENV APACHE_RUN_GROUP www-data
