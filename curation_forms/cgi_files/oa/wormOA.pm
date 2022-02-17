@@ -4951,7 +4951,7 @@ sub getAnyAntibodyTermInfo {		# get term info for molecule objects from mop_ tab
   $to_print .= "antibody: $userValue<br />\n";
   $to_print .= "public name: $publicname<br />\n";
   if ($origpub) { 
-    my ($joinkey) = $origpub =~ m/WBPaper(\d+)/; $to_print .= "Original Publication: <a href=\"/~azurebrd/cgi-bin/forms/paper_display.cgi?action=Search+!&data_number=$joinkey\" target=\"new\">WBPaper$joinkey</a><br />\n"; }
+    my ($joinkey) = $origpub =~ m/WBPaper(\d+)/; $to_print .= "Original Publication: <a href=\"$ENV{PAPER_DISPLAY_CGI_HOST}?action=Search+!&data_number=$joinkey\" target=\"new\">WBPaper$joinkey</a><br />\n"; }
   if ($laboratory) { $to_print .= "Laboratory : $laboratory<br />\n"; }
   $to_print .= "<hr>\n";
   my (@data) = split/\n/, $to_print;
@@ -5209,7 +5209,7 @@ sub getAnyMoleculeTermInfo {		# get term info for molecule objects from mop_ tab
   foreach my $chemi (sort keys %chemi) {
     $to_print .= "ChemIDplus: <a href=\"http://www.ncbi.nlm.nih.gov/sites/entrez?term=${chemi}~[synonym]&cmd=search&db=pcsubstance\" target=\"new\">$chemi</a><br />\n"; }
   if ($kegg) { $to_print .= "KEGG: <a href=\"http://www.genome.jp/dbget-bin/www_bget?cpd:$kegg\" target=\"new\">$kegg</a><br />\n"; }
-  if ($paper) { my @papers = split/","/, $paper; foreach my $pap (@papers) { my ($joinkey) = $pap =~ m/WBPaper(\d+)/; $to_print .= "Paper: <a href=\"/~azurebrd/cgi-bin/forms/paper_display.cgi?action=Search+!&data_number=$joinkey\" target=\"new\">WBPaper$joinkey</a><br />\n"; } }
+  if ($paper) { my @papers = split/","/, $paper; foreach my $pap (@papers) { my ($joinkey) = $pap =~ m/WBPaper(\d+)/; $to_print .= "Paper: <a href=\"$ENV{PAPER_DISPLAY_CGI_HOST}?action=Search+!&data_number=$joinkey\" target=\"new\">WBPaper$joinkey</a><br />\n"; } }
   if ($curator) { $to_print .= "Curator: $curator<br />\n"; }
   if ($remark) { $to_print .= "Remark: $remark<br />\n"; }
   $to_print .= "<hr>\n";
@@ -5267,7 +5267,7 @@ sub getAnyTransgeneTermInfo {
   foreach my $table (@tables) { foreach my $entry (sort keys %{ $info{$table} }) { 
     if ($table eq 'trp_paper') { 
         my @papers = split/","/, $entry; foreach my $pap (@papers) { 
-          my ($joinkey) = $pap =~ m/WBPaper(\d+)/; $to_print .= "Paper: <a href=\"/~azurebrd/cgi-bin/forms/paper_display.cgi?action=Search+!&data_number=$joinkey\" target=\"new\">WBPaper$joinkey</a><br />\n"; } }
+          my ($joinkey) = $pap =~ m/WBPaper(\d+)/; $to_print .= "Paper: <a href=\"$ENV{PAPER_DISPLAY_CGI_HOST}?action=Search+!&data_number=$joinkey\" target=\"new\">WBPaper$joinkey</a><br />\n"; } }
       elsif ($table eq 'trp_driven_by_gene') { 
         my (@genes) = $entry =~ m/WBGene(\d+)/g;
         foreach my $gene (@genes) {
@@ -5361,7 +5361,7 @@ sub getAnyWBGenotypeTermInfo {
   foreach my $table (@tables) { foreach my $entry (sort keys %{ $info{$table} }) { 
     if ($table eq 'gno_paper') { 
         my @papers = split/","/, $entry; foreach my $pap (@papers) { 
-          my ($joinkey) = $pap =~ m/WBPaper(\d+)/; $to_print .= "Paper: <a href=\"/~azurebrd/cgi-bin/forms/paper_display.cgi?action=Search+!&data_number=$joinkey\" target=\"new\">WBPaper$joinkey</a><br />\n"; } }
+          my ($joinkey) = $pap =~ m/WBPaper(\d+)/; $to_print .= "Paper: <a href=\"$ENV{PAPER_DISPLAY_CGI_HOST}?action=Search+!&data_number=$joinkey\" target=\"new\">WBPaper$joinkey</a><br />\n"; } }
       else { $to_print .= "${table}: $entry<br />\n"; } } }
   my (@data) = split/\n/, $to_print;
   foreach my $data_line (@data) { $data_line =~ s/^gno_(.*?):/<span style=\"font-weight: bold\">$1 : <\/span>/; }
@@ -5700,7 +5700,7 @@ sub getAnyWBPaperTermInfo {
   $result->execute(); 
   while (my @row = $result->fetchrow) { if ($row[0]) { $tinpaperlegocc{$row[0]}++; } }
 
-  my $paper_url = "http://tazendra.caltech.edu/~azurebrd/cgi-bin/forms/paper_display.cgi?action=Search+!&data_number=$joinkey";
+  my $paper_url = "$ENV{PAPER_DISPLAY_CGI_HOST}?action=Search+!&data_number=$joinkey";
   $to_print .= "id: <span style=\"font-weight: bold\"><a href=\"$paper_url\" target=\"new\">WBPaper$joinkey</a></span><br />\n";
   $to_print .= "name: WBPaper$joinkey<br />\n";
   if ($title{$joinkey}) {
@@ -5754,7 +5754,7 @@ sub getAnyWBPaperTermInfo {
                if ($gene_to_locus{$wbgene}) { $expr_line .= " $gene_to_locus{$wbgene}"; } } }
     $to_print .= "$expr_line<br />\n"; }
   if (scalar keys %{ $picturesource{$joinkey} } > 0) {
-    $to_print .= qq(image_overview: <a href="http://tazendra.caltech.edu/~azurebrd/cgi-bin/forms/generic.cgi?action=PictureByPaper&paperid=$joinkey" target="new">click to see all images</a><br />\n); }
+    $to_print .= qq(image_overview: <a href="$ENV{GENERIC_CGI_HOST}?action=PictureByPaper&paperid=$joinkey" target="new">click to see all images</a><br />\n); }
   $to_print .= "Journal_image_permission: $journal_has_permission<br />\n";
   foreach my $picturesource (sort keys %{ $picturesource{$joinkey}}) { 	# all this obo data is in one entry, so split and print with <br /> 2010 12 06
     my (@lines) = split/\n/, $picturesource; foreach my $line (@lines) { $to_print .= "$line<br />\n"; } }
@@ -5810,7 +5810,7 @@ sub getAnyWBPictureTermInfo {
   foreach my $table (@tables) { foreach my $entry (sort keys %{ $info{$table} }) { 
     if ($table eq 'pic_paper') { 
         my @papers = split/","/, $entry; foreach my $pap (@papers) { 
-          my ($joinkey) = $pap =~ m/WBPaper(\d+)/; $to_print .= "Paper: <a href=\"/~azurebrd/cgi-bin/forms/paper_display.cgi?action=Search+!&data_number=$joinkey\" target=\"new\">WBPaper$joinkey</a><br />\n"; } }
+          my ($joinkey) = $pap =~ m/WBPaper(\d+)/; $to_print .= "Paper: <a href=\"$ENV{PAPER_DISPLAY_CGI_HOST}?action=Search+!&data_number=$joinkey\" target=\"new\">WBPaper$joinkey</a><br />\n"; } }
       else { $to_print .= "${table}: $entry<br />\n"; } } }
   my (@data) = split/\n/, $to_print;
   foreach my $data_line (@data) { $data_line =~ s/^(.*?):/<span style=\"font-weight: bold\">$1 : <\/span>/; }
@@ -5834,7 +5834,7 @@ sub getAnyWBProcessTermInfo {
   foreach my $table (@tables) { foreach my $entry (sort keys %{ $info{$table} }) { 
     if ($table eq 'prt_paper') { 
         my @papers = split/","/, $entry; foreach my $pap (@papers) { 
-          my ($joinkey) = $pap =~ m/WBPaper(\d+)/; $to_print .= "Paper: <a href=\"/~azurebrd/cgi-bin/forms/paper_display.cgi?action=Search+!&data_number=$joinkey\" target=\"new\">WBPaper$joinkey</a><br />\n"; } }
+          my ($joinkey) = $pap =~ m/WBPaper(\d+)/; $to_print .= "Paper: <a href=\"$ENV{PAPER_DISPLAY_CGI_HOST}?action=Search+!&data_number=$joinkey\" target=\"new\">WBPaper$joinkey</a><br />\n"; } }
       else { $to_print .= "${table}: $entry<br />\n"; } } }
   my (@data) = split/\n/, $to_print;
   foreach my $data_line (@data) { $data_line =~ s/^(.*?):/<span style=\"font-weight: bold\">$1 : <\/span>/; }
@@ -5861,7 +5861,7 @@ sub getAnyWBRnaiTermInfo {
         my $result2 = $dbh->prepare( "SELECT * FROM two_standardname WHERE joinkey = 'two$cur_id' ;" ); $result2->execute(); my @row2 = $result2->fetchrow(); $to_print .= "Curator : $row2[2]\n"; }
       elsif ($table eq 'rna_paper') { 
         my @papers = split/","/, $entry; foreach my $pap (@papers) { 
-          my ($joinkey) = $pap =~ m/WBPaper(\d+)/; $to_print .= "Paper: <a href=\"/~azurebrd/cgi-bin/forms/paper_display.cgi?action=Search+!&data_number=$joinkey\" target=\"new\">WBPaper$joinkey</a><br />\n"; } }
+          my ($joinkey) = $pap =~ m/WBPaper(\d+)/; $to_print .= "Paper: <a href=\"$ENV{PAPER_DISPLAY_CGI_HOST}?action=Search+!&data_number=$joinkey\" target=\"new\">WBPaper$joinkey</a><br />\n"; } }
       else { $to_print .= "${table}: $entry<br />\n"; } } }
   my (@data) = split/\n/, $to_print;
   foreach my $data_line (@data) { $data_line =~ s/^(.*?):/<span style=\"font-weight: bold\">$1 : <\/span>/; }

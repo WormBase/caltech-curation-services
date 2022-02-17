@@ -19,7 +19,7 @@ my $json = JSON->new->allow_nonref;
 # my $jsonPage = <IN>;
 # close (IN);
 
-my $jsonUrl = 'http://tazendra.caltech.edu/~postgres/cgi-bin/oa/ontology_annotator.cgi?action=jsonFieldQuery&field=curator&userValue=Daniela%20Raciti%20%28%20WBPerson12028%20%29%20&datatype=trp&curator_two=two1823&maxPerQuery=99&allDataTableIds=%20HTTP/1.1%22%20200%206585%20%22';
+my $jsonUrl = '$ENV{ONTOLOGY_ANNOTATOR_CGI_HOST}?action=jsonFieldQuery&field=curator&userValue=Daniela%20Raciti%20%28%20WBPerson12028%20%29%20&datatype=trp&curator_two=two1823&maxPerQuery=99&allDataTableIds=%20HTTP/1.1%22%20200%206585%20%22';
 my $jsonPage = get $jsonUrl;
 
 unless (is_utf8($jsonPage)) { from_to($jsonPage, "iso-8859-1", "utf8"); }
