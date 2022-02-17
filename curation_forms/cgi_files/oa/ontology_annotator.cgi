@@ -776,7 +776,7 @@ EndOfText
     next if ($tab eq 'all');
     print "<button id=\"$tab\">$tab</button>\n";
   }
-  if ($host !~ m/tazendra/) { print qq(<span style="color:red">development site </span>); }
+  if ($ENV{DEVELOPMENT} eq "true") { print qq(<span style="color:red">development site </span>); }
   if ($batch_unsafe_flag) {
     my $batchUnsafeWarningText = "Warning, changes you make will do a single ajax update to postgres and give an all or nothing error message, but will NOT update the dataTable display below.";
     print "<span style=\"color:red\" id=\"batchUnsafeWarning\" title=\"$batchUnsafeWarningText\" onClick=\"alert('$batchUnsafeWarningText')\";>Invisible Mode</span>\n"; }
