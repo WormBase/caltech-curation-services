@@ -9,7 +9,7 @@ RUN a2enmod cgid
 #RUN ln -f -s /usr/local/bin/perl /usr/bin/perl
 
 RUN mkdir -p /usr/lib/cgi-bin/oa
-COPY curation_forms/cgi_files/ /usr/lib/cgi-bin/
+#COPY curation_forms/cgi_files/ /usr/lib/cgi-bin/
 COPY curation_forms/apache_conf/apache2.conf /etc/apache2/apache2.conf
 COPY curation_forms/apache_conf/000-default.conf /etc/apache2/sites-enabled/000-default.conf
 COPY curation_forms/apache_conf/httpd.conf /etc/apache2/httpd.conf

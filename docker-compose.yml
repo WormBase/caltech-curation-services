@@ -76,6 +76,7 @@ services:
     volumes:
       - "${HTTPD_AUTH_FILE_PATH}:/etc/httpd/passwd/passwords"
       - "${CURATION_FORMS_USER_FILES_LOCATION}:/etc/user_files"
+      - ./curation_forms/cgi_files:/usr/lib/cgi-bin/
     depends_on:
       - db
     networks:
