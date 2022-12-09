@@ -59,6 +59,7 @@ services:
       - "${GRAFANA_PORT}:3000"
     volumes:
       - grafana_storage:/var/lib/grafana
+      - grafana/grafana.ini:/etc/grafana/grafana.ini
     depends_on:
       - db
       - prometheus
