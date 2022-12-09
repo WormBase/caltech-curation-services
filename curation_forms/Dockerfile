@@ -13,7 +13,7 @@ RUN mkdir -p /usr/lib/cgi-bin/oa
 COPY curation_forms/apache_conf/apache2.conf /etc/apache2/apache2.conf
 COPY curation_forms/apache_conf/000-default.conf /etc/apache2/sites-enabled/000-default.conf
 COPY curation_forms/apache_conf/httpd.conf /etc/apache2/httpd.conf
-COPY .env /usr/lib/cgi-bin/
+#COPY .env /usr/lib/cgi-bin/
 COPY curation_forms/Jex.pm /usr/share/perl/5.18.2/Jex.pm
 RUN chown -R www-data:www-data /usr/lib/cgi-bin/
 RUN find /usr/lib/cgi-bin/ \( -name "*.cgi" -o -name "*.pl" \) -exec chmod +x {} \;
