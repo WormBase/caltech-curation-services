@@ -66,23 +66,24 @@ services:
     networks:
       - caltech-curation-network
 
-  curation_forms:
-    container_name: curation_forms
+  website:
+    container_name: website
     build:
       context: .
-      dockerfile: curation_forms/Dockerfile
+      dockerfile: website/Dockerfile
     ports:
       - "${CURATION_FORMS_PORT}:80"
     volumes:
       - "${HTTPD_AUTH_FILE_PATH}:/etc/httpd/passwd/passwords"
-      - "${CURATION_FORMS_USER_FILES_LOCATION}:/etc/user_files"
-      - ./curation_forms/cgi_files:/usr/lib/cgi-bin/
+      - "${WEBSITE_USER_FILES_LOCATION}:/etc/user_files"
+      - ./website/pub:/usr/lib/pub/
+      - ./website/priv:/usr/lib/priv/
       - .env:/usr/lib/cgi-bin/.env
     depends_on:
       - db
     networks:
       - caltech-curation-network
-    hostname: curation_forms
+    hostname: website
 
 networks:
   caltech-curation-network:
