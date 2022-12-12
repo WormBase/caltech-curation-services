@@ -419,7 +419,7 @@ sub makeSingleNormal {
   my ($one_data, $one_row_curator, $one_timestamp, $two_data, $two_row_curator, $two_timestamp) = ('', '', '', '', '', '');
   if ($pgdata{$one_table}{$order}{data}) { $one_data = $pgdata{$one_table}{$order}{data}; $bgcolor = $blue; }
   if ($pgdata{$one_table}{$order}{row_curator}) { $one_row_curator = $pgdata{$one_table}{$order}{row_curator}; }
-  if ($pgdata{$one_table}{$order}{timestamp}) { $one_timestamp = $pgdata{$one_table}{$order}{timestamp}; $one_timestamp =~ s/\.[\d\-]+$//; $one_timestamp .= "<input type=\"hidden\" id=\"timestamp_${one_table}_${order}\" value=\"$one_timestamp\">"; }
+  if ($pgdata{$one_table}{$order}{timestamp}) { $one_timestamp = $pgdata{$one_table}{$order}{timestamp}; $one_timestamp =~ s/\.[\d\+\-]+$//; $one_timestamp .= "<input type=\"hidden\" id=\"timestamp_${one_table}_${order}\" value=\"$one_timestamp\">"; }
   my $td_one_data = '';
   if ($display_or_edit eq 'edit') {
       ($td_one_data) = &makeInputField($one_data, $one_table, $joinkey, $order, '3', '1', '', $td_width, $input_size); }
@@ -490,7 +490,8 @@ sub printHtmlHeader {
   $header .= '<link rel="stylesheet" href="https://tazendra.caltech.edu/~azurebrd/stylesheets/jex.css" />';
 #   $header .= '<link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/2.7.0/build/fonts/fonts-min.css" />';
 #   $header .= "<link rel=\"stylesheet\" type=\"text/css\" href=\"http://yui.yahooapis.com/2.7.0/build/autocomplete/assets/skins/sam/autocomplete.css\" />";
-  $header .= "<link rel=\"stylesheet\" type=\"text/css\" href=\"https://tazendra.caltech.edu/~azurebrd/javascript/yui/2.7.0/autocomplete.css\" />";
+#   $header .= "<link rel=\"stylesheet\" type=\"text/css\" href=\"https://tazendra.caltech.edu/~azurebrd/javascript/yui/2.7.0/autocomplete.css\" />";
+  $header .= "<link rel=\"stylesheet\" type=\"text/css\" href=\"../javascript/yui/2.7.0/autocomplete.css\" />";
 
 
   $header .= "<style type=\"text/css\">#forcedPersonAutoComplete { width:25em; padding-bottom:2em; } .div-autocomplete { padding-bottom:1.5em; }</style>";
@@ -498,27 +499,33 @@ sub printHtmlHeader {
   $header .= '
     <!-- always needed for yui -->
     <!--<script type="text/javascript" src="http://yui.yahooapis.com/2.7.0/build/yahoo-dom-event/yahoo-dom-event.js"></script>-->
-    <script type="text/javascript" src="https://tazendra.caltech.edu/~azurebrd/javascript/yui/2.7.0/yahoo-dom-event.js"></script>
+    <!--<script type="text/javascript" src="https://tazendra.caltech.edu/~azurebrd/javascript/yui/2.7.0/yahoo-dom-event.js"></script>-->
+    <script type="text/javascript" src="../javascript/yui/2.7.0/yahoo-dom-event.js"></script>
 
     <!-- for autocomplete calls -->
     <!--<script type="text/javascript" src="http://yui.yahooapis.com/2.7.0/build/datasource/datasource-min.js"></script>-->
-    <script type="text/javascript" src="https://tazendra.caltech.edu/~azurebrd/javascript/yui/2.7.0/datasource-min.js"></script>
+    <!--<script type="text/javascript" src="https://tazendra.caltech.edu/~azurebrd/javascript/yui/2.7.0/datasource-min.js"></script>-->
+    <script type="text/javascript" src="../javascript/yui/2.7.0/datasource-min.js"></script>
 
     <!-- OPTIONAL: Connection Manager (enables XHR for DataSource)	needed for Connect.asyncRequest -->
     <!--<script type="text/javascript" src="http://yui.yahooapis.com/2.7.0/build/connection/connection-min.js"></script> -->
-    <script type="text/javascript" src="https://tazendra.caltech.edu/~azurebrd/javascript/yui/2.7.0/connection-min.js"></script> 
+    <!--<script type="text/javascript" src="https://tazendra.caltech.edu/~azurebrd/javascript/yui/2.7.0/connection-min.js"></script> -->
+    <script type="text/javascript" src="../javascript/yui/2.7.0/connection-min.js"></script> 
 
     <!-- Drag and Drop source file --> 
     <!--<script src="http://yui.yahooapis.com/2.7.0/build/dragdrop/dragdrop-min.js" ></script>-->
-    <script src="https://tazendra.caltech.edu/~azurebrd/javascript/yui/2.7.0/dragdrop-min.js" ></script>
+    <!--<script src="https://tazendra.caltech.edu/~azurebrd/javascript/yui/2.7.0/dragdrop-min.js" ></script>-->
+    <script type="text/javascript"  src="../javascript/yui/2.7.0/dragdrop-min.js" ></script>
 
     <!-- At least needed for drag and drop easing -->
     <!--<script type="text/javascript" src="http://yui.yahooapis.com/2.7.0/build/animation/animation-min.js"></script>-->
-    <script type="text/javascript" src="https://tazendra.caltech.edu/~azurebrd/javascript/yui/2.7.0/animation-min.js"></script>
+    <!--<script type="text/javascript" src="https://tazendra.caltech.edu/~azurebrd/javascript/yui/2.7.0/animation-min.js"></script>-->
+    <script type="text/javascript" src="../javascript/yui/2.7.0/animation-min.js"></script>
 
     <!-- autocomplete js -->
     <!--<script type="text/javascript" src="http://yui.yahooapis.com/2.7.0/build/autocomplete/autocomplete-min.js"></script>-->
-    <script type="text/javascript" src="https://tazendra.caltech.edu/~azurebrd/javascript/yui/2.7.0/autocomplete-min.js"></script>
+    <!--<script type="text/javascript" src="https://tazendra.caltech.edu/~azurebrd/javascript/yui/2.7.0/autocomplete-min.js"></script>-->
+    <script type="text/javascript" src="../javascript/yui/2.7.0/autocomplete-min.js"></script>
 
     <!-- form-specific js put this last, since it depends on YUI above -->
     <script type="text/javascript" src="../javascript/lab_editor.js"></script>
