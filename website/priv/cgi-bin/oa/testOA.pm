@@ -16,7 +16,7 @@ use diagnostics;
 use LWP::UserAgent;
 use helperOA;		# &getPgDate  &getHtmlVar  &pad10Zeros  &pad8Zeros
 use DBI;
-use Dotenv -load => '/usr/lib/cgi-bin/.env';
+use Dotenv -load => '/usr/lib/.env';
 
 my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST};port=$ENV{PSQL_PORT}", "$ENV{PSQL_USERNAME}", "$ENV{PSQL_PASSWORD}") or die "Cannot connect to database!\n";
 use Tie::IxHash;

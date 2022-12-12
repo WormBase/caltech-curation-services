@@ -9,7 +9,7 @@ use DBI;
 use LWP::Simple;
 use LWP;
 use Crypt::SSLeay;		# for LWP to get https
-use Dotenv -load => '/usr/lib/cgi-bin/.env';
+use Dotenv -load => '/usr/lib/.env';
 
 my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST};port=$ENV{PSQL_PORT}", "$ENV{PSQL_USERNAME}", "$ENV{PSQL_PASSWORD}") or die "Cannot connect to database!\n";
 

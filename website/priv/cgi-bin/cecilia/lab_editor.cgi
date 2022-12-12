@@ -16,7 +16,7 @@ use CGI;
 use Jex;		# &getPgDate; &getSimpleDate;
 use DBI;
 use Tie::IxHash;
-use Dotenv -load => '/usr/lib/cgi-bin/.env';
+use Dotenv -load => '/usr/lib/.env';
 
 
 # Use all timestamps to use latest to create  Last_verified  date

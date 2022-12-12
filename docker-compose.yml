@@ -2,15 +2,15 @@ version: "3.7"
 services:
   db:
     container_name: curation_db
-    image: postgres:13-alpine
+    image: postgres:13
     restart: always
     environment:
       POSTGRES_USER: ${PSQL_USERNAME}
       POSTGRES_PASSWORD: ${PSQL_PASSWORD}
       POSTGRES_DB: ${PSQL_DATABASE}
       POSTGRES_PORT: ${PSQL_PORT}
-      TZ: 'US/Pacific'
-      PGTZ: 'US/Pacific'
+      TZ: 'America/Los_Angeles'
+      PGTZ: 'America/Los_Angeles'
     ports:
       - "${PSQL_PORT}:${PSQL_PORT}"
     command: postgres -c config_file=/etc/postgresql.conf -c hba_file=/etc/pg_hba.conf
@@ -34,6 +34,7 @@ services:
       DATA_SOURCE_URI: curation_db:${PSQL_PORT}?sslmode=disable
       DATA_SOURCE_USER: ${PSQL_USERNAME}
       DATA_SOURCE_PASS: ${PSQL_PASSWORD}
+      TZ: 'America/Los_Angeles'
     depends_on:
       - db
     networks:
@@ -49,6 +50,8 @@ services:
       - postgres_prom_exporter
     networks:
       - caltech-curation-network
+    environment:
+      TZ: 'America/Los_Angeles'
     hostname: prometheus
 
   grafana:
@@ -65,6 +68,8 @@ services:
       - prometheus
     networks:
       - caltech-curation-network
+    environment:
+      TZ: 'America/Los_Angeles'
 
   website:
     container_name: website
