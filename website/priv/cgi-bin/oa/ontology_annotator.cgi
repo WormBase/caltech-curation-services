@@ -961,17 +961,17 @@ sub showTable {
     <link type="text/css" rel="stylesheet" href="ontology_annotator.css">
 
     <!-- yui .js -->
-    <script type="text/javascript" src="yui/2.7.0/yahoo-dom-event.js"></script> 
-    <script type="text/javascript" src="yui/2.7.0/element-min.js"></script> 
-    <script type="text/javascript" src="yui/2.7.0/datasource-min.js"></script> 
-    <script type="text/javascript" src="yui/2.7.0/json-min.js"></script> 
-    <script type="text/javascript" src="yui/2.7.0/connection-min.js"></script> 
-    <script type="text/javascript" src="yui/2.7.0/get-min.js"></script> 
-    <script type="text/javascript" src="yui/2.7.0/dragdrop-min.js"></script> 
-    <script type="text/javascript" src="yui/2.7.0/calendar-min.js"></script> 
-    <script type="text/javascript" src="yui/2.7.0/datatable.js"></script> 
-    <script type="text/javascript" src="yui/2.7.0/autocomplete-min.js"></script>
-    <script type="text/javascript" src="yui/2.7.0/container-min.js"></script> 
+    <script type="text/javascript" src="../javascript/yui/2.7.0/yahoo-dom-event.js"></script> 
+    <script type="text/javascript" src="../javascript/yui/2.7.0/element-min.js"></script> 
+    <script type="text/javascript" src="../javascript/yui/2.7.0/datasource-min.js"></script> 
+    <script type="text/javascript" src="../javascript/yui/2.7.0/json-min.js"></script> 
+    <script type="text/javascript" src="../javascript/yui/2.7.0/connection-min.js"></script> 
+    <script type="text/javascript" src="../javascript/yui/2.7.0/get-min.js"></script> 
+    <script type="text/javascript" src="../javascript/yui/2.7.0/dragdrop-min.js"></script> 
+    <script type="text/javascript" src="../javascript/yui/2.7.0/calendar-min.js"></script> 
+    <script type="text/javascript" src="../javascript/yui/2.7.0/datatable.js"></script> 
+    <script type="text/javascript" src="../javascript/yui/2.7.0/autocomplete-min.js"></script>
+    <script type="text/javascript" src="../javascript/yui/2.7.0/container-min.js"></script> 
 
     <!-- form-specific js -->
     <script type="text/javascript" src="ontology_annotator.js"></script> 
