@@ -700,7 +700,7 @@ sub showEditor {
   print << "EndOfText";
     <!--CSS file (default YUI Sam Skin) --> 
     <!--<link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/2.7.0/build/autocomplete/assets/skins/sam/autocomplete.css" />-->
-    <link rel="stylesheet" type="text/css" href="yui/2.7.0/autocomplete.css" />
+    <link rel="stylesheet" type="text/css" href="../javascript/yui/2.7.0/autocomplete.css" />
     <link rel="stylesheet" type="text/css" href="ontology_annotator.css" />
 EndOfText
   print "</head>\n";
@@ -954,8 +954,8 @@ sub showTable {
   print "<html>\n<head>\n";
   print << "EndOfText";
     <!--CSS file (default YUI Sam Skin) --> 
-    <link rel="stylesheet" type="text/css" href="yui/2.7.0/datatable.css" />
-    <link rel="stylesheet" type="text/css" href="yui/2.7.0/autocomplete.css" />
+    <link rel="stylesheet" type="text/css" href="../javascript/yui/2.7.0/datatable.css" />
+    <link rel="stylesheet" type="text/css" href="../javascript/yui/2.7.0/autocomplete.css" />
 
     <!-- override free height and visible overflow -->
     <link type="text/css" rel="stylesheet" href="ontology_annotator.css">
