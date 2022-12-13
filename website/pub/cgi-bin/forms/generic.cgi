@@ -76,7 +76,7 @@
 #
 # &listPmids()  for Alliance to download xml, convert to json, pass back for populating author data.  2021 04 06
 #
-# modified to work in cervino docker, but only tested WpaXref and WpaXrefBackwards  2022 10 12
+# modified to work in cervino docker, but only tested WpaXref and WpaXrefBackwards and PapIdToWBPaper.  2022 10 12
 
 
 use Jex;			# untaint, getHtmlVar, cshlNew, getPgDate
