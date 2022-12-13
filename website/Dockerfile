@@ -14,7 +14,6 @@ RUN a2enmod cgid
 COPY website/apache_conf/apache2.conf /etc/apache2/apache2.conf
 COPY website/apache_conf/000-default.conf /etc/apache2/sites-enabled/000-default.conf
 COPY website/apache_conf/httpd.conf /etc/apache2/httpd.conf
-COPY .env /usr/lib/.env
 COPY website/Jex.pm /usr/local/lib/perl5/5.18.4/Jex.pm
 RUN chown -R www-data:www-data /usr/lib/cgi-bin/
 RUN find /usr/lib/cgi-bin/ \( -name "*.cgi" -o -name "*.pl" \) -exec chmod +x {} \;

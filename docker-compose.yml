@@ -83,6 +83,7 @@ services:
       - "${WEBSITE_USER_FILES_LOCATION}:/etc/user_files"
       - ./website/pub:/usr/lib/pub/
       - ./website/priv:/usr/lib/priv/
+      - .env:/usr/lib/.env
     depends_on:
       - db
     networks:
