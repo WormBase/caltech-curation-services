@@ -133,9 +133,11 @@ foreach my $name (sort keys %curation) {
     print "</TR>\n";
 } # foreach $_ (sort keys %curation)
 print "<TR>";
-print "<TD WIDTH=150><A HREF=\"http://tazendra.caltech.edu/~postgres/cgi-bin/oa/ontology_annotator.cgi\">ontology_annotator.cgi</A></TD>";
+# print "<TD WIDTH=150><A HREF=\"http://tazendra.caltech.edu/~postgres/cgi-bin/oa/ontology_annotator.cgi\">ontology_annotator.cgi</A></TD>";
+print "<TD WIDTH=150><A HREF=\"" . $ENV{THIS_HOST} . "priv/cgi-bin/oa/ontology_annotator.cgi\">ontology_annotator.cgi</A></TD>";
 print "<TD></TD><TD WIDTH=400>Ontology Annotator Form</TD><TD></TD>";
-print "<TD>http://tazendra.caltech.edu/~postgres/cgi-bin/oa/ontology_annotator.cgi</TD>";
+# print "<TD>http://tazendra.caltech.edu/~postgres/cgi-bin/oa/ontology_annotator.cgi</TD>";
+print "<TD>" . $ENV{THIS_HOST} . "priv/cgi-bin/oa/ontology_annotator.cgi</TD>";
 print "</TR>\n";
 # print "<TR>";
 # print "<TD WIDTH=150><A HREF=\"http://elbrus.caltech.edu/cgi-bin/igor/rnaitools/rnai_curation\">rnai_curation</A></TD>";
