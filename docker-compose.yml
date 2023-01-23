@@ -84,7 +84,7 @@ services:
       - ./website/pub:/usr/lib/pub/
       - ./website/priv:/usr/lib/priv/
       - .env:/usr/lib/.env
-      - caltech_curation_files:/usr/ccf/
+      - "caltech_curation_files:${CALTECH_CURATION_FILES_PATH}"
     depends_on:
       - db
     networks:
