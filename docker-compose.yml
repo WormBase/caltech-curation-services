@@ -84,6 +84,7 @@ services:
       - ./website/pub:/usr/lib/pub/
       - ./website/priv:/usr/lib/priv/
       - .env:/usr/lib/.env
+      - caltech_curation_files:/usr/ccf/
     depends_on:
       - db
     networks:
@@ -97,3 +98,4 @@ networks:
 volumes:
   grafana_storage:
   curation_db_storage:
+  caltech_curation_files:
