@@ -84,7 +84,7 @@ services:
       - ./website/pub:/usr/lib/pub/
       - ./website/priv:/usr/lib/priv/
       - .env:/usr/lib/.env
-      - "caltech_curation_files:${CALTECH_CURATION_FILES_PATH}"
+      - "${CALTECH_CURATION_FILES_EXTERNAL_PATH}:${CALTECH_CURATION_FILES_INTERNAL_PATH}"
     depends_on:
       - db
     networks:
@@ -98,4 +98,3 @@ networks:
 volumes:
   grafana_storage:
   curation_db_storage:
-  caltech_curation_files:
