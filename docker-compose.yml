@@ -76,8 +76,12 @@ services:
     build:
       context: .
       dockerfile: website/Dockerfile
+      args:
+        SSH_ACEDB_PASSWORD: "${SSH_ACEDB_PASSWORD}"
+        CALTECH_CURATION_FILES_INTERNAL_PATH: "${CALTECH_CURATION_FILES_INTERNAL_PATH}"
     ports:
       - "${CURATION_FORMS_PORT}:80"
+      - "${SSH_PORT}:22"
     volumes:
       - "${HTTPD_AUTH_FILE_PATH}:/etc/httpd/passwd/passwords"
       - "${WEBSITE_USER_FILES_LOCATION}:/etc/user_files"
