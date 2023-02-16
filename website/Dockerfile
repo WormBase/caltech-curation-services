@@ -28,4 +28,4 @@ ENV APACHE_LOG_DIR /var/log/apache2
 
 EXPOSE 80
 EXPOSE 22
-CMD ["/bin/bash", "-c", "echo apachectl -D FOREGROUND; service ssh restart; tail -f /dev/null"]
+CMD ["/bin/bash", "-c", "service apache start; service ssh start; tail -f /dev/null"]
