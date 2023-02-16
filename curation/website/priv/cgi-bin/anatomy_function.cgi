@@ -68,6 +68,9 @@ use Dotenv -load => '/usr/lib/.env';
 use lib qw(  /usr/caltech_curation_files/priv/citace_upload/anatomy_function/ );               # for general ace dumping functions
 use ace_dumper;
 
+my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST};port=$ENV{PSQL_PORT}", "$ENV{PSQL_USERNAME}", "$ENV{PSQL_PASSWORD}") or die "Cannot connect to database!\n";
+# my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb;host=tazendra.caltech.edu;port=$ENV{PSQL_PORT}", "acedb", "") or die "Cannot connect to database!\n";my $result;
+
 my $simpleRemapHashRef = &populateSimpleRemap();
 
 my $filesPath = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/priv/citace_upload/anatomy_function/';

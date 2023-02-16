@@ -79,7 +79,6 @@ services:
       - "${SSH_PORT}:22"
     volumes:
       - "${HTTPD_AUTH_FILE_PATH}:/etc/httpd/passwd/passwords"
-      - "${WEBSITE_USER_FILES_LOCATION}:/etc/user_files"
       - ./curation/website/pub:/usr/lib/pub/
       - ./curation/website/priv:/usr/lib/priv/
       - ./curation/scripts/:/usr/lib/scripts/
