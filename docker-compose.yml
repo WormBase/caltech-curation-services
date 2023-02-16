@@ -1,7 +1,6 @@
 version: "3.7"
 services:
   db:
-    container_name: curation_db
     image: postgres:13
     restart: always
     environment:
@@ -28,7 +27,6 @@ services:
     hostname: curation_db
 
   postgres_prom_exporter:
-    container_name: postgres_prom_exporter
     image: wrouesnel/postgres_exporter
     environment:
       DATA_SOURCE_URI: curation_db:${PSQL_PORT}?sslmode=disable
@@ -42,7 +40,6 @@ services:
     hostname: postgres_prom_exporter
 
   prometheus:
-    container_name: prometheus
     image: prom/prometheus
     volumes:
       - "./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml"
@@ -55,7 +52,6 @@ services:
     hostname: prometheus
 
   grafana:
-    container_name: grafana
     image: grafana/grafana
     restart: unless-stopped
     ports:
@@ -72,7 +68,6 @@ services:
       TZ: 'America/Los_Angeles'
 
   website:
-    container_name: website
     build:
       context: .
       dockerfile: website/Dockerfile
