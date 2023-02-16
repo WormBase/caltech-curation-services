@@ -67,10 +67,10 @@ services:
     environment:
       TZ: 'America/Los_Angeles'
 
-  website:
+  curation:
     build:
       context: .
-      dockerfile: website/Dockerfile
+      dockerfile: curation/Dockerfile
       args:
         SSH_ACEDB_PASSWORD: "${SSH_ACEDB_PASSWORD}"
         CALTECH_CURATION_FILES_INTERNAL_PATH: "${CALTECH_CURATION_FILES_INTERNAL_PATH}"
@@ -80,13 +80,15 @@ services:
     volumes:
       - "${HTTPD_AUTH_FILE_PATH}:/etc/httpd/passwd/passwords"
       - "${WEBSITE_USER_FILES_LOCATION}:/etc/user_files"
-      - ./website/pub:/usr/lib/pub/
-      - ./website/priv:/usr/lib/priv/
+      - ./curation/website/pub:/usr/lib/pub/
+      - ./curation/website/priv:/usr/lib/priv/
+      - ./curation/scripts/:/usr/lib/scripts/
+      - ./curation/user_files/:/usr/lib/user_files/
       - .env:/usr/lib/.env
       - "${CALTECH_CURATION_FILES_EXTERNAL_PATH}:${CALTECH_CURATION_FILES_INTERNAL_PATH}"
     networks:
       - caltech-curation-network
-    hostname: website
+    hostname: curation
 
 networks:
   caltech-curation-network:
