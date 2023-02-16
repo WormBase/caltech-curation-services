@@ -1,5 +1,5 @@
 FROM perl:5.18.4-buster
-ARG SSH_ACEDB_PASSWORD="password"
+ARG SSH_ACEDB_PASSWORD=""
 ARG CALTECH_CURATION_FILES_INTERNAL_PATH=/usr/caltech_curation_files
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
