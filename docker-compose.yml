@@ -84,8 +84,6 @@ services:
       - ./website/priv:/usr/lib/priv/
       - .env:/usr/lib/.env
       - "${CALTECH_CURATION_FILES_EXTERNAL_PATH}:${CALTECH_CURATION_FILES_INTERNAL_PATH}"
-    depends_on:
-      - db
     networks:
       - caltech-curation-network
     hostname: website
