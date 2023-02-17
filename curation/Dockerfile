@@ -28,4 +28,6 @@ ENV APACHE_LOG_DIR /var/log/apache2
 
 EXPOSE 80
 EXPOSE 22
-CMD ["/bin/bash", "-c", "service apache2 start; service ssh start; tail -f /dev/null"]
+
+ENV CALTECH_CURATION_FILES_INTERNAL_PATH ""
+CMD ["/bin/bash", "-c", "echo 'export CALTECH_CURATION_FILES_INTERNAL_PATH=${CALTECH_CURATION_FILES_INTERNAL_PATH}' >> /etc/apache2/envvars; service apache2 start; service ssh start; tail -f /dev/null"]
