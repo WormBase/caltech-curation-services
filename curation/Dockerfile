@@ -15,6 +15,8 @@ RUN a2enmod cgid
 
 COPY curation/website/apache_conf/apache2.conf /etc/apache2/apache2.conf
 COPY curation/website/apache_conf/000-default.conf /etc/apache2/sites-enabled/000-default.conf
+COPY curation/website/apache_conf/000-default.conf /etc/apache2/sites-enabled/000-default-le-ssl.conf
+COPY curation/website/apache_conf/options-ssl-apache.conf /etc/apache2/options-ssl-apache.conf
 COPY curation/website/apache_conf/httpd.conf /etc/apache2/httpd.conf
 COPY curation/scripts/perl_modules/Jex.pm /usr/local/lib/perl5/5.18.4/Jex.pm
 RUN chown -R www-data:www-data /usr/lib/cgi-bin/
@@ -30,4 +32,4 @@ EXPOSE 80
 EXPOSE 22
 
 ENV CALTECH_CURATION_FILES_INTERNAL_PATH ""
-CMD ["/bin/bash", "-c", "echo \"export CALTECH_CURATION_FILES_INTERNAL_PATH=${CALTECH_CURATION_FILES_INTERNAL_PATH}\" >> /etc/apache2/envvars; service apache2 start; service ssh start; tail -f /dev/null"]
+CMD ["/bin/bash", "-c", "echo \"export CALTECH_CURATION_FILES_INTERNAL_PATH=${CALTECH_CURATION_FILES_INTERNAL_PATH}\" >> /etc/apache2/envvars; echo \"export HOST_NAME=${HOST_NAME}\" >> /etc/apache2/envvars; service apache2 start; service ssh start; tail -f /dev/null"]
