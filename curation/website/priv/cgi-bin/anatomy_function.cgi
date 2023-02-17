@@ -65,7 +65,7 @@ use DBI;
 use URI::Escape;
 use Dotenv -load => '/usr/lib/.env';
 
-use lib qw(  /usr/caltech_curation_files/priv/citace_upload/anatomy_function/ );               # for general ace dumping functions
+use lib qw(  /usr/lib/scripts/anatomy_function/ );			# for general ace dumping functions
 use ace_dumper;
 
 my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST};port=$ENV{PSQL_PORT}", "$ENV{PSQL_USERNAME}", "$ENV{PSQL_PASSWORD}") or die "Cannot connect to database!\n";
@@ -132,9 +132,9 @@ sub dumpAll {
 
 #   my $outfile = '/home/postgres/public_html/cgi-bin/data/' . $file;
 #   my $url = 'http://tazendra.caltech.edu/~postgres/cgi-bin/data/' . $file;
-  my $url = 'data/' . $file;
-  print "Started dumping all .ace data to $outfile <BR>";
-  print "Started dumping all .ace data to <A HREF=$url>$url</A>.<BR>";
+  my $url = '/files/priv/citace_upload/anatomy_function/anat_func.ace';
+#   my $url = 'data/' . $file;
+  print "Started dumping all .ace data to <A HREF=$url>$outfile</A>.<BR>";
   open (OUT, ">$outfile") or die "Cannot create $outfile : $!";
   my $result = $dbh->prepare( "SELECT wbb_wbbtf FROM wbb_wbbtf ORDER BY wbb_wbbtf DESC;" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
