@@ -32,4 +32,5 @@ EXPOSE 80
 EXPOSE 22
 
 ENV CALTECH_CURATION_FILES_INTERNAL_PATH ""
+ENV HOST_NAME=""
 CMD ["/bin/bash", "-c", "echo \"export CALTECH_CURATION_FILES_INTERNAL_PATH=${CALTECH_CURATION_FILES_INTERNAL_PATH}\" >> /etc/apache2/envvars; echo \"export HOST_NAME=${HOST_NAME}\" >> /etc/apache2/envvars; service apache2 start; service ssh start; tail -f /dev/null"]
