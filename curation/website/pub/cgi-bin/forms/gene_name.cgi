@@ -1,4 +1,4 @@
-#!/usr/bin/perl 
+#!/usr/bin/env perl 
 
 # Form to submit gene name information.  
 
@@ -35,12 +35,14 @@
 
 my $firstflag = 1;		# flag if first time around (show form for no data)
 
-use Jex;			# untaint, getHtmlVar, cshlNew
+use Jex;			# untaint, getHtmlVar, cshlNew, mailer
 use strict;
 use CGI;
 use DBI;
+use Dotenv -load => '/usr/lib/.env';
 
-my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n";
+# my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n";
+my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST};port=$ENV{PSQL_PORT}", "$ENV{PSQL_USERNAME}", "$ENV{PSQL_PASSWORD}") or die "Cannot connect to database!\n";
 
 
 my $query = new CGI;
