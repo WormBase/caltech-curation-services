@@ -79,6 +79,7 @@ services:
       HOST_NAME: "${HOST_NAME}"
     ports:
       - "${CURATION_FORMS_PORT}:80"
+      - "${SSL_PORT}:${SSL_PORT}"
       - "${SSH_PORT}:22"
     volumes:
       - "${HTTPD_AUTH_FILE_PATH}:/etc/httpd/passwd/passwords"
