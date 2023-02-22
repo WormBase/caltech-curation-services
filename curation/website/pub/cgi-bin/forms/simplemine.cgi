@@ -1,4 +1,4 @@
-#!/usr/bin/perl 
+#!/usr/bin/env perl 
 
 # Query by list of gene names on text tables.
 #
@@ -72,8 +72,10 @@ use LWP::Simple;		# for simple gets
 use DBI;
 use Tie::IxHash;
 
+use Dotenv -load => '/usr/lib/.env';
 
-my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n"; 
+my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST};port=$ENV{PSQL_PORT}", "$ENV{PSQL_USERNAME}", "$ENV{PSQL_PASSWORD}") or die "Cannot connect to database!\n";
+# my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n"; 
 my $result;
 
 my $ua = new LWP::UserAgent;
@@ -555,57 +557,3 @@ sub showFraqForm {
 } # sub showFraqForm
 
 
-sub showIp {
-  print "Content-type: text/html\n\n";
-  my $title = 'Your IP';
-  my ($header, $footer) = &cshlNew($title);
-  print "$header\n";		# make beginning of HTML page
-  my $action;                   # what user clicked
-  unless ($action = $query->param('action')) { $action = 'none'; }
-  print "Your IP is : $host<BR>\n";
-  print "$footer"; 		# make end of HTML page
-} # sub showIp
-
-__END__
-
-#   my ($var, $sourceFile)  = &getHtmlVar($query, 'sourceFile');
-#   my %dataMap;
-#   my $dataHeader;
-#   if ($sourceFile eq 'GeneTissueLifeStage') {
-#       my $dataUrl = 'http://athena.caltech.edu/GeneTissueLifeStage/GeneTissueLifeStage.csv';
-#       my $data    = get $dataUrl;
-#       my (@lines) = split/\n/, $data;
-#       $dataHeader = shift @lines;
-#       foreach my $line (@lines) {
-#         chomp $line;
-#         my ($wbgene, @rest) = split/\t/, $line;
-#         push @{ $dataMap{$wbgene} }, $line; } }
-#     elsif ($sourceFile eq 'ConciseDescription') {
-#       $dataHeader = qq(Gene ID\tDescription Type\tDescription Text);
-#       my $result = $dbh->prepare( "SELECT con_wbgene.con_wbgene, con_desctype.con_desctype, con_desctext.con_desctext FROM con_desctext, con_desctype, con_wbgene WHERE con_wbgene.joinkey = con_desctype.joinkey AND con_wbgene.joinkey = con_desctext.joinkey AND con_wbgene.joinkey NOT IN (SELECT joinkey FROM con_nodump WHERE con_nodump = 'NO DUMP');" );
-#       $result->execute();
-#       my %concise;
-#       while (my @row = $result->fetchrow()) {
-#         my $wbgene   = $row[0];
-#         my $desctype = $row[1];
-#         my $desctext = $row[2];
-#         $concise{$wbgene}{$desctype} = $desctext;	# only look at concise or automated, only display one, prioritizing concise
-#       }
-#       foreach my $wbgene (sort keys %concise) {
-#         if ($concise{$wbgene}{Concise_description}) {
-#             push @{ $dataMap{$wbgene} }, qq($wbgene\tConcise_description\t$concise{$wbgene}{Concise_description}); }
-#           elsif ($concise{$wbgene}{Automated_description}) {
-#           push @{ $dataMap{$wbgene} }, qq($wbgene\tAutomated_description\t$concise{$wbgene}{Automated_description}); } } }
-#     elsif ($sourceFile eq 'RNAiPhenotype') {
-#       my $dirListUrl = 'ftp://ftp.wormbase.org/pub/wormbase/releases/current-development-release/ONTOLOGY/';
-#       my $dirList    = get $dirListUrl;
-#       my ($filename) = $dirList =~ m/(rnai_phenotypes.WS\d+.wb)/;
-#       my $fileUrl    = $dirListUrl . $filename;
-#       my $data       = get $fileUrl;
-#       my (@lines)    = split/\n/, $data;
-#       $dataHeader    = '';	# no header in this file
-#       foreach my $line (@lines) {
-#         chomp $line;
-#         my ($wbgene, @rest) = split/\t/, $line;
-#         push @{ $dataMap{$wbgene} }, $line; } }
-#     else { print qq(You must select a valid datatype\n\n); }
