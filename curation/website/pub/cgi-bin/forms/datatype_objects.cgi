@@ -1,4 +1,4 @@
-#!/usr/bin/perl 
+#!/usr/bin/env perl 
 
 # Query the OA for autocomplete, term info, validity
 
@@ -14,10 +14,14 @@ use diagnostics;
 use CGI;
 use Jex;
 use LWP::Simple;
-use Net::Domain qw(hostname hostfqdn hostdomain);
+# use Net::Domain qw(hostname hostfqdn hostdomain);
+use Dotenv -load => '/usr/lib/.env';
+
+# my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST};port=$ENV{PSQL_PORT}", "$ENV{PSQL_USERNAME}", "$ENV{PSQL_PASSWORD}") or die "Cannot connect to database!\n";
 
 
-my $hostfqdn = hostfqdn();
+# my $hostfqdn = hostfqdn();
+my $thisHost = $ENV{THIS_HOST};
 
 my $query = new CGI;
 my $var;
@@ -77,8 +81,10 @@ if ($action && $userValue && $objectType) {
       $userValue =~ s/ /%20/g;
       my $field    = $objectMap{$objectType}{field};
       my $datatype = $objectMap{$objectType}{datatype};
-#       my $url = "http://tazendra.caltech.edu/~postgres/cgi-bin/oa/ontology_annotator.cgi?action=" . $action . "&field=" . $field . "&datatype=" . $datatype . "&curator_two=two1823&" . $validActions{$action} . "=" . $userValue;
-      my $url = "http://" . $hostfqdn . "/~postgres/cgi-bin/oa/ontology_annotator.cgi?action=" . $action . "&field=" . $field . "&datatype=" . $datatype . "&curator_two=two1823&" . $validActions{$action} . "=" . $userValue;
+      # my $url = "http://tazendra.caltech.edu/~postgres/cgi-bin/oa/ontology_annotator.cgi?action=" . $action . "&field=" . $field . "&datatype=" . $datatype . "&curator_two=two1823&" . $validActions{$action} . "=" . $userValue;
+      # my $url = "http://" . $hostfqdn . "/~postgres/cgi-bin/oa/ontology_annotator.cgi?action=" . $action . "&field=" . $field . "&datatype=" . $datatype . "&curator_two=two1823&" . $validActions{$action} . "=" . $userValue;
+      my $url = $thisHost . "priv/cgi-bin/oa/ontology_annotator.cgi?action=" . $action . "&field=" . $field . "&datatype=" . $datatype . "&curator_two=two1823&" . $validActions{$action} . "=" . $userValue;
+      # print qq($url<br>\n);
       my $data = get $url;
       print qq($data\n); }
     else { print qq(objectType $objectType doesn't map to fields and datatype, contact Juancarlos\n); }
