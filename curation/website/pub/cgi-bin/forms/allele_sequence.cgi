@@ -1,4 +1,4 @@
-#!/usr/bin/perl 
+#!/usr/bin/env perl 
 
 # Form to submit allele-sequence
 #
@@ -23,12 +23,14 @@ use LWP::Simple;
 use File::Basename;		# fileparse
 use Mail::Sendmail;
 use Net::Domain qw(hostname hostfqdn hostdomain);
+use Dotenv -load => '/usr/lib/.env';
+
+my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST};port=$ENV{PSQL_PORT}", "$ENV{PSQL_USERNAME}", "$ENV{PSQL_PASSWORD}") or die "Cannot connect to database!\n";
+# my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n";
+my $result;
 
 
 my $hostfqdn = hostfqdn();
-
-my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n";
-my $result;
 
 
 
