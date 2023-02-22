@@ -76,8 +76,11 @@ services:
         CALTECH_CURATION_FILES_INTERNAL_PATH: "${CALTECH_CURATION_FILES_INTERNAL_PATH}"
     environment:
       CALTECH_CURATION_FILES_INTERNAL_PATH: "${CALTECH_CURATION_FILES_INTERNAL_PATH}"
+      HOST_NAME: "${HOST_NAME}"
+      SSL_PORT: "${SSL_PORT}"
     ports:
       - "${CURATION_FORMS_PORT}:80"
+      - "${SSL_PORT}:${SSL_PORT}"
       - "${SSH_PORT}:22"
     volumes:
       - "${HTTPD_AUTH_FILE_PATH}:/etc/httpd/passwd/passwords"
@@ -86,6 +89,7 @@ services:
       - ./curation/scripts/:/usr/lib/scripts/
       - ./curation/user_files/:/usr/lib/user_files/
       - .env:/usr/lib/.env
+      - "${SSL_CERTIFICATE_DIR}:/etc/ssl_certificate"
       - "${CALTECH_CURATION_FILES_EXTERNAL_PATH}:${CALTECH_CURATION_FILES_INTERNAL_PATH}"
     networks:
       - caltech-curation-network
