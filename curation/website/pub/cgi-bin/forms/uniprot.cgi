@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
 # Display of curated data with PMIDs for UniProt
 
@@ -22,7 +22,10 @@ use Tie::IxHash;
 use LWP::Simple;
 # use Ace;
 
-my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n"; 
+use Dotenv -load => '/usr/lib/.env';
+
+my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST};port=$ENV{PSQL_PORT}", "$ENV{PSQL_USERNAME}", "$ENV{PSQL_PASSWORD}") or die "Cannot connect to database!\n";
+# my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n"; 
 
 
 my $blue = '#00ffcc';                   # redefine blue to a mom-friendly color
