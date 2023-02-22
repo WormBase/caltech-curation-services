@@ -12,6 +12,7 @@ RUN cpanm install DBI Bundle::CPAN Mail::Mailer MIME::Lite Tie::IxHash JSON LWP 
 RUN a2enmod headers
 RUN a2enmod rewrite
 RUN a2enmod cgid
+RUN a2enmod ssl
 
 COPY curation/website/apache_conf/apache2.conf /etc/apache2/apache2.conf
 COPY curation/website/apache_conf/000-default.conf /etc/apache2/sites-enabled/000-default.conf
