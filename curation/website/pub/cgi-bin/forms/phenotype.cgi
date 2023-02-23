@@ -113,10 +113,11 @@ use Tie::IxHash;
 use LWP::Simple;
 use File::Basename;		# fileparse
 use Mail::Sendmail;
-use Net::Domain qw(hostname hostfqdn hostdomain);
+# use Net::Domain qw(hostname hostfqdn hostdomain);
 use Dotenv -load => '/usr/lib/.env';
 
-my $hostfqdn = hostfqdn();
+# my $hostfqdn = hostfqdn();
+my $thishost = $ENV{THIS_HOST};
 
 # my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n";
 my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST};port=$ENV{PSQL_PORT}", "$ENV{PSQL_USERNAME}", "$ENV{PSQL_PASSWORD}") or die "Cannot connect to database!\n";
@@ -195,7 +196,8 @@ sub noNematodePhenotypes {
 #   ($var, my $ip)       = &getHtmlVar($query, 'ipAddress');
 #   ($var, my $pgidsApp) = &getHtmlVar($query, 'pgidsApp');
 #   ($var, my $pgidsRna) = &getHtmlVar($query, 'pgidsRna');
-  my $user             = 'phenotype_form@' . $hostfqdn;	# who sends mail
+  # my $user             = 'phenotype_form@' . $hostfqdn;	# who sends mail
+  my $user = 'phenotype_form@' . $ENV{HOST_NAME}; # who sends mail
   my $email = 'cgrove@caltech.edu';
 #   my $email = 'azurebrd@tazendra.caltech.edu';
 #   my $email = 'closertothewake@gmail.com';
@@ -255,7 +257,8 @@ sub bogusSubmission {
   ($var, my $ip)       = &getHtmlVar($query, 'ipAddress');
   ($var, my $pgidsApp) = &getHtmlVar($query, 'pgidsApp');
   ($var, my $pgidsRna) = &getHtmlVar($query, 'pgidsRna');
-  my $user             = 'phenotype_form@' . $hostfqdn;	# who sends mail
+  # my $user             = 'phenotype_form@' . $hostfqdn;	# who sends mail
+  my $user = 'phenotype_form@' . $ENV{HOST_NAME}; # who sends mail
   my $email = 'cgrove@caltech.edu';
 #   my $email = 'azurebrd@tazendra.caltech.edu';
 #   my $email = 'closertothewake@gmail.com';
@@ -271,7 +274,8 @@ sub emailFlagFirstpass {
   print $header;
   my ($var, $wbperson)     = &getHtmlVar($query, 'wbperson');	# WBPerson ID
   my ($var, $wbpaper)      = &getHtmlVar($query, 'wbpaper');	# WBPaper ID
-  my $user        = 'phenotype_form@' . $hostfqdn;	# who sends mail
+  # my $user        = 'phenotype_form@' . $hostfqdn;	# who sends mail
+  my $user = 'phenotype_form@' . $ENV{HOST_NAME}; # who sends mail
   my $email       = 'cgrove@caltech.edu';
 #   my $email       = 'closertothewake@gmail.com';
   my $subject     = qq(Phenotype Form: Flag $wbpaper by $wbperson);
@@ -286,22 +290,26 @@ sub personPublication {
   print $header;
   my %flaggedPapers;	# paper -> datatype -> counter   paper is the only important thing for being in $relevant, but datatype is important for datatype's curation status
     # newmutant  any flagged -> any positive
-  my $curStatusUrl = 'http://' . $hostfqdn . "/~postgres/cgi-bin/curation_status.cgi?action=listCurationStatisticsPapersPage&select_datatypesource=caltech&select_curator=two2987&listDatatype=newmutant&method=any%20pos&checkbox_cfp=on&checkbox_afp=on&checkbox_str=on&checkbox_svm=on";
+  # my $curStatusUrl = 'http://' . $hostfqdn . "/~postgres/cgi-bin/curation_status.cgi?action=listCurationStatisticsPapersPage&select_datatypesource=caltech&select_curator=two2987&listDatatype=newmutant&method=any%20pos&checkbox_cfp=on&checkbox_afp=on&checkbox_str=on&checkbox_svm=on";
+  my $curStatusUrl = $thishost . "priv/cgi-bin/curation_status.cgi?action=listCurationStatisticsPapersPage&select_datatypesource=caltech&select_curator=two2987&listDatatype=newmutant&method=any%20pos&checkbox_cfp=on&checkbox_afp=on&checkbox_str=on&checkbox_svm=on";
   my $curStatusData = get $curStatusUrl;
   my ($curStatusJoinkeys) = $curStatusData =~ m/name="specific_papers">(.*?)<\/textarea/;
   my (@paps) = split/\s+/, $curStatusJoinkeys; foreach (@paps) { $flaggedPapers{"WBPaper$_"}{app}++; }
     # newmutant  papers validated positive
-  $curStatusUrl = 'http://' . $hostfqdn . "/~postgres/cgi-bin/curation_status.cgi?action=listCurationStatisticsPapersPage&select_datatypesource=caltech&select_curator=two1823&listDatatype=newmutant&method=allval%20pos&checkbox_cfp=on&checkbox_afp=on&checkbox_str=on&checkbox_svm=on";
+  # $curStatusUrl = 'http://' . $hostfqdn . "/~postgres/cgi-bin/curation_status.cgi?action=listCurationStatisticsPapersPage&select_datatypesource=caltech&select_curator=two1823&listDatatype=newmutant&method=allval%20pos&checkbox_cfp=on&checkbox_afp=on&checkbox_str=on&checkbox_svm=on";
+  $curStatusUrl = $thishost . "priv/cgi-bin/curation_status.cgi?action=listCurationStatisticsPapersPage&select_datatypesource=caltech&select_curator=two1823&listDatatype=newmutant&method=allval%20pos&checkbox_cfp=on&checkbox_afp=on&checkbox_str=on&checkbox_svm=on";
   $curStatusData = get $curStatusUrl;
   ($curStatusJoinkeys) = $curStatusData =~ m/name="specific_papers">(.*?)<\/textarea/;
   (@paps) = split/\s+/, $curStatusJoinkeys; foreach (@paps) { $flaggedPapers{"WBPaper$_"}{app}++; }
     # rnai  any flagged -> any positive
-  $curStatusUrl = 'http://' . $hostfqdn . "/~postgres/cgi-bin/curation_status.cgi?action=listCurationStatisticsPapersPage&select_datatypesource=caltech&select_curator=two2987&listDatatype=rnai&method=any%20pos&checkbox_cfp=on&checkbox_afp=on&checkbox_str=on&checkbox_svm=on";
+  # $curStatusUrl = 'http://' . $hostfqdn . "/~postgres/cgi-bin/curation_status.cgi?action=listCurationStatisticsPapersPage&select_datatypesource=caltech&select_curator=two2987&listDatatype=rnai&method=any%20pos&checkbox_cfp=on&checkbox_afp=on&checkbox_str=on&checkbox_svm=on";
+  $curStatusUrl = $thishost . "priv/cgi-bin/curation_status.cgi?action=listCurationStatisticsPapersPage&select_datatypesource=caltech&select_curator=two2987&listDatatype=rnai&method=any%20pos&checkbox_cfp=on&checkbox_afp=on&checkbox_str=on&checkbox_svm=on";
   $curStatusData = get $curStatusUrl;
   ($curStatusJoinkeys) = $curStatusData =~ m/name="specific_papers">(.*?)<\/textarea/;
   (@paps) = split/\s+/, $curStatusJoinkeys; foreach (@paps) { $flaggedPapers{"WBPaper$_"}{rna}++; }
     # rnai  papers validated positive
-  $curStatusUrl = 'http://' . $hostfqdn . "/~postgres/cgi-bin/curation_status.cgi?action=listCurationStatisticsPapersPage&select_datatypesource=caltech&select_curator=two1823&listDatatype=rnai&method=allval%20pos&checkbox_cfp=on&checkbox_afp=on&checkbox_str=on&checkbox_svm=on";
+  # $curStatusUrl = 'http://' . $hostfqdn . "/~postgres/cgi-bin/curation_status.cgi?action=listCurationStatisticsPapersPage&select_datatypesource=caltech&select_curator=two1823&listDatatype=rnai&method=allval%20pos&checkbox_cfp=on&checkbox_afp=on&checkbox_str=on&checkbox_svm=on";
+  $curStatusUrl = $thishost . "priv/cgi-bin/curation_status.cgi?action=listCurationStatisticsPapersPage&select_datatypesource=caltech&select_curator=two1823&listDatatype=rnai&method=allval%20pos&checkbox_cfp=on&checkbox_afp=on&checkbox_str=on&checkbox_svm=on";
   $curStatusData = get $curStatusUrl;
   ($curStatusJoinkeys) = $curStatusData =~ m/name="specific_papers">(.*?)<\/textarea/;
   (@paps) = split/\s+/, $curStatusJoinkeys; foreach (@paps) { $flaggedPapers{"WBPaper$_"}{rna}++; }
@@ -433,7 +441,8 @@ sub personPublication {
       else {	# not flagged, give link to this form to email Chris that the paper should be flagged
         $curation_status   = qq(<a href='phenotype.cgi?action=emailFlagFirstpass&wbpaper=$paper&wbperson=$personId' target='_blank' style='font-weight: bold; text-decoration: underline;'>flag this for phenotype data</a>); }
    if ($relevant eq 'relevant') {
-      my $urlPreexisting  = 'http://' . $hostfqdn .  "/~azurebrd/cgi-bin/forms/phenotype.cgi?action=preexistingData&wbpaper=$paper";
+      # my $urlPreexisting  = 'http://' . $hostfqdn .  "/~azurebrd/cgi-bin/forms/phenotype.cgi?action=preexistingData&wbpaper=$paper";
+      my $urlPreexisting  = $thishost . "pub/cgi-bin/forms/phenotype.cgi?action=preexistingData&wbpaper=$paper";
       my %datatypeLabels; $datatypeLabels{app} = 'Allele-Transgene'; $datatypeLabels{rna} = 'RNAi'; 
       my @curation_status;
       foreach my $datatype (sort keys %datatypeLabels) {
@@ -703,7 +712,8 @@ sub checkPmid {					# only return allele code warning if both checks fail
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; my @row = $result->fetchrow();
   if ($row[0]) { $hasData++; }
   if ($hasData) {
-    my $url = 'http://' . $hostfqdn . "/~azurebrd/cgi-bin/forms/phenotype.cgi?action=preexistingData&wbpaper=$wbpaper";
+    # my $url = 'http://' . $hostfqdn . "/~azurebrd/cgi-bin/forms/phenotype.cgi?action=preexistingData&wbpaper=$wbpaper";
+    my $url = $thishost . "pub/cgi-bin/forms/phenotype.cgi?action=preexistingData&wbpaper=$wbpaper";
     $checkResults = qq(<span style='color: brown'>Notice: The paper you have entered has already been curated for some phenotype data. Please refer to the <a href='$url' target='new' style='font-weight: bold; text-decoration: underline;'>phenotype data summary</a> for this paper. If you believe you have additional phenotype data for this paper, please proceed.</span>); }
   return $checkResults;
 } # sub checkPmid
@@ -1620,8 +1630,10 @@ sub printTrHeader {
   print qq(<tr><td colspan="$colspan" style="font-size: $fontsize;">\n);
   my $header_with_javascript = $header;
   if ($header eq 'Optional') {
-    $header_with_javascript = qq(<span id="optional_down_span" style="display: none;" onmouseover="this.style.cursor='pointer';" onclick="document.getElementById('optional_down_span').style.display='none'; document.getElementById('optional_right_span').style.display=''; document.getElementById('group_1_allelenature').style.display='none'; document.getElementById('group_1_allelefunction').style.display='none'; document.getElementById('group_1_penetrance').style.display='none'; document.getElementById('group_1_tempsens').style.display='none'; document.getElementById('group_1_genotype').style.display='none'; document.getElementById('group_1_strain').style.display='none'; document.getElementById('group_1_comment').style.display='none'; document.getElementById('group_1_linkotherform').style.display='none'; document.getElementById('group_1_optionalexplain').style.display='none';" ><div id="optional_down_image" style="background-position: -40px 0; background-image: url('images/triangle_down_plain.png'); height: 20px; width:20px; float: left;" onmouseover="document.getElementById('optional_down_image').style.backgroundImage='url(images/triangle_down_reversed.png)';" onmouseout="document.getElementById('optional_down_image').style.backgroundImage='url(images/triangle_down_plain.png)';"></div>$header</span>);
-    $header_with_javascript .= qq(<span id="optional_right_span" onmouseover="this.style.cursor='pointer';" onclick="document.getElementById('optional_down_span').style.display=''; document.getElementById('optional_right_span').style.display='none'; document.getElementById('group_1_allelenature').style.display=''; document.getElementById('group_1_allelefunction').style.display=''; document.getElementById('group_1_penetrance').style.display=''; document.getElementById('group_1_tempsens').style.display=''; document.getElementById('group_1_genotype').style.display=''; document.getElementById('group_1_strain').style.display=''; document.getElementById('group_1_comment').style.display=''; document.getElementById('group_1_linkotherform').style.display=''; document.getElementById('group_1_optionalexplain').style.display='';" ><div id="optional_right_image" style="background-position: -40px 0; background-image: url('images/triangle_right_plain.png'); height: 20px; width:20px; float: left;" onmouseover="document.getElementById('optional_right_image').style.backgroundImage='url(images/triangle_right_reversed.png)';" onmouseout="document.getElementById('optional_right_image').style.backgroundImage='url(images/triangle_right_plain.png)';"></div>$header</span>);
+    $header_with_javascript = qq(<span id="optional_down_span" style="display: none;" onmouseover="this.style.cursor='pointer';" onclick="document.getElementById('optional_down_span').style.display='none'; document.getElementById('optional_right_span').style.display=''; document.getElementById('group_1_allelenature').style.display='none'; document.getElementById('group_1_allelefunction').style.display='none'; document.getElementById('group_1_penetrance').style.display='none'; document.getElementById('group_1_tempsens').style.display='none'; document.getElementById('group_1_genotype').style.display='none'; document.getElementById('group_1_strain').style.display='none'; document.getElementById('group_1_comment').style.display='none'; document.getElementById('group_1_linkotherform').style.display='none'; document.getElementById('group_1_optionalexplain').style.display='none';" ><div id="optional_down_image" style="background-position: -40px 0; background-image: url('${thishost}pub/images/triangle_down_plain.png'); height: 20px; width:20px; float: left;" onmouseover="document.getElementById('optional_down_image').style.backgroundImage='url(${thishost}pub/images/triangle_down_reversed.png)';" onmouseout="document.getElementById('optional_down_image').style.backgroundImage='url(${thishost}pub/images/triangle_down_plain.png)';"></div>$header</span>);
+    $header_with_javascript .= qq(<span id="optional_right_span" onmouseover="this.style.cursor='pointer';" onclick="document.getElementById('optional_down_span').style.display=''; document.getElementById('optional_right_span').style.display='none'; document.getElementById('group_1_allelenature').style.display=''; document.getElementById('group_1_allelefunction').style.display=''; document.getElementById('group_1_penetrance').style.display=''; document.getElementById('group_1_tempsens').style.display=''; document.getElementById('group_1_genotype').style.display=''; document.getElementById('group_1_strain').style.display=''; document.getElementById('group_1_comment').style.display=''; document.getElementById('group_1_linkotherform').style.display=''; document.getElementById('group_1_optionalexplain').style.display='';" ><div id="optional_right_image" style="background-position: -40px 0; background-image: url('${thishost}pub/images/triangle_right_plain.png'); height: 20px; width:20px; float: left;" onmouseover="document.getElementById('optional_right_image').style.backgroundImage='url(${thishost}pub/images/triangle_right_reversed.png)';" onmouseout="document.getElementById('optional_right_image').style.backgroundImage='url(${thishost}pub/images/triangle_right_plain.png)';"></div>$header</span>);
+    # $header_with_javascript = qq(<span id="optional_down_span" style="display: none;" onmouseover="this.style.cursor='pointer';" onclick="document.getElementById('optional_down_span').style.display='none'; document.getElementById('optional_right_span').style.display=''; document.getElementById('group_1_allelenature').style.display='none'; document.getElementById('group_1_allelefunction').style.display='none'; document.getElementById('group_1_penetrance').style.display='none'; document.getElementById('group_1_tempsens').style.display='none'; document.getElementById('group_1_genotype').style.display='none'; document.getElementById('group_1_strain').style.display='none'; document.getElementById('group_1_comment').style.display='none'; document.getElementById('group_1_linkotherform').style.display='none'; document.getElementById('group_1_optionalexplain').style.display='none';" ><div id="optional_down_image" style="background-position: -40px 0; background-image: url('images/triangle_down_plain.png'); height: 20px; width:20px; float: left;" onmouseover="document.getElementById('optional_down_image').style.backgroundImage='url(images/triangle_down_reversed.png)';" onmouseout="document.getElementById('optional_down_image').style.backgroundImage='url(images/triangle_down_plain.png)';"></div>$header</span>);
+    # $header_with_javascript .= qq(<span id="optional_right_span" onmouseover="this.style.cursor='pointer';" onclick="document.getElementById('optional_down_span').style.display=''; document.getElementById('optional_right_span').style.display='none'; document.getElementById('group_1_allelenature').style.display=''; document.getElementById('group_1_allelefunction').style.display=''; document.getElementById('group_1_penetrance').style.display=''; document.getElementById('group_1_tempsens').style.display=''; document.getElementById('group_1_genotype').style.display=''; document.getElementById('group_1_strain').style.display=''; document.getElementById('group_1_comment').style.display=''; document.getElementById('group_1_linkotherform').style.display=''; document.getElementById('group_1_optionalexplain').style.display='';" ><div id="optional_right_image" style="background-position: -40px 0; background-image: url('images/triangle_right_plain.png'); height: 20px; width:20px; float: left;" onmouseover="document.getElementById('optional_right_image').style.backgroundImage='url(images/triangle_right_reversed.png)';" onmouseout="document.getElementById('optional_right_image').style.backgroundImage='url(images/triangle_right_plain.png)';"></div>$header</span>);
   } # if ($header eq 'Optional')
   my $message_span = '';
   if ($message) { $message_span = qq(<span style="color: $message_colour; font-size: $message_fontsize;">$message</span>); }
@@ -1746,7 +1758,8 @@ sub showForm {
   print qq(<div id="term_info_box" style="border: solid; position: fixed; top: 95px; right: 20px; width: 350px; z-index:2; background-color: white;">\n);
 #   print qq(<div id="clear_term_info" style="position: fixed; z-index: 3; top: 102px; right: 30px";>&#10008;</div>\n);
 #   print qq(<div id="clear_term_info" align="right" onclick="document.getElementById('term_info').innerHTML = '';">clear &#10008;</div>\n);
-  print qq(<div id="clear_term_info" align="right" onclick="document.getElementById('term_info_box').style.display = 'none';"><img id="close_term_info_image" src="images/x_plain.png" onmouseover="document.getElementById('close_term_info_image').src='images/x_reversed.png';" onmouseout="document.getElementById('close_term_info_image').src='images/x_plain.png';"></div>\n);
+  # print qq(<div id="clear_term_info" align="right" onclick="document.getElementById('term_info_box').style.display = 'none';"><img id="close_term_info_image" src="images/x_plain.png" onmouseover="document.getElementById('close_term_info_image').src='images/x_reversed.png';" onmouseout="document.getElementById('close_term_info_image').src='images/x_plain.png';"></div>\n);
+  print qq(<div id="clear_term_info" align="right" onclick="document.getElementById('term_info_box').style.display = 'none';"><img id="close_term_info_image" src="${thishost}pub/images/x_plain.png" onmouseover="document.getElementById('close_term_info_image').src='${thishost}pub/images/x_reversed.png';" onmouseout="document.getElementById('close_term_info_image').src='${thishost}pub/images/x_plain.png';"></div>\n);
   print qq(<div id="term_info" style="margin: 5px 5px 5px 5px;">Click on green question marks <span style="color: #06C729; font-weight: bold;">?</span> or start typing in a specific field to see more information here.</div>\n);
   print qq(</div>\n);
   &showEditorActions();
@@ -2357,7 +2370,8 @@ sub writePgOaAndEmail {		# tacking on email here since need pgids from pg before
   my $newPgidsApp = join",", @newPgidsApp;
   my $newPgidsRna = join",", @newPgidsRna;
 
-  my $user = 'phenotype_form@' . $hostfqdn;	# who sends mail
+  # my $user = 'phenotype_form@' . $hostfqdn;	# who sends mail
+  my $user = 'phenotype_form@' . $ENV{HOST_NAME}; # who sends mail
   if ($emailPaper) {
     my $email       = 'cgrove@caltech.edu, vanauken@caltech.edu';
 #     my $email       = 'closertothewake@gmail.com';
@@ -2400,7 +2414,8 @@ sub writePgOaAndEmail {		# tacking on email here since need pgids from pg before
   my $email   = "$fields{email}{inputvalue}{1}";
   my $subject = 'Phenotype confirmation';		# subject of mail
   my $body = $messageToUser;					# message to user shown on form
-  $body .= qq(Click <a href='http://${hostfqdn}/~azurebrd/cgi-bin/forms/phenotype.cgi?action=bogusSubmission&pgidsApp=$newPgidsApp&pgidsRna=$newPgidsRna&ipAddress=$ip' target='_blank' style='font-weight: bold; text-decoration: underline;'>here</a> if you did not submit this data or if you would like to retract this submission.<br/><br/>For internal use.<br/>RNAi IDs $newPgidsRna<br/>Phenotype IDs $newPgidsApp<br/><br/>\n);	# additional link to report false data
+  # $body .= qq(Click <a href='http://${hostfqdn}/~azurebrd/cgi-bin/forms/phenotype.cgi?action=bogusSubmission&pgidsApp=$newPgidsApp&pgidsRna=$newPgidsRna&ipAddress=$ip' target='_blank' style='font-weight: bold; text-decoration: underline;'>here</a> if you did not submit this data or if you would like to retract this submission.<br/><br/>For internal use.<br/>RNAi IDs $newPgidsRna<br/>Phenotype IDs $newPgidsApp<br/><br/>\n);	# additional link to report false data
+  $body .= qq(Click <a href='${thishost}pub/cgi-bin/forms/phenotype.cgi?action=bogusSubmission&pgidsApp=$newPgidsApp&pgidsRna=$newPgidsRna&ipAddress=$ip' target='_blank' style='font-weight: bold; text-decoration: underline;'>here</a> if you did not submit this data or if you would like to retract this submission.<br/><br/>For internal use.<br/>RNAi IDs $newPgidsRna<br/>Phenotype IDs $newPgidsApp<br/><br/>\n);	# additional link to report false data
   $body .= $form_data;						# form data
 # UNCOMMENT send general emails
   &mailSendmail($user, $email, $subject, $body, $cc);
