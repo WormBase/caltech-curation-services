@@ -94,6 +94,7 @@ use Email::Simple::Creator;
 use Tie::IxHash;
 use Dotenv -load => '/usr/lib/.env';
 
+my $thishost = $ENV{THIS_HOST};
 
 my %curator;
 
@@ -109,7 +110,7 @@ Content-type: text/html\n\n
 
 <HTML>
 <HEAD>
-<LINK rel="stylesheet" type="text/css" href="http://minerva.caltech.edu/~azurebrd/stylesheets/wormbase.css">
+<LINK rel="stylesheet" type="text/css" href="${thishost}pub/stylesheets/wormbase.css">
 <title>Community Curation Tracker</title>
   <script type="text/javascript" src="js/jquery-1.9.1.min.js"></script>
   <script type="text/javascript" src="js/jquery.tablesorter.min.js"></script>
