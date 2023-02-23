@@ -45,6 +45,9 @@ CMD ["/bin/bash", "-c", "echo \"export CALTECH_CURATION_FILES_INTERNAL_PATH=${CA
                          service ssh start; \
                          mkdir -p ${CALTECH_CURATION_FILES_INTERNAL_PATH}/pub; \
                          mkdir -p ${CALTECH_CURATION_FILES_INTERNAL_PATH}/priv; \
-                         chmod -R 777 ${CALTECH_CURATION_FILES_INTERNAL_PATH}/pub; \
-                         chmod -R 777 ${CALTECH_CURATION_FILES_INTERNAL_PATH}/priv; \
+                         mkdir -p /usr/caltech_curation_files/priv/citace_upload/anatomy_function; \
+                         mkdir -p /usr/caltech_curation_files/priv/forms/gene_go_curation_status; \
+                         mkdir -p /usr/caltech_curation_files/pub/wen/simplemine; \
+                         mkdir -p /usr/caltech_curation_files/pub/wen/agrSimpleMine; \
+                         chmod -R 777 ${CALTECH_CURATION_FILES_INTERNAL_PATH}; \
                          tail -f /dev/null"]
