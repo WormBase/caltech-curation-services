@@ -3,7 +3,7 @@ ARG SSH_ACEDB_PASSWORD=""
 ARG CALTECH_CURATION_FILES_INTERNAL_PATH=/usr/caltech_curation_files
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
-RUN apt-get install -y apache2 vim openssh-server makepasswd zsh
+RUN apt-get install -y apache2 vim openssh-server makepasswd zsh sendmail
 ENV TZ="America/Los_Angeles"
 RUN useradd -rm -d /home/acedb -s /bin/bash -p $(echo "${SSH_ACEDB_PASSWORD}" | makepasswd --crypt-md5 --clearfrom - | awk '{print $2}') acedb
 RUN mkdir -p ${CALTECH_CURATION_FILES_INTERNAL_PATH}
@@ -13,6 +13,7 @@ RUN a2enmod headers
 RUN a2enmod rewrite
 RUN a2enmod cgid
 RUN a2enmod ssl
+RUN yes | sendmailconfig
 
 COPY curation/website/apache_conf/apache2.conf /etc/apache2/apache2.conf
 COPY curation/website/apache_conf/000-default.conf /etc/apache2/sites-enabled/000-default.conf
@@ -42,4 +43,8 @@ CMD ["/bin/bash", "-c", "echo \"export CALTECH_CURATION_FILES_INTERNAL_PATH=${CA
                          if [[ \"${SSL_PORT}\" -ne \"443\" ]]; then echo \"Listen ${SSL_PORT}\" > /etc/apache2/additional_listeners.conf; fi; \
                          service apache2 start; \
                          service ssh start; \
+                         mkdir -p ${CALTECH_CURATION_FILES_INTERNAL_PATH}/pub; \
+                         mkdir -p ${CALTECH_CURATION_FILES_INTERNAL_PATH}/priv; \
+                         chmod -R 777 ${CALTECH_CURATION_FILES_INTERNAL_PATH}/pub; \
+                         chmod -R 777 ${CALTECH_CURATION_FILES_INTERNAL_PATH}/priv; \
                          tail -f /dev/null"]

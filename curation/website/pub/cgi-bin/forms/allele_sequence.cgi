@@ -972,7 +972,8 @@ sub submit {
           print qq($messageToUser<br/>);
           print qq(<br/>$form_data);
           print qq(<br/>Return to the <a href="allele_sequence.cgi">Allele-Sequence Form</a>.<br/>\n);
-          my $user = 'allele_sequence_form@' . $hostfqdn;	# who sends mail
+          # my $user = 'allele_sequence_form@' . $hostfqdn;	# who sends mail
+          my $user = 'allele_sequence_form@' . $ENV{HOST_NAME};	# who sends mail
 #           my $email = 'cgrove@caltech.edu, maryann.tuli@wormbase.org ';
           my $email = 'genenames@wormbase.org, draciti@caltech.edu, daniela@wormbase.org';
 #           my $email = 'genenames@wormbase.org';
