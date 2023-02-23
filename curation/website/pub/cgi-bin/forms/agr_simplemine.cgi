@@ -107,7 +107,8 @@ my $htmltitle = 'Simple Mine';
 # my $base_url = 'http://athena.caltech.edu/fragmine/';	# replaced with ftp 2016 06 03
 # my $base_url = 'ftp://caltech.wormbase.org/pub/wormbase/simpleMine/';	# replaced with local files 2016 06 09
 # my $files_path = '/home/acedb/wen/simplemine/sourceFile/';
-my $files_path_base = '/home/acedb/wen/agrSimpleMine/sourceFile/';
+# my $files_path_base = '/home/acedb/wen/agrSimpleMine/sourceFile/';
+my $files_path_base = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/pub/wen/agrSimpleMine/sourceFile/';
 
 # my (@filesfull) = <${files_path}/*.csv>;		# get all .csv files for Wen.  2018 02 26
 # my @files; foreach my $file (sort @filesfull) { $file =~ s/$files_path\///; push @files, $file; }
@@ -427,7 +428,9 @@ sub showFraqForm {
 #   print qq(Gene mappings to gene identifiers, Tissue-LifeStage, RNAi-Phenotype, Allele-Phenotype, ConciseDescription.<br/><br/>);
 #   print qq(Gene mappings to gene identifiers, ConciseDescription, Mouse/Rat/ZebraFish/Fly/Worm/Yeast Homologs.<br/><br/>);
   print qq(Follow these steps to get information including gene identifier, description, disease association, expression, variants, Interaction and orthologs in other species.<br/><br/>);
-  print qq(<form method="post" id="form" action="agr_simplemine.cgi" enctype="multipart/form-data">\n);
+# posting action without path doesn't work here for some reason, but don't know if fuller path will mess with agr reverse proxy.  2023 02 22
+  print qq(<form method="post" id="form" action="pub/cgi-bin/forms/agr_simplemine.cgi" enctype="multipart/form-data">\n);
+#   print qq(<form method="post" id="form" action="agr_simplemine.cgi" enctype="multipart/form-data">\n);
   my %species;
 #   $species{'MIX'} = 'Any species';	# added at the end below instead of using a tied hash
   $species{'WB'} = 'Caenorhabditis elegans';
@@ -563,46 +566,3 @@ sub agrNew {
 
 
 
-__END__
-
-#   my ($var, $sourceFile)  = &getHtmlVar($query, 'sourceFile');
-#   my %dataMap;
-#   my $dataHeader;
-#   if ($sourceFile eq 'GeneTissueLifeStage') {
-#       my $dataUrl = 'http://athena.caltech.edu/GeneTissueLifeStage/GeneTissueLifeStage.csv';
-#       my $data    = get $dataUrl;
-#       my (@lines) = split/\n/, $data;
-#       $dataHeader = shift @lines;
-#       foreach my $line (@lines) {
-#         chomp $line;
-#         my ($wbgene, @rest) = split/\t/, $line;
-#         push @{ $dataMap{$wbgene} }, $line; } }
-#     elsif ($sourceFile eq 'ConciseDescription') {
-#       $dataHeader = qq(Gene ID\tDescription Type\tDescription Text);
-#       my $result = $dbh->prepare( "SELECT con_wbgene.con_wbgene, con_desctype.con_desctype, con_desctext.con_desctext FROM con_desctext, con_desctype, con_wbgene WHERE con_wbgene.joinkey = con_desctype.joinkey AND con_wbgene.joinkey = con_desctext.joinkey AND con_wbgene.joinkey NOT IN (SELECT joinkey FROM con_nodump WHERE con_nodump = 'NO DUMP');" );
-#       $result->execute();
-#       my %concise;
-#       while (my @row = $result->fetchrow()) {
-#         my $wbgene   = $row[0];
-#         my $desctype = $row[1];
-#         my $desctext = $row[2];
-#         $concise{$wbgene}{$desctype} = $desctext;	# only look at concise or automated, only display one, prioritizing concise
-#       }
-#       foreach my $wbgene (sort keys %concise) {
-#         if ($concise{$wbgene}{Concise_description}) {
-#             push @{ $dataMap{$wbgene} }, qq($wbgene\tConcise_description\t$concise{$wbgene}{Concise_description}); }
-#           elsif ($concise{$wbgene}{Automated_description}) {
-#           push @{ $dataMap{$wbgene} }, qq($wbgene\tAutomated_description\t$concise{$wbgene}{Automated_description}); } } }
-#     elsif ($sourceFile eq 'RNAiPhenotype') {
-#       my $dirListUrl = 'ftp://ftp.wormbase.org/pub/wormbase/releases/current-development-release/ONTOLOGY/';
-#       my $dirList    = get $dirListUrl;
-#       my ($filename) = $dirList =~ m/(rnai_phenotypes.WS\d+.wb)/;
-#       my $fileUrl    = $dirListUrl . $filename;
-#       my $data       = get $fileUrl;
-#       my (@lines)    = split/\n/, $data;
-#       $dataHeader    = '';	# no header in this file
-#       foreach my $line (@lines) {
-#         chomp $line;
-#         my ($wbgene, @rest) = split/\t/, $line;
-#         push @{ $dataMap{$wbgene} }, $line; } }
-#     else { print qq(You must select a valid datatype\n\n); }
