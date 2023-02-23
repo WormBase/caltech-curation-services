@@ -86,8 +86,10 @@ my $host = $query->remote_host();		# get ip address
 
 # my $base_url = 'http://athena.caltech.edu/fragmine/';	# replaced with ftp 2016 06 03
 # my $base_url = 'ftp://caltech.wormbase.org/pub/wormbase/simpleMine/';	# replaced with local files 2016 06 09
-my $files_path = '/home/acedb/wen/simplemine/sourceFile/';
-my $files_path_base = '/home/acedb/wen/simplemine/sourceFile/';
+# my $files_path = '/home/acedb/wen/simplemine/sourceFile/';
+# my $files_path_base = '/home/acedb/wen/simplemine/sourceFile/';
+my $files_path = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/pub/wen/simplemine/sourceFile/';
+my $files_path_base = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/pub/wen/simplemine/sourceFile/';
 
 my (@filesfull) = <${files_path}/*.csv>;		# get all .csv files for Wen.  2018 02 26
 my @files; foreach my $file (sort @filesfull) { $file =~ s/$files_path\///; push @files, $file; }
@@ -466,7 +468,8 @@ sub showFraqForm {
   tie %columns, "Tie::IxHash";
 
 # from a multi-line category file
-  my $filepath = '/home/acedb/wen/simplemine/multiSpeSimpleMine/category_headers';
+  # my $filepath = '/home/acedb/wen/simplemine/multiSpeSimpleMine/category_headers';
+  my $filepath = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/pub/wen/simplemine/multiSpeSimpleMine/category_headers';
   open (IN, "<$filepath") or die "Cannot open $filepath : $!";
   while (my $line = <IN>) {
     chomp $line;
