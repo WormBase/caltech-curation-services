@@ -104,7 +104,8 @@ sub process {                   # see if anything clicked
   my $action;                   # what user clicked
   unless ($action = $query->param('action')) { $action = 'none'; }
 
-  if ($action eq 'VerifyPaper') {                  &verifyPaper(); }
+  if ($action eq 'PapIdToWBPaper') {              &papIdToWBPaper(); }
+#   elsif ($action eq 'VerifyPaper') {               &verifyPaper(); }		# removed for Cecilia 2023 02 24
 #   elsif ($action eq 'ShowAntibodyData') {          &showAntibodyData(); }	# removed 2021 01 28
   elsif ($action eq 'UpdateVariationObo') {        &updateVariationObo(); }
   elsif ($action eq 'AddToVariationObo') {         &addToVariationObo(); }
@@ -113,7 +114,6 @@ sub process {                   # see if anything clicked
   elsif ($action eq 'AddTempObjectObo') {          &addTempObjectObo(); }
   elsif ($action eq 'ContinentPIs') {              &continentPIs(); }
   elsif ($action eq 'PictureByPaper') {            &pictureByPaper(); }
-  elsif ($action eq 'PapIdToWBPaper') {            &papIdToWBPaper(); }
   elsif ($action eq 'ConvertPaperIdentifiers') {   &convertPaperIdentifiers(); }
   elsif ($action eq 'ListPmids') {                 &listPmids(); }
   elsif ($action eq 'WpaXref') {                   &wpaXref(); }
@@ -331,7 +331,7 @@ sub listPmids {			# list pmids for alliance to download and convert to json
 #   print "$footer"; 		# make end of HTML page
 # } # sub showAntibodyData
 
-sub verifyPaper {
+sub OBSOLETEverifyPaper {
   print "Content-type: text\/html\n\n<html><head><title>Confirm Author-Paper-Person Connections</title>\n</head>\n";        # don't resize window  2009 03 17
 #  print "Content-type: text\/html\n\n<html><head><title>Confirm Author-Paper-Person Connections</title>\n<script>window.resizeTo(320, 150);</script></head>\n";
 
@@ -369,12 +369,12 @@ sub verifyPaper {
     print "<!--$command<BR>-->\n";
   }
   print "Thank you for connecting this paper as $yes_no<BR>\n";
-  &mailConfirmation($two, $curator);
+  &OBSOLETEmailConfirmation($two, $curator);
 
   print "</html>";
 } # sub verifyPaper
 
-sub mailConfirmation {
+sub OBSOLETEmailConfirmation {
   my ($two, $std_name) = @_;
   $result = $dbh->prepare( "SELECT two_email FROM two_email WHERE joinkey = '$two' ORDER BY two_timestamp DESC;" );
   $result->execute;
@@ -418,7 +418,7 @@ Cecilia';
     foreach my $only_num (sort keys %time_hash) { print OUT "$only_num\t$time_hash{$only_num}\n"; }
     close (OUT) or die "Cannot close $data_file : $!";
   }
-} # sub mailConfirmation
+} # sub OBSOLETEmailConfirmation
 
 sub continentPIs {				# get all pis, their standardnames, labs, and countries, sorting by continent
   print "Content-type: text/html\n\n";
