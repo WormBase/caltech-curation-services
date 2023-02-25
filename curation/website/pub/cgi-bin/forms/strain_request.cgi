@@ -1,4 +1,4 @@
-#!/usr/bin/perl 
+#!/usr/bin/env perl 
 
 # Form to submit strain requests
 #
@@ -26,12 +26,16 @@ use Tie::IxHash;
 use LWP::Simple;
 use File::Basename;		# fileparse
 use Mail::Sendmail;
-use Net::Domain qw(hostname hostfqdn hostdomain);
+# use Net::Domain qw(hostname hostfqdn hostdomain);
+use Dotenv -load => '/usr/lib/.env';
 
+my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST};port=$ENV{PSQL_PORT}", "$ENV{PSQL_USERNAME}", "$ENV{PSQL_PASSWORD}") or die "Cannot connect to database!\n";
+# my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n";
 
-my $hostfqdn = hostfqdn();
+# my $hostfqdn = hostfqdn();
+my $thishost = $ENV{THIS_HOST};
+my $baseUrl = $ENV{THIS_HOST} . "pub/cgi-bin/forms";
 
-my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n";
 my $result;
 
 
@@ -786,8 +790,10 @@ sub printTrHeader {
   print qq(<tr><td colspan="$colspan" style="font-size: $fontsize;">\n);
   my $header_with_javascript = $header;
   if ($header eq 'Optional') {
-    $header_with_javascript = qq(<span id="optional_down_span" style="display: none;" onclick="document.getElementById('optional_down_span').style.display='none'; document.getElementById('optional_right_span').style.display=''; document.getElementById('group_1_allelenature').style.display='none'; document.getElementById('group_1_allelefunction').style.display='none'; document.getElementById('group_1_penetrance').style.display='none'; document.getElementById('group_1_tempsens').style.display='none'; document.getElementById('group_1_comment').style.display='none'; document.getElementById('group_1_linkotherform').style.display='none'; document.getElementById('group_1_optionalexplain').style.display='none';" ><div id="optional_down_image" style="background-position: -40px 0; background-image: url('http://${hostfqdn}/~azurebrd/images/triangle_down_plain.png'); height: 20px; width:20px; float: left;" onmouseover="document.getElementById('optional_down_image').style.backgroundImage='url(http://${hostfqdn}/~azurebrd/images/triangle_down_reversed.png)';" onmouseout="document.getElementById('optional_down_image').style.backgroundImage='url(http://${hostfqdn}/~azurebrd/images/triangle_down_plain.png)';"></div>$header</span>);
-    $header_with_javascript .= qq(<span id="optional_right_span" onclick="document.getElementById('optional_down_span').style.display=''; document.getElementById('optional_right_span').style.display='none'; document.getElementById('group_1_allelenature').style.display=''; document.getElementById('group_1_allelefunction').style.display=''; document.getElementById('group_1_penetrance').style.display=''; document.getElementById('group_1_tempsens').style.display=''; document.getElementById('group_1_comment').style.display=''; document.getElementById('group_1_linkotherform').style.display=''; document.getElementById('group_1_optionalexplain').style.display='';" ><div id="optional_right_image" style="background-position: -40px 0; background-image: url('http://${hostfqdn}/~azurebrd/images/triangle_right_plain.png'); height: 20px; width:20px; float: left;" onmouseover="document.getElementById('optional_right_image').style.backgroundImage='url(http://${hostfqdn}/~azurebrd/images/triangle_right_reversed.png)';" onmouseout="document.getElementById('optional_right_image').style.backgroundImage='url(http://${hostfqdn}/~azurebrd/images/triangle_right_plain.png)';"></div>$header</span>);
+    $header_with_javascript = qq(<span id="optional_down_span" style="display: none;" onmouseover="this.style.cursor='pointer';" onclick="document.getElementById('optional_down_span').style.display='none'; document.getElementById('optional_right_span').style.display=''; document.getElementById('group_1_allelenature').style.display='none'; document.getElementById('group_1_allelefunction').style.display='none'; document.getElementById('group_1_penetrance').style.display='none'; document.getElementById('group_1_tempsens').style.display='none'; document.getElementById('group_1_genotype').style.display='none'; document.getElementById('group_1_strain').style.display='none'; document.getElementById('group_1_comment').style.display='none'; document.getElementById('group_1_linkotherform').style.display='none'; document.getElementById('group_1_optionalexplain').style.display='none';" ><div id="optional_down_image" style="background-position: -40px 0; background-image: url('${thishost}pub/images/triangle_down_plain.png'); height: 20px; width:20px; float: left;" onmouseover="document.getElementById('optional_down_image').style.backgroundImage='url(${thishost}pub/images/triangle_down_reversed.png)';" onmouseout="document.getElementById('optional_down_image').style.backgroundImage='url(${thishost}pub/images/triangle_down_plain.png)';"></div>$header</span>);
+    $header_with_javascript .= qq(<span id="optional_right_span" onmouseover="this.style.cursor='pointer';" onclick="document.getElementById('optional_down_span').style.display=''; document.getElementById('optional_right_span').style.display='none'; document.getElementById('group_1_allelenature').style.display=''; document.getElementById('group_1_allelefunction').style.display=''; document.getElementById('group_1_penetrance').style.display=''; document.getElementById('group_1_tempsens').style.display=''; document.getElementById('group_1_genotype').style.display=''; document.getElementById('group_1_strain').style.display=''; document.getElementById('group_1_comment').style.display=''; document.getElementById('group_1_linkotherform').style.display=''; document.getElementById('group_1_optionalexplain').style.display='';" ><div id="optional_right_image" style="background-position: -40px 0; background-image: url('${thishost}pub/images/triangle_right_plain.png'); height: 20px; width:20px; float: left;" onmouseover="document.getElementById('optional_right_image').style.backgroundImage='url(${thishost}pub/images/triangle_right_reversed.png)';" onmouseout="document.getElementById('optional_right_image').style.backgroundImage='url(${thishost}pub/images/triangle_right_plain.png)';"></div>$header</span>);
+    # $header_with_javascript = qq(<span id="optional_down_span" style="display: none;" onmouseover="this.style.cursor='pointer';" onclick="document.getElementById('optional_down_span').style.display='none'; document.getElementById('optional_right_span').style.display=''; document.getElementById('group_1_allelenature').style.display='none'; document.getElementById('group_1_allelefunction').style.display='none'; document.getElementById('group_1_penetrance').style.display='none'; document.getElementById('group_1_tempsens').style.display='none'; document.getElementById('group_1_genotype').style.display='none'; document.getElementById('group_1_strain').style.display='none'; document.getElementById('group_1_comment').style.display='none'; document.getElementById('group_1_linkotherform').style.display='none'; document.getElementById('group_1_optionalexplain').style.display='none';" ><div id="optional_down_image" style="background-position: -40px 0; background-image: url('images/triangle_down_plain.png'); height: 20px; width:20px; float: left;" onmouseover="document.getElementById('optional_down_image').style.backgroundImage='url(images/triangle_down_reversed.png)';" onmouseout="document.getElementById('optional_down_image').style.backgroundImage='url(images/triangle_down_plain.png)';"></div>$header</span>);
+    # $header_with_javascript .= qq(<span id="optional_right_span" onmouseover="this.style.cursor='pointer';" onclick="document.getElementById('optional_down_span').style.display=''; document.getElementById('optional_right_span').style.display='none'; document.getElementById('group_1_allelenature').style.display=''; document.getElementById('group_1_allelefunction').style.display=''; document.getElementById('group_1_penetrance').style.display=''; document.getElementById('group_1_tempsens').style.display=''; document.getElementById('group_1_genotype').style.display=''; document.getElementById('group_1_strain').style.display=''; document.getElementById('group_1_comment').style.display=''; document.getElementById('group_1_linkotherform').style.display=''; document.getElementById('group_1_optionalexplain').style.display='';" ><div id="optional_right_image" style="background-position: -40px 0; background-image: url('images/triangle_right_plain.png'); height: 20px; width:20px; float: left;" onmouseover="document.getElementById('optional_right_image').style.backgroundImage='url(images/triangle_right_reversed.png)';" onmouseout="document.getElementById('optional_right_image').style.backgroundImage='url(images/triangle_right_plain.png)';"></div>$header</span>);
   } # if ($header eq 'Optional')
   my $message_span = '';
   if ($message) { $message_span = qq(<span style="color: $message_colour; font-size: $message_fontsize;">$message</span>); }
@@ -832,7 +838,8 @@ sub showForm {
   print qq(<div id="term_info_box" style="border: solid; position: fixed; top: 95px; right: 20px; width: 350px; z-index:2; background-color: white;">\n);
 #   print qq(<div id="clear_term_info" style="position: fixed; z-index: 3; top: 102px; right: 30px";>&#10008;</div>\n);
 #   print qq(<div id="clear_term_info" align="right" onclick="document.getElementById('term_info').innerHTML = '';">clear &#10008;</div>\n);
-  print qq(<div id="clear_term_info" align="right" onclick="document.getElementById('term_info_box').style.display = 'none';"><img id="close_term_info_image" src="http://${hostfqdn}/~azurebrd/images/x_plain.png" onmouseover="document.getElementById('close_term_info_image').src='http://${hostfqdn}/~azurebrd/images/x_reversed.png';" onmouseout="document.getElementById('close_term_info_image').src='http://${hostfqdn}/~azurebrd/images/x_plain.png';"></div>\n);
+  # print qq(<div id="clear_term_info" align="right" onclick="document.getElementById('term_info_box').style.display = 'none';"><img id="close_term_info_image" src="http://${hostfqdn}/~azurebrd/images/x_plain.png" onmouseover="document.getElementById('close_term_info_image').src='http://${hostfqdn}/~azurebrd/images/x_reversed.png';" onmouseout="document.getElementById('close_term_info_image').src='http://${hostfqdn}/~azurebrd/images/x_plain.png';"></div>\n);
+  print qq(<div id="clear_term_info" align="right" onclick="document.getElementById('term_info_box').style.display = 'none';"><img id="close_term_info_image" src="${baseUrl}/images/x_plain.png" onmouseover="document.getElementById('close_term_info_image').src='${baseUrl}/images/x_reversed.png';" onmouseout="document.getElementById('close_term_info_image').src='${baseUrl}/images/x_plain.png';"></div>\n);
   print qq(<div id="term_info" style="margin: 5px 5px 5px 5px;">Click on green question marks <span style="color: #06C729; font-weight: bold;">?</span> or start typing in a specific field to see more information here.</div>\n);
   print qq(</div>\n);
   &showEditorActions();
@@ -1016,7 +1023,8 @@ sub submit {
           print qq($messageToUser<br/>);
           print qq(<br/>$form_data);
           print qq(<br/>Return to the <a href="strain_request.cgi">Strain Request Form</a>.<br/>\n);
-          my $user = 'strain_request_form@' . $hostfqdn;	# who sends mail
+          # my $user = 'strain_request_form@' . $hostfqdn;	# who sends mail
+          my $user = 'strain_request_form@' . $ENV{HOST_NAME};	# who sends mail
 #           my $email = 'azurebrd@tazendra.caltech.edu';
 #           my $email = 'pws@caltech.edu';
           my $email = 'harald_hutter@sfu.ca, pws@caltech.edu, rougv001@umn.edu';
@@ -1236,10 +1244,10 @@ sub initFields {
 
 # <link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/2.7.0/build/autocomplete/assets/skins/sam/autocomplete.css" />
 sub addJavascriptCssToHeader {
-  my $baseUrl = 'https://' . $hostfqdn . "/~azurebrd/cgi-bin/forms";
+  # my $baseUrl = 'https://' . $hostfqdn . "/~azurebrd/cgi-bin/forms";
   my $extra_stuff = << "EndOfText";
-<link rel="stylesheet" type="text/css" href="$baseUrl/stylesheets/jex.css" />
-<link rel="stylesheet" type="text/css" href="$baseUrl/stylesheets/yui_edited_autocomplete.css" />
+<link rel="stylesheet" type="text/css" href="${baseUrl}/stylesheets/jex.css" />
+<link rel="stylesheet" type="text/css" href="${baseUrl}/stylesheets/yui_edited_autocomplete.css" />
 <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/yui/2.7.0/fonts/fonts-min.css" />
 <!--
 # <link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/2.7.0/build/fonts/fonts-min.css" />
@@ -1254,7 +1262,7 @@ sub addJavascriptCssToHeader {
 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/yui/2.7.0/datasource/datasource-min.js"></script>
 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/yui/2.7.0/autocomplete/autocomplete-min.js"></script>
 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/yui/2.7.0/json/json-min.js"></script>
-<script type="text/javascript" src="$baseUrl/javascript/strain_request.js"></script>
+<script type="text/javascript" src="${baseUrl}/javascript/strain_request.js"></script>
 <script type="text/JavaScript">
 <!--Your browser is not set to be Javascript enabled
 //-->
