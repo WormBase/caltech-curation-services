@@ -13,7 +13,6 @@ RUN a2enmod headers
 RUN a2enmod rewrite
 RUN a2enmod cgid
 RUN a2enmod ssl
-RUN yes | sendmailconfig
 
 COPY curation/website/apache_conf/apache2.conf /etc/apache2/apache2.conf
 COPY curation/website/apache_conf/000-default.conf /etc/apache2/sites-enabled/000-default.conf
@@ -50,4 +49,6 @@ CMD ["/bin/bash", "-c", "echo \"export CALTECH_CURATION_FILES_INTERNAL_PATH=${CA
                          mkdir -p /usr/caltech_curation_files/pub/wen/simplemine; \
                          mkdir -p /usr/caltech_curation_files/pub/wen/agrSimpleMine; \
                          chmod -R 777 ${CALTECH_CURATION_FILES_INTERNAL_PATH}; \
+                         yes | sendmailconfig; \
+                         echo \" $(ip -4 -br address | awk '{if (NR!=1) print $3}' | cut -d \"/\" -f1) ${HOSTNAME}.localdomain\" >> /etc/hosts; \
                          tail -f /dev/null"]
