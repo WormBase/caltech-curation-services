@@ -39,6 +39,7 @@ ENV SSL_PORT="443"
 CMD ["/bin/bash", "-c", "echo \"export CALTECH_CURATION_FILES_INTERNAL_PATH=${CALTECH_CURATION_FILES_INTERNAL_PATH}\" >> /etc/apache2/envvars; \
                          echo \"export HOST_NAME=${HOST_NAME}\" >> /etc/apache2/envvars; \
                          echo \"export SSL_PORT=${SSL_PORT}\" >> /etc/apache2/envvars; \
+                         echo \"export IP_INSIDE_DOCKER=$(ip -4 -br address | awk '{if (NR!=1) print $3}' | cut -d '/' -f1)\" >> /etc/apache2/envvars; \
                          if [[ \"${SSL_PORT}\" -ne \"443\" ]]; then echo \"Listen ${SSL_PORT}\" > /etc/apache2/additional_listeners.conf; fi; \
                          service apache2 start; \
                          service ssh start; \
