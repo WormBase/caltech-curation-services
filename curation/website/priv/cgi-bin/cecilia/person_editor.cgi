@@ -48,6 +48,9 @@
 # http for .js wasn't working anymore after tazendra move to Chen and back, and possibly because of ssl cert that Valerio wanted.
 # cloudflare links Sybil found weren't working because of a type error or something.  Downloaded needed files and pointed to
 # https://tazendra.caltech.edu/~azurebrd/javascript/yui/2.7.0/  2021 11 16
+#
+# Transferred to dockerized on cervino, added yui/2.7.0/ to repo in pub/stylesheets/ and pub/javascript/ but still uses tazendra
+# in &makePdfLinkFromPath() since those aren't going to cervino.  2023 03 01 
  
 
 
@@ -65,6 +68,7 @@ my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST}
 # my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n"; 
 
 my $baseUrl = $ENV{THIS_HOST} . "priv/cgi-bin/cecilia";
+my $thishost = $ENV{THIS_HOST};
 
 # Use all timestamps to use latest to create  Last_verified  date
 
@@ -800,7 +804,8 @@ sub createPeopleFromXml {
 
     # add link to checkout more papers, also add link to next WBPaper ID
   (my $var, my $paper_joinkey) = &getHtmlVar($query, "paper_joinkey");
-  my $paper_editor_url = "http://tazendra.caltech.edu/~postgres/cgi-bin/paper_editor.cgi?curator_id=$curator_two&action=Search&data_number=$paper_joinkey";
+  my $paper_editor_url = $baseUrl . "paper_editor.cgi?curator_id=$curator_two&action=Search&data_number=$paper_joinkey";
+  # my $paper_editor_url = "http://tazendra.caltech.edu/~postgres/cgi-bin/paper_editor.cgi?curator_id=$curator_two&action=Search&data_number=$paper_joinkey";
   print "Creating persons from authors in WBPaper$paper_joinkey <a target=\"new\" href=\"$paper_editor_url\">paper editor link</a>.<br />\n";
   my $prev_paper_joinkey = $paper_joinkey - 1;
   my $prev_url = "person_editor.cgi?curator_two=$curator_two&paper_id=$prev_paper_joinkey&action=Search+Paper";
@@ -948,7 +953,8 @@ sub displayPaper {
   while (my @row = $result->fetchrow) { $curation_done{$row[0]}++; } $curation_done = join", ", sort keys %curation_done;
   if ($curation_done) { print "<b style=\"color: red;font-size: 14pt\">curation_done : $curation_done</b><br />\n"; }
 
-  my $paper_editor_url = "http://tazendra.caltech.edu/~postgres/cgi-bin/paper_editor.cgi?curator_id=$curator_two&action=Search&data_number=$joinkey";
+  my $paper_editor_url = $baseUrl . "paper_editor.cgi?curator_id=$curator_two&action=Search&data_number=$joinkey";
+  # my $paper_editor_url = "http://tazendra.caltech.edu/~postgres/cgi-bin/paper_editor.cgi?curator_id=$curator_two&action=Search&data_number=$joinkey";
   print "WBPaper$joinkey <a target=\"new\" href=\"$paper_editor_url\">paper editor link</a>.<br />\n";
   my $pmid; my %pg_aid;
   $result = $dbh->prepare( "SELECT * FROM pap_identifier WHERE joinkey = '$joinkey'" );
@@ -1580,15 +1586,16 @@ sub printHtmlHeader {
   my $header = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><HTML><HEAD>';
   $header .= "<title>$title</title>\n";
 
-  $header .= '<link rel="stylesheet" href="https://tazendra.caltech.edu/~azurebrd/stylesheets/jex.css" />';
+  $header .= qq(<link rel="stylesheet" href="${thishost}pub/stylesheets/jex.css" />);
 #   $header .= '<link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/2.7.0/build/fonts/fonts-min.css" />';
 #   $header .= "<link rel=\"stylesheet\" type=\"text/css\" href=\"http://yui.yahooapis.com/2.7.0/build/autocomplete/assets/skins/sam/autocomplete.css\" />";
-  $header .= "<link rel=\"stylesheet\" type=\"text/css\" href=\"https://tazendra.caltech.edu/~azurebrd/javascript/yui/2.7.0/autocomplete.css\" />";
+  $header .= "<link rel=\"stylesheet\" type=\"text/css\" href=\"${thishost}pub/stylesheets/yui/2.7.0/autocomplete.css\" />";
+  # $header .= "<link rel=\"stylesheet\" type=\"text/css\" href=\"https://tazendra.caltech.edu/~azurebrd/javascript/yui/2.7.0/autocomplete.css\" />";
 
 
   $header .= "<style type=\"text/css\">#forcedPersonAutoComplete { width:25em; padding-bottom:2em; } .div-autocomplete { padding-bottom:1.5em; }</style>";
 
-  $header .= '
+  $header .= qq(
     <!-- always needed for yui -->
     <!--<script type="text/javascript" src="http://yui.yahooapis.com/2.7.0/build/yahoo-dom-event/yahoo-dom-event.js"></script>-->
     <script type="text/javascript" src="https://tazendra.caltech.edu/~azurebrd/javascript/yui/2.7.0/yahoo-dom-event.js"></script>
@@ -1597,19 +1604,23 @@ sub printHtmlHeader {
 
     <!-- for autocomplete calls -->
     <!--<script type="text/javascript" src="http://yui.yahooapis.com/2.7.0/build/datasource/datasource-min.js"></script>-->
-    <script type="text/javascript" src="https://tazendra.caltech.edu/~azurebrd/javascript/yui/2.7.0/datasource-min.js"></script>
+    <!--<script type="text/javascript" src="https://tazendra.caltech.edu/~azurebrd/javascript/yui/2.7.0/datasource-min.js"></script>-->
+    <script type="text/javascript" src="${thishost}pub/javascript/yui/2.7.0/datasource-min.js"></script>
 
     <!-- OPTIONAL: Connection Manager (enables XHR for DataSource)	needed for Connect.asyncRequest -->
     <!--<script type="text/javascript" src="http://yui.yahooapis.com/2.7.0/build/connection/connection-min.js"></script> -->
-    <script type="text/javascript" src="https://tazendra.caltech.edu/~azurebrd/javascript/yui/2.7.0/connection-min.js"></script> 
+    <!--<script type="text/javascript" src="https://tazendra.caltech.edu/~azurebrd/javascript/yui/2.7.0/connection-min.js"></script> -->
+    <script type="text/javascript" src="${thishost}pub/javascript/yui/2.7.0/connection-min.js"></script> 
 
     <!-- Drag and Drop source file --> 
     <!--<script src="http://yui.yahooapis.com/2.7.0/build/dragdrop/dragdrop-min.js" ></script>-->
-    <script src="https://tazendra.caltech.edu/~azurebrd/javascript/yui/2.7.0/dragdrop-min.js" ></script>
+    <!--<script src="https://tazendra.caltech.edu/~azurebrd/javascript/yui/2.7.0/dragdrop-min.js" ></script>-->
+    <script src="${thishost}pub/javascript/yui/2.7.0/dragdrop-min.js" ></script>
 
     <!-- At least needed for drag and drop easing -->
     <!--<script type="text/javascript" src="http://yui.yahooapis.com/2.7.0/build/animation/animation-min.js"></script>-->
-    <script type="text/javascript" src="https://tazendra.caltech.edu/~azurebrd/javascript/yui/2.7.0/animation-min.js"></script>
+    <!--<script type="text/javascript" src="https://tazendra.caltech.edu/~azurebrd/javascript/yui/2.7.0/animation-min.js"></script>-->
+    <script type="text/javascript" src="${thishost}pub/javascript/yui/2.7.0/animation-min.js"></script>
 
 
     <!-- OPTIONAL: JSON Utility (for DataSource) -->
@@ -1632,7 +1643,8 @@ sub printHtmlHeader {
 
     <!-- autocomplete js -->
     <!--<script type="text/javascript" src="http://yui.yahooapis.com/2.7.0/build/autocomplete/autocomplete-min.js"></script>-->
-    <script type="text/javascript" src="https://tazendra.caltech.edu/~azurebrd/javascript/yui/2.7.0/autocomplete-min.js"></script>
+    <!--<script type="text/javascript" src="https://tazendra.caltech.edu/~azurebrd/javascript/yui/2.7.0/autocomplete-min.js"></script>-->
+    <script type="text/javascript" src="${thishost}pub/javascript/yui/2.7.0/autocomplete-min.js"></script>
 
     <!-- container_core js -->
     <!--<script type="text/javascript" src="http://yui.yahooapis.com/2.7.0/build/container/container-min.js"></script>-->
@@ -1640,7 +1652,7 @@ sub printHtmlHeader {
     <!-- form-specific js put this last, since it depends on YUI above -->
     <script type="text/javascript" src="../javascript/person_editor.js"></script>
 
-  ';
+  );
   $header .= "</head>";
   $header .= '<body class="yui-skin-sam">';
   print $header;
