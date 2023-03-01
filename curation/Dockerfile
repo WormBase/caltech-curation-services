@@ -49,6 +49,6 @@ CMD ["/bin/bash", "-c", "echo \"export CALTECH_CURATION_FILES_INTERNAL_PATH=${CA
                          mkdir -p /usr/caltech_curation_files/pub/wen/simplemine; \
                          mkdir -p /usr/caltech_curation_files/pub/wen/agrSimpleMine; \
                          chmod -R 777 ${CALTECH_CURATION_FILES_INTERNAL_PATH}; \
-                         echo \"$(ip -4 -br address | awk '{if (NR!=1) print $3}' | cut -d '/' -f1) ${HOSTNAME} ${HOSTNAME}.localdomain\" >> /etc/hosts; \
+                         echo \"$(ip -4 -br address | awk '{if (NR!=1) print $3}' | cut -d '/' -f1) ${HOSTNAME} ${HOST_NAME}\" >> /etc/hosts; \
                          yes | sendmailconfig; \
                          tail -f /dev/null"]
