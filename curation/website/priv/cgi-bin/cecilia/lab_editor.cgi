@@ -28,6 +28,9 @@ use Dotenv -load => '/usr/lib/.env';
 my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST};port=$ENV{PSQL_PORT}", "$ENV{PSQL_USERNAME}", "$ENV{PSQL_PASSWORD}") or die "Cannot connect to database!\n";
 my $result;
 
+my $baseUrl = $ENV{THIS_HOST} . "priv/cgi-bin/cecilia";
+my $thishost = $ENV{THIS_HOST};
+
 my $query = new CGI;
 
 my $frontpage = 1;
@@ -487,7 +490,8 @@ sub printHtmlHeader {
   my $header = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><HTML><HEAD>';
   $header .= "<title>$title</title>\n";
 
-  $header .= '<link rel="stylesheet" href="https://tazendra.caltech.edu/~azurebrd/stylesheets/jex.css" />';
+  $header .= qq(<link rel="stylesheet" href="${thishost}pub/stylesheets/jex.css" />);
+  # $header .= '<link rel="stylesheet" href="https://tazendra.caltech.edu/~azurebrd/stylesheets/jex.css" />';
 #   $header .= '<link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/2.7.0/build/fonts/fonts-min.css" />';
 #   $header .= "<link rel=\"stylesheet\" type=\"text/css\" href=\"http://yui.yahooapis.com/2.7.0/build/autocomplete/assets/skins/sam/autocomplete.css\" />";
 #   $header .= "<link rel=\"stylesheet\" type=\"text/css\" href=\"https://tazendra.caltech.edu/~azurebrd/javascript/yui/2.7.0/autocomplete.css\" />";

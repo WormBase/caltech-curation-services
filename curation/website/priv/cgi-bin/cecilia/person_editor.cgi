@@ -1598,7 +1598,8 @@ sub printHtmlHeader {
   $header .= qq(
     <!-- always needed for yui -->
     <!--<script type="text/javascript" src="http://yui.yahooapis.com/2.7.0/build/yahoo-dom-event/yahoo-dom-event.js"></script>-->
-    <script type="text/javascript" src="https://tazendra.caltech.edu/~azurebrd/javascript/yui/2.7.0/yahoo-dom-event.js"></script>
+    <!--<script type="text/javascript" src="https://tazendra.caltech.edu/~azurebrd/javascript/yui/2.7.0/yahoo-dom-event.js"></script>-->
+    <script type="text/javascript" src="${thishost}pub/javascript/yui/2.7.0/yahoo-dom-event.js"></script>
 
     <!--<script type="text/javascript" src="http://yui.yahooapis.com/2.7.0/build/element/element-min.js"></script>-->
 
