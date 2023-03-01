@@ -1599,29 +1599,34 @@ sub printHtmlHeader {
     <!-- always needed for yui -->
     <!--<script type="text/javascript" src="http://yui.yahooapis.com/2.7.0/build/yahoo-dom-event/yahoo-dom-event.js"></script>-->
     <!--<script type="text/javascript" src="https://tazendra.caltech.edu/~azurebrd/javascript/yui/2.7.0/yahoo-dom-event.js"></script>-->
-    <script type="text/javascript" src="${thishost}pub/javascript/yui/2.7.0/yahoo-dom-event.js"></script>
+    <!--<script type="text/javascript" src="${thishost}pub/javascript/yui/2.7.0/yahoo-dom-event.js"></script>-->
+    <script type="text/javascript" src="../javascript/yui/2.7.0/yahoo-dom-event.js"></script>
 
     <!--<script type="text/javascript" src="http://yui.yahooapis.com/2.7.0/build/element/element-min.js"></script>-->
 
     <!-- for autocomplete calls -->
     <!--<script type="text/javascript" src="http://yui.yahooapis.com/2.7.0/build/datasource/datasource-min.js"></script>-->
     <!--<script type="text/javascript" src="https://tazendra.caltech.edu/~azurebrd/javascript/yui/2.7.0/datasource-min.js"></script>-->
-    <script type="text/javascript" src="${thishost}pub/javascript/yui/2.7.0/datasource-min.js"></script>
+    <!--<script type="text/javascript" src="${thishost}pub/javascript/yui/2.7.0/datasource-min.js"></script>-->
+    <script type="text/javascript" src="../javascript/yui/2.7.0/datasource-min.js"></script>
 
     <!-- OPTIONAL: Connection Manager (enables XHR for DataSource)	needed for Connect.asyncRequest -->
     <!--<script type="text/javascript" src="http://yui.yahooapis.com/2.7.0/build/connection/connection-min.js"></script> -->
     <!--<script type="text/javascript" src="https://tazendra.caltech.edu/~azurebrd/javascript/yui/2.7.0/connection-min.js"></script> -->
-    <script type="text/javascript" src="${thishost}pub/javascript/yui/2.7.0/connection-min.js"></script> 
+    <!--<script type="text/javascript" src="${thishost}pub/javascript/yui/2.7.0/connection-min.js"></script> -->
+    <script type="text/javascript" src="../javascript/yui/2.7.0/connection-min.js"></script>
 
     <!-- Drag and Drop source file --> 
     <!--<script src="http://yui.yahooapis.com/2.7.0/build/dragdrop/dragdrop-min.js" ></script>-->
     <!--<script src="https://tazendra.caltech.edu/~azurebrd/javascript/yui/2.7.0/dragdrop-min.js" ></script>-->
-    <script src="${thishost}pub/javascript/yui/2.7.0/dragdrop-min.js" ></script>
+    <!--<script src="${thishost}pub/javascript/yui/2.7.0/dragdrop-min.js" ></script>-->
+    <script type="text/javascript" src="../javascript/yui/2.7.0/dragdrop-min.js"></script>
 
     <!-- At least needed for drag and drop easing -->
     <!--<script type="text/javascript" src="http://yui.yahooapis.com/2.7.0/build/animation/animation-min.js"></script>-->
     <!--<script type="text/javascript" src="https://tazendra.caltech.edu/~azurebrd/javascript/yui/2.7.0/animation-min.js"></script>-->
-    <script type="text/javascript" src="${thishost}pub/javascript/yui/2.7.0/animation-min.js"></script>
+    <!--<script type="text/javascript" src="${thishost}pub/javascript/yui/2.7.0/animation-min.js"></script>-->
+    <script type="text/javascript" src="../javascript/yui/2.7.0/animation-min.js"></script>
 
 
     <!-- OPTIONAL: JSON Utility (for DataSource) -->
@@ -1645,7 +1650,8 @@ sub printHtmlHeader {
     <!-- autocomplete js -->
     <!--<script type="text/javascript" src="http://yui.yahooapis.com/2.7.0/build/autocomplete/autocomplete-min.js"></script>-->
     <!--<script type="text/javascript" src="https://tazendra.caltech.edu/~azurebrd/javascript/yui/2.7.0/autocomplete-min.js"></script>-->
-    <script type="text/javascript" src="${thishost}pub/javascript/yui/2.7.0/autocomplete-min.js"></script>
+    <!--<script type="text/javascript" src="${thishost}pub/javascript/yui/2.7.0/autocomplete-min.js"></script>-->
+    <script type="text/javascript" src="../javascript/yui/2.7.0/autocomplete-min.js"></script>
 
     <!-- container_core js -->
     <!--<script type="text/javascript" src="http://yui.yahooapis.com/2.7.0/build/container/container-min.js"></script>-->
