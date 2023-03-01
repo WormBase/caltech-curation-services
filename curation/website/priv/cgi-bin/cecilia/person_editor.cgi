@@ -57,8 +57,8 @@ use Jex;		# &getPgDate; &getSimpleDate;
 use DBI;
 use Tie::IxHash;
 use Math::SigFigs;                              # significant figures $new = FormatSigFigs($n, $d);
-# use GD::Graph::lines;	# generate statistics graphs
-use GD::Graph::area;	# generate statistics graphs
+# # use GD::Graph::lines;	# generate statistics graphs
+# use GD::Graph::area;	# generate statistics graphs	# can't install on dockerized 2023 02 27 okay to remove with Paul S and Raymond
 use Dotenv -load => '/usr/lib/.env';
 
 my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST};port=$ENV{PSQL_PORT}", "$ENV{PSQL_USERNAME}", "$ENV{PSQL_PASSWORD}") or die "Cannot connect to database!\n";
@@ -141,7 +141,7 @@ sub display {
   elsif ($action eq 'Person Statistics') { &personStatistics(); }
   elsif ($action eq 'Address by Twos') { &addressByTwos(); }
   elsif ($action eq 'Display Address by Twos') { &displayAddressByTwos(); }
-  elsif ($action eq 'generatePng') { &generatePng(); }
+  # elsif ($action eq 'generatePng') { &generatePng(); } # Can't get GD::Graph on dockerized 2023 02 27
 } # sub display
 
 sub autocompleteXHR {
@@ -1349,50 +1349,53 @@ sub personStatistics {
 #   print qq(<img src="data/person_editor_valid.png"><br/>\n);
 #   print qq(<img src="data/person_editor_totalvalid.png"><br/>\n);
 
-  my $xdata = join"|", @vmonths;
-  my $ydata = join"|", @valid;
-  my $xlabel = 'Year-Month';
-  my $ylabel = 'Valid Persons created';
-  my $title   = 'Valid Persons created in each Year-Month';
-  my $graph_valid = qq(<img src="person_editor.cgi?action=generatePng&xdata=$xdata&ydata=$ydata&xlabel=$xlabel&ylabel=$ylabel&title=$title"><br/>\n);
-
-  $xdata = join"|", @tmonths;
-  $ydata = join"|", @totalvalid;
-  $xlabel = 'Year-Month';
-  $ylabel = 'Total Valid Persons';
-  $title   = 'Total Valid Persons in each Year-Month';
-  my $graph_totalvalid = qq(<img src="person_editor.cgi?action=generatePng&xdata=$xdata&ydata=$ydata&xlabel=$xlabel&ylabel=$ylabel&title=$title"><br/>\n);
+# Can't get GD::Graph on dockerized 2023 02 27
+#   my $xdata = join"|", @vmonths;
+#   my $ydata = join"|", @valid;
+#   my $xlabel = 'Year-Month';
+#   my $ylabel = 'Valid Persons created';
+#   my $title   = 'Valid Persons created in each Year-Month';
+#   my $graph_valid = qq(<img src="person_editor.cgi?action=generatePng&xdata=$xdata&ydata=$ydata&xlabel=$xlabel&ylabel=$ylabel&title=$title"><br/>\n);
+# 
+#   $xdata = join"|", @tmonths;
+#   $ydata = join"|", @totalvalid;
+#   $xlabel = 'Year-Month';
+#   $ylabel = 'Total Valid Persons';
+#   $title   = 'Total Valid Persons in each Year-Month';
+#   my $graph_totalvalid = qq(<img src="person_editor.cgi?action=generatePng&xdata=$xdata&ydata=$ydata&xlabel=$xlabel&ylabel=$ylabel&title=$title"><br/>\n);
 
   pop @valid;	# get rid of the current month, which is not yet finished
   my $totalvalidforavg = 0; foreach my $v (@valid) { $totalvalidforavg += $v; } 	# add up all months minus the most recent month
   my $avgvalidcreated = FormatSigFigs($totalvalidforavg / scalar(@valid), 5);		# divide by the number of months added together, and round to 5 sig figs
   print "<br/>$avgvalidcreated Average Valid Created per Month (except for first month and most recent month)<br/><br/>\n";
 
-  print $graph_valid;
-  print $graph_totalvalid;
+# Can't get GD::Graph on dockerized 2023 02 27
+#   print $graph_valid;
+#   print $graph_totalvalid;
 
 } # sub personStatistics
 
-sub generatePng {
-  (my $oop, my $xdata)  = &getHtmlVar($query, 'xdata' );
-  ($oop, my $ydata)  = &getHtmlVar($query, 'ydata' );
-  ($oop, my $xlabel) = &getHtmlVar($query, 'xlabel');
-  ($oop, my $ylabel) = &getHtmlVar($query, 'ylabel');
-  ($oop, my $title)  = &getHtmlVar($query, 'title' );
-  my @xdata = split/\|/, $xdata;
-  my @ydata = split/\|/, $ydata;
-  my @data = (\@xdata, \@ydata);
-  my $xsize = scalar(@xdata) * 50;
-  my $mygraph = GD::Graph::area->new($xsize, 300);
-  $mygraph->set(
-    x_label     => $xlabel,
-    y_label     => $ylabel,
-    title       => $title,
-  ) or warn $mygraph->error;
-  my $myimage = $mygraph->plot(\@data) or warn $mygraph->error;
-  print "Content-type: image/png\n\n";
-  print $myimage->png;
-} # sub generatePng
+# Can't get GD::Graph on dockerized 2023 02 27
+# sub generatePng {
+#   (my $oop, my $xdata)  = &getHtmlVar($query, 'xdata' );
+#   ($oop, my $ydata)  = &getHtmlVar($query, 'ydata' );
+#   ($oop, my $xlabel) = &getHtmlVar($query, 'xlabel');
+#   ($oop, my $ylabel) = &getHtmlVar($query, 'ylabel');
+#   ($oop, my $title)  = &getHtmlVar($query, 'title' );
+#   my @xdata = split/\|/, $xdata;
+#   my @ydata = split/\|/, $ydata;
+#   my @data = (\@xdata, \@ydata);
+#   my $xsize = scalar(@xdata) * 50;
+#   my $mygraph = GD::Graph::area->new($xsize, 300);
+#   $mygraph->set(
+#     x_label     => $xlabel,
+#     y_label     => $ylabel,
+#     title       => $title,
+#   ) or warn $mygraph->error;
+#   my $myimage = $mygraph->plot(\@data) or warn $mygraph->error;
+#   print "Content-type: image/png\n\n";
+#   print $myimage->png;
+# } # sub generatePng
 
 ### End Person Statistics Section ###
 
