@@ -91,10 +91,12 @@
 # when coming from action Display with wbperson id.  2020 06 10
 #
 # updated getPgHash() to skip invalid persons into aka_hash.  For Cecilia and Kimberly.  2022 01 06
+#
+# removing acefile in dockerized, Cecilia doesn't use it.  2023 03 01
 
 
-my $acefile = "/home/azurebrd/public_html/cgi-bin/data/person_lineage.ace";
-
+# removing acefile in dockerized, Cecilia doesn't use it.  2023 03 01
+# my $acefile = "/home/azurebrd/public_html/cgi-bin/data/person_lineage.ace";
 
 # use LWP::Simple;
 # use Mail::Mailer;
@@ -180,7 +182,8 @@ sub process {			# see if anything clicked
       if ($action eq 'Submit') {
         my $result;				# general pg stuff
         my $joinkey;				# the joinkey for pg
-        open (OUT, ">>$acefile") or die "Cannot create $acefile : $!";
+        # removing acefile in dockerized, Cecilia doesn't use it.  2023 03 01
+        # open (OUT, ">>$acefile") or die "Cannot create $acefile : $!";
         my $host = $query->remote_host();		# get ip address
         my $body .= "$sender from ip $host sends :\n\n";
   
@@ -268,8 +271,8 @@ sub process {			# see if anything clicked
 
           my $full_body = "Thank you very much for updating your lineage of C. elegans biologist and other nematologist.\n\nUpdates will appear in the next release of WormBase in your WBPerson page. The full release schedule is available here:\n\nhttps://www.wormbase.org/about/release_schedule#0--10\n\nYou will be contacted if there are any conflicts, or if people from your lineage have not been assigned a WBPerson ID.\n\nPlease do not hesitate to contact me if you have any questions.\n\nHave a great day,\n\nCecilia\n";
           $full_body .= "\n\n" . $body . "\n" . $ace_body;
-          print OUT "$ace_body\n";			# print to outfile
-          close (OUT) or die "cannot close $acefile : $!";
+          # print OUT "$ace_body\n";			# print to outfile
+          # close (OUT) or die "cannot close $acefile : $!";
           $email .= ", $sender";
           $full_body =~ s/<span style="color:brown">//g;
           $full_body =~ s/<\/span//g;
