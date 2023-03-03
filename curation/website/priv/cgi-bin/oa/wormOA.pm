@@ -4317,7 +4317,7 @@ sub getAnyTransgeneAutocomplete {			# autocomplete on OA config that has multipl
   $result = $dbh->prepare( "SELECT trp_publicname.trp_publicname, ${table}.${table} FROM $table, trp_publicname WHERE trp_publicname.joinkey = ${table}.joinkey AND LOWER(${table}.${table}) ~ '$words' AND LOWER(${table}.${table}) !~ '^$words' ORDER BY ${table}.${table};" );
   $result->execute();
   while ( (my @row = $result->fetchrow()) && (scalar keys %matches < $max_results) ) { $matches{"$row[0] ( $row[1] ) "}++; }
-  my $result = $dbh->prepare( "SELECT * FROM $table WHERE LOWER($table) ~ '^$words' AND joinkey NOT IN (SELECT joinkey FROM trp_publicname) ORDER BY $table;" );
+  $result = $dbh->prepare( "SELECT * FROM $table WHERE LOWER($table) ~ '^$words' AND joinkey NOT IN (SELECT joinkey FROM trp_publicname) ORDER BY $table;" );
   $result->execute();
   while ( (my @row = $result->fetchrow()) && (scalar keys %matches < $max_results) ) { $matches{"$row[1] ( $row[1] ) "}++; }
   $result = $dbh->prepare( "SELECT * FROM $table WHERE LOWER($table) ~ '$words' AND LOWER($table) !~ '^$words' AND joinkey NOT IN (SELECT joinkey FROM trp_publicname) ORDER BY $table;" );
