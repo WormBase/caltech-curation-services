@@ -173,11 +173,14 @@ sub submit {
   print qq(<a href="http://www.wormbase.org/about/release_schedule#01--10">http://www.wormbase.org/about/release_schedule#01--10</a><br/>\n);
   print "$tableSent</table><br/>\n";
   print "$tableDiff</table>";
-  my $user = shift @emails;
+  my $user = 'person_form@' . $ENV{HOST_NAME};       # who sends mail
   my $email = 'cecnak@wormbase.org';
 #   my $email = 'cecilia@tazendra.caltech.edu';
 #   my $email = 'azurebrd@tazendra.caltech.edu';
-  if ($user) { $email .= ', ' . $user; } else { $user = 'no_email'; }
+  # my $user = shift @emails;
+  # if ($user) { $email .= ', ' . $user; } else { $user = 'no_email'; }
+  my $sender_email = shift @emails;
+  if ($sender_email) { $email .= ', ' . $sender_email; }
   my $subject = 'Update From Person Form';
   my $host = $query->remote_host();     # get ip address
   my $body = "From IP $host sends :\n\n";
