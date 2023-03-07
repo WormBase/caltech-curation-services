@@ -98,6 +98,8 @@ my $ua = new LWP::UserAgent;
 my $query = new CGI;
 my $host = $query->remote_host();		# get ip address
 
+my $filesPath = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/pub/cgi-bin/generic_cgi/';
+
 &process();                     # see if anything clicked
 
 sub process {                   # see if anything clicked
@@ -107,8 +109,8 @@ sub process {                   # see if anything clicked
   if ($action eq 'PapIdToWBPaper') {              &papIdToWBPaper(); }
 #   elsif ($action eq 'VerifyPaper') {               &verifyPaper(); }		# removed for Cecilia 2023 02 24
 #   elsif ($action eq 'ShowAntibodyData') {          &showAntibodyData(); }	# removed 2021 01 28
-  elsif ($action eq 'UpdateVariationObo') {        &updateVariationObo(); }
-  elsif ($action eq 'AddToVariationObo') {         &addToVariationObo(); }
+#   elsif ($action eq 'UpdateVariationObo') {        &updateVariationObo(); }	# obsolete before dockerizing 2023 03 06
+#   elsif ($action eq 'AddToVariationObo') {         &addToVariationObo(); }	# obsolete before dockerizing 2023 03 06
   elsif ($action eq 'TempVariationObo') {          &tempVariationObo(); }
   elsif ($action eq 'TempStrainObo') {             &tempStrainObo(); }
   elsif ($action eq 'AddTempObjectObo') {          &addTempObjectObo(); }
@@ -714,7 +716,8 @@ sub tempObjectObo {
   my $title = "Add new temporary $datatype to obo_ tables and flatfile";
   my ($header, $footer) = &cshlNew($title);
   print "$header\n";		# make beginning of HTML page
-  my $obotempfile = '/home/azurebrd/public_html/cgi-bin/data/obo_tempfile_' . $datatype;
+  my $obotempfile = $filesPath . 'obo_tempfile_' . $datatype;
+  # my $obotempfile = '/home/azurebrd/public_html/cgi-bin/data/obo_tempfile_' . $datatype;
   unless (-e $obotempfile) { print "ERROR no obo_tempfile_$datatype to write to at $obotempfile<br/>"; print $footer; return; }
   &printTempObjectForm($datatype);
 #   my $action;                   # what user clicked
@@ -729,7 +732,9 @@ sub addTempObjectObo {
   my $title = "Add new temporary $datatype to obo_ tables and flatfile";
   my ($header, $footer) = &cshlNew($title);
   print "$header\n";		# make beginning of HTML page
-  my $obotempfile = '/home/azurebrd/public_html/cgi-bin/data/obo_tempfile_' . $datatype;
+  my $obotempfile = $filesPath . 'obo_tempfile_' . $datatype;
+  # my $obotempfile = '/home/azurebrd/public_html/cgi-bin/data/obo_tempfile_' . $datatype;
+
   unless (-e $obotempfile) { print "ERROR no obo_tempfile_$datatype to write to at $obotempfile<br/>"; print $footer; return; }
   my $error_message = '';
   ($var, my $objectidnamebatch)   = &getHtmlVar($query, 'objectidnamebatch');
