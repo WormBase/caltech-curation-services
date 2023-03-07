@@ -19,7 +19,7 @@ print "START $date -> Estimate $hour:$min:$sec\n";
 
 $date = &getSimpleDate();
 
-use lib qw( /usr/lib/scripts/movie/ );
+use lib qw( /usr/lib/scripts/citace_upload/movie/ );
 # use lib qw( /home/postgres/work/citace_upload/movie/ );
 # use get_allele_phenotype_ace;
 use get_movie_ace;

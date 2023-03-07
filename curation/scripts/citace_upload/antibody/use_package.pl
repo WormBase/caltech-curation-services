@@ -19,7 +19,7 @@ print "START $date -> Estimate $hour:$min:$sec\n";
 
 $date = &getSimpleDate();
 
-use lib qw( /usr/lib/scripts/antibody/ );
+use lib qw( /usr/lib/scripts/citace_upload/antibody/ );
 # use lib qw( /home/postgres/work/citace_upload/antibody/ );
 # use get_allele_phenotype_ace;
 use get_antibody_ace;

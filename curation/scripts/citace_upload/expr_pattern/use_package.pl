@@ -18,7 +18,7 @@ print "START $date -> Estimate $hour:$min:$sec\n";
 
 $date = &getSimpleDate();
 
-use lib qw( /usr/lib/scripts/expr_pattern/ );
+use lib qw( /usr/lib/scripts/citace_upload/expr_pattern/ );
 # use lib qw( /home/postgres/work/citace_upload/expr_pattern );
 use get_expr_pattern_ace;
 
