@@ -99,6 +99,10 @@ services:
     build:
       context: acedb
       dockerfile: Dockerfile
+      args:
+        CALTECH_CURATION_FILES_INTERNAL_PATH: "${CALTECH_CURATION_FILES_INTERNAL_PATH}"
+    volumes:
+      - "${CALTECH_CURATION_FILES_EXTERNAL_PATH}:${CALTECH_CURATION_FILES_INTERNAL_PATH}"
 
 networks:
   caltech-curation-network:
