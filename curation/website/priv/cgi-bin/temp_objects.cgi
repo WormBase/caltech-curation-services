@@ -30,7 +30,7 @@ use Dotenv -load => '/usr/lib/.env';
 use Sys::Hostname;
 my $host = hostname();
 
-
+my $filesPath = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/pub/cgi-bin/generic_cgi/';
 
 my $query = new CGI;	# new CGI form
 # my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n";
@@ -179,7 +179,8 @@ sub addTempObjectObo {
   $result = $dbh->do( "INSERT INTO obo_name_$datatype VALUES('$objId', '$objName');" );
   $result = $dbh->do( "INSERT INTO obo_data_$datatype VALUES('$objId', '$terminfo');" );
   print "Added $pgDate $objId $objName to obo_name_$datatype and obo_data_$datatype<br/>\n";
-  my $obotempfile = '/home/azurebrd/public_html/cgi-bin/data/obo_tempfile_' . $datatype;
+  my $obotempfile = $filesPath . 'obo_tempfile_' . $datatype;
+  # my $obotempfile = '/home/azurebrd/public_html/cgi-bin/data/obo_tempfile_' . $datatype;
   unless (-e $obotempfile) { print "ERROR no obo_tempfile_$datatype to write to at $obotempfile . Contact Juancarlos because $objName + $objId got created in the names service, but it's not in tempfile to update postgres<br/>"; return; }
   open (OUT, ">>$obotempfile") or die "Cannot append to $obotempfile : $!";
   print OUT qq($objId\t$objName\t$pgDate\t$comment\n);
