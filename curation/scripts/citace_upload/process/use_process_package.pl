@@ -1,10 +1,7 @@
 #!/usr/bin/env perl
 
-# use the get_movie_ace.pm module from /home/postgres/work/citace_upload/movie/ 
-# to dump the movie objects.  2012 10 15
-#
-# added database for Daniela.  2013 10 10
-
+# use the get_process_ace.pm module from /home/postgres/work/citace_upload/process/ 
+# to dump the process terms.  2012 07 17
 
 
 use strict;
@@ -19,22 +16,28 @@ print "START $date -> Estimate $hour:$min:$sec\n";
 
 $date = &getSimpleDate();
 
-use lib qw( /usr/lib/scripts/movie/ );
-# use lib qw( /home/postgres/work/citace_upload/movie/ );
+use lib qw( /usr/lib/scripts/citace_upload/process/ );
+# use lib qw( /home/postgres/work/citace_upload/process/ );
 # use get_allele_phenotype_ace;
-use get_movie_ace;
+use get_process_ace;
 
-my $outfile = 'movie.ace.' . $date;
+my $outfile = 'process.ace.' . $date;
 # my $molfile = 'mol_phene.ace.' . $date;
 # my $outlong = 'abstracts.ace.' . $date;
-my $errfile = 'err_movie.out.' . $date;
+my $errfile = 'err_process.out.' . $date;
 open (OUT, ">$outfile") or die "Cannot create $outfile : $!\n";
 # open (MOL, ">$molfile") or die "Cannot create $molfile : $!\n";
 # open (LON, ">$outlong") or die "Cannot create $outlong : $!\n";
 open (ERR, ">$errfile") or die "Cannot create $errfile : $!\n";
 
-my ($all_entry, $err_text) = &getMovie('all');
-# my ($all_entry, $err_text) = &getMovie('WBMovie0000000001');
+
+# my ($all_entry, $long_text, $err_text) = &getPaper('00000003');
+# my ($all_entry, $long_text, $err_text) = &getPaper('valid');
+# my ($all_entry, $mol_entry, $err_text) = &getAllelePhenotype('all');
+my ($all_entry, $err_text) = &getProcess('all');
+
+# my ($all_entry, $long_text, $err_text) = &getAllelePhenotype('bx123');
+# my ($all_entry, $long_text, $err_text) = &getAllelePhenotype('tm1821');
 
 print OUT "$all_entry\n";
 # print MOL "$mol_entry\n";

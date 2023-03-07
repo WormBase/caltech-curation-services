@@ -1,11 +1,10 @@
 #!/usr/bin/env perl
 
-# use the get_antibody_ace.pm module from /home/postgres/work/citace_upload/antibody/ 
+# use the get_paper_ace.pm module from /home/postgres/work/citace_upload/papers/ 
 # to dump the papers, abstracts (LongText objects), and errors associated with
-# them.  2012 05 31
+# them.  2005 07 13
 #
-# Transferred to dockerized.  2023 03 01
-
+# Change to default get all papers, not just valid ones.  2005 11 10
 
 use strict;
 use Jex;
@@ -19,24 +18,29 @@ print "START $date -> Estimate $hour:$min:$sec\n";
 
 $date = &getSimpleDate();
 
-use lib qw( /usr/lib/scripts/antibody/ );
-# use lib qw( /home/postgres/work/citace_upload/antibody/ );
-# use get_allele_phenotype_ace;
-use get_antibody_ace;
+use lib qw( /usr/lib/scripts/citace_upload/expr_pattern/ );
+# use lib qw( /home/postgres/work/citace_upload/expr_pattern );
+use get_expr_pattern_ace;
 
-my $outfile = 'antibody.ace.' . $date;
+my $outfile = 'expr_pattern.ace.' . $date;
 my $errfile = 'err.out.' . $date;
 
 open (OUT, ">$outfile") or die "Cannot create $outfile : $!\n";
 open (ERR, ">$errfile") or die "Cannot create $errfile : $!\n";
 
 
-my ($all_entry, $err_text) = &getAntibody('all');
+my ($all_entry, $err_text) = &getExprPattern('all');
+# my ($all_entry, $err_text) = &getExprPattern('Expr10041');
+# my ($all_entry, $err_text) = &getExprPattern('Expr12629');
 
-# my ($all_entry, $err_text) = &getAntibody('[cgc512]:MSP');
+# my ($all_entry, $err_text) = &getExprPattern('Expr14990');
+# my ($all_entry, $err_text) = &getExprPattern('Expr11505');
+# my ($all_entry, $err_text) = &getExprPattern('Expr631');
+# my ($all_entry, $err_text) = &getExprPattern('Expr1041');
+# my ($all_entry, $err_text) = &getExprPattern('Expr1087');
 
 print OUT "$all_entry\n";
-if ($err_text) { print ERR "$err_text"; }
+if ($err_text) { print ERR "$err_text\n"; }
 
 close (OUT) or die "Cannot close $outfile : $!";
 close (ERR) or die "Cannot close $errfile : $!";
