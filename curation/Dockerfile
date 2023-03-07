@@ -3,16 +3,20 @@ ARG SSH_ACEDB_PASSWORD=""
 ARG CALTECH_CURATION_FILES_INTERNAL_PATH=/usr/caltech_curation_files
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
-RUN apt-get install -y apache2 vim openssh-server makepasswd zsh sendmail
+RUN apt-get install -y apache2 vim openssh-server makepasswd zsh sendmail cron
 ENV TZ="America/Los_Angeles"
-RUN useradd -rm -d /home/acedb -s /bin/bash -p $(echo "${SSH_ACEDB_PASSWORD}" | makepasswd --crypt-md5 --clearfrom - | awk '{print $2}') acedb
 RUN mkdir -p ${CALTECH_CURATION_FILES_INTERNAL_PATH}
 RUN chmod -R 777 ${CALTECH_CURATION_FILES_INTERNAL_PATH}
-RUN cpanm install DBI Bundle::CPAN Mail::Mailer MIME::Lite Tie::IxHash JSON LWP::Protocol::https LWP Math::SigFigs Email::Send::Gmail Text::CSV_XS Dotenv CGI DBD::Pg Mail::Sendmail
+RUN useradd -rm -d ${CALTECH_CURATION_FILES_INTERNAL_PATH} -s /bin/bash -p $(echo "${SSH_ACEDB_PASSWORD}" | makepasswd --crypt-md5 --clearfrom - | awk '{print $2}') acedb
+RUN cpanm install --force DBI Bundle::CPAN Mail::Mailer MIME::Lite Tie::IxHash JSON LWP::Protocol::https LWP Math::SigFigs Email::Send::Gmail Text::CSV_XS Dotenv CGI DBD::Pg Mail::Sendmail
 RUN a2enmod headers
 RUN a2enmod rewrite
 RUN a2enmod cgid
 RUN a2enmod ssl
+
+ADD curation/crontab /etc/cron.d/curation_crontab
+RUN chmod 0644 /etc/cron.d/curation_crontab
+RUN crontab /etc/cron.d/curation_crontab
 
 COPY curation/website/apache_conf/apache2.conf /etc/apache2/apache2.conf
 COPY curation/website/apache_conf/000-default.conf /etc/apache2/sites-enabled/000-default.conf
@@ -20,6 +24,7 @@ COPY curation/website/apache_conf/000-default-le-ssl.conf /etc/apache2/sites-ena
 COPY curation/website/apache_conf/options-ssl-apache.conf /etc/apache2/options-ssl-apache.conf
 COPY curation/website/apache_conf/httpd.conf /etc/apache2/httpd.conf
 COPY curation/scripts/perl_modules/Jex.pm /usr/local/lib/perl5/5.18.4/Jex.pm
+COPY curation/container_startup_setup.sh .
 RUN touch /etc/apache2/additional_listeners.conf
 RUN chown -R www-data:www-data /usr/lib/cgi-bin/
 RUN find /usr/lib/cgi-bin/ \( -name "*.cgi" -o -name "*.pl" \) -exec chmod +x {} \;
@@ -36,20 +41,4 @@ EXPOSE 22
 ENV CALTECH_CURATION_FILES_INTERNAL_PATH ""
 ENV HOST_NAME=""
 ENV SSL_PORT="443"
-CMD ["/bin/bash", "-c", "echo \"export CALTECH_CURATION_FILES_INTERNAL_PATH=${CALTECH_CURATION_FILES_INTERNAL_PATH}\" >> /etc/apache2/envvars; \
-                         echo \"export HOST_NAME=${HOST_NAME}\" >> /etc/apache2/envvars; \
-                         echo \"export SSL_PORT=${SSL_PORT}\" >> /etc/apache2/envvars; \
-                         echo \"export IP_INSIDE_DOCKER=$(ip -4 -br address | awk '{if (NR!=1) print $3}' | cut -d '/' -f1)\" >> /etc/apache2/envvars; \
-                         if [[ \"${SSL_PORT}\" -ne \"443\" ]]; then echo \"Listen ${SSL_PORT}\" > /etc/apache2/additional_listeners.conf; fi; \
-                         service apache2 start; \
-                         service ssh start; \
-                         mkdir -p ${CALTECH_CURATION_FILES_INTERNAL_PATH}/pub; \
-                         mkdir -p ${CALTECH_CURATION_FILES_INTERNAL_PATH}/priv; \
-                         mkdir -p /usr/caltech_curation_files/priv/citace_upload/anatomy_function; \
-                         mkdir -p /usr/caltech_curation_files/priv/forms/gene_go_curation_status; \
-                         mkdir -p /usr/caltech_curation_files/pub/wen/simplemine; \
-                         mkdir -p /usr/caltech_curation_files/pub/wen/agrSimpleMine; \
-                         chmod -R 777 ${CALTECH_CURATION_FILES_INTERNAL_PATH}; \
-                         echo \"$(ip -4 -br address | awk '{if (NR!=1) print $3}' | cut -d '/' -f1) ${HOSTNAME} ${HOST_NAME}\" >> /etc/hosts; \
-                         yes | sendmailconfig; \
-                         tail -f /dev/null"]
+CMD ["/bin/bash", "container_startup_setup.sh"]

@@ -95,6 +95,11 @@ services:
       - caltech-curation-network
     hostname: curation
 
+  acedb:
+    build:
+      context: acedb
+      dockerfile: Dockerfile
+
 networks:
   caltech-curation-network:
     name: caltech-curation-network

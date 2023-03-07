@@ -1,0 +1,5 @@
+SHELL=/bin/bash
+BASH_ENV=/container.env
+
+
+# 0 2 * * * python3 /script.pl > /var/log/script.log 2>&1
