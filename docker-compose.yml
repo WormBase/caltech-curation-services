@@ -96,13 +96,18 @@ services:
     hostname: curation
 
   acedb:
+    # run 'xhost +local:root' on the host to give the right permissions to the instance
     build:
       context: acedb
       dockerfile: Dockerfile
       args:
         CALTECH_CURATION_FILES_INTERNAL_PATH: "${CALTECH_CURATION_FILES_INTERNAL_PATH}"
+    environment:
+      - DISPLAY=${DISPLAY}
     volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
       - "${CALTECH_CURATION_FILES_EXTERNAL_PATH}:${CALTECH_CURATION_FILES_INTERNAL_PATH}"
+    network_mode: host
 
 networks:
   caltech-curation-network:
