@@ -75,7 +75,6 @@ services:
         SSH_ACEDB_PASSWORD: "${SSH_ACEDB_PASSWORD}"
         CALTECH_CURATION_FILES_INTERNAL_PATH: "${CALTECH_CURATION_FILES_INTERNAL_PATH}"
     environment:
-      DISPLAY: ${DISPLAY}
       CALTECH_CURATION_FILES_INTERNAL_PATH: "${CALTECH_CURATION_FILES_INTERNAL_PATH}"
       HOST_NAME: "${HOST_NAME}"
       SSL_PORT: "${SSL_PORT}"
@@ -90,7 +89,6 @@ services:
       - ./curation/scripts/:/usr/lib/scripts/
       - ./curation/user_files/:/usr/lib/user_files/
       - .env:/usr/lib/.env
-      - /tmp/.X11-unix:/tmp/.X11-unix
       - "${SSL_CERTIFICATE_DIR}:/etc/ssl_certificate"
       - "${CALTECH_CURATION_FILES_EXTERNAL_PATH}:${CALTECH_CURATION_FILES_INTERNAL_PATH}"
     networks:
