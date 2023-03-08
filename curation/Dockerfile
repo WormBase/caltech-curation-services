@@ -2,8 +2,7 @@ FROM perl:5.18.4-buster
 ARG SSH_ACEDB_PASSWORD=""
 ARG CALTECH_CURATION_FILES_INTERNAL_PATH=/usr/caltech_curation_files
 ARG DEBIAN_FRONTEND=noninteractive
-RUN apt-get update
-RUN apt-get install -y apache2 vim openssh-server makepasswd zsh sendmail cron
+RUN export DEBIAN_FRONTEND=noninteractive && apt-get update && apt-get install -q -y apache2 vim openssh-server makepasswd zsh sendmail cron git libglib2.0-dev libgtk2.0-dev libreadline-dev build-essential flex-old bison libxmu-dev libcurl4-openssl-dev xorg
 ENV TZ="America/Los_Angeles"
 RUN mkdir -p ${CALTECH_CURATION_FILES_INTERNAL_PATH}
 RUN chmod -R 777 ${CALTECH_CURATION_FILES_INTERNAL_PATH}
@@ -13,6 +12,9 @@ RUN a2enmod headers
 RUN a2enmod rewrite
 RUN a2enmod cgid
 RUN a2enmod ssl
+
+RUN git clone https://github.com/WormBase/acedb.git acedb && cd acedb && ln -s wmake/makefile Makefile && export ACEDB_MACHINE=LINUX_64 && make
+ENV PATH="${PATH}:/acedb/bin.LINUX_64"
 
 ADD curation/crontab /etc/cron.d/curation_crontab
 RUN chmod 0644 /etc/cron.d/curation_crontab
