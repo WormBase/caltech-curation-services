@@ -1,0 +1,245 @@
+#!/usr/bin/perl -T
+
+# Form to submit Expression Pattern information.
+
+# an expression pattern form to make .ace files and email curator
+# This version gets headers and footers off of www.wormbase.org with LWP / Jex,
+# untaints and gets HTML values with CGI / Jex, sends mail with Mail::Mailer /
+# Jex   2002 05 14
+
+my $acefile = "/home2/azurebrd/public_html/cgi-bin/data/expr.ace";
+
+my $firstflag = 1;		# flag if first time around (show form for no data)
+
+use LWP::Simple;
+use Mail::Mailer;
+
+my ($header, $footer) = &cshlNew();
+
+use Jex;			# untaint, getHtmlVar, cshlNew
+use strict;
+use CGI;
+use Fcntl;
+
+my $query = new CGI;
+my $user = 'expression_pattern_form';		# who sends mail
+my $email = "wchen\@its.caltech.edu";	# to whom send mail
+my $subject = 'expression pattern data';	# subject of mail
+my $body = '';					# body of mail
+
+print "Content-type: text/html\n\n";
+print "$header\n";		# make beginning of HTML page
+
+&process();			# see if anything clicked
+&display();			# show form as appropriate
+print "$footer"; 		# make end of HTML page
+
+sub process {			# see if anything clicked
+  my $action;			# what user clicked
+  unless ($action = $query->param('action')) { $action = 'none'; }
+
+  if ($action eq 'Go !') { 
+    $firstflag = "";		# reset flag to not display first page (form)
+    open (OUT, ">>$acefile") or die "Cannot create $acefile : $!";
+    print OUT "Expr_pattern : [ExprXXXX] \n";
+    print "Expr_pattern : [ExprXXXX]<BR>\n";
+    $body .= "Expr_pattern : [ExprXXXX]\n";
+    my @vars = qw(locus sequence clone protein protein_description cell cell_group life_stage in_situ reporter_gene antibody other_type subcellular_localization pattern cgc_number other_id reference_info remark);
+    foreach $_ (@vars) { 
+      my ($var, $val) = &getHtmlVar($query, $_);
+      if ($val =~ m/\S/) { 	# if value entered
+        print OUT "@{[ucfirst($var)]} \"$val\" \n";
+        print "@{[ucfirst($var)]} \"$val\" <BR>\n";
+        $body .= "@{[ucfirst($var)]} \"$val\"\n";
+      } # if ($val) 
+    } # foreach $_ (@vars) 
+    print OUT "\n";		# divider for outfile
+    close (OUT) || die "cannot close $acefile : $!";
+    &mailer($user, $email, $subject, $body);	# email wen the data
+    print "<P><P><P><H1>Thank you, your info will be updated shortly.</H1>\n";
+    print "If you wish to modify your submitted information, please go back and resubmit.<BR><P> See all <A HREF=\"http://minerva.caltech.edu/~azurebrd/cgi-bin/data/expr.ace\">new submissions</A>.<P>\n";
+  } # if ($action eq 'Go !') 
+} # sub process
+
+
+sub display {			# show form as appropriate
+  if ($firstflag) { # if first or bad, show form 
+  print <<"EndOfText";
+<A NAME="form"><H1>NEW EXPRESSION PATTERN DATA SUBMISSION :</H1></A>
+
+Use this form for reporting new Expression Pattern data.<BR><BR>
+If sending pictures, instead of filling the web form, email all information to
+<A HREF=\"mailto:wchen\@its.caltech.edu\">wchen\@its.caltech.edu</A>.<BR><BR>
+If you don't know or don't have something, leave the field
+blank.<BR><BR>
+
+<HR>
+
+<FORM METHOD="POST" ACTION="expr_pattern.cgi">
+<TABLE>
+
+<TR>
+<TD ALIGN="left"><b>Expression of : </b></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Locus :</b></TD>
+<TD><TABLE><INPUT NAME="locus" VALUE="" SIZE=30></TABLE></TD>
+<TD>e.g. : pal-1</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Sequence :</b></TD>
+<TD><TABLE><INPUT NAME="sequence" VALUE="" SIZE=30></TABLE></TD>
+<TD>e.g : ZK863.1</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Clone :</b></TD>
+<TD><TABLE><INPUT NAME="clone" VALUE="" SIZE=30></TABLE></TD>
+<TD>e.g. : ZK863</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Protein :</b></TD>
+<TD><TABLE><INPUT NAME="protein" VALUE="" SIZE=30></TABLE></TD>
+<TD>e.g. : CE22786</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Protein Description :</b></TD>
+<TD><TABLE><INPUT NAME="protein_description" VALUE="" SIZE=30></TABLE></TD>
+</TR>
+
+<TR></TR> <TR></TR> <TR></TR> <TR></TR> 
+<TR></TR> <TR></TR> <TR></TR> <TR></TR>
+
+<TR>
+<TD ALIGN="left"><b>Expressed in : </b></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Cell :</b></TD>
+<TD><TEXTAREA NAME="cell" VALUE="" ROWS=03 COLS=30></TEXTAREA></TD>
+<TD>e.g. : P0<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;P1<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;EMS</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Cell Group : </b></TD>
+<TD><TEXTAREA NAME="cell_group" VALUE="" ROWS=03 COLS=30></TEXTAREA></TD>
+<TD>e.g. : pharynx<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp&nbsp;nerve ring</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Life Stage :</b></TD>
+<TD><TEXTAREA NAME="life_stage" VALUE="" ROWS=03 COLS=30></TEXTAREA></TD>
+<TD>e.g. : gastrula embryo<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2-fold
+embryo</TD>
+</TR>
+
+<TR></TR> <TR></TR> <TR></TR> <TR></TR>
+<TR></TR> <TR></TR> <TR></TR> <TR></TR>
+
+<TR>
+<TD ALIGN="left"><b>Type of Experiments : </b></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>In Situ :</b></TD>
+<TD><TABLE><INPUT NAME="in_situ" VALUE="" SIZE=30></TABLE></TD>
+<TD>e.g. : Digoxigenin-labeled DNA probes</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Reporter Gene : </b></TD>
+<TD><TABLE><INPUT NAME="reporter_gene" VALUE="" SIZE=30></TABLE></TD>
+<TD>e.g. : GFP or lacZ translational fusion of ...</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Antibody :</b></TD>
+<TD><TABLE><INPUT NAME="antibody" VALUE="" SIZE=30></TABLE></TD>
+<TD>e.g. : Polyclonal rabbit antibody of ...</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Other Type :</b></TD>
+<TD><TABLE><INPUT NAME="other_type" VALUE="" SIZE=30></TABLE></TD>
+<TD>e.g. : Northern, RT-PCR, ...</TD>
+</TR>
+
+<TR></TR> <TR></TR> <TR></TR> <TR></TR> 
+<TR></TR> <TR></TR> <TR></TR> <TR></TR>
+
+<TR>
+<TD ALIGN="left"><b>Localization : </b></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Subcellular Localization :</b></TD>
+<TD><TABLE><INPUT NAME="subcellular_localization" VALUE="" SIZE=30></TABLE></TD>
+<TD>e.g. : pal-1 is expressed in nuclei/cytosol ...</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Pattern :</b></TD>
+<TD><TEXTAREA NAME="pattern" VALUE="" ROWS=03 COLS=30></TEXTAREA></TD>
+<TD>e.g. : pal-1 RNA evenly distributed in ...</TD>
+</TR>
+
+<TR></TR> <TR></TR> <TR></TR> <TR></TR> 
+<TR></TR> <TR></TR> <TR></TR> <TR></TR>
+
+<TR>
+<TD ALIGN="left"><b>Data Source : </b></TD>
+<TD></TD>
+<TD> (where curators can confirm the data)</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>CGC Number :</b></TD>
+<TD><TABLE><INPUT NAME="cgc_number" VALUE="" SIZE=30></TABLE></TD>
+<TD>e.g. : 4501</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Other ID :</b></TD>
+<TD><TABLE><INPUT NAME="other_id" VALUE="" SIZE=30></TABLE></TD>
+<TD>e.g. : PMID11134024, or medline ...</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Reference Info :</b></TD>
+<TD><TABLE><INPUT NAME="reference_info" VALUE="" SIZE=30></TABLE></TD>
+<TD>e.g. : Science 274, 113-115 ...</TD>
+</TR>
+
+<TR></TR> <TR></TR> <TR></TR> <TR></TR> 
+<TR></TR> <TR></TR> <TR></TR> <TR></TR>
+
+<TR>
+<TD ALIGN="right"><b>Remark :</b></TD>
+<TD><TABLE><INPUT NAME="remark" VALUE="" SIZE=30></TABLE></TD>
+<TD>Write comments here</TD>
+</TR>
+
+<!--
+<TR>
+<TD ALIGN="right"><b>Comment :</b></TD>
+<TD><TABLE><INPUT NAME="remark" VALUE="" SIZE=30></TABLE></TD>
+</TR>-->
+
+<TR><TD COLSPAN=2> </TD></TR>
+<TR>
+<TD> </TD>
+<TD><INPUT TYPE="submit" NAME="action" VALUE="Go !">
+    <INPUT TYPE="reset"></TD>
+</TR>
+</TABLE>
+
+</FORM>
+If you have any problems, questions, or comments, please email <A HREF=\"mailto:azurebrd\@minerva.caltech.edu\">azurebrd\@minerva.caltech.edu</A>
+EndOfText
+
+  } # if ($badflag || $firstflag) show form 
+} # sub display

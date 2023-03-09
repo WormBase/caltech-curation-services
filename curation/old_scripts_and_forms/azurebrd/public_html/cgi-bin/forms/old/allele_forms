@@ -1,0 +1,73 @@
+
+	          	Wormbase allele data submission form 
+                        ====================================
+
+                  (other submission forms would be similar such as 
+                     Wormbase Multi-point mapping data submission form
+                     =================================================)  
+
+						Example
+               Predicted or known Gene:         (sequence name or locus, e.g. B03030.3 or aap-1)
+			        Allele:
+		     Associated strain:          
+                      Allele_ref_point:         (eg., B0303) 
+                       Allele_sequence:		(eg., B03030.3) 
+ 			    Start base:         
+			      End base:
+      30 bp Upstream flanking sequence:
+    30 bp downstream flanking sequence:
+                            Alteration:         (eg., c to t, insertion, deletion) 
+	            Insertion sequence:         (textfield for sequence input)
+                       Person Evidence:	        (Last_name, middle_initial(if applicable) first_initial, eg., A, BC)
+                        Paper Evidence:	 	(cgc#)
+		Phenotypic descritpion:		(if available)
+                      nature of allele:         (checkbox here for
+							 recessive		
+		       	 				 semi-dominant
+			  				 dominant
+
+	              					 loss-of-function
+                          				     hypomorph
+                         				     null (amorph)
+                           				     unspecified
+                       					 gain of function
+                           				     unspecified
+ 	   	            				     hypermorph
+ 		  	       				     neomorph
+        						     antimorph ("dominant" negative))
+                            Laboratory:         (prefix, eg., CB, PS)			       
+                      submitter e-mail: 	 mandatory (email of representative of laboratory)
+
+
+Predicted of known Gene                 : Gene (Source)
+Allele                                  : main tag
+Associated Strain                       : Strain
+Allele_ref_point                        : Derived_from (?)
+Allele_sequence                         : Sequence (Sequence_details)
+Start base                              : unknown
+End base                                : unknown
+30 bp Upstream flanking sequence        : unknown (related to Flanking_sequence ?)
+30 bp Downstream flanking sequence      : unknown (related to Flanking_sequence ?)
+Alternation                             : unknown
+Insertion sequence                      : unknown
+Person Evidence                         : Author (Isolation) (?)
+Paper Evidence                          : Reference
+Phenotypic description                  : Phenotype (Description) (?)
+Nature of Allele                        : unknown (not needed ?)
+Recessive                               : Recessive (Description)
+                                          (data just say yes ?)
+Semi-Dominant                           : Semi_dominant (Description)
+                                          (data just say yes ?)
+Dominant                                : Dominant (Description)
+                                          (data just say yes ?)
+Loss-of-function                        : unknown (not needed ?)
+Hypomorph                               : unknown
+Null                                    : unknown
+Unspecified                             : unknown
+Gain of function                        : unknown (not needed ?)
+Unspecified                             : unknown
+Hypermorph                              : unknown
+Neomorph                                : unknown
+Antimorph                               : unknown
+Laboratory                              : Laboratory
+

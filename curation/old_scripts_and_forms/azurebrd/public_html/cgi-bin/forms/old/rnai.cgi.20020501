@@ -1,0 +1,616 @@
+#!/usr/bin/perl -T
+
+# Form to submit RNAi information.
+
+# an rnaiform for cgc to make .ace files
+# This version queries with AcePerl, gets headers and footers off of
+# www.wormbase.org with LWP, has better tables
+
+$data_file = '/home/azurebrd/public_html/cgi-bin/data/rnai.txt';
+$acefile = ("/home2/azurebrd/public_html/cgi-bin/data/rnai.ace");
+
+$badflag = 0;		# flag if needs to reinput (needs to show form again)
+$first = 1;		# flag if first time around (show form for no data)
+$badname = 0;		# flag if name needs to be re-entered
+
+$max_entries =  0; # how many rnai entries to save?
+                   # set to '0' (zero) for infinite entries...
+		   # replace $max_entries with $entry for last entry
+
+# use lib '../blib/lib','../blib/arch';
+# use Ace;
+# # use strict vars;
+# 
+# use constant HOST => $ENV{ACEDB_HOST} || 'stein.cshl.org';
+# use constant PORT => $ENV{ACEDB_PORT} || 200005;
+# 
+# $|=1;
+# 
+use LWP::Simple;
+
+my $header; my $footer;
+
+&cshlNew();
+
+sub cshlNew {
+  my $page = get "http://www.wormbase.org";
+  $page =~ s/href="/href="http:\/\/www.wormbase.org/g;
+  $page =~ s/src="/src="http:\/\/www.wormbase.org/g;
+  ($header) = $page =~ m/^(.*?\<hr\>.*?\<hr\>)/s;
+  ($footer) = $page =~ m/.*(\<hr\>.*?)$/s;
+} # sub cshlNew
+
+sub caltechOld {
+  $page = get "http://caltech.wormbase.org";            # get template
+  $page =~ s/href="\//href="http:\/\/caltech.wormbase.org\//gi; # set references right
+  $page =~ s/src="/src="http:\/\/caltech.wormbase.org/gi;       # set references right
+  $page =~ s/Home Page/Expression Pattern Form/g;       # set references right
+  @page = split("\n", $page);                   # break up to play with
+  my $i = 0;                                    # counter
+  while ($line !~ m/long-release-start/) {      # until what we don't want
+    $line = $page[$i];                          # get line
+    @header = (@header, $page[$i]);             # add to header
+    $i++                                                # add to counter
+  } # while ($line !~ ...
+  $toomany = scalar(@header);                   # get last line to remove
+  $header[$toomany-1] = "";                     # remove last line
+  $header = join("\n", @header);                        # put header together
+  while ($line !~ m/footer/) {                  # until we get to footer
+    $line = $page[$i];                          # read lines
+    $i++                                                # add to counter
+  } # while ($line !~ ...
+  for (my $j = $i; $j <= scalar(@page)-1; $j++) { # from here to out of lines
+    @footer = (@footer, $page[$j]);             # add to footer
+  } # for (my $j ...
+  $footer = join("\n", @footer);                        # put footer together
+} # sub caltechOld
+
+
+use CGI;
+use Fcntl;
+$query = new CGI;
+
+unless ($action = $query->param('action')) {
+    $action = 'none';
+}
+
+
+# make beginning of HTML page
+
+print "Content-type: text/html\n\n";
+print "$header";
+
+
+# if someone submitted the form, i.e. pressed the ``Go !'' button
+
+if ($action eq 'Go !') {
+    
+    $first = 0; # turn off flag to display form first time
+    $querying = 0;		# not querying
+    $updating = 0;		# not updating
+
+    # process the form submission
+    # and assemble the rnaiform entry
+
+    $sequence = $query->param('sequence');
+    $method = $query->param('method');
+    $laboratory = $query->param('laboratory');
+    $author = $query->param('author');
+    $date = $query->param('date');
+    $strain = $query->param('strain');
+    $delivered_by = $query->param('officephone');
+    $predicted_gene = $query->param('predicted_gene');
+    $locus = $query->param('locus');
+    $reference = $query->param('reference');
+    $phenotype = $query->param('phenotype');
+    $remark = $query->param('remark');
+
+    # clean up and fiddle with $sequence
+      # get rid of all non-(letters, hyphon, underscore)
+    $sequence =~ s/[^a-zA-Z_\-]//g;
+    if ( ($sequence eq "") || ($sequence eq "Sequence-less") ) {
+        # set sequence for showing mistake
+      $sequence = 'Sequence-less';
+        # set flags for showing mistake and form
+      $badsequence = 1; # $badflag = 1;
+    }
+      # disable all HTML tags
+    $sequence =~ s/</&lt;/g;
+      # untaint variable
+    unless ($sequence =~ /^([^<]*)$/) {
+        die "couldn't untaint sequence: $sequence\n";
+    }
+    $sequence = $1;
+
+    # clean up and fiddle with $method
+      # get rid of all non-(letters, hyphon, underscore)
+    $method =~ s/[^a-zA-Z_\-]//g;
+    unless ($method) {
+#       $method = 'Method-less';
+      $badmethod = 1; 
+    }
+      # disable all HTML tags
+    $method =~ s/</&lt;/g;
+      # untaint variable
+    unless ($method =~ /^([^<]*)$/) {
+        die "couldn't untaint method: $method\n";
+    }
+    $method = $1;
+
+    # clean up and fiddle with $laboratory
+      # get rid of all non-(letters, hyphon, underscore)
+    $laboratory =~ s/[^a-zA-Z_\-]//g;
+    unless ($laboratory) {
+        # set laboratory for showing mistake
+#       $laboratory = 'Laboratory-less';
+        # set flags for showing mistake and form
+      $badlaboratory = 1; 
+    }
+      # disable all HTML tags
+    $laboratory =~ s/</&lt;/g;
+      # untaint variable
+    unless ($laboratory =~ /^([^<]*)$/) {
+        die "couldn't untaint laboratory: $laboratory\n";
+    }
+    $laboratory = $1;
+
+    # clean up and fiddle with $author
+      # get rid of all non-(letters, hyphon, underscore)
+    $author =~ s/[^a-zA-Z_\-]//g;
+    unless ($author) {
+        # set author for showing mistake
+#       $author = 'Author-less';
+        # set flags for showing mistake and form
+      $badauthor = 1; 
+    }
+      # disable all HTML tags
+    $author =~ s/</&lt;/g;
+      # untaint variable
+    unless ($author =~ /^([^<]*)$/) {
+        die "couldn't untaint author: $author\n";
+    }
+    $author = $1;
+
+    # clean up and fiddle with $date
+      # get rid of all non-(letters, hyphon, underscore)
+    $date =~ s/[^a-zA-Z_\-]//g;
+    unless ($date) {
+        # set date for showing mistake
+#       $date = 'Date-less';
+        # set flags for showing mistake and form
+      $baddate = 1; 
+    }
+      # disable all HTML tags
+    $date =~ s/</&lt;/g;
+      # untaint variable
+    unless ($date =~ /^([^<]*)$/) {
+        die "couldn't untaint date: $date\n";
+    }
+    $date = $1;
+
+    # clean up and fiddle with $strain
+      # get rid of all non-(letters, hyphon, underscore)
+    $strain =~ s/[^a-zA-Z_\-]//g;
+    unless ($strain) {
+        # set strain for showing mistake
+#       $strain = 'Strain-less';
+        # set flags for showing mistake and form
+      $badstrain = 1; 
+    }
+      # disable all HTML tags
+    $strain =~ s/</&lt;/g;
+      # untaint variable
+    unless ($strain =~ /^([^<]*)$/) {
+        die "couldn't untaint strain: $strain\n";
+    }
+    $strain = $1;
+
+    # clean up and fiddle with $delivered_by
+      # get rid of all non-(letters, hyphon, underscore)
+    $delivered_by =~ s/[^a-zA-Z_\-]//g;
+    unless ($delivered_by) {
+        # set delivered_by for showing mistake
+#       $delivered_by = 'Delivered_by-less';
+        # set flags for showing mistake and form
+      $baddelivered_by = 1; 
+    }
+      # disable all HTML tags
+    $delivered_by =~ s/</&lt;/g;
+      # untaint variable
+    unless ($delivered_by =~ /^([^<]*)$/) {
+        die "couldn't untaint delivered_by: $delivered_by\n";
+    }
+    $delivered_by = $1;
+
+    # clean up and fiddle with $predicted_gene
+      # get rid of all non-(letters, hyphon, underscore)
+    $predicted_gene =~ s/[^a-zA-Z_\-]//g;
+    unless ($predicted_gene) {
+        # set predicted_gene for showing mistake
+#       $predicted_gene = 'Predicted_gene-less';
+        # set flags for showing mistake and form
+      $badpredicted_gene = 1; 
+    }
+      # disable all HTML tags
+    $predicted_gene =~ s/</&lt;/g;
+      # untaint variable
+    unless ($predicted_gene =~ /^([^<]*)$/) {
+        die "couldn't untaint predicted_gene: $predicted_gene\n";
+    }
+    $predicted_gene = $1;
+
+    # clean up and fiddle with $locus
+      # get rid of all non-(letters, hyphon, underscore)
+    $locus =~ s/[^a-zA-Z_\-]//g;
+    unless ($locus) {
+        # set locus for showing mistake
+#       $locus = 'Locus-less';
+        # set flags for showing mistake and form
+      $badlocus = 1; 
+    }
+      # disable all HTML tags
+    $locus =~ s/</&lt;/g;
+      # untaint variable
+    unless ($locus =~ /^([^<]*)$/) {
+        die "couldn't untaint locus: $locus\n";
+    }
+    $locus = $1;
+
+    # clean up and fiddle with $reference
+      # get rid of all non-(letters, hyphon, underscore)
+    $reference =~ s/[^a-zA-Z_\-]//g;
+    unless ($reference) {
+        # set reference for showing mistake
+#       $reference = 'Reference-less';
+        # set flags for showing mistake and form
+      $badreference = 1; 
+    }
+      # disable all HTML tags
+    $reference =~ s/</&lt;/g;
+      # untaint variable
+    unless ($reference =~ /^([^<]*)$/) {
+        die "couldn't untaint reference: $reference\n";
+    }
+    $reference = $1;
+
+    # clean up and fiddle with $phenotype
+      # get rid of all non-(letters, hyphon, underscore)
+    $phenotype =~ s/[^a-zA-Z_\-]//g;
+    unless ($phenotype) {
+        # set phenotype for showing mistake
+#       $phenotype = 'Phenotype-less';
+        # set flags for showing mistake and form
+      $badphenotype = 1; 
+    }
+      # disable all HTML tags
+    $phenotype =~ s/</&lt;/g;
+      # untaint variable
+    unless ($phenotype =~ /^([^<]*)$/) {
+        die "couldn't untaint phenotype: $phenotype\n";
+    }
+    $phenotype = $1;
+
+    # clean up and fiddle with $remark
+      # get rid of all non-(letters, hyphon, underscore)
+    $remark =~ s/[^a-zA-Z_\-]//g;
+    unless ($remark) {
+        # set remark for showing mistake
+#       $remark = 'Remark-less';
+        # set flags for showing mistake and form
+      $badremark = 1; 
+    }
+      # disable all HTML tags
+    $remark =~ s/</&lt;/g;
+      # untaint variable
+    unless ($remark =~ /^([^<]*)$/) {
+        die "couldn't untaint remark: $remark\n";
+    }
+    $remark = $1;
+
+    # begin comment
+    # clean up and fiddle with $comment
+      # length filter 
+    if (length($comment) > 32768) {
+      $comment = '...more than I feel like posting in the rnaiform.';
+    }
+    unless ($comment) {
+      $comment = '...nothing to speak of.';
+      $flagcomment = 1;
+    } else {
+      if ($comment eq '...nothing to speak of.') {
+        $flagcomment = 1;
+      }
+    }
+      # fix line-endings
+    $comment =~ s/\r\n?/\n/g;
+      # will not get rid of odd characters
+      # lose HTML tags
+    $comment =~ s/</&lt;/g;
+      # untaint variable
+    unless ($comment =~ /^([^<]*)$/) {
+        die "couldn't untaint comment: $comment\n";
+    }
+    $comment = $1;
+    # end comment
+
+
+
+
+    # insert text for flags here, e.g.
+    # nameflag for $entry
+#     if ($badname) { # write an entry to the $data_file 
+#     $entry .= <<"EndOfText";
+# <P>
+# <b>You are required to enter a First name and Last name.
+# <br></b>
+# 
+# EndOfText
+#     }
+# 
+#     if ($badflag) { # write the rest of an entry to the $data_file 
+#     $entry .= <<"EndOfText";
+# <P>
+# <b>You have previously entered : </b><br><br>
+# <b>$sequence, $method $author</b> &nbsp; <EM>living at 
+# $reference $phenotype $remark, 
+# $city, $state, $zipcode, $country, wrote :</EM><BR>
+# <BLOCKQUOTE>Email : $strain &nbsp;&nbsp;&nbsp;   
+#             Office Phone : $delivered_by &nbsp;&nbsp;&nbsp;   
+#             Lab Phone : $predicted_gene &nbsp;&nbsp;&nbsp;   
+# 	    Fax : $locus &nbsp;&nbsp;&nbsp;   
+# 	    Laboratory : $laboratory</BLOCKQUOTE><BR>
+# <BLOCKQUOTE>$comment</BLOCKQUOTE></P>
+# <HR>
+# EndOfText
+# 
+#     # open non-destructively, read old entries, write out new
+# 
+#     # initialize all_entries with $entry
+#     $all_entries = $entry;
+#     sysopen(ENTRIES, "$data_file", O_RDWR)
+#                              or die "can't open $data_file: $!";
+#     flock(ENTRIES, 2)        or die "can't LOCK_EX $data_file: $!";
+# 		# 2 gives an exclusive lock on the file, as opposed to 1
+# 		# which gives a shared lock for multiple viewers
+# 
+#     while(<ENTRIES>) {
+#         $all_entries .= $_;
+# 		# for each loop, all read is stored in $_, which is .='ed
+#     }
+# 
+#     # this loop is useless in our case
+#     if ($max_entries) {
+#         # lop the head off the authorform, if necessary
+#         @all_entries = split(/<HR>/i, $all_entries);  # i makes case insensitive
+#         $entry_count = @all_entries - 1;
+#         while ($entry_count > $max_entries) {
+#             pop @all_entries;
+#             $entry_count = @all_entries - 1;
+#         }
+#         $all_entries = join('<HR>', @all_entries);
+#     }
+# 
+#     # now write out to $data_file
+#     seek(ENTRIES, 0, 0)        or die "can't rewind $data_file: $!";
+#     truncate(ENTRIES, 0)       or die "can't truncate $data_file: $!";
+# # modify from $all_entries to be just $entry for last mess up case
+#     print ENTRIES $all_entries or die "can't print to $data_file: $!";
+#     close(ENTRIES)             or die "can't close $data_file: $!";
+# 
+#     } # if ($badflag) to write entry 
+
+} # if ($action eq 'Go !')
+
+
+
+# display if error
+
+# if ($badflag) { # flagged for name data, show what entered
+#   open (IN, "$data_file") or die "Can't open $data_file for reading: $!";
+#   flock(IN, 1)            or die "Can't get LOCK_SH on $data_file: $!";
+#   while (<IN>) {
+#       print;
+#   }
+#   close IN                or die "Can't close $data_file: $!";
+# } # if $badflag
+
+
+
+# display the form	
+
+if ($badflag || $first) { # if first or bad, show form 
+  print <<"EndOfText";
+<A NAME="form"><H1>NEW RNAi SUBMISSION :</H1></A>
+
+Use this form for reporting new RNAi data.<BR><BR>
+To see an example of this type of data click here : <A HREF=\"http://minerva.caltech.edu/~azurebrd/rnaiexample.txt\">Example</A>.<BR><BR>
+If you don't know or don't have something, leave the field
+blank.<BR><BR>
+<!--If you have any problems or questions, please email me.<BR><BR>-->
+
+<HR>
+
+<FORM METHOD="POST" ACTION="rnai.cgi">
+<TABLE>
+
+
+<TR>
+<TD ALIGN="right"><b>Sequence :</b></TD>
+<TD><TABLE><INPUT NAME="sequence" VALUE="$sequence" SIZE=30></TABLE></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Method :</b></TD>
+<TD><TABLE><INPUT NAME="method" VALUE="$method" SIZE=30></TABLE></TD>
+</TR>
+
+<TR></TR> <TR></TR> <TR></TR> <TR></TR> 
+<TR></TR> <TR></TR> <TR></TR> <TR></TR>
+
+<TR>
+<TD ALIGN="right"><b>Experiment : Laboratory :</b></TD>
+<TD><TABLE><INPUT NAME="laboratory" VALUE="$laboratory" SIZE=10></TABLE></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Author :</b></TD>
+<TD><TABLE><INPUT NAME="author" VALUE="$author" SIZE=10></TABLE></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Date :</b></TD>
+<TD><TABLE><INPUT NAME="date" VALUE="$date" SIZE=10></TABLE></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Strain : </b></TD>
+<TD><TABLE><INPUT NAME="strain" VALUE="$strain" SIZE=15></TABLE></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Delivered By :</b></TD>
+<TD><TABLE><INPUT NAME="delivered_by" VALUE="$delivered_by" SIZE=20></TABLE></TD>
+</TR>
+
+<TR></TR> <TR></TR> <TR></TR> <TR></TR>
+<TR></TR> <TR></TR> <TR></TR> <TR></TR>
+
+<TR>
+<TD ALIGN="right"><b>Inhibits : Predicted_gene :</b></TD>
+<TD><TABLE><INPUT NAME="predicted_gene" VALUE="$predicted_gene" SIZE=20></TABLE></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Locus : </b></TD>
+<TD><TABLE><INPUT NAME="locus" VALUE="$locus" SIZE=20></TABLE></TD>
+</TR>
+
+<TR></TR> <TR></TR> <TR></TR> <TR></TR> 
+<TR></TR> <TR></TR> <TR></TR> <TR></TR>
+
+<TR>
+<TD ALIGN="right"><b>Reference :</b></TD>
+<TD><TABLE><INPUT NAME="reference" VALUE="$reference" SIZE=30></TABLE></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Phenotype :</b></TD>
+<TD><TABLE><INPUT NAME="phenotype" VALUE="$phenotype" SIZE=30></TABLE></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Remark :</b></TD>
+<TD><TABLE><INPUT NAME="remark" VALUE="$remark" SIZE=30></TABLE></TD>
+</TR>
+
+<!--
+<TR>
+<TD ALIGN="right"><b>Comment :</b></TD>
+<TD><TABLE><INPUT NAME="comment" VALUE="$comment" SIZE=30></TABLE></TD>
+</TR>-->
+
+<TR><TD COLSPAN=2> </TD></TR>
+<TR>
+<TD> </TD>
+<TD><INPUT TYPE="submit" NAME="action" VALUE="Go !">
+    <INPUT TYPE="reset"></TD>
+</TR>
+</TABLE>
+
+</FORM>
+If you have any problems, questions, or comments, please strain <A HREF=\"mailto:azurebrd\@vermicelli.caltech.edu\">azurebrd\@vermicelli.caltech.edu</A>
+EndOfText
+
+} # if ($badflag || $first) show form 
+
+# output to rnai.ace, show happy ending
+unless ( $badflag + $first + $querying + $updating ) { 
+			# unless bad or first time or querying or updating
+			# + to sum up 0s into one 0 for unless
+  print <<"EndOfText";
+<P>
+<P>
+<P>
+<H1> Thank you, your info will be updated shortly.  </H1>
+EndOfText
+
+
+  open (OUT, ">>$acefile") || die "cannot create  $acefile : $!";
+  print OUT "RNAi : \"$sequence \" \n";
+  print "RNAi : \"$sequence \" <BR>\n";
+
+  unless ($badsequence) { 
+    print OUT "Sequence           \"$sequence\" \n";
+    print "Sequence           \"$sequence\" <BR>\n";
+  }
+  unless ($badmethod) { 
+    print OUT "Method             \"$method\" \n";
+    print "Method             \"$method\" <BR>\n";
+  }
+  unless ($badlaboratory) {
+    print OUT "Laboratory         \"$laboratory\" \n";
+    print "Laboratory         \"$laboratory\" <BR>\n";
+  }
+  unless ($badauthor) {
+    print OUT "Author             \"$author\" \n";
+    print "Author             \"$author\" <BR>\n";
+  }
+  unless ($baddate) {
+    print OUT "Date               \"$date\" \n";
+    print "Date               \"$date\" <BR>\n";
+  }
+  unless ($badstrain) {
+    print OUT "Strain             \"$strain\" \n";
+    print "Strain             \"$strain\" <BR>\n";
+  }
+  unless ($baddelivered_by) {
+    print OUT "Delivered_by       \"$delivered_by\" \n";
+    print "Delivered_by       \"$delivered_by\" <BR>\n";
+  }
+  unless ($badpredicted_gene) {
+    print OUT "Predicted_gene     \"$predicted_gene\" \n";
+    print "Predicted_gene     \"$predicted_gene\" <BR>\n";
+  }
+  unless ($badlocus) {
+    print OUT "Locus              \"$locus\" \n";
+    print "Locus              \"$locus\" <BR>\n";
+  }
+  unless ($badreference) {
+    print OUT "Reference          \"$reference\" \n";
+    print "Reference          \"$reference\" <BR>\n";
+  }
+  unless ($badphenotype) {
+    print OUT "Phenotype          \"$phenotype\" \n";
+    print "Phenotype          \"$phenotype\" <BR>\n";
+  }
+  unless ($badremark) {
+    print OUT "Remark             \"$remark\" \n";
+    print "Remark             \"$remark\" <BR>\n";
+  }
+  unless($flagcomment) {
+    print OUT "Comment            \"$comment\" \n";
+    print "Comment            \"$comment\" <BR>\n";
+  }
+  print OUT " \n\n";
+  print " <BR>";
+  close (OUT) || die "cannot close $acefile : $!";
+
+  open (ERASE, ">$data_file") || die "cannot access $data_file : $!";
+  print ERASE "";
+  close (ERASE) || die "cannot close $data_file : $!";
+
+  print <<"EndOfText";
+If you wish to modify your submitted information, please go back
+  and resubmit.<BR>
+<P> See all
+<A
+HREF="http://minerva.caltech.edu/~azurebrd/cgi-bin/data/rnai.ace">new
+submissions</A>.<P>
+EndOfText
+  
+} # unless ($badflag + $first) output to rnai.ace, show happy ending
+
+
+# make end of HTML page
+
+print "$footer";

@@ -1,0 +1,32 @@
+Your WBPerson number and Standard name are displayed.  This will be used to 
+track down who validated these connections between you and your papers. 
+Please don't use this form for someone else's data.  If you would like
+to do so, please contact cecilia@minerva.caltech.edu
+
+Your papers will be in batches of up to 10 papers (so as not to take too
+long to load all papers if you have a large amount of papers), please select
+a batch and click ``Select !''
+
+After clicking ``Select !'', your WBPerson entry will be displayed.  If 
+some of it is not up-to-date, please email cecilia@minerva.caltech.edu
+to update your entry.  This should be the same data displayed in WormBase.
+
+Each paper entry has its own table with its reference information.
+Under author a first pass curator has marked the entries that may be yours.
+These have a radio button, for you to mark each paper as Yours or Not Yours.
+After making selections for all papers click the ``Edit !'' button, then 
+go back and select another batch of papers if there are others left
+unselected.
+
+If you have published any C. elegans papers that are not on the list, 
+please leave a Comment using the Comment box and clicking the ``Comment !''
+button.  (This will also email cecilia@minerva.caltech.edu your data)
+
+If anything is unclear, please let us know.
+
+
+If you haven't folled the URL :
+
+Select your name, click ``Pick !'' or
+Type your WBPerson number, click ``Pick !''
+

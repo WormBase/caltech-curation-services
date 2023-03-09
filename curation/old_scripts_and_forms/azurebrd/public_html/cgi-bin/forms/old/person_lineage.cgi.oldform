@@ -1,0 +1,285 @@
+#!/usr/bin/perl
+
+# Form to submit person lineage information
+
+# Commented out all PG stuff.  Based on 2_pt_data.cgi.
+# Required to enter email and WBPerson to connect.  Add XREF type data
+# to form some kind of DAG to connect to other people.  At the moment
+# only email me and write to a flatfile.  Need to figure out if it
+# will be people, and if so whether Cecilia will curate each.  2003 07 09
+#
+# Ack.  has forgotten to touch + chmod the $acefile.
+# Changed box to take up to 5000 chars instead of 50.
+# Change Trained With to Trained As (etc.)  
+# Created forms@minerva.caltech.edu to store emails.  2003 10 09
+#
+# Appended $sender as email\t"$sender" to .ace output to parse into postgres
+# later.  2003 10 27
+
+
+
+my $acefile = "/home2/azurebrd/public_html/cgi-bin/data/person_lineage.ace";
+
+my $firstflag = 1;		# flag if first time around (show form for no data)
+
+# use LWP::Simple;
+# use Mail::Mailer;
+
+use Jex;			# untaint, getHtmlVar, cshlNew
+use strict;
+use CGI;
+use Fcntl;
+use Pg;
+
+my $conn = Pg::connectdb("dbname=testdb");
+die $conn->errorMessage unless PGRES_CONNECTION_OK eq $conn->status;
+
+my $query = new CGI;
+my $user = 'person_lineage_data_form';	# who sends mail
+# my $email = 'azurebrd@minerva.caltech.edu';	# to whom send mail
+my $email = 'forms@minerva.caltech.edu';	# to whom send mail
+my $subject = 'person_lineage';	# subject of mail
+my $body = '';			# body of mail
+my $ace_body = '';		# body of ace file
+
+print "Content-type: text/html\n\n";
+my $title = 'Person Lineage Data Submission Form';
+my ($header, $footer) = &cshlNew($title);
+print "$header\n";		# make beginning of HTML page
+
+&process();			# see if anything clicked
+&display();			# show form as appropriate
+print "$footer"; 		# make end of HTML page
+
+sub process {			# see if anything clicked
+  my $action;			# what user clicked
+  unless ($action = $query->param('action')) { $action = 'none'; }
+
+  if ($action eq 'Submit') { 
+    $firstflag = "";				# reset flag to not display first page (form)
+
+    my $mandatory_ok = 'ok';			# default mandatory is ok
+    my $sender = '';
+    my @mandatory = qw ( email mapper );
+    my %mandatoryName;				# hash of field names to print warnings
+    $mandatoryName{email} = "Email";
+ 
+    foreach $_ (@mandatory) {			# check mandatory fields
+      my ($var, $val) = &getHtmlVar($query, $_);
+      if ($_ eq 'email') {			# check emails
+        unless ($val =~ m/@.+\..+/) { 		# if email doesn't match, warn
+          print "<FONT COLOR=red SIZE=+2>$val is not a valid email address.</FONT><BR>";
+          $mandatory_ok = 'bad';		# mandatory not right, print to resubmit
+        } else { $sender = $val; }
+      } else { 					# check other mandatory fields
+	unless ($val) { 			# if there's no value
+          print "<FONT COLOR=red SIZE=+2>$mandatoryName{$_} is a mandatory field.</FONT><BR>";
+          $mandatory_ok = 'bad';		# mandatory not right, print to resubmit
+        }
+      }
+    } # foreach $_ (@mandatory)
+
+    if ($mandatory_ok eq 'bad') { 
+      print "Please click back and resubmit.<P>";
+    } else { 					# if email is good, process
+      my $result;				# general pg stuff
+      my $joinkey;				# the joinkey for pg
+      open (OUT, ">>$acefile") or die "Cannot create $acefile : $!";
+      my $host = $query->remote_host();		# get ip address
+      my $body .= "$sender from ip $host sends :\n\n";
+
+	my @all_vars = qw ( mapper trainedwith_phd trainedwith_postdoc trainedwith_masters trainedwith_undergrad trainedwith_highschool trainedwith_sabbatical trainedwith_visitedlab trainedwith_staff trainedwith_unknown trained_phd trained_postdoc trained_masters trained_undergrad trained_highschool trained_sabbatical trained_visitedlab trained_staff trained_unknown collaborated comment );
+
+      my ($var, $mapper) = &getHtmlVar($query, 'mapper');	# using mapper as pg key
+      unless ($mapper =~ m/\S/) {				# if there's no mapper text
+        print "<FONT COLOR='red'>Warning, you have not picked a Mapper</FONT>.<P>\n";
+      } else {							# if tpd text, output
+#         $result = $conn->exec( "INSERT INTO tpd_mapper (tpd_mapper) VALUES ('$mapper');" );
+#         $result = $conn->exec( "SELECT currval('tpd_seq');" );
+#         my @row = $result->fetchrow;
+#         $joinkey = $row[0];
+        $body .= "mapper\t$mapper\n";
+        $ace_body .= "Person_lineage : $mapper\n";
+        $ace_body .= "email\t\"$sender\"\n";	# appended to .ace file to parse into postgres later 
+#         $ace_body .= "Mapper\t\"$mapper\"\n";
+#         print "2_pt_data entry number $joinkey<BR><BR>\n";
+#         $result = $conn->exec( "INSERT INTO tpd_submitter_email VALUES ('$joinkey', '$sender');" );
+#         $result = $conn->exec( "INSERT INTO tpd_ip VALUES ('$joinkey', '$host');" );
+  
+        foreach $_ (@all_vars) { 			# for all fields, check for data and output
+          my ($var, $val) = &getHtmlVar($query, $_);
+          if ($val =~ m/\S/) { 	# if value entered
+            $body .= "$var\t\"$val\"\n";
+            $ace_body .= "$var\t\"$val\"\n";		# new addition for no real reason 2003 07 09
+#             my $pg_table = 'tpd_' . $var;
+#             $result = $conn->exec( "INSERT INTO $pg_table VALUES ('$joinkey', '$val');" );
+          } # if ($val) 
+        } # foreach $_ (@vars) 
+        my $full_body = $body . "\n" . $ace_body;
+        print OUT "$ace_body\n";			# print to outfile
+        close (OUT) or die "cannot close $acefile : $!";
+        $email .= ", $sender";
+        &mailer($user, $email, $subject, $full_body);	# email the data
+        $body =~ s/\n/<BR>\n/mg;
+        $ace_body =~ s/\n/<BR>\n/mg;
+        print "BODY : <BR>$body<BR><BR>\n";
+        print "ACE : <BR>$ace_body<BR><BR>\n";
+        print "<P><P><P><H1>Thank you, your info will be updated shortly.</H1>\n";
+        print "If you wish to modify your submitted information, please go back
+and resubmit.<BR><P> See all <A HREF=\"http://minerva.caltech.edu/~azurebrd/cgi-bin/data/person_lineage.ace\">new submissions</A>.<P>\n";
+      } # else # unless ($genotype =~ m/\S/)
+    } # else # unless ($sender =~ m/@.+\..+/)
+  } # if ($action eq 'Submit') 
+} # sub process
+
+
+
+sub display {			# show form as appropriate
+  if ($firstflag) { # if first or bad, show form 
+    print <<"EndOfText";
+<html>
+  <head>
+    <title>Person Lineage Data Submission Form</title>
+  </head>
+
+  <body>
+
+<A NAME="form"><H1>Person Lineage Data Submission Form :</H1></A>
+<B>WormBase would like to fully describe the professional associations
+between C. elegans researchers that started with Sydney Brenner and has 
+expanded to over 450 registered C. elegans laboratories worldwide today.  
+Please describe both those people that trained you and the people that 
+you have subsequently trained/collaborated with.</B><P><HR><P>
+<B>Please fill out as many fields as possible.  The first two fields are
+required.</B><P>
+<B>If a field has multiple data, please separate with commas, e.g.
+\"Cecilia Nakamura, Keith Horatio Bradnam\".</B><P>
+<B>If we can not find information on someone you have trained, we will contact you to create an entry for them.</B><BR>
+
+<HR>
+
+    
+
+<FORM METHOD="POST" ACTION="person_lineage.cgi">
+ 
+    <TABLE ALIGN="center"> 
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR><TD><FONT SIZE=+2><B>REQUIRED</B></FONT></TD></TR>
+    <TR><TD ALIGN="right"><I><FONT COLOR='red'><B>Submitter's Email</FONT></I> :</B></TD>
+        <TD COLSPAN=2><Input Type="Text" Name="email" Size="50"></TD>
+        <TD COLSPAN=3>(e.g. bob\@yahoo.com)</TD><TD></TR>
+    <TR><TD ALIGN="right"><I><FONT COLOR='red'><B>Full Name of Person to Connect</FONT></I> :</B></TD>
+        <TD COLSPAN=2><Input Type="Text" Name="mapper" Size="50"></TD>
+        <TD COLSPAN=3>(e.g. Eimear Elizabeth Kenny or WBPerson1841)</TD><TD></TR>
+ 
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR><TD><FONT SIZE=+2><B>TRAINED AS A</B></FONT></TD></TR>
+    <TR><TD ALIGN="right"><B>Trained as a PhD with :</B></TD>
+        <TD COLSPAN=2><Input Type="Text" Name="trainedwith_phd" Size="50" Maxlength="5000"></TD>
+        <TD COLSPAN=3>(e.g. Cecilia Nakamura, Keith Horatio Bradnam)</TD></TR>
+    <TR><TD ALIGN="right"><B>Trained as a Postdoc with :</B></TD>
+        <TD COLSPAN=2><Input Type="Text" Name="trainedwith_postdoc" Size="50" Maxlength="5000"></TD>
+        <TD COLSPAN=3></TD></TR>
+    <TR><TD ALIGN="right"><B>Trained as a Masters with :</B></TD>
+        <TD COLSPAN=2><Input Type="Text" Name="trainedwith_masters" Size="50" Maxlength="5000"></TD>
+        <TD COLSPAN=3></TD></TR>
+    <TR><TD ALIGN="right"><B>Trained as an Undergrad with :</B></TD>
+        <TD COLSPAN=2><Input Type="Text" Name="trainedwith_undergrad" Size="50" Maxlength="5000"></TD>
+        <TD COLSPAN=3></TD></TR>
+    <TR><TD ALIGN="right"><B>Trained as a High School student with :</B></TD>
+        <TD COLSPAN=2><Input Type="Text" Name="trainedwith_highschool" Size="50" Maxlength="5000"></TD>
+        <TD COLSPAN=3></TD></TR>
+    <TR><TD ALIGN="right"><B>Trained for a Sabbatical with :</B></TD>
+        <TD COLSPAN=2><Input Type="Text" Name="trainedwith_sabbatical" Size="50" Maxlength="5000"></TD>
+        <TD COLSPAN=3></TD></TR>
+    <TR><TD ALIGN="right"><B>Trained as a Lab Visitor with :</B></TD>
+        <TD COLSPAN=2><Input Type="Text" Name="trainedwith_visitedlab" Size="50" Maxlength="5000"></TD>
+        <TD COLSPAN=3></TD></TR>
+    <TR><TD ALIGN="right"><B>Trained as a Research Staff with :</B></TD>
+        <TD COLSPAN=2><Input Type="Text" Name="trainedwith_staff" Size="50" Maxlength="5000"></TD>
+        <TD COLSPAN=3></TD></TR>
+    <TR><TD ALIGN="right"><B>Trained as Unknown with :</B></TD>
+        <TD COLSPAN=2><Input Type="Text" Name="trainedwith_unknown" Size="50" Maxlength="5000"></TD>
+        <TD COLSPAN=3></TD></TR>
+  
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR><TD><FONT SIZE=+2><B>TRAINED</B></FONT></TD></TR>
+    <TR><TD ALIGN="right"><B>Trained PhD :</B></TD>
+        <TD COLSPAN=2><Input Type="Text" Name="trained_phd" Size="50" Maxlength="5000"></TD>
+        <TD COLSPAN=3></TD></TR>
+    <TR><TD ALIGN="right"><B>Trained Postdoc :</B></TD>
+        <TD COLSPAN=2><Input Type="Text" Name="trained_postdoc" Size="50" Maxlength="5000"></TD>
+        <TD COLSPAN=3></TD></TR>
+    <TR><TD ALIGN="right"><B>Trained Masters :</B></TD>
+        <TD COLSPAN=2><Input Type="Text" Name="trained_masters" Size="50" Maxlength="5000"></TD>
+        <TD COLSPAN=3></TD></TR>
+    <TR><TD ALIGN="right"><B>Trained Undergrad :</B></TD>
+        <TD COLSPAN=2><Input Type="Text" Name="trained_undergrad" Size="50" Maxlength="5000"></TD>
+        <TD COLSPAN=3></TD></TR>
+    <TR><TD ALIGN="right"><B>Trained High School student :</B></TD>
+        <TD COLSPAN=2><Input Type="Text" Name="trained_highschool" Size="50" Maxlength="5000"></TD>
+        <TD COLSPAN=3></TD></TR>
+    <TR><TD ALIGN="right"><B>Trained Sabbatical :</B></TD>
+        <TD COLSPAN=2><Input Type="Text" Name="trained_sabbatical" Size="50" Maxlength="5000"></TD>
+        <TD COLSPAN=3></TD></TR>
+    <TR><TD ALIGN="right"><B>Trained Lab Visitor :</B></TD>
+        <TD COLSPAN=2><Input Type="Text" Name="trained_visitedlab" Size="50" Maxlength="5000"></TD>
+        <TD COLSPAN=3></TD></TR>
+    <TR><TD ALIGN="right"><B>Trained Research Staff :</B></TD>
+        <TD COLSPAN=2><Input Type="Text" Name="trained_staff" Size="50" Maxlength="5000"></TD>
+        <TD COLSPAN=3></TD></TR>
+    <TR><TD ALIGN="right"><B>Trained Unknown :</B></TD>
+        <TD COLSPAN=2><Input Type="Text" Name="trained_unknown" Size="50" Maxlength="5000"></TD>
+        <TD COLSPAN=3></TD></TR>
+
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR><TD><FONT SIZE=+2><B>COLLABORATED</B></FONT></TD></TR>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR><TD ALIGN="right"><B>Collaborated with : </B></TD>
+        <TD COLSPAN=2><Input Type="Text" Name="collaborated" Size="50" Maxlength="5000"></TD>
+        <TD COLSPAN=3></TD></TR>
+
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR><TD><FONT SIZE=+2><B>COMMENT</B></FONT></TD></TR>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR><TR><TD ALIGN="right"><B>Comment :</B></TD>
+        <TD COLSPAN=2><TEXTAREA Name="comment" Rows=5 Cols=38></TEXTAREA></TD>
+        <TD COLSPAN=3></TD></TR><TR></TR>
+
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR><TD COLSPAN=2> </TD></TR>
+    <TR>
+      <TD> </TD>
+      <TD><INPUT TYPE="submit" NAME="action" VALUE="Submit">
+        <INPUT TYPE="reset"></TD>
+    </TR>
+  </TABLE>
+
+</FORM>
+If you have any problems, questions, or comments, please contact <A HREF=\"mailto:cecilia\@minerva.caltech.edu\">cecilia\@minerva.caltech.edu</A>
+
+  </body>
+</html>
+
+EndOfText
+
+  } # if (firstflag) show form 
+} # sub display

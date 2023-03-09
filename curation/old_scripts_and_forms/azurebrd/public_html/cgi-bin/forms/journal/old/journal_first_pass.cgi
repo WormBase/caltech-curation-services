@@ -1,0 +1,864 @@
+#!/usr/bin/perl
+
+# New for authors to first pass fields
+
+# Added javascript extendable textareas.  Made them hide by default.  Added ``Add information'' link
+# to show hidden textareas.  2009 02 28
+#
+# Changed the link to toggle the hide / show state.  Changed the state to refer to the tr instead
+# of the textarea, which allows a close button on the first td or the tr.  Moved the looping javascript
+# that hid all textareas into first_pass.js, and have it match a regexp of ^tr on the id of the "tr"s 
+# to make sure they're hidden.  2009 03 02
+#
+# Made subcategories and ToggleHideSubcategories javascript function.  2009 03 07
+#
+# Lots of description changes.  Added %hash{example}{table} to hide by default and toggle off a ``?''
+# to show explanation text.  Added ``Specify'' comment when toggling subcategories on.  2009 03 11
+#
+# More ordering changes and description and name changes.  2009 03 12
+#
+# Re-created some tables, renamed some other tables, repopulated data and populated afp_{table}_hst
+# for history data.
+# Rewrote &writePg(); to delete normal data if there was some, and insert data into history and normal.
+# Had to add ``name'' to html elements since CGI.pm can't get them from the ``id'' field.  2009 03 13
+#
+# Added afp_lasttouched to store when someone last sent data (so as not to check all values to see if 
+# someone wrote anything.  Stores ``time'' as an integer.  2009 04 22
+#
+# Added citation info and congratulations on top.  with &getCitation.  switched from Pg.pm to DBI.pm
+# 2009 04 23
+#
+# Altered for Journal FP from Author FP  
+# Uses journal_first_pass.js
+# Checkboxes expand hidden spans for example info and textarea ``add info''.
+# Some fields autoexpand example info by default.
+# The 5 new tables for journal only are : 
+#   afp_newstrains, afp_newbalancers, afp_newprotein, afp_newcell, afp_authors
+# 2009 05 03
+#
+# these fields newstrains newbalancers newcell authors extvariation genesymbol genestudied antibody 
+# transgene newsnp should be emailed to Karen + whenever anyone sends something.  (1 email for all 
+# of those fields)
+# TODO possibly add some sort of filtering in FP checkout for Genetics papers.
+# 2009 07 03  
+#
+# wrote &emailCurator if there's $formdata to email data curators that want data.  2009 09 10
+#
+# changed order of fields, some names and examples, made a required and recommended category.
+# 2009 09 29
+#
+# only show required fields, change instructions and description of fields.  for Karen.
+# 2010 05 13
+#
+# more changes for Mary Ann / Karen.  2010 05 14
+#
+# change &getCitation(); from wpa to pap tables, even though we're not even using this subroutine.
+# 2010 06 24
+#
+# added "No data to submit" dummy checkbox so users can feel they clicked something (nothing stored with it)
+# added newmutant table for new phenotype data.
+# consolidated karen emails
+# removed jolene  
+# &gotFlagged() email now goes to Karen, Chris, Daniela.  Added link to URL in that email.
+# change "Submit" to "Send to WormBase".  changed ? text for mass spec.  2011 02 09
+#
+# added draciti to otherexpr  2011 02 10
+#
+# Karen gets rid of allele fields (extvariation and newmutant) and adds a link at the 
+# bottom with a dummy checkbox.  2015 11 19
+
+
+use Jex;			# untaint, getHtmlVar, cshlNew
+use strict;
+use CGI;
+
+use DBI;
+
+my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n"; 
+
+
+my $blue = '#00ffcc';                   # redefine blue to a mom-friendly color
+my $red = '#00ffff';                    # redefine red to a mom-friendly color
+
+
+my $query = new CGI;
+my $firstflag = 1;
+
+my %hash;				# cat -> category ;  name -> name ;  exmp -> example
+my %name;
+my %pgData;				# data already in the pg tables (non _hst)
+my @pgTables;				# the postgres tables
+
+my %karen_email;			# fields that should be emailed to Karen
+&populateKarenEmailFields();
+
+# my @cats = qw( gif int gef pfs seq cell sil rgn oth );
+
+
+# my @cats = qw( req rec spe gif gfp int gef rgn pfs seq cell sil oth );
+my @cats = qw( req );			# only show required fields for Karen  2010 05 13
+# my @req = qw( genesymbol extvariation newstrains newbalancers transgene newcell newmutant );
+my @req = qw( genesymbol newstrains newbalancers transgene newcell );
+my @rec = qw( genestudied authors );
+my @spe = qw( celegans cnonbristol nematode nonnematode );
+my @gif = qw( mappingdata );
+my @gfp = qw( phenanalysis rnaiexp mosaic siteaction timeaction genefunc humdis );
+# my @phenanalysis = qw( newmutant overexpr chemicals );
+my @phenanalysis = qw( overexpr chemicals );
+my @rnaiexp = qw( rnai lsrnai );
+my @int = qw( geneint funccomp geneprod );
+my @gef = qw( otherexpr microarray genereg seqfeat matrices );
+my @rgn = qw( antibody marker );
+# my @pfs = qw( newprotein invitro domanal covalent structinfo massspec );
+my @pfs = qw( invitro domanal covalent structinfo massspec );
+my @seq = qw( structcorr seqchange newsnp );
+my @cell = qw( ablationdata cellfunc );
+my @sil = qw( phylogenetic othersilico );
+my @oth = qw( supplemental nocuratable comment );
+$hash{cat}{req} = [ @req ];
+$hash{cat}{rec} = [ @rec ];
+$hash{cat}{spe} = [ @spe ];
+$hash{cat}{gif} = [ @gif ];
+$hash{cat}{gfp} = [ @gfp ];
+$hash{cat}{phenanalysis} = [ @phenanalysis ];
+$hash{cat}{rnaiexp} = [ @rnaiexp ];
+$hash{cat}{int} = [ @int ];
+$hash{cat}{gef} = [ @gef ];
+$hash{cat}{rgn} = [ @rgn ];
+$hash{cat}{pfs} = [ @pfs ];
+$hash{cat}{seq} = [ @seq ];
+$hash{cat}{cell} = [ @cell ];
+$hash{cat}{sil} = [ @sil ];
+$hash{cat}{oth} = [ @oth ];
+
+# my @cats = qw( spe gif gfp int gef rgn pfs seq cell sil oth );
+# my @spe = qw( celegans cnonbristol nematode nonnematode );
+# my @gif = qw( genestudied genesymbol extvariation newstrains mappingdata newbalancers );
+# my @gfp = qw( phenanalysis rnaiexp mosaic siteaction timeaction genefunc humdis );
+# my @phenanalysis = qw( newmutant overexpr chemicals );
+# my @rnaiexp = qw( rnai lsrnai );
+# my @int = qw( geneint funccomp geneprod );
+# my @gef = qw( otherexpr microarray genereg seqfeat matrices );
+# my @rgn = qw( antibody transgene marker );
+# # my @pfs = qw( newprotein invitro domanal covalent structinfo massspec );
+# my @pfs = qw( invitro domanal covalent structinfo massspec );
+# my @seq = qw( structcorr seqchange newsnp );
+# my @cell = qw( newcell ablationdata cellfunc );
+# my @sil = qw( phylogenetic othersilico );
+# my @oth = qw( supplemental nocuratable authors comment );
+# $hash{cat}{spe} = [ @spe ];
+# $hash{cat}{gif} = [ @gif ];
+# $hash{cat}{gfp} = [ @gfp ];
+# $hash{cat}{phenanalysis} = [ @phenanalysis ];
+# $hash{cat}{rnaiexp} = [ @rnaiexp ];
+# $hash{cat}{int} = [ @int ];
+# $hash{cat}{gef} = [ @gef ];
+# $hash{cat}{rgn} = [ @rgn ];
+# $hash{cat}{pfs} = [ @pfs ];
+# $hash{cat}{seq} = [ @seq ];
+# $hash{cat}{cell} = [ @cell ];
+# $hash{cat}{sil} = [ @sil ];
+# $hash{cat}{oth} = [ @oth ];
+
+&hashName();
+
+
+print "Content-type: text/html\n\n";
+my $title = 'Journal Paper Flagging Form';
+my ($header, $footer) = &cshlNew($title);
+$header =~ s/<\/head>/<link rel="stylesheet" href="http:\/\/tazendra.caltech.edu\/~azurebrd\/stylesheets\/jex.css" \/><script type="text\/javascript" src="http:\/\/tazendra.caltech.edu\/~azurebrd\/javascript\/test.js"><\/script><script type="text\/javascript" src="http:\/\/tazendra.caltech.edu\/~azurebrd\/javascript\/journal_first_pass.js"><\/script>\n<\/head>/;
+
+
+
+print "$header\n";		# make beginning of HTML page
+
+&process();			# see if anything clicked
+# &displayQuery();		# show query box
+print "$footer"; 		# make end of HTML page
+
+sub process {			# see if anything clicked
+  my $action;			# what user clicked
+  unless ($action = $query->param('action')) { $action = 'none'; &displayTypeTwo(); }
+
+  if ($action eq 'Curate') { &displayTypeTwo(); }
+  elsif ($action eq 'Send to WormBase') { &gotFlagged(); }
+#   elsif ($action eq 'Submit Text') { &gotText(); }
+  elsif ($action eq 'nocuratable') { &gotNocuratable(); }
+}
+
+sub gotNocuratable {
+  my ($paper, $passwd) = &checkPaperPasswd();
+  return if ($paper eq 'bad');
+  print "Not a primary research article.<BR>\n";
+  &writePg('nocuratable', $paper, 'checked');
+#   &messageAndrei("$paper is a review");
+} # sub gotNocuratable
+
+sub writePg {
+  my ($table, $joinkey, $data) = @_;
+  next unless ($data);		# skip if there's no data (NULL is explicitly written)
+  my $to_print = $data; if ($to_print eq 'NULL') { $to_print = "is now blank"; }
+  unless ($table eq 'lasttouched') {
+    print "<span style=\"color:#3366FF; font-family: sans-serif;\">$hash{name}{$table}</span> $to_print<br />\n";
+  }
+  my @pgcommands = (); my $pgcommand = '';
+  $pgcommand = "DELETE FROM afp_$table WHERE joinkey = '$joinkey';" ;	
+  push @pgcommands, $pgcommand;		# can't check $pgData{$table} since blank wouldn't show
+  $pgcommand = "INSERT INTO afp_$table VALUES ('$joinkey', $data);" ;
+  push @pgcommands, $pgcommand;
+  $pgcommand = "INSERT INTO afp_${table}_hst VALUES ('$joinkey', $data);" ;
+  push @pgcommands, $pgcommand;
+  foreach $pgcommand (@pgcommands) {
+#     print "$pgcommand<BR>\n";
+    my $result = $dbh->do( $pgcommand );
+  }
+# I THINK THE BELOW IS JUNK  2009 04 06
+#   my @row = $result->fetchrow();
+# UNCOMMENT THESE TO WRITE TO POSTGRES
+#   if ($row[0]) {				# if there was previous data in postgres
+#       my $update = 0;
+#       if ($data ne 'checked') { $update++; }	# real data, always update
+#       elsif ( ($row[1] eq 'checked') && ($data eq 'checked') ) { $update++; }	# was checked and is checked, update to get new timestamp
+#       elsif ( ($row[1] ne 'checked') && ($data eq 'checked') ) { $update = 0; }	# was real data and is now checked, ignore, not new data
+#       if ($update > 0) {
+#         $result = $conn->exec( "UPDATE $table SET $table = '$data' WHERE joinkey = '$joinkey';" );
+#         $result = $conn->exec( "UPDATE $table SET afp_timestamp = CURRENT_TIMESTAMP WHERE joinkey = '$joinkey';" ); } }
+#     else { $result = $conn->exec( "INSERT INTO $table VALUES ('$joinkey', '$data');" ); }
+} # sub writePg
+
+sub emailComment {
+  my ($paper, $formdata) = @_;
+  my $user = 'paper_fields.cgi';
+  my $email = 'kyook@its.caltech.edu';
+  my $subject = "Comment for WBPaper$paper";
+  my $body = $formdata;
+  &mailer($user, $email, $subject, $body);    # email CGI to user
+}
+
+sub gotFlagged {
+  my ($paper, $passwd) = &checkPaperPasswd();
+  return if ($paper eq 'bad');
+  &populatePgData($paper);
+  &printForm();
+#   print "<INPUT TYPE=HIDDEN NAME=paper VALUE=$paper>\n"; print "<INPUT TYPE=HIDDEN NAME=passwd VALUE=$passwd>\n";
+  my $time = time;
+  &writePg('lasttouched', $paper, "'$time'"); 
+
+  my $body = "Paper $paper flagged from journal_first_pass.cgi\n";
+  foreach my $table (@pgTables) {
+    my ($pgdata) = &getPgData($table, $paper);
+    (my $oop, my $checked) = &getHtmlVar($query, "${table}_check");
+    ($oop, my $formdata) = &getHtmlVar($query, $table);
+# print "$table has -=${formdata}=-<br />\n";
+    if ($formdata && $karen_email{$table}) { $body .= "\n$table\t$formdata"; }
+    if ($pgdata) {					# there was pg data;  three posibilities, same text data, diff text data, same checkbox, blank checkbox
+      next if ($pgdata eq $formdata); 			# no change, skip (same text data)
+      if ($formdata) {					# diff formdata, write and move on
+        &emailCurator($table, $formdata, $body); 
+        &writePg($table, $paper, "'$formdata'"); 
+        if ($table eq 'comment') { &emailComment($paper, $formdata); }
+        next; } 		
+      next if ($pgdata eq $checked);			# no change, skip (same checkbox)
+      if ($checked eq '') { &writePg($table, $paper, 'NULL'); }
+    } else { 						# new data
+      unless ($formdata) { $formdata = $checked; }	# no formdata, copy checked data
+      if ($formdata) { 
+        &emailCurator($table, $formdata, $body);  
+        &writePg($table, $paper, "'$formdata'"); }
+    }
+  } # foreach my $table (@pgTables)
+  print "</FORM>\n";
+#   &messageCurator($body);				# Xiaodong doesn't want messages  2009 04 24
+  &messageKaren($body, $paper, $passwd);
+  print "Thank you for helping us with this mark-up pipeline.<br />\n";
+} # sub gotFlagged
+
+sub emailCurator {			# mail data curators that want data.  2009 09 10
+  my ($table, $formdata, $body) = @_;
+  my $email = '';
+  if ( ($table eq 'rnai') || ($table eq 'lsrnai') ) { $email = 'garys@its.caltech.edu'; }
+  elsif ( ($table eq 'geneprod') || ($table eq 'invitro') ) { $email = 'vanauken@its.caltech.edu'; }
+  elsif ( ($table eq 'overexpr') || ( $table eq 'transgenes') || 
+          ( $table eq 'genestudied') ) { $email = 'kyook@caltech.edu'; }
+  elsif ( $table eq 'authors') { $email = 'cecilia@tazendra.caltech.edu'; }
+  elsif ( $table eq 'genesymbol') { $email = 'genenames@wormbase.org, vanauken@its.caltech.edu'; }
+  elsif ( ($table eq 'newmutant') ) { $email = 'kyook@caltech.edu, garys@caltech.edu'; }
+  elsif ( ( $table eq 'newbalancers') || ( $table eq 'extvariation') ) { $email = 'genenames@wormbase.org'; }
+  elsif ( $table eq 'otherexpr' ) { $email = 'draciti@caltech.edu'; }
+  elsif ( $table eq 'newstrains') { $email = 'ar2@sanger.ac.uk'; }
+  elsif ( ($table eq 'genereg') || ($table eq 'geneint') || ($table eq 'seqfeat') || ($table eq 'matrices') ) {
+    $email = 'xdwang@its.caltech.edu'; }
+  elsif ( ($table eq 'mosaic') || ( $email eq 'siteaction') || ( $email eq 'timeaction') ||
+       ( $email eq 'ablationdata') || ( $email eq 'newcell') || ( $email eq 'cellfunc') ) {
+    $email = 'raymond@its.caltech.edu'; }
+  if ($email) {
+    my $user = 'journal_first_pass.cgi';
+    my $subject = $body . " for $table";
+    $body = "In collaboration with Genetics, Textpresso developers  have generated links to these objects in WormBase, which will be silent until the object is created in the database.\n\n" . $formdata;
+    &mailer($user, $email, $subject, $body);    # email CGI to user
+  }
+}
+
+sub messageKaren {
+  my ($body, $paper, $passwd) = @_;
+  my $user = 'journal_first_pass.cgi';
+  my $email = 'kyook@caltech.edu, draciti@caltech.edu, cgrove@caltech.edu';
+#   my $email = 'azurebrd@tazendra.caltech.edu';
+  my $subject = "Paper $paper flagged from Journal Flagging Form";
+  my $url = 'http://tazendra.caltech.edu/~azurebrd/cgi-bin/forms/journal/journal_first_pass.cgi?action=Curate&paper=' . $paper . '&passwd=' . $passwd;
+  $body .= "Here's a link to the journal FP form for this paper $url";
+#   print "$body<BR>\n";
+  &mailer($user, $email, $subject, $body);    # email CGI to user
+} # sub messageAndrei
+
+
+sub printForm {
+  print "<FORM METHOD=POST ACTION=\"journal_first_pass.cgi\">\n";
+} # sub printForm
+
+sub checkPaperPasswd {
+  (my $oop, my $paper) = &getHtmlVar($query, 'paper');
+  ($oop, my $passwd) = &getHtmlVar($query, 'passwd');
+  my $result = $dbh->prepare( "SELECT * FROM afp_passwd WHERE joinkey = '$paper' AND afp_passwd = '$passwd';" );
+  $result->execute();
+  my @row = $result->fetchrow;
+# UNCOMMENT THIS TO PUT PASSWORD CHECKING BACK
+  unless ($row[0]) { print "Invalid Password<BR>\n"; return "bad"; }
+  my $time = time;
+# print "TIME $time<BR>\n";
+  my $timediff = $time - $passwd;
+# UNCOMMENT THIS TO PUT PASSWORD EXPIRY BACK
+#   if ($timediff > 604800) { print "Password has expired after 7 days, please email <A HREF=\"mailto:petcherski\@gmail.com\">Andrei</A> for renewal<BR>\n"; return "bad"; }
+  return ($paper, $passwd);
+} # sub checkPaperPasswd
+
+sub displayTypeTwo {
+  my ($paper, $passwd) = &checkPaperPasswd();
+  return if ($paper eq 'bad');
+  &populatePgData($paper);
+  print "<FORM NAME=typeTwoForm METHOD=POST ACTION=\"journal_first_pass.cgi\">\n";
+# I THINK THE BELOW IS JUNK  2009 04 06
+#   print "<div id=\"showData\"></div>";
+#   print "<INPUT TYPE=BUTTON VALUE=\"testing\" onClick=\"ShowData()\"><BR><P>\n";
+#   print << "EndOfText";
+#   <input type="text" id="txtToHide" onfocus="hide(this.form,1)"/>
+#   <textArea id="txtArea" style="overflow:auto;" onblur="hide(this.form,2)"></textArea><br>
+# EndOfText
+# 
+# print '<script type=text/javascript>
+# for (docprop in document) {
+#   document.writeln(docprop + "=");
+#   eval ("document.writeln(document." + docprop + ")");
+#   document.writeln("<BR>");
+# }
+# </script>';
+ 
+  print "<input type=\"hidden\" name=\"paper\" value=\"$paper\" />\n"; 
+  print "<input type=\"hidden\" name=\"passwd\" value=\"$passwd\" />\n";
+
+  print "<p><span style=\"font-weight:bold\">Congratulations on your paper being accepted by GENETICS for publication!</span></p>\n";
+
+  print "<p>GENETICS is working with textpresso (www.textpresso.org) and WormBase (www.wormbase.org) to create links between genetic and genomic objects (genes, alleles, reagents, etc.) that are in the online full text and PDF formats of your paper to the appropriate page on WormBase.  Existing WormBase objects that are in your paper will automatically be linked. <span style=\"font-style:italic; color:magenta\">However, if you want any new objects discovered / described in your online paper to be linked to WormBase then you need to tell us what they are.</span></p>";
+
+  print "<p>Please use the form provided below to enter the names of these objects. This information will be sent to WormBase where these objects will be curated and made available in the next possible release of our database.  Follow the examples carefully as your data will be processed automatically. If you would rather upload a file, please contact <a href=mailto:kyook\@caltech.edu>kyook\@caltech.edu</a>.</p>\n";
+# print "<p>Please follow the examples carefully as your data will be processed automatically. Errors in data submission may result in the need for an extended period of proofreading. If you would rather upload a file, please contact <a href=mailto:kyook\@caltech.edu>kyook\@caltech.edu</a>.</p>\n";
+
+print "<p>Thank you for your help.</p>\n";
+
+
+print "<p>Best Wishes,<br />\n";
+
+print "WormBase<br />\n";
+print "<a href=\"http://www.wormbase.org\">http://www.wormbase.org</a><br />\n";
+print "<a href=mailto:help\@wormbase.org>help\@wormbase.org</a></p><br />\n";
+
+
+
+# print "Please click the box next to the type of data found in the body of your publication.<br />\n";
+
+#   print "<h2>Congratulations on the publication of your paper!</h2>\n";
+#   my $citation = &getCitation($paper);
+#   print "$citation<br />\n";
+#   print "<h2>Please click the box next to the type of data your publication includes.</h2>\n";
+
+#   print "<b>If this is a <span style=\"color:red\">Review</span> just click this button and ignore the fields below : </b><input type=\"submit\" id=\"action\" value=\"Review\"><br />\n";
+#   print "<b>If this is not a primary research article, please click <a href=http:\/\/tazendra.caltech.edu\/~azurebrd\/cgi-bin\/forms\/journal_first_pass.cgi?paper=$paper&passwd=$passwd&action=nocuratable><span style=\"color:chocolate\">here</span></a>.  You may ignore the fields below.  Thank you. </b><br />\n";
+  print "Click the \"<span style=\"color:chocolate\">?</span>\" to find out more about the data type.<br />";
+  print "Click the \"<span style=\"color:blue\">Add information</span>\" to open or close the data entry box.<br />";
+  if ($pgData{afp}) { print "This paper has already had data submitted, loading it now.<br />\n"; }
+  print "<table border=\"0\">";
+  foreach my $cat (@cats) {
+    if ($cat eq 'spe') { print "<tr><td colspan=\"3\"><span style=\"margin-top: 30px; margin-bottom: 10; color:red\"><br />Optional below here.<br />Check the box or add information if the corresponding data type exists in your paper.<br />Click the \"?\" to find out more about the data type.</span></td></tr>\n"; }
+    print "<td colspan=3><h1 style=\"margin-top: 30; margin-bottom: 10\">$hash{name}{$cat}</h1></td></tr>\n";
+#     print "<td colspan=3><h1>$hash{name}{$cat} :</h1></td></tr>\n";
+    foreach my $table (@{ $hash{cat}{$cat} }) { 
+      &showTr($table, $paper, "cat", "1");
+      if ($hash{cat}{$table}) { 
+        foreach my $subcat ( @{ $hash{cat}{$table} } ) { &showTr($subcat, $paper, "subcat", "1"); } 
+#         print "</table>";	# close the table that holds subcategories
+      }
+    }
+  } # foreach my $cat (@cats)
+  print "</table>";
+  print "<input type=\"checkbox\" name=\"dummy_checkbox\" id=\"dummy_checkbox\" value=\"\" />\n";
+  print qq(<span style="font-weight:bold;">Alleles</span>. Add sequence information <a href="http://tazendra.caltech.edu/~azurebrd/cgi-bin/forms/allele_sequence.cgi" style="color:red" target="_blank">here</a> ; Add phenotype information <a href="http://tazendra.caltech.edu/~azurebrd/cgi-bin/forms/allele_phenotype.cgi" style="color:red" target="_blank">here</a>.<br/>);
+  print "<input type=\"checkbox\" name=\"dummy_checkbox\" id=\"dummy_checkbox\" value=\"\" />\n";
+  print "<span style=color:red><b>No data to submit</b></span><br/>";
+  print "<P><BR><INPUT TYPE=submit NAME=action VALUE=\"Send to WormBase\"><BR>\n";
+  print "</FORM>\n";
+} # sub displayTypeTwo
+
+sub populatePgData {
+  my $paper = shift;
+  foreach my $cat (@cats) {
+    foreach my $table (@{ $hash{cat}{$cat} }) { 
+      if ($hash{cat}{$table}) { 
+        foreach my $subcat ( @{ $hash{cat}{$table} } ) { push @pgTables, $subcat; } }  
+      else { push @pgTables, $table; } } }
+  foreach my $table (@pgTables) {
+    my ($pgdata) = &getPgData($table, $paper);
+    if ($pgdata) { 
+      $pgData{afp}++;
+      $pgData{$table} = $pgdata; }
+  } # foreach my $table (@pgTables)
+} # sub populatePgData
+
+sub showTr {
+  my ($table, $paper, $catOrSubcat, $rowSpan) = @_;
+  my $trId = '';
+  if ($catOrSubcat eq 'subcat') { $trId = "tr_hidden_$table"; }
+  my $left = '';
+  if ($catOrSubcat eq 'subcat') { $left = "style=\"left: 20px\""; }
+  print "<tr id=\"$trId\" $left>\n";
+  my $checked = '';
+#   my ($pgdata) = &getPgData($table, $paper);
+  my $pgdata = $pgData{$table};
+  if ($pgdata) { $checked = 'checked="checked"'; } else { $checked = ''; }
+  unless ($pgData{afp}) { if ($table eq 'celegans') { $checked = 'checked="checked"'; } }
+  my $td_id = "td_" . $table . '_check';
+  if ($hash{cat}{$table}) { 				# for mutant or rnai subcategory
+    $rowSpan = scalar( @{ $hash{cat}{$table} } ) + 1; }
+#   if ($hash{cat}{$table}) { 				# for mutant or rnai subcategory
+#       my $subcats = join", ", @{ $hash{cat}{$table} };
+#       $td_id = "td_" . $subcats . '_check';
+#       $checked .= " onClick=\"ToggleHideSubcategories(\'$subcats\')\""; }
+#     else {						# all normal subcategory checkboxes now expand example and hidden
+#       $checked .= " onClick=\"ToggleHideSpansExampleHidden(\'$table\')\""; }	# removed again 2009 05 04
+
+  print "<td id=\"$td_id\" valign=\"top\" rowspan=\"$rowSpan\">";	# assign an id for ToggleHideSubcategories
+  my $colspan = 2;					# shown tds with data of categories have a colspan of 2
+  if ($catOrSubcat eq 'subcat') { $colspan--; } 	# hidden tds with data of sub-categories have a colspan of 1
+  unless ($hash{cat}{$table}) {
+    print "<input type=\"checkbox\" name=\"${table}_check\" id=\"${table}_check\" value=\"checked\" $checked />\n"; }
+  print "</td><td colspan=\"$colspan\">\n"; 
+  print "<table border=\"0\"><tr><td colspan=\"2\">";		# open a table for description and textarea to be aligned
+  print "$hash{name}{$table}";
+  if ($hash{exmp}{$table}) { 
+      print "  <a href=\"javascript:ToggleHideSpan('example', '$table')\" style=\"color:chocolate\">?</a><span id=\"span_example_$table\">$hash{exmp}{$table}</span>";
+  }
+  if ($hash{cat}{$table}) { 
+      my $subcats = join", ", @{ $hash{cat}{$table} };
+      print "  <span id=\"span_specify_$subcats\"><b>Please specify your data type.</b></span>\n"; 
+  } else {
+      print " <a href=\"javascript:ToggleHideSpan('hidden', '$table')\">Add information</a>."; 
+      print "<span style=\"color:white\">$table</span>\n"; 
+      print "<span id=\"span_hidden_$table\"><br />";
+      print "<textarea name=\"$table\" id=\"$table\" style=\"overflow:auto; left:10px\" onKeyUp=DisableCheckboxResizeTextarea(\"$table\") rows=\"4\" cols=\"80\">";
+      if ($pgdata ne 'checked') { print "$pgdata"; }
+      print "</textarea>";
+      print "<a href=\"javascript:ToggleHideSpan('hidden', '$table')\" style=\"vertical-align: top\">x</a>";
+      print "</span>\n";
+  }
+  print "</td></tr></table>";					# close table for description and textarea alignment
+  print "</td></tr>\n";
+#   print "<tr id=\"tr_hidden_$table\"><td valign=\"top\" align=\"right\" style=\"font-variant: small-caps\"><a href=\"javascript:ToggleHideSpan('hidden', '$table')\">x</a></td>";
+#   print "<td><textarea id=\"$table\" style=\"overflow:auto;\" onKeyUp=ExpandTextarea(\"$table\") rows=\"4\" cols=\"80\"></textarea></td></tr>\n";
+}
+
+sub getCitation {
+  my ($joinkey) = @_;  my %title; my %journal; my %year;
+  my $result = $dbh->prepare( "SELECT * FROM pap_title WHERE joinkey = '$joinkey' ;" );
+  $result->execute();
+  while ( my @row = $result->fetchrow() ) { $title{$row[1]}++; }
+  $result = $dbh->prepare( "SELECT * FROM pap_journal WHERE joinkey = '$joinkey' " );
+  $result->execute();
+  while ( my @row = $result->fetchrow() ) { $journal{$row[1]}++; }
+  $result = $dbh->prepare( "SELECT * FROM pap_year WHERE joinkey = '$joinkey' " );
+  $result->execute();
+  while ( my @row = $result->fetchrow() ) { $year{$row[1]}++; }
+  my (@titles) = keys %title; my (@journals) = keys %journal; my (@year) = keys %year; 
+  my $citation = "<span style=\"font-size: 105%; font-weight: bold\">\"$titles[0]\" <span style=\"font-style: italic\">$journals[0],</span> $year[0]</span>";
+  return $citation;
+} # sub getTitle
+
+sub getPgData {
+  my ($table, $joinkey) = @_;
+  my $result = $dbh->prepare( "SELECT * FROM afp_$table WHERE joinkey = '$joinkey';" );
+  $result->execute();
+  my @row = $result->fetchrow();
+  if ($row[1]) { return $row[1]; }
+  return;
+} # sub getPgData
+
+
+sub populateKarenEmailFields {
+  $karen_email{"newstrains"}++; 
+  $karen_email{"newbalancers"}++;
+  $karen_email{"newcell"}++;
+  $karen_email{"newmutant"}++;
+  $karen_email{"authors"}++;
+  $karen_email{"extvariation"}++;
+  $karen_email{"genesymbol"}++;
+  $karen_email{"genestudied"}++;
+  $karen_email{"antibody"}++;
+  $karen_email{"transgene"}++;
+  $karen_email{"newsnp"}++;
+} # sub populateKarenEmailFields
+
+sub hashName {
+  $hash{name}{req} = '<span style=color:red>Enter new objects that you want linked in your paper :</span>';
+  $hash{name}{rec} = '<span style=color:red>Recommended :</span>';
+
+  $hash{name}{spe} = 'Species :';
+  $hash{name}{celegans}    = '<i>C. elegans</i>.';
+  $hash{exmp}{celegans}    = 'Please uncheck if you are not reporting data for <i>C. elegans</i>.';
+  $hash{name}{cnonbristol} = '<i>C. elegans</i> other than Bristol.';
+#   $hash{exmp}{cnonbristol} = 'Please indicate if data for <i>C. elegans</i> isolates other than N2 (Bristol) are presented in this paper.';
+  $hash{exmp}{cnonbristol} = 'Please indicate if <i>C. elegans</i> isolates other than Bristol, such as Hawaiian, CB4855, etc., are used in your paper.';	# changed 2009 07 06
+  $hash{name}{nematode}    = 'Nematode species other than <i>C. elegans</i>.';
+  $hash{exmp}{nematode}    = 'Please indicate if data is presented for any species other than <i>C. elegans</i>, e.g., <i>C. briggsae, Pristionchus pacificus, Brugia malayi,</i> etc.';
+  $hash{name}{nonnematode} = 'Non-nematode species.';
+  $hash{exmp}{nonnematode} = 'Please indicate if data is presented for any non-nematode species.';
+
+  $hash{name}{gif} = 'Gene Identification and Mapping :';
+  $hash{name}{genestudied}  = '<span style="font-weight:bold;">Genes studied in this paper</span> (separated by comma).';
+  $hash{name2}{genestudied} = 'Relevant Genes.  Please list genes studied in the paper.  Exclude common markers and reporters.';
+  $hash{exmp}{genestudied}  = 'Please list any gene that is a focus of analysis in your paper. ';
+#   $hash{name}{genesymbol} = 'Newly cloned Novel Gene Symbol or Gene-CDS link.  E.g., xyz-1 gene was cloned and it turned out to be the same as abc-1 gene.';
+  $hash{name}{genesymbol}   = '<span style="font-weight:bold;">Genes cloned or mapped in this paper</span> (example: cdf-2, mett-10 ).';
+  $hash{exmp}{genesymbol}   = 'List any gene in your paper that doesn\'t exist in WormBase already.';
+#   $hash{name}{extvariation} = '<span style="font-weight:bold;">Alleles</span> (example: dh115, oz36, u53 ).';
+#   $hash{exmp}{extvariation} = 'List all alleles that do not exist in WormBase already.';
+  $hash{name}{newstrains}   = '<span style="font-weight:bold;">Strains (only those accepted by the CGC for deposit into the permanent collection)</span> (example: YY166, YY173, YY216).';
+  $hash{exmp}{newstrains}   = 'List any strain that will be sent to the CGC. Only list the name of the strain and not the genotype, a data curator will extract that information later.';
+  $hash{name}{mappingdata}  = 'Genetic mapping data.';
+  $hash{exmp}{mappingdata}  = 'Please indicate if your paper contains 3-factor interval mapping data, i.e., genetic data only.  Include Df or Dp data, but no SNP interval mapping.';
+  $hash{name}{newbalancers} = '<span style="font-weight:bold;">Rearrangements</span> (example: hT96, cDf57).';
+  $hash{exmp}{newbalancers} = 'List any balancer or rearrangement that doesn\'t exist in WormBase already.  Only list the name of the object and no other details, a data curator will extract that information later.';
+
+  $hash{name}{gfp} = 'Gene Function :';
+  $hash{name}{phenanalysis} = 'Mutant, overexpression, or chemical-based phenotypes.';
+#   $hash{name}{newmutant}    = '<span style="font-weight:bold;">New phenotype</span> (example: Lov, Pat, Unc).';
+#   $hash{exmp}{newmutant}    = 'Please enter any new 3-letter terms for phenotypes';
+  $hash{name}{overexpr} = 'Overexpression phenotype.';
+  $hash{exmp}{overexpr} = 'Please indicate if your paper reports an abnormal phenotype based on the overexpression of a gene or gene construct. E.g., "...constitutively activated SCD-2(neu*) receptor caused 100% of animals to arrest in the first larval stage (L1)..."';
+  $hash{name}{chemicals} = 'Chemicals.';
+  $hash{exmp}{chemicals} = 'Please indicate if the effects of small molecules, chemicals, or drugs were studied on worms, e.g., paraquat, butanone, benzaldehyde, aldicarb, etc. Mutagens used for the generation of mutants in genetic screens do not need to be indicated.';
+  $hash{name}{rnaiexp}   = 'RNAi experimental details';
+  $hash{exmp}{rnaiexp}   = 'If your paper reports RNAi experiments and the details for the probes used are not listed in supplemental materials, please enter the sequences or source of sequences used for these experiments so we can map these experiments in relation to the genome. You can enter this information in the form of standard primer pair names (e.g., sjj_ZK617.1, cenix:155-g4, mv_CAA3346 or the library used), genomic coordinates of the primers (e.g. IV:11970667..12012891, ZK1067:13703..22295, MtDNA:4504..5613), or cDNA/EST/OST clone names (e.g. AF071375, yk275g9, OSTR215B4_1). Otherwise, please give us the sequences of the primers or the exact sequence of the entire RNAi probe.';
+  $hash{name}{rnai}   = 'Small-scale RNAi (&lt; 100 individual experiments).';
+  $hash{exmp}{rnai}   = 'Please tell us the sequences or source of sequences used for RNAi experiments so we can map these experiments in relation to the genome.';
+  $hash{name}{lsrnai} = 'Large-scale RNAi (&ge; 100 individual experiments).';
+  $hash{exmp}{lsrnai} = 'Please indicate if your paper reports gene knockdown phenotypes for more than 100 individual RNAi experiments.';
+  $hash{name}{mosaic} = 'Mosaic analysis.';
+  $hash{exmp}{mosaic} = 'Please indicate if your paper reports cell specific gene function based on mosaic analysis, e.g., extra-chromosomal transgene loss in a particular cell lineage leads to loss of mutant rescue, etc.';
+  $hash{name}{siteaction} = 'Tissue or cell site of action.';
+  $hash{exmp}{siteaction} = 'Please indicate if your paper reports anatomy (tissue or cell)-specific expression function for a gene.';
+  $hash{name}{timeaction} = 'Time of action.';
+  $hash{exmp}{timeaction} = 'Please indicate if your paper reports a temporal requirement for gene function, that is, if gene activity was assayed, for example, through temperature-shift experiments.';
+  $hash{name}{genefunc} = 'Molecular function of a gene product.';
+  $hash{exmp}{genefunc} = 'Please indicate if your paper discusses a new function for a known or newly defined gene.';
+  $hash{name}{humdis} = 'Homolog of a human disease-associated gene.';
+  $hash{exmp}{humdis} = 'Please indicate if genes discussed in your paper are a homolog/ortholog of a human disease-related gene.';
+
+  $hash{name}{int} = 'Interactions :';
+  $hash{name}{geneint} = 'Genetic interactions.';
+  $hash{exmp}{geneint} = 'Please indicate if your paper reports the analysis of more than one gene at a time, e.g., double, triple, etc. mutants, including experiments where RNAi was used concurrent with other RNAi-treatments or mutations.';
+  $hash{name}{funccomp} = 'Functional complementation.';
+  $hash{exmp}{funccomp} = 'Please indicate if your paper reports functional redundancy between separate genes, e.g., the rescue of <i>gen-A</i> by overexpression of <i>gen-B</i>, or any other extragenic sequence.';
+  $hash{name}{geneprod} = 'Gene product interaction.';
+  $hash{exmp}{geneprod} = 'Please indicate if your paper reports data on protein-protein, RNA-protein, DNA-protein, or Y2H interactions, etc.';
+
+  $hash{name}{gef} = 'Regulation of Gene Expression :';
+  $hash{name}{otherexpr} = 'New expression pattern for a gene.';
+  $hash{exmp}{otherexpr} = 'Please indicate if your paper reports new temporal or spatial (e.g. tissue, subcellular, etc.) data on the pattern of expression of any gene in a wild-type background. You can include: reporter gene analysis, antibody staining, <i>In situ</i> hybridization, RT-PCR, Western or Northern blot data.';
+  $hash{name}{microarray} = 'Microarray.';
+  $hash{exmp}{microarray} = 'Please indicate if your paper reports any microarray data.';
+  $hash{name}{genereg} = 'Alterations in gene expression by genetic or other treatment.';
+  $hash{exmp}{genereg} = 'Please indicate if your paper reports changes or lack of changes in gene expression levels or patterns due to genetic background, exposure to chemicals or temperature, or any other experimental treatment.';
+  $hash{name}{seqfeat} = 'Regulatory sequence features.';
+  $hash{exmp}{seqfeat} = 'Please indicate if your paper reports any gene expression regulatory elements, e.g., DNA/RNA elements required for gene expression, promoters, introns, UTR\'s, DNA binding sites, etc.';
+  $hash{name}{matrices} = 'Position frequency matrix (PFM) or position weight matrix (PWM).';
+  $hash{exmp}{matrices} = 'Please indicate if your paper reports PFMs or PWMs, which are typically used to define regulatory sites in genomic DNA (e.g., bound by transcription factors) or mRNA (e.g., bound by translational factors or miRNA). PFMs define simple nucleotide frequencies, while PWMs are scaled logarithmically against a background frequency.';
+
+  $hash{name}{rgn} = 'Reagents :';
+  $hash{name}{antibody} = '<i>C. elegans</i> antibodies.';
+  $hash{exmp}{antibody} = 'Please list any new or known antibody created by your lab or another researcher\'s lab, that is used in this paper; do not check this box if antibodies were commercially bought.';
+  $hash{name}{transgene} = '<span style="font-weight:bold;">Transgenes</span> (example: amIs4, amIs5).';
+  $hash{exmp}{transgene} = 'List any transgene used in this paper that doesn\'t exist in WormBase already.  Do not include if the transgene does not have a canonical name.';
+  $hash{name}{marker} = 'Transgenes used as tissue markers.';
+  $hash{exmp}{marker} = 'Please list any transgene used in this paper that doesn\'t exist in WormBase already, especially if the transgene does not have a canonical name.';
+
+  $hash{name}{pfs} = 'Protein Function and Structure :';
+  $hash{name}{newprotein} = '<span style="font-weight:bold;">New protein</span> (separated by comma).';
+  $hash{exmp}{newprotein} = 'Please list any protein that doesn\'t exist in WormBase already.';
+  $hash{name}{invitro} = 'Protein analysis <i>in vitro</i>.';
+  $hash{exmp}{invitro} = 'Please indicate if your paper reports any <i>in vitro</i> protein analysis such as kinase assays, agonist pharmacological studies, reconstitution studies, etc.';
+  $hash{name}{domanal} = 'Analysis of protein domains.';
+  $hash{exmp}{domanal} = 'Please indicate if your paper reports on a function of a particular domain within a protein.';
+  $hash{name}{covalent} = 'Covalent modification.';
+  $hash{exmp}{covalent} = 'Please indicate if your paper reports on post-translational modifications as assayed by mutagenesis or in vitro analysis.';
+  $hash{name}{structinfo} = 'Structural information.';
+  $hash{exmp}{structinfo} = 'Please indicate if your paper reports NMR or X-ray crystallographic information.';
+  $hash{name}{massspec} = 'Mass spectrometry.';
+  $hash{exmp}{massspec} = 'Please indicate if your paper reports data from any mass spec analysis e.g., LCMS, HRMS, etc. Keywords: mass spectrometry, peptide, (and any one of the following:) MASCOT, SEQUEST, X!Tandem, OMSSA, MassMatrix';
+  
+  $hash{name}{seq} = 'Genome Sequence Data :';
+  $hash{name}{structcorr} = 'Gene structure correction.';
+  $hash{exmp}{structcorr} = 'Please indicate if your paper reports a gene structure that is different from the one in WormBase, e.g., different splice-site, SL1 instead of SL2, etc.';
+  $hash{name}{seqchange} = 'Sequencing mutant alleles.';
+  $hash{exmp}{seqchange} = 'Please indicate if your paper reports new sequence data for any mutation.';
+  $hash{name}{newsnp} = 'New SNPs, not already in WormBase.';
+  $hash{exmp}{newsnp} = 'Please list any SNP reported in your paper that doesn\'t exist in WormBase already.';
+  
+#   $hash{name}{newstrains}   = '<span style="font-weight:bold;">Strains (only those being sent to the CGC)</span> (example: YY166, YY173, YY216).';
+
+  $hash{name}{cell} = 'Cell Data :';
+  $hash{name}{newcell}      = '<span style="font-weight:bold;">Cell / anatomy terms and synonyms</span> (example: arcade ring, sex myoblasts).';
+  $hash{exmp}{newcell}      = 'Please list any C. elegans cell or anatomy part reported in your paper that doesn\'t exist in WormBase already.';
+  $hash{name}{ablationdata} = 'Ablation data.';
+  $hash{exmp}{ablationdata} = 'Please indicate if your paper reports data from an assay involving any cell or anatomical unit being ablated by laser or by other means (e.g. by expressing a cell-toxic protein).';
+  $hash{name}{cellfunc} = 'Cell function.';
+  $hash{exmp}{cellfunc} = 'Please indicate if your paper reports a function for any anatomical part (e.g., cell, tissue, etc.), which has not been indicated elsewhere on this form.';
+
+  $hash{name}{sil} = 'In Silico Data :';
+  $hash{name}{phylogenetic} = 'Phylogenetic analysis.';
+  $hash{exmp}{phylogenetic} = 'Please indicate if your paper reports any phylogenetic analysis.';
+  $hash{name}{othersilico}  = 'Other bioinformatics analysis.';
+  $hash{exmp}{othersilico}  = 'Please indicate if your paper reports any bioinformatic data not indicated anywhere else on this form.';
+
+#   $hash{name}{rgn} = 'Reagents.';
+
+  $hash{name}{oth} = 'Other :';
+  $hash{name}{supplemental} = 'Supplemental materials.';
+  $hash{exmp}{supplemental} = 'Please indicate if your paper has supplemental material.';
+  $hash{name}{nocuratable}  = 'NONE of the aforementioned data types are in this research article.';
+  $hash{exmp}{nocuratable}  = 'Please indicate if none of the above pertains to your paper. Feel free to list the data type most pertinent to your research paper in the "Add information" text area.';
+  $hash{name}{authors} = '<span style="font-weight:bold;">Names and e-mail address of authors</span> (Juancarlos Chan bob@example.com, Karen Yo karen@example.com, Cecilia Nakamura ceci@example.com).';
+  $hash{exmp}{authors} = 'Please list the e-mail address of any author on your paper that needs to be added to the WormBase database. These authors will receive a separate request from us for more information.';
+  $hash{name}{comment} = 'Feedback';
+  $hash{exmp}{comment} = 'Please give us feedback on this form or on any topic pertinent to how we can better extract data from your paper.';
+} # sub hashName
+
+__END__
+
+
+DELETE FROM afp_celegans WHERE joinkey = '00000001';
+DELETE FROM afp_cnonbristol WHERE joinkey = '00000001';
+DELETE FROM afp_nematode WHERE joinkey = '00000001';
+DELETE FROM afp_nonnematode WHERE joinkey = '00000001';
+DELETE FROM afp_genestudied WHERE joinkey = '00000001';
+DELETE FROM afp_genesymbol WHERE joinkey = '00000001';
+DELETE FROM afp_extvariation WHERE joinkey = '00000001';
+DELETE FROM afp_newstrains WHERE joinkey = '00000001';
+DELETE FROM afp_mappingdata WHERE joinkey = '00000001';
+DELETE FROM afp_newbalancers WHERE joinkey = '00000001';
+DELETE FROM afp_newmutant WHERE joinkey = '00000001';
+DELETE FROM afp_overexpr WHERE joinkey = '00000001';
+DELETE FROM afp_chemicals WHERE joinkey = '00000001';
+DELETE FROM afp_rnai WHERE joinkey = '00000001';
+DELETE FROM afp_lsrnai WHERE joinkey = '00000001';
+DELETE FROM afp_mosaic WHERE joinkey = '00000001';
+DELETE FROM afp_siteaction WHERE joinkey = '00000001';
+DELETE FROM afp_timeaction WHERE joinkey = '00000001';
+DELETE FROM afp_genefunc WHERE joinkey = '00000001';
+DELETE FROM afp_humdis WHERE joinkey = '00000001';
+DELETE FROM afp_geneint WHERE joinkey = '00000001';
+DELETE FROM afp_funccomp WHERE joinkey = '00000001';
+DELETE FROM afp_geneprod WHERE joinkey = '00000001';
+DELETE FROM afp_otherexpr WHERE joinkey = '00000001';
+DELETE FROM afp_microarray WHERE joinkey = '00000001';
+DELETE FROM afp_genereg WHERE joinkey = '00000001';
+DELETE FROM afp_seqfeat WHERE joinkey = '00000001';
+DELETE FROM afp_matrices WHERE joinkey = '00000001';
+DELETE FROM afp_antibody WHERE joinkey = '00000001';
+DELETE FROM afp_transgene WHERE joinkey = '00000001';
+DELETE FROM afp_marker WHERE joinkey = '00000001';
+DELETE FROM afp_newprotein WHERE joinkey = '00000001';
+DELETE FROM afp_invitro WHERE joinkey = '00000001';
+DELETE FROM afp_domanal WHERE joinkey = '00000001';
+DELETE FROM afp_covalent WHERE joinkey = '00000001';
+DELETE FROM afp_structinfo WHERE joinkey = '00000001';
+DELETE FROM afp_massspec WHERE joinkey = '00000001';
+DELETE FROM afp_structcorr WHERE joinkey = '00000001';
+DELETE FROM afp_seqchange WHERE joinkey = '00000001';
+DELETE FROM afp_newsnp WHERE joinkey = '00000001';
+DELETE FROM afp_newcell WHERE joinkey = '00000001';
+DELETE FROM afp_ablationdata WHERE joinkey = '00000001';
+DELETE FROM afp_cellfunc WHERE joinkey = '00000001';
+DELETE FROM afp_phylogenetic WHERE joinkey = '00000001';
+DELETE FROM afp_othersilico WHERE joinkey = '00000001';
+DELETE FROM afp_supplemental WHERE joinkey = '00000001';
+DELETE FROM afp_nocuratable WHERE joinkey = '00000001';
+DELETE FROM afp_authors WHERE joinkey = '00000001';
+DELETE FROM afp_comment WHERE joinkey = '00000001';
+
+DELETE FROM afp_celegans_hst WHERE joinkey = '00000001';
+DELETE FROM afp_cnonbristol_hst WHERE joinkey = '00000001';
+DELETE FROM afp_nematode_hst WHERE joinkey = '00000001';
+DELETE FROM afp_nonnematode_hst WHERE joinkey = '00000001';
+DELETE FROM afp_genestudied_hst WHERE joinkey = '00000001';
+DELETE FROM afp_genesymbol_hst WHERE joinkey = '00000001';
+DELETE FROM afp_extvariation_hst WHERE joinkey = '00000001';
+DELETE FROM afp_newstrains_hst WHERE joinkey = '00000001';
+DELETE FROM afp_mappingdata_hst WHERE joinkey = '00000001';
+DELETE FROM afp_newbalancers_hst WHERE joinkey = '00000001';
+DELETE FROM afp_newmutant_hst WHERE joinkey = '00000001';
+DELETE FROM afp_overexpr_hst WHERE joinkey = '00000001';
+DELETE FROM afp_chemicals_hst WHERE joinkey = '00000001';
+DELETE FROM afp_rnai_hst WHERE joinkey = '00000001';
+DELETE FROM afp_lsrnai_hst WHERE joinkey = '00000001';
+DELETE FROM afp_mosaic_hst WHERE joinkey = '00000001';
+DELETE FROM afp_siteaction_hst WHERE joinkey = '00000001';
+DELETE FROM afp_timeaction_hst WHERE joinkey = '00000001';
+DELETE FROM afp_genefunc_hst WHERE joinkey = '00000001';
+DELETE FROM afp_humdis_hst WHERE joinkey = '00000001';
+DELETE FROM afp_geneint_hst WHERE joinkey = '00000001';
+DELETE FROM afp_funccomp_hst WHERE joinkey = '00000001';
+DELETE FROM afp_geneprod_hst WHERE joinkey = '00000001';
+DELETE FROM afp_otherexpr_hst WHERE joinkey = '00000001';
+DELETE FROM afp_microarray_hst WHERE joinkey = '00000001';
+DELETE FROM afp_genereg_hst WHERE joinkey = '00000001';
+DELETE FROM afp_seqfeat_hst WHERE joinkey = '00000001';
+DELETE FROM afp_matrices_hst WHERE joinkey = '00000001';
+DELETE FROM afp_antibody_hst WHERE joinkey = '00000001';
+DELETE FROM afp_transgene_hst WHERE joinkey = '00000001';
+DELETE FROM afp_marker_hst WHERE joinkey = '00000001';
+DELETE FROM afp_newprotein_hst WHERE joinkey = '00000001';
+DELETE FROM afp_invitro_hst WHERE joinkey = '00000001';
+DELETE FROM afp_domanal_hst WHERE joinkey = '00000001';
+DELETE FROM afp_covalent_hst WHERE joinkey = '00000001';
+DELETE FROM afp_structinfo_hst WHERE joinkey = '00000001';
+DELETE FROM afp_massspec_hst WHERE joinkey = '00000001';
+DELETE FROM afp_structcorr_hst WHERE joinkey = '00000001';
+DELETE FROM afp_seqchange_hst WHERE joinkey = '00000001';
+DELETE FROM afp_newsnp_hst WHERE joinkey = '00000001';
+DELETE FROM afp_newcell_hst WHERE joinkey = '00000001';
+DELETE FROM afp_ablationdata_hst WHERE joinkey = '00000001';
+DELETE FROM afp_cellfunc_hst WHERE joinkey = '00000001';
+DELETE FROM afp_phylogenetic_hst WHERE joinkey = '00000001';
+DELETE FROM afp_othersilico_hst WHERE joinkey = '00000001';
+DELETE FROM afp_supplemental_hst WHERE joinkey = '00000001';
+DELETE FROM afp_nocuratable_hst WHERE joinkey = '00000001';
+DELETE FROM afp_authors_hst WHERE joinkey = '00000001';
+DELETE FROM afp_comment_hst WHERE joinkey = '00000001';
+
+
+# my $DB = Ace->connect(-path  =>  '/home/acedb/ts',
+#                       -program => '/home/acedb/bin/tace') || die "Connection failure: ",Ace->error;
+
+sub displayTypeOne {
+  my ($paper, $passwd) = &checkPaperPasswd();
+  return if ($paper eq 'bad');
+  &printForm();
+  print "<INPUT TYPE=HIDDEN NAME=paper VALUE=$paper>\n"; print "<INPUT TYPE=HIDDEN NAME=passwd VALUE=$passwd>\n";
+  print "<B>If this is a <FONT COLOR=red>Review</FONT> just click this button and ignore the fields below : </B><INPUT TYPE=submit NAME=action VALUE=\"Review\"><BR><P>\n";
+  foreach my $cat (@cats) {
+    print "<H1>$hash{name}{$cat} :</H1><P>\n";
+    foreach my $table (@{ $hash{cat}{$cat} }) { 
+      my ($data) = &getPgData($table, $paper);
+      if ($data) { $data = 'checked'; }
+#       print "<INPUT TYPE=checkbox NAME=\"${table}_check\" $data>$hash{name}{$table} <FONT COLOR=red>$table</FONT><BR>\n"; 
+#       if ($curatorOnly{$table}) { print "<FONT COLOR=red>Only curators will see this line : </FONT>\n"; }
+      print "<INPUT TYPE=checkbox NAME=\"${table}_check\" $data>$hash{name}{$table} <FONT COLOR=white>$table</FONT><BR>\n"; 
+    }
+  } # foreach my $cat (@cats)
+  print "<P><BR><INPUT TYPE=submit NAME=action VALUE=\"Flag\"><BR>\n";
+  print "</FORM>\n";
+} # sub displayTypeOne
+
+
+sub OLDwritePg {
+  my ($table, $joinkey, $data) = @_;
+  next unless ($data);		# skip if there's no data
+  $table = 'afp_' . $table;
+  my $result = $conn->exec( "SELECT * FROM $table WHERE joinkey = '$joinkey';" );
+  my @row = $result->fetchrow();
+# UNCOMMENT THESE TO WRITE TO POSTGRES
+#   if ($row[0]) {				# if there was previous data in postgres
+#       my $update = 0;
+#       if ($data ne 'checked') { $update++; }	# real data, always update
+#       elsif ( ($row[1] eq 'checked') && ($data eq 'checked') ) { $update++; }	# was checked and is checked, update to get new timestamp
+#       elsif ( ($row[1] ne 'checked') && ($data eq 'checked') ) { $update = 0; }	# was real data and is now checked, ignore, not new data
+#       if ($update > 0) {
+#         $result = $conn->exec( "UPDATE $table SET $table = '$data' WHERE joinkey = '$joinkey';" );
+#         $result = $conn->exec( "UPDATE $table SET afp_timestamp = CURRENT_TIMESTAMP WHERE joinkey = '$joinkey';" ); } }
+#     else { $result = $conn->exec( "INSERT INTO $table VALUES ('$joinkey', '$data');" ); }
+} # sub OLDwritePg
+
+sub messageAndrei {
+  my $body = shift;
+  my $user = 'paper_fields.cgi';
+  my $email = 'petcherski@gmail.com';
+#   my $email = 'azurebrd@tazendra.caltech.edu';
+  my $subject = 'Updated Author Flagging Form';
+#   print "$body<BR>\n";
+#   &mailer($user, $email, $subject, $body);    # email CGI to user
+} # sub messageAndrei
+
+sub gotText {
+  my ($paper, $passwd) = &checkPaperPasswd();
+  return if ($paper eq 'bad');
+  my $body = "Paper $paper Text data\n";
+  foreach my $cat (@cats, "comment") {
+    foreach my $table (@{ $hash{cat}{$cat} }) { 
+      (my $oop, my $text) = &getHtmlVar($query, "${table}_text");
+      if ($text) { 
+        &writePg($table, $paper, $text);
+        $body .= "$table :\t$text\n";
+        &textTable($table, $text); }
+    } # foreach my $table (@{ $hash{cat}{$cat} })
+  } # foreach my $cat (@cats)
+  &messageAndrei($body);
+} # sub gotText
+
+sub OLDgotFlagged {
+  my ($paper, $passwd) = &checkPaperPasswd();
+  return if ($paper eq 'bad');
+  &printForm();
+  print "<INPUT TYPE=HIDDEN NAME=paper VALUE=$paper>\n"; print "<INPUT TYPE=HIDDEN NAME=passwd VALUE=$passwd>\n";
+  (my $oop, my $paper) = &getHtmlVar($query, 'paper');
+  ($oop, my $passwd) = &getHtmlVar($query, 'passwd');
+  print "<INPUT TYPE=HIDDEN NAME=paper VALUE=$paper>\n";
+  print "<INPUT TYPE=HIDDEN NAME=passwd VALUE=$passwd>\n";
+  print "This page is optional. Brief notes that will help curators to locate the data you flagged on the previous page are highly appreciated (e.g.  \"Y2H fig.5\").<P><BR>\n";
+
+  my $body = "Paper $paper flagged\n";
+  foreach my $cat (@cats, "comment") {
+    foreach my $table (@{ $hash{cat}{$cat} }) { 
+      (my $oop, my $checked) = &getHtmlVar($query, "${table}_check");
+      if ( ($checked) || ($table eq 'comment') ) { 
+        &writePg($table, $paper, 'checked');
+        $body .= "$table\tchecked\n";
+        my ($data) = &getPgData($table, $paper);
+        &checkedTable($table, $data); }
+    } # foreach my $table (@{ $hash{cat}{$cat} })
+  } # foreach my $cat (@cats)
+  print "<P><BR><INPUT TYPE=submit NAME=action VALUE=\"Submit Text\"><BR>\n";
+  print "</FORM>\n";
+  &messageAndrei($body);
+} # sub OLDgotFlagged
+
+sub textTable {
+  my ($table, $text) = @_;
+  print "$hash{name}{$table} : $text<P>\n"; 
+} # sub textTable
+
+sub checkedTable {
+  my ($table, $data) = @_;
+  if ($data eq 'checked') { $data = ''; }
+  my $textarea_name = $hash{name}{$table}; if ($hash{name2}{$table}) { $textarea_name = $hash{name2}{$table}; }
+  print "$textarea_name :<BR><TEXTAREA NAME=\"${table}_text\" ROWS=4 COLS=80>$data</TEXTAREA><BR><P>\n"; 
+} # sub checkedTable
+
+

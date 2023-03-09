@@ -1,0 +1,299 @@
+#!/usr/bin/perl -T
+
+# Form to submit Allele information.
+
+# an allele form to make .ace files and email curator
+# This version gets headers and footers off of www.wormbase.org with LWP / Jex,
+# untaints and gets HTML values with CGI / Jex, sends mail with Mail::Mailer /
+# Jex   2002 05 14
+
+my $acefile = "/home2/azurebrd/public_html/cgi-bin/data/allele.ace";
+
+my $firstflag = 1;		# flag if first time around (show form for no data)
+
+# use LWP::Simple;
+# use Mail::Mailer;
+
+use Jex;			# untaint, getHtmlVar, cshlNew
+use strict;
+use CGI;
+use Fcntl;
+
+my $query = new CGI;
+my $user = 'allele_form';	# who sends mail
+# my $email = 'ck1@sanger.ac.uk';	# to whom send mail
+my $email = 'azurebrd@minerva.caltech.edu';	# to whom send mail
+my $subject = 'allele data';	# subject of mail
+my $body = '';			# body of mail
+
+print "Content-type: text/html\n\n";
+my $title = 'Allele Data Submission Form';
+my ($header, $footer) = &cshlNew($title);
+print "$header\n";		# make beginning of HTML page
+
+&process();			# see if anything clicked
+&display();			# show form as appropriate
+print "$footer"; 		# make end of HTML page
+
+sub process {			# see if anything clicked
+  my $action;			# what user clicked
+  unless ($action = $query->param('action')) { $action = 'none'; }
+
+  if ($action eq 'Go !') { 
+    my ($var, $sender) = &getHtmlVar($query, 'email');
+    unless ($sender =~ m/@.+\..+/) { 		# if email doesn't match, warn
+      print "<FONT COLOR=red SIZE=+2>$sender is not a valid email address.</FONT><BR>";
+      print "Please click back and resubmit.<P>";
+    } else { 					# if email is good, process
+      $firstflag = "";				# reset flag to not display first page (form)
+      open (OUT, ">>$acefile") or die "Cannot create $acefile : $!";
+      my $host = $query->remote_host();		# get ip address
+      my $body .= "$sender from ip $host sends :\n\n";
+      my @vars = qw( gene strain ref_point sequence start_base end_base upstream downstream alteration insertion person paper phenotypic laboratory );
+  
+      my @nature = qw( recessive semidominant dominant lossoffunction hypomorph amorph unspecifiedloss gainoffunction unspecifiedgain hypermorph neomorph antimorph);
+  
+      my %aceName;
+      $aceName{gene} = 'Gene';
+      $aceName{strain} = 'Strain';
+      $aceName{ref_point} = 'Derived_from';
+      $aceName{sequence} = 'Sequence';
+      $aceName{start_base} = 'BAD_Start_base';
+      $aceName{end_base} = 'BAD_End_base';
+      $aceName{upstream} = 'BAD_Upstream';
+      $aceName{downstream} = 'BAD_Downstream';
+      $aceName{alternation} = 'BAD_Alternation';
+      $aceName{insertion} = 'BAD_Insertion';
+      $aceName{person} = 'Author';
+      $aceName{paper} = 'Reference';
+      $aceName{phenotypic} = 'Phenotype';
+      $aceName{laboratory} = 'Laboratory';
+      $aceName{recessive} = 'Recessive';
+      $aceName{semidominant} = 'Semi_dominant';
+      $aceName{dominant} = 'Dominant';
+      $aceName{lossoffunction} = 'BAD_Loss-of-function';
+      $aceName{hypomorph} = 'BAD_Hypomorph';
+      $aceName{amorph} = 'BAD_Amorph';
+      $aceName{unspecifiedloss} = 'BAD_Unspecified_loss';
+      $aceName{gainoffunction} = 'BAD_Gain_of_function';
+      $aceName{unspecifiedgain} = 'BAD_Unspcified_gain';
+      $aceName{hypermorph} = 'BAD_Hypermorph';
+      $aceName{neomorph} = 'BAD_Neomorph';
+      $aceName{antimorph} = 'BAD_Antimorph';
+
+      my ($var, $val) = &getHtmlVar($query, 'allele');
+      unless ($val =~ m/\S/) {			# if there's no allele text
+        print "<FONT COLOR='red'>Warning, you have not picked an Allele</FONT>.<P>\n";
+      } else {					# if allele text, output
+        print OUT "Allele : [$val] \n";
+        print "Allele : [$val]<BR>\n";
+        $body .= "Allele : [$val]\n";
+      } # else # unless ($val =~ m/\S/)
+  
+      foreach $_ (@vars, @nature) { 		# for all fields, check for data and output
+        my ($var, $val) = &getHtmlVar($query, $_);
+        if ($val =~ m/\S/) { 	# if value entered
+          print OUT "$aceName{$var} \"$val\" \n";
+          print "$aceName{$var} \"$val\" <BR>\n";
+          $body .= "$aceName{$var}\t\"$val\"\n";
+#           print OUT "$aceName{ @{[ucfirst($var)]} } \"$val\" \n";
+#           print "$aceName{ @{[ucfirst($var)]} } \"$val\" <BR>\n";
+#           $body .= "$aceName{ @{[ucfirst($var)]} }\t\"$val\"\n";
+        } # if ($val) 
+      } # foreach $_ (@vars) 
+      print OUT "\n";		# divider for outfile
+      close (OUT) or die "cannot close $acefile : $!";
+      &mailer($user, $email, $subject, $body);	# email the data
+      print "<P><P><P><H1>Thank you, your info will be updated shortly.</H1>\n";
+      print "If you wish to modify your submitted information, please go back and resubmit.<BR><P> See all <A HREF=\"http://minerva.caltech.edu/~azurebrd/cgi-bin/data/allele.ace\">new submissions</A>.<P>\n";
+    } # else # unless ($sender =~ m/@.+\..+/)
+  } # if ($action eq 'Go !') 
+} # sub process
+
+
+sub display {			# show form as appropriate
+  if ($firstflag) { # if first or bad, show form 
+    print <<"EndOfText";
+
+
+<A NAME="form"><H1>WormBase Allele Data Submission Form :</H1></A>
+
+<HR>
+
+<FORM METHOD="POST" ACTION="allele.cgi">
+<TABLE>
+
+<TR>
+<TD ALIGN="right"><b>Predicted or Known Gene :</b></TD>
+<TD><INPUT NAME="gene" VALUE="" SIZE=30></TD>
+<TD>Sequence name or locus, e.g. B03030.3 or aap-1</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Allele :</b></TD>
+<TD><INPUT NAME="allele" VALUE="" SIZE=30></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Associated Strain :</b></TD>
+<TD><INPUT NAME="strain" VALUE="" SIZE=30></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Allele_ref_point :</b></TD>
+<TD><INPUT NAME="ref_point" VALUE="" SIZE=30></TD>
+<TD>e.g., B0303</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Allele_sequence :</b></TD>
+<TD><INPUT NAME="sequence" VALUE="" SIZE=30></TD>
+<TD>e.g., B0303.3</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Start base :</b></TD>
+<TD><INPUT NAME="start_base" VALUE="" SIZE=30></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>End base :</b></TD>
+<TD><INPUT NAME="end_base" VALUE="" SIZE=30></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>30 bp Upstream of flanking sequence :</b></TD>
+<TD><INPUT NAME="upstream" VALUE="" SIZE=30></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>30 bp Downstream of flanking sequence :</b></TD>
+<TD><INPUT NAME="downstream" VALUE="" SIZE=30></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Alteration :</b></TD>
+<TD><INPUT NAME="alteration" VALUE="" SIZE=30></TD>
+<TD>e.g., c to t, insertion, deletion</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Insertion Sequence :</b></TD>
+<TD><INPUT NAME="insertion" VALUE="" SIZE=30></TD>
+<TD>textfield for sequence input</TD>
+</TR>
+
+<TR></TR> <TR></TR> <TR></TR> <TR></TR>
+<TR></TR> <TR></TR> <TR></TR> <TR></TR>
+
+<TR>
+<TD ALIGN="right"><b>Person Evidence :</b></TD>
+<TD><INPUT NAME="person" VALUE="" SIZE=30></TD>
+<TD>Last_name, middle_initial (if applicable) first_initial. e.g., Sternberg, PW</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Paper Evidence :</b></TD>
+<TD><INPUT NAME="paper" VALUE="" SIZE=30></TD>
+<TD>cgc number or pmid number</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Laboratory :</b></TD>
+<TD><INPUT NAME="laboratory" VALUE="" SIZE=30></TD>
+<TD>prefix, e.g., CB, PS</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Phenotypic Description :</b></TD>
+<TD><INPUT NAME="phenotypic" VALUE="" SIZE=30></TD>
+<TD>If available</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Nature of Allele : Recessive</b></TD>
+<TD><INPUT NAME="recessive" TYPE="checkbox" VALUE="yes"></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Nature of Allele : Semi-dominant</b></TD>
+<TD><INPUT NAME="semidominant" TYPE="checkbox" VALUE="yes"></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Nature of Allele : Dominant</b></TD>
+<TD><INPUT NAME="dominant" TYPE="checkbox" VALUE="yes"></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Nature of Allele : Loss-of-function</b></TD>
+<TD><INPUT NAME="lossoffunction" TYPE="checkbox" VALUE="yes"></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Nature of Allele : hypomorph</b></TD>
+<TD><INPUT NAME="hypomorph" TYPE="checkbox" VALUE="yes"></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Nature of Allele : Null (amorph)</b></TD>
+<TD><INPUT NAME="amorph" TYPE="checkbox" VALUE="yes"></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Nature of Allele : Unspecified (loss-of-function)</b></TD>
+<TD><INPUT NAME="unspecifiedloss" TYPE="checkbox" VALUE="yes"></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Nature of Allele : Gain of function</b></TD>
+<TD><INPUT NAME="gainoffunction" TYPE="checkbox" VALUE="yes"></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Nature of Allele : Unspecified (gain of function)</b></TD>
+<TD><INPUT NAME="unspecifiedgain" TYPE="checkbox" VALUE="yes"></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Nature of Allele : Hypermorph</b></TD>
+<TD><INPUT NAME="hypermorph" TYPE="checkbox" VALUE="yes"></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Nature of Allele : Neomorph</b></TD>
+<TD><INPUT NAME="neomorph" TYPE="checkbox" VALUE="yes"></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Nature of Allele : Antimorph </b></TD>
+<TD><INPUT NAME="antimorph" TYPE="checkbox" VALUE="yes"></TD>
+<TD>"dominant" negagive</TD>
+</TR>
+
+<TR></TR> <TR></TR> <TR></TR> <TR></TR>
+<TR></TR> <TR></TR> <TR></TR> <TR></TR>
+
+<TR>
+<TD ALIGN="right"><b>Submitter E-mail :</b></TD>
+<TD><INPUT NAME="email" VALUE="" SIZE=30></TD>
+<TD>Mandatory (email of representative of laboratory)</TD>
+</TR>
+
+<TR></TR> <TR></TR> <TR></TR> <TR></TR>
+<TR></TR> <TR></TR> <TR></TR> <TR></TR>
+
+<TR><TD COLSPAN=2> </TD></TR>
+<TR>
+<TD> </TD>
+<TD><INPUT TYPE="submit" NAME="action" VALUE="Go !">
+    <INPUT TYPE="reset"></TD>
+</TR>
+</TABLE>
+
+</FORM>
+If you have any problems, questions, or comments, please contact <A HREF=\"mailto:azurebrd\@minerva.caltech.edu\">azurebrd\@minerva.caltech.edu</A>
+EndOfText
+
+  } # if (firstflag) show form 
+} # sub display

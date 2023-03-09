@@ -1,0 +1,275 @@
+#!/usr/bin/perl
+
+# From for authors to first pass fields
+
+# Sent 3 papers to Paul  2008 07 30
+#
+# Changed message on second page to say optional.  2008 10 17
+#
+# Replaced by first_pass.cgi  2009 04 06
+
+
+use Jex;			# untaint, getHtmlVar, cshlNew
+use strict;
+use CGI;
+# use Ace;
+
+use Pg;
+my $conn = Pg::connectdb("dbname=testdb");
+die $conn->errorMessage unless PGRES_CONNECTION_OK eq $conn->status;
+
+my $blue = '#00ffcc';                   # redefine blue to a mom-friendly color
+my $red = '#00ffff';                    # redefine red to a mom-friendly color
+
+
+my $query = new CGI;
+my $firstflag = 1;
+
+my %hash;
+my %name;
+
+
+my @cats = qw( gif int gef pfs seq cell sil rgn oth );
+my @gif = qw( genesymbol mappingdata genefunction newmutant rnai lsrnai );
+my @int = qw( geneinteractions geneproduct );
+my @gef = qw( expression sequencefeatures generegulation overexpression mosaic site microarray );
+my @pfs = qw( invitro covalent structureinformation );
+my @seq = qw( structurecorrectionsanger sequencechange massspec );
+my @cell = qw( ablationdata cellfunction );
+my @sil = qw( phylogenetic othersilico );
+my @rgn = qw( chemicals transgene antibody newsnp rgngene );
+my @oth = qw( nematode humandiseases supplemental );
+$hash{cat}{gif} = [ @gif ];
+$hash{cat}{int} = [ @int ];
+$hash{cat}{gef} = [ @gef ];
+$hash{cat}{pfs} = [ @pfs ];
+$hash{cat}{seq} = [ @seq ];
+$hash{cat}{cell} = [ @cell ];
+$hash{cat}{sil} = [ @sil ];
+$hash{cat}{rgn} = [ @rgn ];
+$hash{cat}{oth} = [ @oth ];
+my @comment = qw( comment );
+$hash{cat}{comment} = [ @comment ];
+
+
+&hashName();
+
+print "Content-type: text/html\n\n";
+my $title = 'Paper Flagging Form';
+my ($header, $footer) = &cshlNew($title);
+print "$header\n";		# make beginning of HTML page
+
+&process();			# see if anything clicked
+# &displayQuery();		# show query box
+print "$footer"; 		# make end of HTML page
+
+sub process {			# see if anything clicked
+  my $action;			# what user clicked
+  unless ($action = $query->param('action')) { $action = 'none'; &displayFirstPage(); }
+
+  if ($action eq 'Curate') { &displayFirstPage(); }
+  elsif ($action eq 'Flag') { &gotFlagged(); }
+  elsif ($action eq 'Submit Text') { &gotText(); }
+  elsif ($action eq 'Review') { &gotReview(); }
+}
+
+sub gotReview {
+  my ($paper, $passwd) = &checkPaperPasswd();
+  return if ($paper eq 'bad');
+  print "Review.<BR>\n";
+  &writePg('review', $paper, 'checked');
+  &messageAndrei("$paper is a review");
+} # sub gotReview
+
+sub writePg {
+  my ($table, $joinkey, $data) = @_;
+  next unless ($data);		# skip if there's no data
+  $table = 'afp_' . $table;
+  my $result = $conn->exec( "SELECT * FROM $table WHERE joinkey = '$joinkey';" );
+  my @row = $result->fetchrow();
+  if ($row[0]) {				# if there was previous data in postgres
+      my $update = 0;
+      if ($data ne 'checked') { $update++; }	# real data, always update
+      elsif ( ($row[1] eq 'checked') && ($data eq 'checked') ) { $update++; }	# was checked and is checked, update to get new timestamp
+      elsif ( ($row[1] ne 'checked') && ($data eq 'checked') ) { $update = 0; }	# was real data and is now checked, ignore, not new data
+      if ($update > 0) {
+        $result = $conn->exec( "UPDATE $table SET $table = '$data' WHERE joinkey = '$joinkey';" );
+        $result = $conn->exec( "UPDATE $table SET afp_timestamp = CURRENT_TIMESTAMP WHERE joinkey = '$joinkey';" ); } }
+    else { $result = $conn->exec( "INSERT INTO $table VALUES ('$joinkey', '$data');" ); }
+} # sub updatePg
+
+sub messageAndrei {
+  my $body = shift;
+  my $user = 'paper_fields.cgi';
+  my $email = 'petcherski@gmail.com';
+#   my $email = 'azurebrd@tazendra.caltech.edu';
+  my $subject = 'Updated Author Flagging Form';
+#   print "$body<BR>\n";
+  &mailer($user, $email, $subject, $body);    # email CGI to user
+} # sub messageAndrei
+
+sub gotText {
+  my ($paper, $passwd) = &checkPaperPasswd();
+  return if ($paper eq 'bad');
+  my $body = "Paper $paper Text data\n";
+  foreach my $cat (@cats, "comment") {
+    foreach my $table (@{ $hash{cat}{$cat} }) { 
+      (my $oop, my $text) = &getHtmlVar($query, "${table}_text");
+      if ($text) { 
+        &writePg($table, $paper, $text);
+        $body .= "$table :\t$text\n";
+        &textTable($table, $text); }
+    } # foreach my $table (@{ $hash{cat}{$cat} })
+  } # foreach my $cat (@cats)
+  &messageAndrei($body);
+} # sub gotText
+
+sub gotFlagged {
+  my ($paper, $passwd) = &checkPaperPasswd();
+  return if ($paper eq 'bad');
+  &printForm();
+  print "<INPUT TYPE=HIDDEN NAME=paper VALUE=$paper>\n"; print "<INPUT TYPE=HIDDEN NAME=passwd VALUE=$passwd>\n";
+  (my $oop, my $paper) = &getHtmlVar($query, 'paper');
+  ($oop, my $passwd) = &getHtmlVar($query, 'passwd');
+  print "<INPUT TYPE=HIDDEN NAME=paper VALUE=$paper>\n";
+  print "<INPUT TYPE=HIDDEN NAME=passwd VALUE=$passwd>\n";
+  print "This page is optional. Brief notes that will help curators to locate the data you flagged on the previous page are highly appreciated (e.g.  \"Y2H fig.5\").<P><BR>\n";
+
+  my $body = "Paper $paper flagged\n";
+  foreach my $cat (@cats, "comment") {
+    foreach my $table (@{ $hash{cat}{$cat} }) { 
+      (my $oop, my $checked) = &getHtmlVar($query, "${table}_check");
+      if ( ($checked) || ($table eq 'comment') ) { 
+        &writePg($table, $paper, 'checked');
+        $body .= "$table\tchecked\n";
+        my ($data) = &getPgData($table, $paper);
+        &checkedTable($table, $data); }
+    } # foreach my $table (@{ $hash{cat}{$cat} })
+  } # foreach my $cat (@cats)
+  print "<P><BR><INPUT TYPE=submit NAME=action VALUE=\"Submit Text\"><BR>\n";
+  print "</FORM>\n";
+  &messageAndrei($body);
+} # sub gotFlagged
+
+sub textTable {
+  my ($table, $text) = @_;
+  print "$hash{name}{$table} : $text<P>\n"; 
+} # sub textTable
+
+sub checkedTable {
+  my ($table, $data) = @_;
+  if ($data eq 'checked') { $data = ''; }
+  my $textarea_name = $hash{name}{$table}; if ($hash{name2}{$table}) { $textarea_name = $hash{name2}{$table}; }
+  print "$textarea_name :<BR><TEXTAREA NAME=\"${table}_text\" ROWS=4 COLS=80>$data</TEXTAREA><BR><P>\n"; 
+} # sub checkedTable
+
+
+sub printForm {
+  print "<FORM METHOD=POST ACTION=\"paper_fields.cgi\">\n";
+} # sub printForm
+
+sub checkPaperPasswd {
+  (my $oop, my $paper) = &getHtmlVar($query, 'paper');
+  ($oop, my $passwd) = &getHtmlVar($query, 'passwd');
+  my $result = $conn->exec( "SELECT * FROM afp_passwd WHERE joinkey = '$paper' AND afp_passwd = '$passwd';" );
+  my @row = $result->fetchrow;
+  unless ($row[0]) { print "Invalid Password<BR>\n"; return "bad"; }
+  my $time = time;
+# print "TIME $time<BR>\n";
+  my $timediff = $passwd - $time;
+  if ($timediff > 2592000) { print "Password has expired after 30 days, please email Andrei for renewal<BR>\n"; return "bad"; }
+  return ($paper, $passwd);
+} # sub checkPaperPasswd
+
+sub displayFirstPage {
+  my ($paper, $passwd) = &checkPaperPasswd();
+  return if ($paper eq 'bad');
+  &printForm();
+  print "<INPUT TYPE=HIDDEN NAME=paper VALUE=$paper>\n"; print "<INPUT TYPE=HIDDEN NAME=passwd VALUE=$passwd>\n";
+  print "<B>If this is a <FONT COLOR=red>Review</FONT> just click this button and ignore the fields below : </B><INPUT TYPE=submit NAME=action VALUE=\"Review\"><BR><P>\n";
+  foreach my $cat (@cats) {
+    print "<H1>$hash{name}{$cat} :</H1><P>\n";
+    foreach my $table (@{ $hash{cat}{$cat} }) { 
+      my ($data) = &getPgData($table, $paper);
+      if ($data) { $data = 'checked'; }
+#       print "<INPUT TYPE=checkbox NAME=\"${table}_check\" $data>$hash{name}{$table} <FONT COLOR=red>$table</FONT><BR>\n"; 
+      print "<INPUT TYPE=checkbox NAME=\"${table}_check\" $data>$hash{name}{$table} <FONT COLOR=white>$table</FONT><BR>\n"; 
+    }
+  } # foreach my $cat (@cats)
+  print "<P><BR><INPUT TYPE=submit NAME=action VALUE=\"Flag\"><BR>\n";
+  print "</FORM>\n";
+} # sub displayFirstPage
+
+sub getPgData {
+  my ($table, $joinkey) = @_;
+  my $result = $conn->exec( "SELECT * FROM afp_$table WHERE joinkey = '$joinkey';" );
+  my @row = $result->fetchrow();
+  if ($row[1]) { return $row[1]; }
+  return;
+} # sub getPgData
+
+
+
+sub hashName {
+  $hash{name}{gif} = 'Gene Identity and Function';
+  $hash{name}{genesymbol} = 'Novel Gene Symbol or Gene-CDS link (e.g. xyz-1 gene was cloned and it turned out to be the same as abc-1 gene)';
+  $hash{name}{mappingdata} = 'Genetic Mapping Data (e.g. 3-factor mapping, deficiency mapping)';
+  $hash{name}{genefunction} = 'Gene Function (novel function for a gene (not reported in Wormbase under Concise Description on the Gene page)';
+  $hash{name}{newmutant} = 'Mutant Phenotype (we reported the presence or absence of mutant phenotypes)';
+  $hash{name}{rnai} = 'RNAi (small scale, less than 100 individual experiments) <FONT COLOR=RED>This datatype is likely to be missed by the author</FONT>';
+  $hash{name}{lsrnai} = 'RNAi (large scale >100 individual experiments)';
+
+  $hash{name}{int} = 'Interactions';
+  $hash{name}{geneinteractions} = 'Genetic interactions (e.g. daf-16(mu86) suppresses daf-2(e1370), daf-16(RNAi) suppresses daf-2(RNAi))';
+  $hash{name}{geneproduct} = 'Gene Product Interaction (protein-protein, RNA-protein, DNA-protein interactions, etc.)';
+
+  $hash{name}{gef} = 'Gene Expression and Function';
+  $hash{name}{expression} = 'Expression Pattern Data (such as GFP reporter assay or immunostaining. exclude data for the reporters used exclusively as markers)';
+  $hash{name}{sequencefeatures} = 'Cis-Gene Regulation (transcription factor binding sites, PWM, DNA/RNA elements required for gene expression etc.)';
+  $hash{name}{generegulation} = 'Gene Regulation on Expression Level (e.g. geneA-gfp reporter is mis-expressed in geneB mutant background)';
+  $hash{name}{overexpression} = 'Overexpression  (over-expression of a gene that results in a phenotypic change, genetic intractions, etc.)';
+  $hash{name}{mosaic} = 'Mosaic Analysis (e.g. extra-chromosomal transgene loss in a particular cell lineage abolishes mutant rescue)';
+  $hash{name}{site} = 'Site of Action (e.g. tissue/cell specific expression rescues mutant phenotype; RNAi in rrf-1 background determines that the gene acts in the germ line)';
+  $hash{name}{microarray} = 'Microarray';
+
+  $hash{name}{pfs} = 'Protein Function and Structure';
+  $hash{name}{invitro} = 'Protein Analysis In Vitro (e.g. kinase assay)';
+  $hash{name}{covalent} = 'Covalent Modification (e.g. phosphorylation site is studies via mutagenesis and in vitro assay)';
+  $hash{name}{structureinformation} = 'Structure Information (e.g. NMR structure, functional domain info for a protein (e.g. removal of the first 50aa causes mislocalization of the protein))';
+  
+  $hash{name}{seq} = 'Sequence Data';
+  $hash{name}{structurecorrectionsanger} = 'Gene Structure Correction (Gene Structure is different from the one in Wormbase: e.g. different splice-site, SL1 instead of SL2, etc.)';
+  $hash{name}{sequencechange} = 'Sequence Change (we sequenced mutations in this paper)';
+  $hash{name}{massspec} = 'Mass Spectrometry';
+  
+  $hash{name}{cell} = 'Cell Data';
+  $hash{name}{ablationdata} = 'Ablation Data (cells were ablated using a laser or by other means (e.g. by expressing a cell-toxic protein))';
+  $hash{name}{cellfunction} = 'Cell Function (the paper describes new function for a cell)';
+
+  $hash{name}{sil} = 'In Silico Data';
+  $hash{name}{phylogenetic} = 'Phylogenetic Analysis';
+  $hash{name}{othersilico} = 'Other Silico Data (e.g. computational modeling of signaling pathways, genetic and physical interactions)';
+
+  $hash{name}{rgn} = 'Reagents';
+  $hash{name}{chemicals} = 'Chemicals (typically a small-molecule chemical was used: butanol, prozac, etc.)';
+  $hash{name}{transgene} = 'Transgene (integrated or extra-chromosomal) <FONT COLOR=RED>This datatype is likely to be missed by the author</FONT>';
+  $hash{name}{antibody} = 'C.elegans Antibodies (Abs were created in the paper, or Abs used were created before elsewhere) <FONT COLOR=RED>This datatype is likely to be missed by the author</FONT>';
+  $hash{name}{newsnp} = 'New SNPs (SNPs that are not in Wormbase)';
+#   $hash{name}{rgngene} = 'List Gene names for gene or gene products studied in the paper (exclude common markers and reporters)';
+  $hash{name}{rgngene} = 'Please list genes studied in the paper (in the box on the next page)';
+  $hash{name2}{rgngene} = 'Please list genes studied in the paper.  Exclude common markers and reporters';
+
+  $hash{name}{oth} = 'Other';
+  $hash{name}{nematode} = 'Nematode species (there is info about non-C.elegans nematodes)';
+  $hash{name}{humandiseases} = 'Human Diseases (relevant to human diseases, e.g. the gene studied is a ortholog of a human disease gene)';
+  $hash{name}{supplemental} = 'Check if the paper is accompanied by the supplemental materials';
+
+  $hash{name}{comment} = 'Comment';
+} # sub hashName
+
+__END__
+
+
+# my $DB = Ace->connect(-path  =>  '/home/acedb/ts',
+#                       -program => '/home/acedb/bin/tace') || die "Connection failure: ",Ace->error;
+

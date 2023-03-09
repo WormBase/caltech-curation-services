@@ -1,0 +1,139 @@
+#!/usr/bin/perl -T
+
+# Form to submit Logo votes.
+
+# an logo form to make .ace files and (optionally) email curator
+# This version gets headers and footers off of www.wormbase.org with LWP / Jex,
+# untaints and gets HTML values with CGI / Jex, sends mail with Mail::Mailer /
+# Jex   2002 05 14
+
+my $acefile = "/home/azurebrd/public_html/cgi-bin/data/logo";
+
+my $firstflag = 1;		# flag if first time around (show form for no data)
+
+use LWP::Simple;
+use Mail::Mailer;
+
+my ($header, $footer) = &cshlNew();
+
+use Jex;			# untaint, getHtmlVar, cshlNew
+use strict;
+use CGI;
+use Fcntl;
+
+my $query = new CGI;
+my $user = 'logo_form';		# who sends mail
+my $email = "wchen\@its.caltech.edu";	# to whom send mail
+my $subject = 'logo vote';	# subject of mail
+my $body = '';					# body of mail
+
+print "Content-type: text/html\n\n";
+print "$header\n";		# make beginning of HTML page
+
+&process();			# see if anything clicked
+&display();			# show form as appropriate
+print "$footer"; 		# make end of HTML page
+
+sub process {			# see if anything clicked
+  my $action;			# what user clicked
+  unless ($action = $query->param('action')) { $action = 'none'; }
+
+  if ($action eq 'Go !') { 
+    $firstflag = "";		# reset flag to not display first page (form)
+    open (OUT, ">>$acefile") or die "Cannot create $acefile : $!";
+    my @vars = qw(name favourite second third comment);
+    foreach $_ (@vars) { 
+      my ($var, $val) = &getHtmlVar($query, $_);
+      if ($val =~ m/\S/) { 	# if value entered
+#         if ($_ eq 'name') {	# print main tag if name
+#           print OUT "@{[ucfirst($var)]} : [$val] \n";
+#           print "@{[ucfirst($var)]} : [$val]<BR>\n";
+#           $body .= "@{[ucfirst($var)]} : [$val]\n";
+#         } # if ($_ eq 'name')
+        print OUT "@{[ucfirst($var)]} \"$val\" \n";
+        print "@{[ucfirst($var)]} \"$val\" <BR>\n";
+        $body .= "@{[ucfirst($var)]} \"$val\"\n";
+      } # if ($val) 
+    } # foreach $_ (@vars) 
+    print OUT "\n";		# divider for outfile
+    close (OUT) || die "cannot close $acefile : $!";
+#     &mailer($user, $email, $subject, $body);	# email wen the data
+    print "<P><P><P><H1>Thank you, your info will be updated shortly.</H1>\n";
+    print "If you wish to modify your submitted information, please go back and resubmit.<BR><P> \n";
+#     print "See all <A HREF=\"http://minerva.caltech.edu/~azurebrd/cgi-bin/data/logo\">new submissions</A>.<P>\n";
+  } # if ($action eq 'Go !') 
+} # sub process
+
+
+sub display {			# show form as appropriate
+  if ($firstflag) { # if first or bad, show form 
+    print <<"EndOfText";
+<A NAME="form"><H1>WormBase Logo Voting :</H1></A>
+
+Enter your name and the codes for your favourite, second favourite, and third
+favourite logos.<BR><BR>
+
+<HR>
+
+<FORM METHOD="POST" ACTION="logo.cgi">
+<TABLE>
+
+<TR>
+<TD ALIGN="left"><b>Logo Voter : </b></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Name :</b></TD>
+<TD><TABLE><INPUT NAME="name" VALUE="" SIZE=30></TABLE></TD>
+<TD>e.g. : Paul Sternberg</TD>
+</TR>
+
+<TR></TR> <TR></TR> <TR></TR> <TR></TR> 
+<TR></TR> <TR></TR> <TR></TR> <TR></TR>
+
+<TR>
+<TD ALIGN="left"><b>Favourite Logos : </b></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Favourite :</b></TD>
+<TD><TABLE><INPUT NAME="favourite" VALUE="" SIZE=30></TABLE></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Second Choice :</b></TD>
+<TD><TABLE><INPUT NAME="second" VALUE="" SIZE=30></TABLE></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Third Choice :</b></TD>
+<TD><TABLE><INPUT NAME="third" VALUE="" SIZE=30></TABLE></TD>
+</TR>
+
+<TR></TR> <TR></TR> <TR></TR> <TR></TR> 
+<TR></TR> <TR></TR> <TR></TR> <TR></TR>
+
+<TR>
+<TD ALIGN="left"><b>Comment : </b></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Comment :</b></TD>
+<TD><TABLE><TEXTAREA NAME="comment" VALUE="" COLS=60 ROWS=4></TEXTAREA></TABLE></TD>
+</TR>
+
+
+<TR><TD COLSPAN=2> </TD></TR>
+<TR>
+<TD> </TD>
+<TD><INPUT TYPE="submit" NAME="action" VALUE="Go !">
+    <INPUT TYPE="reset"></TD>
+</TR>
+</TABLE>
+
+</FORM>
+EndOfText
+# If you have any problems, questions, or comments, please email <A HREF=\"mailto:azurebrd\@minerva.caltech.edu\">azurebrd\@minerva.caltech.edu</A>
+
+  } # if (firstflag) show form 
+} # sub display

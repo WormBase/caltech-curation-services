@@ -1,0 +1,853 @@
+#!/usr/bin/perl -T
+
+# Form to submit Expression Pattern information.
+
+# an expression pattern form to make .ace files
+# This version queries with AcePerl, gets headers and footers off of
+# www.wormbase.org with LWP, has better tables
+
+$data_file = '/home/azurebrd/public_html/cgi-bin/data/expr.txt';
+$acefile = "/home2/azurebrd/public_html/cgi-bin/data/expr.ace";
+
+$badflag = 0;		# flag if needs to reinput (needs to show form again)
+$first = 1;		# flag if first time around (show form for no data)
+$badname = 0;		# flag if name needs to be re-entered
+
+$max_entries =  0; # how many expr entries to save?
+                   # set to '0' (zero) for infinite entries...
+		   # replace $max_entries with $entry for last entry
+
+# use lib '../blib/lib','../blib/arch';
+# use Ace;
+# # use strict vars;
+# 
+# use constant HOST => $ENV{ACEDB_HOST} || 'stein.cshl.org';
+# use constant PORT => $ENV{ACEDB_PORT} || 200005;
+# 
+# $|=1;
+# 
+use LWP::Simple;
+
+my $header; my $footer;
+
+&cshlNew();
+
+sub cshlNew {
+  my $page = get "http://www.wormbase.org";
+  $page =~ s/href="/href="http:\/\/www.wormbase.org/g;
+  $page =~ s/src="/src="http:\/\/www.wormbase.org/g;
+  ($header) = $page =~ m/^(.*?\<hr\>.*?\<hr\>)/s;
+  ($footer) = $page =~ m/.*(\<hr\>.*?)$/s;
+} # sub cshlNew
+
+sub caltechOld {
+  $page = get "http://caltech.wormbase.org";		# get template
+  $page =~ s/href="\//href="http:\/\/caltech.wormbase.org\//gi;	# set references right
+  $page =~ s/src="/src="http:\/\/caltech.wormbase.org/gi;	# set references right
+  $page =~ s/Home Page/Expression Pattern Form/g;	# set references right
+  @page = split("\n", $page);			# break up to play with
+  my $i = 0;					# counter
+  while ($line !~ m/long-release-start/) {	# until what we don't want
+    $line = $page[$i];				# get line
+    @header = (@header, $page[$i]);		# add to header
+    $i++						# add to counter
+  } # while ($line !~ ...
+  $toomany = scalar(@header);			# get last line to remove
+  $header[$toomany-1] = "";			# remove last line
+  $header = join("\n", @header);			# put header together
+  while ($line !~ m/footer/) {			# until we get to footer
+    $line = $page[$i];				# read lines
+    $i++						# add to counter
+  } # while ($line !~ ...
+  for (my $j = $i; $j <= scalar(@page)-1; $j++) { # from here to out of lines
+    @footer = (@footer, $page[$j]);		# add to footer
+  } # for (my $j ...
+  $footer = join("\n", @footer);			# put footer together
+} # sub caltechOld
+
+
+
+use CGI;
+use Fcntl;
+$query = new CGI;
+
+unless ($action = $query->param('action')) {
+    $action = 'none';
+}
+
+
+# make beginning of HTML page
+
+print "Content-type: text/html\n\n";
+print "$header";
+
+
+# if someone submitted the form, i.e. pressed the ``Go !'' button
+
+if ($action eq 'Go !') {
+    
+    $first = 0; # turn off flag to display form first time
+    $querying = 0;		# not querying
+    $updating = 0;		# not updating
+
+    # process the form submission
+    # and assemble the exprform entry
+
+    $locus = $query->param('locus');
+    $sequence = $query->param('sequence');
+    $clone = $query->param('clone');
+    $protein = $query->param('protein');
+    $protein_description = $query->param('protein_description');
+    $cell = $query->param('cell');
+    $cell_group = $query->param('cell_group');
+    $life_stage = $query->param('life_stage');
+    $in_situ = $query->param('in_situ');
+    $reporter_gene = $query->param('reporter_gene');
+    $antibody = $query->param('antibody');
+    $other_type = $query->param('other_type');
+    $subcellular_localization = $query->param('subcellular_localization');
+    $pattern = $query->param('pattern');
+    $cgc_number = $query->param('cgc_number');
+    $other_id = $query->param('other_id');
+    $reference_info = $query->param('reference_info');
+    $remark = $query->param('remark');
+
+    # clean up and fiddle with $locus
+      # get rid of all non-(letters, hyphon, underscore)
+    $locus =~ s/[^0-9a-zA-Z_\-\.\,\s]//g;
+    if ( ($locus eq "") || ($locus eq "Locus-less") ) {
+        # set locus for showing mistake
+#      $locus = 'Locus-less';
+        # set flags for showing mistake and form
+      $badlocus = 1; # $badflag = 1;
+    }
+      # disable all HTML tags
+    $locus =~ s/</&lt;/g;
+      # untaint variable
+    unless ($locus =~ /^([^<]*)$/) {
+        die "couldn't untaint locus: $locus\n";
+    }
+    $locus = $1;
+
+    # clean up and fiddle with $sequence
+      # get rid of all non-(letters, hyphon, underscore)
+    $sequence =~ s/[^0-9a-zA-Z_\-\.\,\s]//g;
+    if ( ($sequence eq "") || ($sequence eq "Sequence-less") ) {
+        # set sequence for showing mistake
+#      $sequence = 'Sequence-less';
+        # set flags for showing mistake and form
+      $badsequence = 1; # $badflag = 1;
+    }
+      # disable all HTML tags
+    $sequence =~ s/</&lt;/g;
+      # untaint variable
+    unless ($sequence =~ /^([^<]*)$/) {
+        die "couldn't untaint sequence: $sequence\n";
+    }
+    $sequence = $1;
+
+    # clean up and fiddle with $clone
+      # get rid of all non-(letters, hyphon, underscore)
+    $clone =~ s/[^0-9a-zA-Z_\-\.\,\s]//g;
+    unless ($clone) {
+#       $clone = 'Clone-less';
+      $badclone = 1; 
+    }
+      # disable all HTML tags
+    $clone =~ s/</&lt;/g;
+      # untaint variable
+    unless ($clone =~ /^([^<]*)$/) {
+        die "couldn't untaint clone: $clone\n";
+    }
+    $clone = $1;
+
+    # clean up and fiddle with $protein
+      # get rid of all non-(letters, hyphon, underscore)
+    $protein =~ s/[^0-9a-zA-Z_\-\.\,\s]//g;
+    unless ($protein) {
+        # set protein for showing mistake
+#       $protein = 'Protein-less';
+        # set flags for showing mistake and form
+      $badprotein = 1; 
+    }
+      # disable all HTML tags
+    $protein =~ s/</&lt;/g;
+      # untaint variable
+    unless ($protein =~ /^([^<]*)$/) {
+        die "couldn't untaint protein: $protein\n";
+    }
+    $protein = $1;
+
+    # clean up and fiddle with $protein_description
+      # get rid of all non-(letters, hyphon, underscore)
+    $protein_description =~ s/[^0-9a-zA-Z_\-\.\,\s]//g;
+    unless ($protein_description) {
+        # set protein_description for showing mistake
+#       $protein_description = 'Author-less';
+        # set flags for showing mistake and form
+      $badprotein_description = 1; 
+    }
+      # disable all HTML tags
+    $protein_description =~ s/</&lt;/g;
+      # untaint variable
+    unless ($protein_description =~ /^([^<]*)$/) {
+        die "couldn't untaint protein_description: $protein_description\n";
+    }
+    $protein_description = $1;
+
+    # clean up and fiddle with $cell
+      # get rid of all non-(letters, hyphon, underscore)
+    $cell =~ s/[^0-9a-zA-Z_\-\.\,\s]//g;
+    unless ($cell) {
+        # set cell for showing mistake
+#       $cell = 'cell-less';
+        # set flags for showing mistake and form
+      $badcell = 1; 
+    }
+      # disable all HTML tags
+    $cell =~ s/</&lt;/g;
+      # untaint variable
+    unless ($cell =~ /^([^<]*)$/) {
+        die "couldn't untaint cell: $cell\n";
+    }
+    $cell = $1;
+
+    # clean up and fiddle with $cell_group
+      # get rid of all non-(letters, hyphon, underscore)
+    $cell_group =~ s/[^0-9a-zA-Z_\-\.\,\s]//g;
+    unless ($cell_group) {
+        # set cell_group for showing mistake
+#       $cell_group = 'Cell_group-less';
+        # set flags for showing mistake and form
+      $badcell_group = 1; 
+    }
+      # disable all HTML tags
+    $cell_group =~ s/</&lt;/g;
+      # untaint variable
+    unless ($cell_group =~ /^([^<]*)$/) {
+        die "couldn't untaint cell_group: $cell_group\n";
+    }
+    $cell_group = $1;
+
+    # clean up and fiddle with $life_stage
+      # get rid of all non-(letters, hyphon, underscore)
+    $life_stage =~ s/[^0-9a-zA-Z_\-\.\,\s]//g;
+    unless ($life_stage) {
+        # set life_stage for showing mistake
+#       $life_stage = 'Delivered_by-less';
+        # set flags for showing mistake and form
+      $badlife_stage = 1; 
+    }
+      # disable all HTML tags
+    $life_stage =~ s/</&lt;/g;
+      # untaint variable
+    unless ($life_stage =~ /^([^<]*)$/) {
+        die "couldn't untaint life_stage: $life_stage\n";
+    }
+    $life_stage = $1;
+
+    # clean up and fiddle with $in_situ
+      # get rid of all non-(letters, hyphon, underscore)
+    $in_situ =~ s/[^0-9a-zA-Z_\-\.\,\s\(\)]//g;
+    unless ($in_situ) {
+        # set in_situ for showing mistake
+#       $in_situ = 'In_situ-less';
+        # set flags for showing mistake and form
+      $badin_situ = 1; 
+    }
+      # disable all HTML tags
+    $in_situ =~ s/</&lt;/g;
+      # untaint variable
+    unless ($in_situ =~ /^([^<]*)$/) {
+        die "couldn't untaint in_situ: $in_situ\n";
+    }
+    $in_situ = $1;
+
+    # clean up and fiddle with $reporter_gene
+      # get rid of all non-(letters, hyphon, underscore)
+    $reporter_gene =~ s/[^0-9a-zA-Z_\-\.\,\s\(\)]//g;
+    unless ($reporter_gene) {
+        # set reporter_gene for showing mistake
+#       $reporter_gene = 'Reporter_gene-less';
+        # set flags for showing mistake and form
+      $badreporter_gene = 1; 
+    }
+      # disable all HTML tags
+    $reporter_gene =~ s/</&lt;/g;
+      # untaint variable
+    unless ($reporter_gene =~ /^([^<]*)$/) {
+        die "couldn't untaint reporter_gene: $reporter_gene\n";
+    }
+    $reporter_gene = $1;
+
+    # clean up and fiddle with $antibody
+      # get rid of all non-(letters, hyphon, underscore)
+    $antibody =~ s/[^0-9a-zA-Z_\-\.\,\s\(\)]//g;
+    unless ($antibody) {
+        # set antibody for showing mistake
+#       $antibody = 'Antibody-less';
+        # set flags for showing mistake and form
+      $badantibody = 1; 
+    }
+      # disable all HTML tags
+    $antibody =~ s/</&lt;/g;
+      # untaint variable
+    unless ($antibody =~ /^([^<]*)$/) {
+        die "couldn't untaint antibody: $antibody\n";
+    }
+    $antibody = $1;
+
+    # clean up and fiddle with $other_type
+      # get rid of all non-(letters, hyphon, underscore)
+    $other_type =~ s/[^0-9a-zA-Z_\-\.\,\s]//g;
+    unless ($other_type) {
+        # set other_type for showing mistake
+#       $other_type = 'Other_type-less';
+        # set flags for showing mistake and form
+      $badother_type = 1; 
+    }
+      # disable all HTML tags
+    $other_type =~ s/</&lt;/g;
+      # untaint variable
+    unless ($other_type =~ /^([^<]*)$/) {
+        die "couldn't untaint other_type: $other_type\n";
+    }
+    $other_type = $1;
+
+    # clean up and fiddle with $subcellular_localization
+      # get rid of all non-(letters, hyphon, underscore)
+    $subcellular_localization =~ s/[^0-9a-zA-Z_\-\.\,\s\(\)]//g;
+    unless ($subcellular_localization) {
+        # set subcellular_localization for showing mistake
+#       $subcellular_localization = 'Subcellular_localization-less';
+        # set flags for showing mistake and form
+      $badsubcellular_localization = 1; 
+    }
+      # disable all HTML tags
+    $subcellular_localization =~ s/</&lt;/g;
+      # untaint variable
+    unless ($subcellular_localization =~ /^([^<]*)$/) {
+        die "couldn't untaint subcellular_localization: $subcellular_localization\n";
+    }
+    $subcellular_localization = $1;
+
+    # clean up and fiddle with $pattern
+      # get rid of all non-(letters, hyphon, underscore)
+    $pattern =~ s/[^0-9a-zA-Z_\-\.\,\s\(\)]//g;
+    unless ($pattern) {
+        # set pattern for showing mistake
+#       $pattern = 'Pattern-less';
+        # set flags for showing mistake and form
+      $badpattern = 1; 
+    }
+      # disable all HTML tags
+    $pattern =~ s/</&lt;/g;
+      # untaint variable
+    unless ($pattern =~ /^([^<]*)$/) {
+        die "couldn't untaint pattern: $pattern\n";
+    }
+    $pattern = $1;
+
+    # clean up and fiddle with $cgc_number
+      # get rid of all non-(letters, hyphon, underscore)
+    $cgc_number =~ s/[^0-9a-zA-Z_\-\.\,\s]//g;
+    unless ($cgc_number) {
+        # set cgc_number for showing mistake
+#       $cgc_number = 'Cgc_number-less';
+        # set flags for showing mistake and form
+      $badcgc_number = 1; 
+    }
+      # disable all HTML tags
+    $cgc_number =~ s/</&lt;/g;
+      # untaint variable
+    unless ($cgc_number =~ /^([^<]*)$/) {
+        die "couldn't untaint cgc_number: $cgc_number\n";
+    }
+    $cgc_number = $1;
+
+    # clean up and fiddle with $other_id
+      # get rid of all non-(letters, hyphon, underscore)
+    $other_id =~ s/[^0-9a-zA-Z_\-\.\,\s]//g;
+    unless ($other_id) {
+        # set other_id for showing mistake
+#       $other_id = 'Other_id-less';
+        # set flags for showing mistake and form
+      $badother_id = 1; 
+    }
+      # disable all HTML tags
+    $other_id =~ s/</&lt;/g;
+      # untaint variable
+    unless ($other_id =~ /^([^<]*)$/) {
+        die "couldn't untaint other_id: $other_id\n";
+    }
+    $other_id = $1;
+
+    # clean up and fiddle with $reference_info
+      # get rid of all non-(letters, hyphon, underscore)
+    $reference_info =~ s/[^0-9a-zA-Z_\-\.\,\s]//g;
+    unless ($reference_info) {
+        # set reference_info for showing mistake
+#       $reference_info = 'Reference_info-less';
+        # set flags for showing mistake and form
+      $badreference_info = 1; 
+    }
+      # disable all HTML tags
+    $reference_info =~ s/</&lt;/g;
+      # untaint variable
+    unless ($reference_info =~ /^([^<]*)$/) {
+        die "couldn't untaint reference_info: $reference_info\n";
+    }
+    $reference_info = $1;
+
+    # clean up and fiddle with $remark
+      # get rid of all non-(letters, hyphon, underscore)
+    $remark =~ s/[^0-9a-zA-Z_\-\.\,\s\(\)]//g;
+    unless ($remark) {
+        # set remark for showing mistake
+#       $remark = 'Remark-less';
+        # set flags for showing mistake and form
+      $badremark = 1; 
+    }
+      # disable all HTML tags
+    $remark =~ s/</&lt;/g;
+      # untaint variable
+    unless ($remark =~ /^([^<]*)$/) {
+        die "couldn't untaint remark: $remark\n";
+    }
+    $remark = $1;
+
+    # begin comment
+    # clean up and fiddle with $comment
+      # length filter 
+    if (length($comment) > 32768) {
+      $comment = '...more than I feel like posting in the exprform.';
+    }
+    unless ($comment) {
+      $comment = '...nothing to speak of.';
+      $flagcomment = 1;
+    } else {
+      if ($comment eq '...nothing to speak of.') {
+        $flagcomment = 1;
+      }
+    }
+      # fix line-endings
+    $comment =~ s/\r\n?/\n/g;
+      # will not get rid of odd characters
+      # lose HTML tags
+    $comment =~ s/</&lt;/g;
+      # untaint variable
+    unless ($comment =~ /^([^<]*)$/) {
+        die "couldn't untaint comment: $comment\n";
+    }
+    $comment = $1;
+    # end comment
+
+
+
+
+    # insert text for flags here, e.g.
+    # nameflag for $entry
+#     if ($badname) { # write an entry to the $data_file 
+#     $entry .= <<"EndOfText";
+# <P>
+# <b>You are required to enter a First name and Last name.
+# <br></b>
+# 
+# EndOfText
+#     }
+# 
+#     if ($badflag) { # write the rest of an entry to the $data_file 
+#     $entry .= <<"EndOfText";
+# <P>
+# <b>You have previously entered : </b><br><br>
+# <b>$sequence, $method $author</b> &nbsp; <EM>living at 
+# $reference $phenotype $remark, 
+# $city, $state, $zipcode, $country, wrote :</EM><BR>
+# <BLOCKQUOTE>Email : $strain &nbsp;&nbsp;&nbsp;   
+#             Office Phone : $delivered_by &nbsp;&nbsp;&nbsp;   
+#             Lab Phone : $predicted_gene &nbsp;&nbsp;&nbsp;   
+# 	    Fax : $locus &nbsp;&nbsp;&nbsp;   
+# 	    Laboratory : $laboratory</BLOCKQUOTE><BR>
+# <BLOCKQUOTE>$comment</BLOCKQUOTE></P>
+# <HR>
+# EndOfText
+# 
+#     # open non-destructively, read old entries, write out new
+# 
+#     # initialize all_entries with $entry
+#     $all_entries = $entry;
+#     sysopen(ENTRIES, "$data_file", O_RDWR)
+#                              or die "can't open $data_file: $!";
+#     flock(ENTRIES, 2)        or die "can't LOCK_EX $data_file: $!";
+# 		# 2 gives an exclusive lock on the file, as opposed to 1
+# 		# which gives a shared lock for multiple viewers
+# 
+#     while(<ENTRIES>) {
+#         $all_entries .= $_;
+# 		# for each loop, all read is stored in $_, which is .='ed
+#     }
+# 
+#     # this loop is useless in our case
+#     if ($max_entries) {
+#         # lop the head off the authorform, if necessary
+#         @all_entries = split(/<HR>/i, $all_entries);  # i makes case insensitive
+#         $entry_count = @all_entries - 1;
+#         while ($entry_count > $max_entries) {
+#             pop @all_entries;
+#             $entry_count = @all_entries - 1;
+#         }
+#         $all_entries = join('<HR>', @all_entries);
+#     }
+# 
+#     # now write out to $data_file
+#     seek(ENTRIES, 0, 0)        or die "can't rewind $data_file: $!";
+#     truncate(ENTRIES, 0)       or die "can't truncate $data_file: $!";
+# # modify from $all_entries to be just $entry for last mess up case
+#     print ENTRIES $all_entries or die "can't print to $data_file: $!";
+#     close(ENTRIES)             or die "can't close $data_file: $!";
+# 
+#     } # if ($badflag) to write entry 
+
+} # if ($action eq 'Go !')
+
+
+
+# display if error
+
+# if ($badflag) { # flagged for name data, show what entered
+#   open (IN, "$data_file") or die "Can't open $data_file for reading: $!";
+#   flock(IN, 1)            or die "Can't get LOCK_SH on $data_file: $!";
+#   while (<IN>) {
+#       print;
+#   }
+#   close IN                or die "Can't close $data_file: $!";
+# } # if $badflag
+
+
+
+# display the form	
+
+if ($badflag || $first) { # if first or bad, show form 
+  print <<"EndOfText";
+<A NAME="form"><H1>NEW EXPRESSION PATTERN DATA SUBMISSION :</H1></A>
+
+Use this form for reporting new Expression Pattern data.<BR><BR>
+If sending pictures, instead of filling the web form, email all information to
+<A HREF=\"mailto:wchen\@its.caltech.edu\">wchen\@its.caltech.edu</A>.<BR><BR>
+If you don't know or don't have something, leave the field
+blank.<BR><BR>
+<!--If you have any problems or questions, please email me.<BR><BR>-->
+
+<HR>
+
+<FORM METHOD="POST" ACTION="expr_pattern.cgi">
+<TABLE>
+
+<TR>
+<TD ALIGN="left"><b>Expression of : </b></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Locus :</b></TD>
+<TD><TABLE><INPUT NAME="locus" VALUE="$locus" SIZE=30></TABLE></TD>
+<TD>e.g. : pal-1</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Sequence :</b></TD>
+<TD><TABLE><INPUT NAME="sequence" VALUE="$sequence" SIZE=30></TABLE></TD>
+<TD>e.g : ZK863.1</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Clone :</b></TD>
+<TD><TABLE><INPUT NAME="clone" VALUE="$clone" SIZE=30></TABLE></TD>
+<TD>e.g. : ZK863</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Protein :</b></TD>
+<TD><TABLE><INPUT NAME="protein" VALUE="$protein" SIZE=30></TABLE></TD>
+<TD>e.g. : CE22786</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Protein Description :</b></TD>
+<TD><TABLE><INPUT NAME="protein_description" VALUE="$protein_description" SIZE=30></TABLE></TD>
+</TR>
+
+<TR></TR> <TR></TR> <TR></TR> <TR></TR> 
+<TR></TR> <TR></TR> <TR></TR> <TR></TR>
+
+<TR>
+<TD ALIGN="left"><b>Expressed in : </b></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Cell :</b></TD>
+<TD><TEXTAREA NAME="cell" VALUE="$cell" ROWS=03 COLS=30></TEXTAREA></TD>
+<TD>e.g. : P0<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;P1<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;EMS</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Cell Group : </b></TD>
+<TD><TEXTAREA NAME="cell_group" VALUE="$cell_group" ROWS=03 COLS=30></TEXTAREA></TD>
+<TD>e.g. : pharynx<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp&nbsp;nerve ring</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Life Stage :</b></TD>
+<TD><TEXTAREA NAME="life_stage" VALUE="$life_stage" ROWS=03 COLS=30></TEXTAREA></TD>
+<TD>e.g. : gastrula embryo<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2-fold
+embryo</TD>
+</TR>
+
+<TR></TR> <TR></TR> <TR></TR> <TR></TR>
+<TR></TR> <TR></TR> <TR></TR> <TR></TR>
+
+<TR>
+<TD ALIGN="left"><b>Type of Experiments : </b></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>In Situ :</b></TD>
+<TD><TABLE><INPUT NAME="in_situ" VALUE="$in_situ" SIZE=30></TABLE></TD>
+<TD>e.g. : Digoxigenin-labeled DNA probes</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Reporter Gene : </b></TD>
+<TD><TABLE><INPUT NAME="reporter_gene" VALUE="$reporter_gene" SIZE=30></TABLE></TD>
+<TD>e.g. : GFP or lacZ translational fusion of ...</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Antibody :</b></TD>
+<TD><TABLE><INPUT NAME="antibody" VALUE="$antibody" SIZE=30></TABLE></TD>
+<TD>e.g. : Polyclonal rabbit antibody of ...</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Other Type :</b></TD>
+<TD><TABLE><INPUT NAME="other_type" VALUE="$other_type" SIZE=30></TABLE></TD>
+<TD>e.g. : Northern, RT-PCR, ...</TD>
+</TR>
+
+<TR></TR> <TR></TR> <TR></TR> <TR></TR> 
+<TR></TR> <TR></TR> <TR></TR> <TR></TR>
+
+<TR>
+<TD ALIGN="left"><b>Localization : </b></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Subcellular Localization :</b></TD>
+<TD><TABLE><INPUT NAME="subcellular_localization" VALUE="$subcellular_localization" SIZE=30></TABLE></TD>
+<TD>e.g. : pal-1 is expressed in nuclei/cytosol ...</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Pattern :</b></TD>
+<TD><TEXTAREA NAME="pattern" VALUE="$pattern" ROWS=03 COLS=30></TEXTAREA></TD>
+<TD>e.g. : pal-1 RNA evenly distributed in ...</TD>
+</TR>
+
+<TR></TR> <TR></TR> <TR></TR> <TR></TR> 
+<TR></TR> <TR></TR> <TR></TR> <TR></TR>
+
+<TR>
+<TD ALIGN="left"><b>Data Source : </b></TD>
+<TD></TD>
+<TD> (where curators can confirm the data)</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>CGC Number :</b></TD>
+<TD><TABLE><INPUT NAME="cgc_number" VALUE="$cgc_number" SIZE=30></TABLE></TD>
+<TD>e.g. : 4501</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Other ID :</b></TD>
+<TD><TABLE><INPUT NAME="other_id" VALUE="$other_id" SIZE=30></TABLE></TD>
+<TD>e.g. : PMID11134024, or medline ...</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Reference Info :</b></TD>
+<TD><TABLE><INPUT NAME="reference_info" VALUE="$reference_info" SIZE=30></TABLE></TD>
+<TD>e.g. : Science 274, 113-115 ...</TD>
+</TR>
+
+<TR></TR> <TR></TR> <TR></TR> <TR></TR> 
+<TR></TR> <TR></TR> <TR></TR> <TR></TR>
+
+<TR>
+<TD ALIGN="right"><b>Remark :</b></TD>
+<TD><TABLE><INPUT NAME="remark" VALUE="$remark" SIZE=30></TABLE></TD>
+<TD>Write comments here</TD>
+</TR>
+
+<!--
+<TR>
+<TD ALIGN="right"><b>Comment :</b></TD>
+<TD><TABLE><INPUT NAME="comment" VALUE="$comment" SIZE=30></TABLE></TD>
+</TR>-->
+
+<TR><TD COLSPAN=2> </TD></TR>
+<TR>
+<TD> </TD>
+<TD><INPUT TYPE="submit" NAME="action" VALUE="Go !">
+    <INPUT TYPE="reset"></TD>
+</TR>
+</TABLE>
+
+</FORM>
+If you have any problems, questions, or comments, please email <A HREF=\"mailto:azurebrd\@minerva.caltech.edu\">azurebrd\@minerva.caltech.edu</A>
+EndOfText
+
+} # if ($badflag || $first) show form 
+
+# output to expr.ace, show happy ending
+unless ( $badflag + $first + $querying + $updating ) { 
+			# unless bad or first time or querying or updating
+			# + to sum up 0s into one 0 for unless
+  print <<"EndOfText";
+<P>
+<P>
+<P>
+<H1> Thank you, your info will be updated shortly.  </H1>
+EndOfText
+
+
+  open (OUT, ">>$acefile") || die "cannot create  $acefile : $!";
+  print OUT "Expr_pattern : [ExprXXXX] \n";
+  print "Expr_pattern : [ExprXXXX] <BR>\n";
+
+  unless ($badlocus) { 
+    print OUT "Locus                    \"$locus\" \n";
+    print "Locus                    \"$locus\" <BR>\n";
+  }
+  unless ($badsequence) { 
+    print OUT "Sequence                 \"$sequence\" \n";
+    print "Sequence                 \"$sequence\" <BR>\n";
+  }
+  unless ($badclone) { 
+    print OUT "Clone                    \"$clone\" \n";
+    print "Clone                    \"$clone\" <BR>\n";
+  }
+  unless ($badprotein) {
+    print OUT "Protein                  \"$protein\" \n";
+    print "Protein                  \"$protein\" <BR>\n";
+  }
+  unless ($badprotein_description) {
+    print OUT "Protein_description      \"$protein_description\" \n";
+    print "Protein_description      \"$protein_description\" <BR>\n";
+  }
+  unless ($badcell) {
+    if ($cell =~ m/\n/) { 
+      @celllines = split /\r\n/, $cell;		# has a return also
+      foreach $_ (@celllines) {
+        print OUT "Cell                     \"$_\" \n";
+        print "Cell                     \"$_\" <BR>\n";
+      }
+    } else {
+      print OUT "Cell                     \"$cell\" \n";
+      print "Cell                     \"$cell\" <BR>\n";
+    }
+  }
+  unless ($badcell_group) {
+    if ($cell_group =~ m/\n/) { 
+      @cell_grouplines = split /\r\n/, $cell_group;
+      foreach $_ (@cell_grouplines) {
+        print OUT "Cell_group               \"$_\" \n";
+        print "Cell_group               \"$_\" <BR>\n";
+      }
+    } else {
+      print OUT "Cell_group               \"$cell_group\" \n";
+      print "Cell_group               \"$cell_group\" <BR>\n";
+    }
+  }
+  unless ($badlife_stage) {
+    if ($life_stage =~ m/\n/) { 
+      @life_stagelines = split /\r\n/, $life_stage;
+      foreach $_ (@life_stagelines) {
+        print OUT "Life_stage               \"$_\" \n";
+        print "Life_stage               \"$_\" <BR>\n";
+      }
+    } else {
+      print OUT "Life_stage               \"$life_stage\" \n";
+      print "Life_stage               \"$life_stage\" <BR>\n";
+    }
+  }
+  unless ($badin_situ) {
+    print OUT "In_situ                  \"$in_situ\" \n";
+    print "In_situ                  \"$in_situ\" <BR>\n";
+  }
+  unless ($badreporter_gene) {
+    print OUT "Reporter_gene            \"$reporter_gene\" \n";
+    print "Reporter_gene            \"$reporter_gene\" <BR>\n";
+  }
+  unless ($badantibody) {
+    print OUT "Antibody                 \"$antibody\" \n";
+    print "Antibody                 \"$antibody\" <BR>\n";
+  }
+  unless ($badother_type) {
+    print OUT "Other                    \"$other_type\" \n";
+    print "Other                    \"$other_type\" <BR>\n";
+  }
+  unless ($badsubcellular_localization) {
+    print OUT "Subcellular_localization \"$subcellular_localization\" \n";
+    print "Subcellular_localization \"$subcellular_localization\" <BR>\n";
+  }
+  unless ($badpattern) {
+    if ($pattern =~ m/\n/) { 
+      @patternlines = split /\r\n/, $pattern;
+      $pattern = join(" ", @patternlines);
+    }
+    print OUT "Pattern                  \"$pattern\" \n";
+    print "Pattern                  \"$pattern\" <BR>\n";
+  }
+  unless ($badcgc_number) {
+    print OUT "CGC_number               \"$cgc_number\" \n";
+    print "CGC_number               \"$cgc_number\" <BR>\n";
+  }
+  unless ($badother_id) {
+    print OUT "Other_ID                 \"$other_id\" \n";
+    print "Other_ID                 \"$other_id\" <BR>\n";
+  }
+  unless ($badreference_info) {
+    print OUT "Reference                \"$reference_info\" \n";
+    print "Reference                \"$reference_info\" <BR>\n";
+  }
+  unless ($badremark) {
+    print OUT "Remark                   \"$remark\" \n";
+    print "Remark                   \"$remark\" <BR>\n";
+  }
+  unless($flagcomment) {
+    print OUT "Comment            \"$comment\" \n";
+    print "Comment            \"$comment\" <BR>\n";
+  }
+  print OUT " \n\n";
+  print " <BR>";
+  close (OUT) || die "cannot close $acefile : $!";
+
+  open (ERASE, ">$data_file") || die "cannot access $data_file : $!";
+  print ERASE "";
+  close (ERASE) || die "cannot close $data_file : $!";
+
+  print <<"EndOfText";
+If you wish to modify your submitted information, please go back
+  and resubmit.<BR>
+<P> See all
+<A
+HREF="http://minerva.caltech.edu/~azurebrd/cgi-bin/data/expr.ace">new
+submissions</A>.<P>
+EndOfText
+  
+} # unless ($badflag + $first) output to expr.ace, show happy ending
+
+
+# make end of HTML page
+
+print "$footer";

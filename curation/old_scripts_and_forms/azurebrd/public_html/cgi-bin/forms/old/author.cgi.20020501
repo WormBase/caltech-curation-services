@@ -1,0 +1,1363 @@
+#!/usr/bin/perl -T
+
+# Form to update Author information.
+
+# an authorform for cgc to make .ace files
+# middlename takes 2 initials to fit some previous authors's wishes
+# This version queries with AcePerl, gets headers and footers off of
+# www.wormbase.org with LWP, has better tables
+#
+# Updated to have a caltech webpage (faster, but gets a hewlerd packard
+# page sometimes) or a cshl webpage (slower and uses different html that
+# is parsed differently).  Taint compatible by untainting $ENV{PATH} 
+# (because of /home/acedb/bin/tace).  Updated to connect locally since
+# Aceperl won't connect to cshl for some reason.  2002 03 20
+
+$data_file = '/home/azurebrd/public_html/cgi-bin/data/author.txt';
+$acefile = "/home/azurebrd/public_html/cgi-bin/data/authors.ace";
+
+$badflag = 0;		# flag if needs to reinput (needs to show form again)
+$first = 1;		# flag if first time around (show form for no data)
+$badname = 0;		# flag if name needs to be re-entered
+$bademail = 0;		# flag if email needs to be re-entered
+
+$max_entries =  0; # how many authorform entries to save?
+                   # set to '0' (zero) for infinite entries...
+		   # replace $max_entries with $entry for last entry
+
+# use diagnostics;	# too many warnings to apache error_log
+use lib '../blib/lib','../blib/arch';
+use Ace;
+# print "BEFORE<BR>\n";
+  $ENV{PATH} = untaint($ENV{PATH});
+  my $db = Ace->connect(-path  =>  '/home/acedb',
+                        -program => '/home/acedb/bin/tace') || die "Connection failure: ",Ace->error;
+# my $db = Ace->connect( -path    => '/home/acedb',
+#                        -program => '/home/acedb/bin/tace') || die "Connection failure: ",Ace->error;
+# print "AFTER<BR>\n";
+# use strict vars;
+
+# use constant HOST => $ENV{ACEDB_HOST} || 'stein.cshl.org';
+# use constant PORT => $ENV{ACEDB_PORT} || 200005;
+# 
+# $|=1;
+
+use LWP::Simple;
+
+my ($header, $footer);
+&cshlNew();
+
+sub caltechOld {
+  $page = get "http://caltech.wormbase.org";		# get template
+
+  $page =~ s/href="/href="http:\/\/caltech.wormbase.org/g;	# set references right
+  $page =~ s/src="/src="http:\/\/caltech.wormbase.org/g;	# set references right
+  @page = split("\n", $page);			# break up to play with
+  my $i = 0;					# counter
+  while ($line !~ m/long-release-start/) {	# until what we don't want
+    $line = $page[$i];				# get line
+    @header = (@header, $page[$i]);		# add to header
+    $i++						# add to counter
+  } # while ($line !~ ...
+  $toomany = scalar(@header);			# get last line to remove
+  $header[$toomany-1] = "";			# remove last line
+  $header = join("\n", @header);			# put header together
+  while ($line !~ m/footer/) {			# until we get to footer
+    $line = $page[$i];				# read lines
+    $i++						# add to counter
+  } # while ($line !~ ...
+  for (my $j = $i; $j <= scalar(@page)-1; $j++) { # from here to out of lines
+    @footer = (@footer, $page[$j]);		# add to footer
+  } # for (my $j ...
+  $footer = join("\n", @footer);			# put footer together
+} # sub caltechOld
+
+sub cshlNew {
+  my $page = get "http://www.wormbase.org";
+  $page =~ s/href="/href="http:\/\/www.wormbase.org/g;
+  $page =~ s/src="/src="http:\/\/www.wormbase.org/g;
+  ($header) = $page =~ m/^(.*?\<hr\>.*?\<hr\>)/s;
+  ($footer) = $page =~ m/.*(\<hr\>.*?)$/s;
+} # sub cshlNew
+
+
+use CGI;
+use Fcntl;
+$query = new CGI;
+
+unless ($action = $query->param('action')) {
+    $action = 'none';
+}
+
+
+# make beginning of HTML page
+
+print "Content-type: text/html\n\n";
+print "$header";
+
+
+# if someone submitted the form, i.e. pressed the ``Go !'' button
+
+if ($action eq 'Query !') {
+  $first = 0;			# not first time someone looking through it
+  $querying = 1;		# is querying
+  $updating = 0;		# not updating
+
+    # get lastname and untaint
+  my $oop;
+  if ($query->param('lastname') ) {
+    $oop = $query->param('lastname');
+  } else { $oop = ' '; } # if ($query->param('lastname') )
+  my $lastnamequery = &untaint($oop);
+#   $lastnamequery = $query->param('lastname');
+#   unless ($lastnamequery =~ /^([^<]*)$/) {
+#     die "couldn't untaint lastnamequery : $lastnamequery\n";
+#   }
+
+  if ($lastnamequery ne ' ') { 	# if good
+    print <<"EndOfText";
+<P>
+<H1>You are searching for $lastnamequery		
+<br><br></H1>
+
+EndOfText
+  } else {			# if not good
+    print <<"EndOfText";
+<P>
+<b>You need to enter a lastname to query off of	
+<br></b>
+
+EndOfText
+  } # if ($lastnamequery)
+
+#   $authors = "/home/azurebrd/work/authorform/authors.ace";   # author dump file
+
+  $key = "key";			# shortcuts for hash
+  $aka = "Also Known As";		# shortcuts for hash
+  $lab = "Laboratory";		# shortcuts for hash
+  $add1 = "Mail";			# shortcuts for hash
+  $add2 = "E_mail";		# shortcuts for hash
+  $add3 = "Phone";		# shortcuts for hash
+  $add4 = "Fax";			# shortcuts for hash
+
+
+# my $db = Ace->connect(-host=>HOST,-port=>PORT) || die "Connection failure: ",Ace->error;			# open connection
+
+my @authors = $db->list('Author',"$lastnamequery*");	# get authors
+if (scalar(@authors) > 1) { 	# show appropriate for number of authors
+  print "<BR> There are " . scalar(@authors) . " matching entries.  Please scroll down if you don't see yours.<BR><BR>";
+} elsif (scalar(@authors) == 1 ) {
+  print "<BR> There is " . scalar(@authors) . " matching entry.<BR><BR>";
+} else { 
+  print "<BR> There are no matching entries.<BR><BR>";
+}
+if (scalar(@authors)) { 	# if found
+  $found = 1; $entry = 0;	# it's found, initialize $entry
+  print "Please update your information if you recognize your entry.
+    Otherwise, go back and submit all your information.<br> For <b> 
+    Laboratory</b>, write your lab's 2 letter CGC number.  If not sure, 
+    please find out <A HREF=\"http://minerva.caltech.edu/~azurebrd/cgi-bin/data/labcore.ace\" target=new>here</A>.  <br><br>\n";
+} # if (scalar(@authors))
+
+for (my $i = 0; $i < scalar(@authors); $i++) {
+  $entry++;			# next hash entry
+  $akavalue = $AoH[$entry]{$aka} = "";		# initialize hash entries
+  $labvalue = $AoH[$entry]{$lab} = "";		# initialize hash entries
+  $add1[0] = $AoH[$entry]{$add1}[0] = "";	# initialize hash entries
+  $add1[1] = $AoH[$entry]{$add1}[1] = "";	# initialize hash entries
+  $add1[2] = $AoH[$entry]{$add1}[2] = "";	# initialize hash entries
+  $add1[3] = $AoH[$entry]{$add1}[3] = "";	# initialize hash entries
+  $add1[4] = $AoH[$entry]{$add1}[4] = "";	# initialize hash entries
+  $add2[0] = $AoH[$entry]{$add2}[0] = "";	# initialize hash entries
+  $add2[1] = $AoH[$entry]{$add2}[1] = "";	# initialize hash entries
+  $add3[0] = $AoH[$entry]{$add3}[0] = "";	# initialize hash entries
+  $add3[1] = $AoH[$entry]{$add3}[1] = "";	# initialize hash entries
+  $add4[0] = $AoH[$entry]{$add4}[0] = "";	# initialize hash entries
+  $add4[1] = $AoH[$entry]{$add4}[1] = "";	# initialize hash entries
+  print "The following entry was found : <BR>";
+  print "Author $authors[$i]<BR>\n";		# show author entry found
+  $AoH[$entry]{$key} = "$authors[$i]";                  # assign author
+  my $object = $db->fetch(Author, "$authors[$i]");	# get author
+  $ENV{PATH} = untaint($ENV{PATH});
+  my @aka_lines =  ($object->at('Also_known_as'));	# get name
+  foreach $_ (@aka_lines) {			# set values for form display
+    # print "Aka \t $_ <BR>\n";
+    $akavalue = $AoH[$entry]{$aka} = $_;	
+  }
+  @aka_lines =  ($object->at('Full_name'));
+  foreach $_ (@aka_lines) {
+    # print "Aka \t $_ <BR>\n";
+    $akavalue = $AoH[$entry]{$aka} = $_;	
+  }
+  my @lab_lines =  ($object->at('Laboratory'));		# same for lab
+  foreach $_ (@lab_lines) {
+    # print "Laboratory \t $_ <BR>\n";
+    $labvalue = $AoH[$entry]{$lab} = $_;	
+  }
+  my @mail_lines =  ($object->at('Address.Mail'));	# same for mail
+  for $j ( 0 .. scalar(@mail_lines)-1 ) {
+    # print "Mail \t $mail_lines[$j] <BR>\n";
+    $add1[$j] = $AoH[$entry]{add1}[$j] = $mail_lines[$j];
+  }
+  my @email_lines =  ($object->at('Address.E_mail'));	# same for email
+  for $j ( 0 .. scalar(@email_lines)-1 ) {
+    # print "E_mail \t $email_lines[$j] <BR>\n";
+    $add2[$j] = $AoH[$entry]{add2}[$j] = $email_lines[$j];
+  }
+  my @phone_lines =  ($object->at('Address.Phone'));	# same for phone
+  for $j ( 0 .. scalar(@phone_lines)-1 ) {
+    # print "Phone \t $phone_lines[$j] <BR>\n";
+    $add3[$j] = $AoH[$entry]{add3}[$j] = $phone_lines[$j];
+  }
+  my @fax_lines =  ($object->at('Address.Fax'));	# same for fax
+  for $j ( 0 .. scalar(@fax_lines)-1 ) {
+    # print "Fax \t $fax_lines[$j] <BR>\n";
+    $add4[$j] = $AoH[$entry]{add4}[$j] = $fax_lines[$j];
+  }
+  print "<BR>\n";				# separator
+
+  # show forms to update
+print <<"EndOfText";
+    <FORM METHOD="POST" ACTION="author.cgi">
+    <TABLE>
+EndOfText
+
+print <<"EndOfText";
+    <TR>
+    <TD ALIGN="right" width=100><b>Also Known As</b></TD>
+    <INPUT TYPE=HIDDEN NAME="key" VALUE="$AoH[$entry]{$key}">
+    <TD width=700><INPUT NAME="aka" VALUE="$akavalue" SIZE=40></TD>
+    </TR>
+
+    <TR>
+    <TD ALIGN="right" width=100><b>Laboratory</b></TD>
+    <TD width=700><INPUT NAME="lab" VALUE="$labvalue" SIZE=40></TD>
+    </TR>
+EndOfText
+
+    for $i ( 0 .. $#{ $AoH[$entry]{$add1} } ) {
+      print <<"EndOfText";
+    <TR>
+    <TD ALIGN="right" width=100><b>$add1</b></TD>
+    <TD width=700><INPUT NAME="Mail_$i" VALUE="$add1[$i]" SIZE=40></TD>
+    </TR>
+EndOfText
+    }
+
+    for $i ( 0 .. $#{ $AoH[$entry]{$add2} } ) {
+      print <<"EndOfText";
+    <TR>
+    <TD ALIGN="right" width=100><b>$add2</b></TD>
+    <TD width=700><INPUT NAME="E_mail_$i" VALUE="$add2[$i]" SIZE=40></TD>
+    </TR>
+EndOfText
+    }
+
+    for $i ( 0 .. $#{ $AoH[$entry]{$add3} } ) {
+      print <<"EndOfText";
+    <TR>
+    <TD ALIGN="right" width=100><b>$add3</b></TD>
+    <TD width=700><INPUT NAME="Phone_$i" VALUE="$add3[$i]" SIZE=40></TD>
+    </TR>
+EndOfText
+    }
+
+    for $i ( 0 .. $#{ $AoH[$entry]{$add4} } ) {
+      print <<"EndOfText";
+    <TR>
+    <TD ALIGN="right" width=100><b>$add4</b></TD>
+    <TD width=700><INPUT NAME="Fax_$i" VALUE="$add4[$i]" SIZE=40></TD>
+    </TR>
+EndOfText
+    }
+
+print <<"EndOfText";
+    <TR><TD COLSPAN=2> </TD></TR>
+    <TR>
+    <TD> </TD>
+    <TD><INPUT TYPE="submit" NAME="action" VALUE="Update !">
+    </TR> 
+    </TABLE>
+    </FORM>
+EndOfText
+
+      print "<br><br>\n";
+} # for (my $i = 0; $i < scalar(@authors); $i++)
+
+
+      # if not found, show warning
+  unless ($found) { print <<"EndOfText";
+<P>
+A matching record could not be found, please go back and submit all your
+information.
+<br>
+
+EndOfText
+  } # unless ($found) ...
+
+} # if ($action eq 'Query !') 
+
+
+
+if ($action eq 'Update !') {
+    $first = 0;			# not first time
+    $querying = 0;		# not querying
+    $updating = 1;		# it's updating
+
+  print <<"EndOfText";
+<P>
+<P>
+<P>
+<H1> Thank you, your info will be updated shortly. </H1>
+EndOfText
+
+      # get values and untaint them
+    $key = $query->param('key');	
+    unless ($key =~ /^([^<]*)$/) {
+        die "couldn't untaint key : $key\n";
+    }
+    $aka = $query->param('aka');
+    unless ($aka =~ /^([^<]*)$/) {
+        die "couldn't untaint aka : $aka\n";
+    }
+    $lab = $query->param('lab');
+    unless ($lab =~ /^([^<]*)$/) {
+        die "couldn't untaint lab : $lab\n";
+    }
+    $Mail_0 = $query->param('Mail_0');
+    unless ($Mail_0 =~ /^([^<]*)$/) {
+        die "couldn't untaint Mail_0 : $Mail_0\n";
+    }
+    $Mail_1 = $query->param('Mail_1');
+    unless ($Mail_1 =~ /^([^<]*)$/) {
+        die "couldn't untaint Mail_1 : $Mail_1\n";
+    }
+    $Mail_2 = $query->param('Mail_2');
+    unless ($Mail_2 =~ /^([^<]*)$/) {
+        die "couldn't untaint Mail_2 : $Mail_2\n";
+    }
+    $Mail_3 = $query->param('Mail_3');
+    unless ($Mail_3 =~ /^([^<]*)$/) {
+        die "couldn't untaint Mail_3 : $Mail_3\n";
+    }
+    $Mail_4 = $query->param('Mail_4');
+    unless ($Mail_4 =~ /^([^<]*)$/) {
+        die "couldn't untaint Mail_4 : $Mail_4\n";
+    }
+    $Mail_5 = $query->param('Mail_5');
+    unless ($Mail_5 =~ /^([^<]*)$/) {
+        die "couldn't untaint Mail_5 : $Mail_5\n";
+    }
+    $Mail_6 = $query->param('Mail_6');
+    unless ($Mail_6 =~ /^([^<]*)$/) {
+        die "couldn't untaint Mail_6 : $Mail_6\n";
+    }
+    $Mail_7 = $query->param('Mail_7');
+    unless ($Mail_7 =~ /^([^<]*)$/) {
+        die "couldn't untaint Mail_7 : $Mail_7\n";
+    }
+    $Mail_8 = $query->param('Mail_8');
+    unless ($Mail_8 =~ /^([^<]*)$/) {
+        die "couldn't untaint Mail_8 : $Mail_8\n";
+    }
+    $E_mail_0 = $query->param('E_mail_0');
+    unless ($E_mail_0 =~ /^([^<]*)$/) {
+        die "couldn't untaint E_mail_0 : $E_mail_0\n";
+    }
+    $E_mail_1 = $query->param('E_mail_1');
+    unless ($E_mail_1 =~ /^([^<]*)$/) {
+        die "couldn't untaint E_mail_1 : $E_mail_1\n";
+    }
+    $E_mail_2 = $query->param('E_mail_2');
+    unless ($E_mail_2 =~ /^([^<]*)$/) {
+        die "couldn't untaint E_mail_2 : $E_mail_2\n";
+    }
+    $E_mail_3 = $query->param('E_mail_3');
+    unless ($E_mail_3 =~ /^([^<]*)$/) {
+        die "couldn't untaint E_mail_3 : $E_mail_3\n";
+    }
+    $Phone_0 = $query->param('Phone_0');
+    unless ($Phone_0 =~ /^([^<]*)$/) {
+        die "couldn't untaint Phone_0 : $Phone_0\n";
+    }
+    $Phone_1 = $query->param('Phone_1');
+    unless ($Phone_1 =~ /^([^<]*)$/) {
+        die "couldn't untaint Phone_1 : $Phone_1\n";
+    }
+    $Phone_2 = $query->param('Phone_2');
+    unless ($Phone_2 =~ /^([^<]*)$/) {
+        die "couldn't untaint Phone_2 : $Phone_2\n";
+    }
+    $Phone_3 = $query->param('Phone_3');
+    unless ($Phone_3 =~ /^([^<]*)$/) {
+        die "couldn't untaint Phone_3 : $Phone_3\n";
+    }
+    $Fax_0 = $query->param('Fax_0');
+    unless ($Fax_0 =~ /^([^<]*)$/) {
+        die "couldn't untaint Fax_0 : $Fax_0\n";
+    }
+    $Fax_1 = $query->param('Fax_1');
+    unless ($Fax_1 =~ /^([^<]*)$/) {
+        die "couldn't untaint Fax_1 : $Fax_1\n";
+    }
+    $Fax_2 = $query->param('Fax_2');
+    unless ($Fax_2 =~ /^([^<]*)$/) {
+        die "couldn't untaint Fax_2 : $Fax_2\n";
+    }
+    $Fax_3 = $query->param('Fax_3');
+    unless ($Fax_3 =~ /^([^<]*)$/) {
+        die "couldn't untaint Fax_3 : $Fax_3\n";
+    }
+
+    open (OUT, ">>$acefile") || die "cannot create  $acefile : $!";
+					# add to acefile
+    $key =~ s/Author //;		# take out extra words Author 
+      # write values to file and show results
+    if ($key) {
+      print OUT "Author : \"$key\"\n";
+      print "Author : $key<BR>\n";
+    }
+    if ($aka) {
+      print OUT "Full_name          \"$aka\"\n";
+      print "Full_name          \"$aka\"<BR>\n";
+    }
+    if ($lab) {
+      print OUT "Laboratory         \"$lab\"\n";
+      print "Laboratory         \"$lab\"<BR>\n";
+    }
+    if ($Mail_0) {
+      print OUT "Mail               \"$Mail_0\"\n";
+      print "Mail               \"$Mail_0\"<BR>\n";
+    }
+    if ($Mail_1) {
+      print OUT "Mail               \"$Mail_1\"\n";
+      print "Mail               \"$Mail_1\"<BR>\n";
+    }
+    if ($Mail_2) {
+      print OUT "Mail               \"$Mail_2\"\n";
+      print "Mail               \"$Mail_2\"<BR>\n";
+    }
+    if ($Mail_3) {
+      print OUT "Mail               \"$Mail_3\"\n";
+      print "Mail               \"$Mail_3\"<BR>\n";
+    }
+    if ($Mail_4) {
+      print OUT "Mail               \"$Mail_4\"\n";
+      print "Mail               \"$Mail_4\"<BR>\n";
+    }
+    if ($Mail_5) {
+      print OUT "Mail               \"$Mail_5\"\n";
+      print "Mail               \"$Mail_5\"<BR>\n";
+    }
+    if ($Mail_6) {
+      print OUT "Mail               \"$Mail_6\"\n";
+      print "Mail               \"$Mail_6\"<BR>\n";
+    }
+    if ($Mail_7) {
+      print OUT "Mail               \"$Mail_7\"\n";
+      print "Mail               \"$Mail_7\"<BR>\n";
+    }
+    if ($Mail_8) {
+      print OUT "Mail               \"$Mail_8\"\n";
+      print "Mail               \"$Mail_8\"<BR>\n";
+    }
+    if ($E_mail_0) {
+      print OUT "E_mail             \"$E_mail_0\"\n";
+      print "E_mail             \"$E_mail_0\"<BR>\n";
+    }
+    if ($E_mail_1) {
+      print OUT "E_mail             \"$E_mail_1\"\n";
+      print "E_mail             \"$E_mail_1\"<BR>\n";
+    }
+    if ($E_mail_2) {
+      print OUT "E_mail             \"$E_mail_2\"\n";
+      print "E_mail             \"$E_mail_2\"<BR>\n";
+    }
+    if ($E_mail_3) {
+      print OUT "E_mail             \"$E_mail_3\"\n";
+      print "E_mail             \"$E_mail_3\"<BR>\n";
+    }
+    if ($Phone_0) {
+      print OUT "Phone              \"$Phone_0\"\n";
+      print "Phone              \"$Phone_0\"<BR>\n";
+    }
+    if ($Phone_1) {
+      print OUT "Phone              \"$Phone_1\"\n";
+      print "Phone              \"$Phone_1\"<BR>\n";
+    }
+    if ($Phone_2) {
+      print OUT "Phone              \"$Phone_2\"\n";
+      print "Phone              \"$Phone_2\"<BR>\n";
+    }
+    if ($Phone_3) {
+      print OUT "Phone              \"$Phone_3\"\n";
+      print "Phone              \"$Phone_3\"<BR>\n";
+    }
+    if ($Fax_0) {
+      print OUT "Fax                \"$Fax_0\"\n";
+      print "Fax                \"$Fax_0\"<BR>\n";
+    }
+    if ($Fax_1) {
+      print OUT "Fax                \"$Fax_1\"\n";
+      print "Fax                \"$Fax_1\"<BR>\n";
+    }
+    if ($Fax_2) {
+      print OUT "Fax                \"$Fax_2\"\n";
+      print "Fax                \"$Fax_2\"<BR>\n";
+    }
+    if ($Fax_3) {
+      print OUT "Fax                \"$Fax_3\"\n";
+      print "Fax                \"$Fax_3\"<BR>\n";
+    }
+    print OUT " \n\n";
+    print "<BR>";
+    close (OUT) || die "cannot close $acefile : $!";
+
+  print <<"EndOfText";
+If you wish to modify your submitted information, please go back
+  and resubmit.<BR>
+<P> See all
+<A
+HREF="http://minerva.caltech.edu/~azurebrd/cgi-bin/data/authors.ace">new
+submissions</A>.<P>
+EndOfText
+
+
+
+} # if ($action eq 'Update !')
+
+if ($action eq 'Go !') {
+    
+    $first = 0; # turn off flag to display form first time
+    $querying = 0;		# not querying
+    $updating = 0;		# not updating
+
+    # process the form submission
+    # and assemble the authorform entry
+
+    $lastname = $query->param('lastname');
+    $firstname = $query->param('firstname');
+    $middlename = $query->param('middlename');
+    $email = $query->param('email');
+    $officephone = $query->param('officephone');
+    $labphone = $query->param('labphone');
+    $fax = $query->param('fax');
+    $streetaddress1 = $query->param('streetaddress1');
+    $streetaddress2 = $query->param('streetaddress2');
+    $streetaddress3 = $query->param('streetaddress3');
+    $city = $query->param('city');
+    $state = $query->param('state');
+    $zipcode = $query->param('zipcode');
+    $country = $query->param('country');
+    $laboratory = $query->param('laboratory');
+    $comment = $query->param('comment');
+
+    # begin name
+    # clean up and fiddle with $lastname
+      # if something not entered
+      # get rid of all non-(letters, hyphon, underscore)
+    $lastname =~ s/[^a-zA-Z_\-]//g;
+    unless ($lastname) {
+        # set lastname for showing mistake
+      $lastname = 'Lastname-less';
+        # set flags for showing mistake and form
+      $badname = 1; $badflag = 1;
+    }
+      # length filter 
+    if (length($lastname) > 150) {
+      $lastname = 'Someone with a really long lastname';
+    }
+      # disable all HTML tags
+    $lastname =~ s/</&lt;/g;
+      # read string into array (or use @array = split(//, $lastname);
+    for (0..length($lastname)-1) {
+      $lastname[$_] = substr $lastname, $_, 1;
+    }
+      # cap the first letter (or use $lastname = "\u$lastname";)
+    $lastname[0] =~ tr/a-z/A-Z/;
+      # bring together @lastname again
+    $lastname = join('', @lastname);
+      # $lastname = $lastname[0];
+      # untaint variable
+    unless ($lastname =~ /^([^<]*)$/) {
+        die "couldn't untaint lastname: $lastname\n";
+    }
+    $lastname = $1;
+
+    # clean up and fiddle with $firstname
+      # get rid of all non-(letters, hyphon, underscore)
+    $firstname =~ s/[^a-zA-Z_\-]//g;
+    unless ($firstname) {
+      $firstname = 'Firstname-less';
+      $badname = 1; $badflag = 1;
+    }
+      # length filter 
+    if (length($firstname) > 150) {
+      $firstname = 'Someone with a really long firstname';
+    }
+      # disable all HTML tags
+    $firstname =~ s/</&lt;/g;
+      # read string into array
+    for (0..length($firstname)-1) {
+      $firstname[$_] = substr $firstname, $_, 1;
+    }
+      # cap the first letter
+    $firstname[0] =~ tr/a-z/A-Z/;
+      # make into $firstinit for .ace file's author tag
+    $firstinit = $firstname[0];
+      # bring together $firstname again
+    $firstname = join('', @firstname);
+      # untaint variable
+    unless ($firstname =~ /^([^<]*)$/) {
+        die "couldn't untaint firstname: $firstname\n";
+    }
+    $firstname = $1;
+
+    # clean up and fiddle with $middlename
+    # if no middlename
+      # get rid of all non-(letters, underscore, hyphen, space)
+    $middlename =~ s/[^a-zA-Z_\- ]//g;
+    unless ($middlename) {	# if no middlenmae
+      $middlename = 'Middlename-less';  # set to say
+      $flagmiddle = 1;			# flag it
+    } else {			# if there is a middlename
+      if ($middlename eq 'Middlename-less') { 	# if there really isn't
+        $flagmiddle = 1;		# flag it
+	$middleinit = "";		# set initial to empty
+      } else {		  	# there really is
+          # length filter 
+        if (length($middlename) > 150) {
+          $middlename = 'Someone with a really long middlename';
+        }
+          # disable all HTML tags
+        $middlename =~ s/</&lt;/g;
+	  # check to see if names entered or just initials
+
+        @middlename = split(/\s+/, $middlename);
+	$middlelength = scalar(@middlename);	# get number of middlenames
+	if ($middlelength > 1) {  	# if more than one middlename
+	  for (0..$middlelength-1) { 	# for each string
+	      # use temp array coo for getting initials
+	    @coo = split(//, $middlename[$_]);
+	      # get each initial into an array
+	    @middleinit = (@middleinit, $coo[0]);	
+	      # join and uppercase them
+            $middleinit = uc( join("", @middleinit) );
+	  }
+	} else {			# if just one middlename
+            # read middlename into string (else use split(//, $str); )
+          for (0..length($middlename)-1) {
+            $middlename[$_] = substr $middlename, $_, 1;
+          }
+            # make into middle initial
+	  $middleinit = $middlename[0] . $middlename[1];
+            # cap those letters
+          $middleinit =~ tr/a-z/A-Z/;
+	}
+      }
+    }
+      # untaint variable
+    unless ($middlename =~ /^([^<]*)$/) {
+        die "couldn't untaint middlename: $middlename\n";
+    }
+    $middlename = $1;
+    # end name
+
+    # begin email
+    # clean up and fiddle with $email
+    unless ($email) {
+      $email = 'Email-less';
+      $flagemail = 1;
+    } else {
+      if ($email eq 'Email-less') {
+        $flagemail = 1;
+      } else {
+        if ($email =~ /.+@.*\..+/) {
+        } else {
+          $bademail = 1; $badflag = 1;
+        }
+      }
+    }
+      # length filter 
+    if (length($email) > 150) {
+      $email = 'Someone with a really long email';
+    }
+      # get rid of all non(words, letters, hyphen, underscore, @)
+    $email =~ s/^a-zA-Z0-9\-_@<>//g;
+      # disable all HTML tags
+    $email =~ s/</&lt;/g;
+      # untaint variable
+    unless ($email =~ /^([^<]*)$/) {
+        die "couldn't untaint email: $email\n";
+    }
+    $email = $1;
+    if ($email eq 'Email-less') {
+      $flagemail = 1;
+    }
+    # end email
+
+    # begin office phone
+    # clean up and fiddle with $officephone
+    unless ($officephone) {
+      $officephone = 'Phone-less';
+    }
+      # length filter 
+    if (length($officephone) > 150) {
+      $officephone = 'Someone with a really long officephone';
+    }
+      # get rid of all non(numbers, letters, hyphen, underscore, () )
+    $officephone =~ s/~a-zA-Z0-9\-_()//g;
+      # disable all HTML tags
+    $officephone =~ s/</&lt;/g;
+      # untaint variable
+    unless ($officephone =~ /^([^<]*)$/) {
+        die "couldn't untaint officephone: $officephone\n";
+    }
+    $officephone = $1;
+    if ($officephone eq 'Phone-less') {
+      $flagofficephone = 1;
+    }
+    # end office phone
+
+    # begin lab phone
+    # clean up and fiddle with $labphone
+    unless ($labphone) {
+      $labphone = 'Phone-less';
+    }
+      # length filter 
+    if (length($labphone) > 150) {
+      $labphone = 'Someone with a really long labphone';
+    }
+      # get rid of all non(numbers, letters, hyphen, underscore, () )
+    $labphone =~ s/~a-zA-Z0-9\-_()//g;
+      # disable all HTML tags
+    $labphone =~ s/</&lt;/g;
+      # untaint variable
+    unless ($labphone =~ /^([^<]*)$/) {
+        die "couldn't untaint labphone: $labphone\n";
+    }
+    $labphone = $1;
+    if ($labphone eq 'Phone-less') {
+      $flaglabphone = 1;
+    }
+    # end lab phone
+
+    # begin fax
+    # clean up and fiddle with $fax
+    unless ($fax) {
+      $fax = 'Fax-less';
+    }
+      # length filter 
+    if (length($fax) > 150) {
+      $fax = 'Someone with a really long fax';
+    }
+      # get rid of all non(numbers, letters, hyphen, underscore, () )
+    $fax =~ s/~a-zA-Z0-9\-_()//g;
+      # disable all HTML tags
+    $fax =~ s/</&lt;/g;
+      # untaint variable
+    unless ($fax =~ /^([^<]*)$/) {
+        die "couldn't untaint fax: $fax\n";
+    }
+    $fax = $1;
+    if ($fax eq 'Fax-less') {
+      $flagfax = 1;
+    }
+    # end fax
+
+    # begin snailmail
+    # clean up and fiddle with $streetaddress1
+    unless ($streetaddress1) {
+      $streetaddress1 = 'Street-less';
+      $flagstreet = 1;
+    } else {
+      if ($streetaddress1 eq 'Street-less') {
+        $flagstreet = 1;
+      }
+    }
+      # length filter 
+    if (length($streetaddress1) > 150) {
+      $streetaddress1 = 'Someone with a really long street address';
+    }
+      # will not get rid off odd characters, presume odd chars in use for address
+      # disable all HTML tags
+    $streetaddress1 =~ s/</&lt;/g;
+      # untaint variable
+    unless ($streetaddress1 =~ /^([^<]*)$/) {
+        die "couldn't untaint streetaddress1: $streetaddress1\n";
+    }
+    $streetaddress1 = $1;
+
+    # clean up and fiddle with $streetaddress2
+    unless ($streetaddress2) {
+      # $streetaddress2 = 'Street-less';
+    }
+      # length filter 
+    if (length($streetaddress2) > 150) {
+      $streetaddress2 = 'Someone with a really long street address';
+    }
+      # disable all HTML tags
+    $streetaddress2 =~ s/</&lt;/g;
+      # untaint variable
+    unless ($streetaddress2 =~ /^([^<]*)$/) {
+        die "couldn't untaint streetaddress2: $streetaddress2\n";
+    }
+    $streetaddress2 = $1;
+
+    # clean up and fiddle with $streetaddress3
+    unless ($streetaddress3) {
+      # $streetaddress3 = 'Street-less';
+    }
+      # length filter 
+    if (length($streetaddress3) > 150) {
+      $streetaddress3 = 'Someone with a really long street address';
+    }
+      # disable all HTML tags
+    $streetaddress3 =~ s/</&lt;/g;
+      # untaint variable
+    unless ($streetaddress3 =~ /^([^<]*)$/) {
+        die "couldn't untaint streetaddress3: $streetaddress3\n";
+    }
+    $streetaddress3 = $1;
+
+    
+
+    # clean up and fiddle with $city
+    unless ($city) { 
+      $city = 'City-less';
+      $flagcity = 1;
+    } else {
+      if ($city eq 'City-less') {
+        $flagcity = 1;
+      }
+    }
+      # get rid of all non-(letters, digits, hyphen, underscore)
+    $city =~ s/^a-zA-Z0-9\-_//g;
+      # disable HTML tags
+    $city =~ s/</&lt;/g;
+      # untaint variable
+    unless ($city =~ /^([^<]*)$/) {
+        die "couldn't untaint from_where: $city\n";
+    }
+    $city = $1;
+
+    # clean up and fiddle with $state
+    unless ($state) {
+      $state = 'State-less';
+      $flagstate = 1;
+    } else {
+      if ($state eq 'State-less') {
+        $flagstate = 1;
+      }
+    }
+      # length filter 
+    if (length($state) > 50) {
+      $state = 'Someone with a really long state name';
+    }
+      # get rid of all non-(letters, digits, hyphen, underscore)
+    $state =~ s/^a-zA-Z0-9\-_//g;
+      # disable all HTML tags
+    $state =~ s/</&lt;/g;
+      # untaint variable
+    unless ($state =~ /^([^<]*)$/) {
+        die "couldn't untaint state: $state\n";
+    }
+    $state = $1;
+
+    # clean up and fiddle with $zipcode
+      # get rid of all non-(digits, hyphen)
+    $zipcode =~ s/[^0-9\-]//g;
+      # replace all extra -'s
+    $zipcode =~ s/\-+/\-/g;
+      # get rid of - at beginning and end of zipcode
+    $zipcode =~ s/^\-//g;
+    $zipcode =~ s/\-$//g;
+    unless ($zipcode) {
+      $zipcode = 'Zipcode-less';
+      $flagzipcode = 1;
+    } else {
+      if ($zipcode eq 'Zipcode-less') {
+        $flagzipcode = 1;
+      }
+    }
+      # length filter 
+    if (length($zipcode) > 50) {
+      $zipcode = 'Someone with a really long zip';
+    }
+      # disable all HTML tags
+    $zipcode =~ s/</&lt;/g;
+      # untaint variable
+    unless ($zipcode =~ /^([^<]*)$/) {
+        die "couldn't untaint zipcode: $zipcode\n";
+    }
+
+      # do different parts of line as values in chmod
+    unless ($flagcity) { $lastmailbit += 1 }
+    unless ($flagstate) { $lastmailbit += 2 }
+    unless ($flagzipcode) { $lastmailbit += 4 }
+    if ($lastmailbit == 0) { $flaglastmail = 1 }
+    elsif ($lastmailbit == 1) {
+      $lastmail = "$city";
+    } 
+    elsif ($lastmailbit == 2) {
+      $lastmail = "$state";
+    } 
+    elsif ($lastmailbit == 4) {
+      $lastmail = "$zipcode";
+    } 
+    elsif ($lastmailbit == 3) {
+      $lastmail = "$city, $state";
+    } 
+    elsif ($lastmailbit == 5) {
+      $lastmail = "$city, $zipcode";
+    } 
+    elsif ($lastmailbit == 6) {
+      $lastmail = "$state  $zipcode";
+    } 
+    elsif ($lastmailbit == 7) {
+      $lastmail = "$city, $state  $zipcode";
+    } else {
+    } # if ($lastmailbit == 0)
+
+    # clean up and fiddle with $country
+    unless ($country) {
+      $country = 'COUNTRY-LESS';
+      $flagcountry = 1;
+    } else {
+      if ($country eq 'COUNTRY-LESS') {
+        $flagcountry = 1;
+      }
+    }
+      # length filter 
+    if (length($country) > 50) {
+      $country = 'Someone with a really long country name';
+    }
+      # get rid of non(letters digits hyphen underscore)
+    $country =~ s/^a-zA-Z0-9\-_//g;
+      # cap it
+    $country =~ tr/a-z/A-Z/;
+      # disable all HTML tags
+    $country =~ s/</&lt;/g;
+      # untaint variable
+    unless ($country =~ /^([^<]*)$/) {
+        die "couldn't untaint country: $country\n";
+    }
+    $country = $1;
+    # end snailmail
+
+    # begin laboratory
+    # clean up and fiddle with $laboratory
+    unless ($laboratory) {
+      $laboratory = 'LABORATORY-LESS';
+      $flaglaboratory = 1;
+    } else {
+      if ($laboratory eq 'LABORATORY-LESS') {
+        $flaglaboratory = 1;
+      }
+    }
+      # length filter 
+    if (length($laboratory) > 50) {
+      $laboratory = 'Someone with a really long laboratory';
+    }
+      # disable all HTML tags
+    $laboratory =~ s/</&lt;/g;
+      # get rid of all non-letters
+    $laboratory =~ s/[^a-zA-Z\-]//g;
+      # cap it
+    $laboratory =~ tr/a-z/A-Z/;
+      # if not a valid CGC lab, flag it
+    if ($laboratory !~ m/^AA$|^^AB$|^AC$|^AD$|^AE$|^AF$|^AG$|^AH$|^AL$|^AN$|^AP$|^AQ$|^AR$|^AS$|^AT$|^AV$|^AW$|^AX$|^AZ$|^BA$|^BC$|^BD$|^BE$|^BG$|^BH$|^BK$|^BL$|^BM$|^BP$|^BR$|^BS$|^BW$|^CB$|^CC$|^CD$|^CE$|^CF$|^CGC$|^CH$|^CL$|^CM$|^CR$|^CS$|^CT$|^CU$|^CW$|^CX$|^CZ$|^DA$|^DB$|^DD$|^DF$|^DG$|^DH$|^DJ$|^DM$|^DP$|^DR$|^DS$|^DT$|^DU$|^DZ$|^EA$|^EC$|^ED$|^EE$|^EF$|^EG$|^EH$|^EJ$|^EK$|^EL$|^EM$|^EN$|^ER$|^ES$|^ET$|^EU$|^EW$|^FF$|^FH$|^FK$|^FR$|^FS$|^FX$|^FZ$|^GA$|^GB$|^GC$|^GE$|^GG$|^GJ$|^GL$|^GP$|^GR$|^GS$|^GT$|^GX$|^GY$|^HA$|^HB$|^HC$|^HE$|^HG$|^HH$|^HK$|^HR$|^HS$|^HU$|^HX$|^HY$|^IA$|^IB$|^IF$|^IG$|^IK$|^IM$|^IN$|^JA$|^JB$|^JC$|^JD$|^JE$|^JF$|^JG$|^JH$|^JJ$|^JK$|^JL$|^JM$|^JN$|^JP$|^JR$|^JS$|^JT$|^JU$|^JV$|^JW$|^KA$|^KB$|^KC$|^KD$|^KE$|^KG$|^KJ$|^KK$|^KL$|^KM$|^KN$|^KP$|^KR$|^KS$|^KT$|^KU$|^KW$|^KY$|^LA$|^LB$|^LC$|^LE$|^LK$|^LL$|^LM$|^LN$|^LP$|^LR$|^LS$|^LT$|^LU$|^LV$|^LX$|^MA$|^MB$|^MC$|^MD$|^ME$|^MF$|^MG$|^MH$|^MJ$|^MK$|^ML$|^MM$|^MO$|^MP$|^MQ$|^MR$|^MS$|^MT$|^MU$|^MW$|^MZ$|^NA$|^NC$|^NE$|^NF$|^NG$|^NH$|^NJ$|^NL$|^NM$|^NR$|^NS$|^NT$|^NU$|^NW$|^NY$|^OH$|^OK$|^OR$|^OS$|^OT$|^PA$|^PB$|^PC$|^PD$|^PE$|^PG$|^PH$|^PJ$|^PK$|^PL$|^PR$|^PS$|^PX$|^PY$|^RB$|^RC$|^RE$|^RG$|^RH$|^RL$|^RM$|^RR$|^RS$|^RW$|^RX$|^RY$|^SA$|^SB$|^SC$|^SD$|^SE$|^SF$|^SG$|^SH$|^SJ$|^SK$|^SL$|^SM$|^SN$|^SP$|^SQ$|^SR$|^SS$|^ST$|^SU$|^SV$|^SW$|^SZ$|^TA$|^TB$|^TD$|^TE$|^TF$|^TH$|^TJ$|^TK$|^TL$|^TM$|^TN$|^TP$|^TR$|^TS$|^TT$|^TU$|^TW$|^TX$|^TY$|^UA$|^UC$|^UG$|^UK$|^UL$|^UM$|^UP$|^UT$|^UW$|^VB$|^VC$|^VD$|^VH$|^VJ$|^VM$|^VT$|^WB$|^WF$|^WG$|^WH$|^WJ$|^WK$|^WM$|^WR$|^WS$|^WU$|^WW$|^XA$|^XG$|^XR$|^XY$|^YK$|^YS$|^YT$|^YW$|^ZA$|^ZB$|^ZG$|^ZZ$|LABORATORY-LESS/) {
+      $badlaboratory = 1; $badflag = 1;
+    }
+
+      # untaint variable
+    unless ($laboratory =~ /^([^<]*)$/) {
+        die "couldn't untaint laboratory: $laboratory\n";
+    }
+    $laboratory = $1;
+    # end laboratory
+
+
+    # begin comment
+    # clean up and fiddle with $comment
+      # length filter 
+    if (length($comment) > 32768) {
+      $comment = '...more than I feel like posting in the authorform.';
+    }
+    unless ($comment) {
+      $comment = '...nothing to speak of.';
+      $flagcomment = 1;
+    } else {
+      if ($comment eq '...nothing to speak of.') {
+        $flagcomment = 1;
+      }
+    }
+      # fix line-endings
+    $comment =~ s/\r\n?/\n/g;
+      # will not get rid of odd characters
+      # lose HTML tags
+    $comment =~ s/</&lt;/g;
+      # untaint variable
+    unless ($comment =~ /^([^<]*)$/) {
+        die "couldn't untaint comment: $comment\n";
+    }
+    $comment = $1;
+    # end comment
+
+
+    # assemble finished authorform entry
+
+    # nameflag for $entry
+    if ($badname) { # write an entry to the $data_file 
+    $entry .= <<"EndOfText";
+<P>
+<b>You are required to enter a First name and Last name.
+<br></b>
+
+EndOfText
+    }
+
+    # emailflag for $entry
+    if ($bademail) { # write an entry to the $data_file 
+    $entry .= <<"EndOfText";
+<P>
+<b>You are required to enter a proper email address; leave blank
+if you have no email address.<br></b>
+
+EndOfText
+    }
+
+
+# THESE ARE NOT FLAGGED ANYWHERE
+#     # phoneflag for $entry
+#     if ($badphone) { # write an entry to the $data_file 
+#     $entry .= <<"EndOfText";
+# <P>
+# <b>If you enter a phone, you must enter both area code
+# and main number, otherwise leave both blank.<br></b>
+# 
+# EndOfText
+#     }
+# 
+#     # faxflag for $entry
+#     if ($badfax) { # write an entry to the $data_file 
+#     $entry .= <<"EndOfText";
+# <P>
+# <b>If you enter a fax number, you must enter both area code
+# and main number, otherwise leave both blank.<br></b>
+# 
+# EndOfText
+#     }
+
+    # laboratoryflag for $entry
+    if ($badlaboratory) { # write an entry to the $data_file
+    $entry .= <<"EndOfText";
+<P>
+<b>If you enter a Laboratory, please make sure that it's a valid CGC
+laboratory code; find it <A 
+HREF="http://minerva.caltech.edu/~azurebrd/cgi-bin/data/labcore.ace">here</A>, or leave
+the field blank.<br></b>
+
+EndOfText
+    }
+
+    if ($badflag) { # write the rest of an entry to the $data_file 
+    $entry .= <<"EndOfText";
+<P>
+<b>You have previously entered : </b><br><br>
+<b>$lastname, $firstname $middlename</b> &nbsp; <EM>living at 
+$streetaddress1 $streetaddress2 $streetaddress3, 
+$city, $state, $zipcode, $country, wrote :</EM><BR>
+<BLOCKQUOTE>Email : $email &nbsp;&nbsp;&nbsp;   
+            Office Phone : $officephone &nbsp;&nbsp;&nbsp;   
+            Lab Phone : $labphone &nbsp;&nbsp;&nbsp;   
+	    Fax : $fax &nbsp;&nbsp;&nbsp;   
+	    Laboratory : $laboratory</BLOCKQUOTE><BR>
+<BLOCKQUOTE>$comment</BLOCKQUOTE></P>
+<HR>
+EndOfText
+
+    # open non-destructively, read old entries, write out new
+
+    # initialize all_entries with $entry
+    $all_entries = $entry;
+    sysopen(ENTRIES, "$data_file", O_RDWR)
+                             or die "can't open $data_file: $!";
+    flock(ENTRIES, 2)        or die "can't LOCK_EX $data_file: $!";
+		# 2 gives an exclusive lock on the file, as opposed to 1
+		# which gives a shared lock for multiple viewers
+
+    while(<ENTRIES>) {
+        $all_entries .= $_;
+		# for each loop, all read is stored in $_, which is .='ed
+    }
+
+    # this loop is useless in our case
+    if ($max_entries) {
+        # lop the head off the authorform, if necessary
+        @all_entries = split(/<HR>/i, $all_entries);  # i makes case insensitive
+        $entry_count = @all_entries - 1;
+        while ($entry_count > $max_entries) {
+            pop @all_entries;
+            $entry_count = @all_entries - 1;
+        }
+        $all_entries = join('<HR>', @all_entries);
+    }
+
+    # now write out to $data_file
+    seek(ENTRIES, 0, 0)        or die "can't rewind $data_file: $!";
+    truncate(ENTRIES, 0)       or die "can't truncate $data_file: $!";
+# modify from $all_entries to be just $entry for last mess up case
+    print ENTRIES $all_entries or die "can't print to $data_file: $!";
+    close(ENTRIES)             or die "can't close $data_file: $!";
+
+    } # if ($badflag) to write entry 
+} # if ($action eq 'Go !')
+
+
+# display if error
+
+if ($badflag) { # flagged for name data, show what entered
+  open (IN, "$data_file") or die "Can't open $data_file for reading: $!";
+  flock(IN, 1)            or die "Can't get LOCK_SH on $data_file: $!";
+  while (<IN>) {
+      print;
+  }
+  close IN                or die "Can't close $data_file: $!";
+} # if $badflag
+
+
+# display the form	
+
+if ($badflag || $first) { # if first or bad, show form 
+  print <<"EndOfText";
+<A NAME="form"><H1>Add your info (First and Last names are 
+required) :</H1></A>
+
+If you don't know or don't have something, leave the field
+blank.<BR><BR>
+If you think you are already in the database, enter your <b>Last name</b> and click on
+the <b>\"Query !\"</b> button.  <BR> 
+Then update if your recognize your entry, or come back and submit all your 
+information.<BR><BR>
+<!--If you have any problems or questions, please email me.<BR><BR>-->
+
+
+<FORM METHOD="POST" ACTION="author.cgi">
+<TABLE>
+
+
+<TR>
+<TD ALIGN="right"><b>Last name :</b></TD>
+<TD><TABLE><INPUT NAME="lastname" SIZE=30></TABLE></TD>
+<TD><TABLE><INPUT TYPE="submit" NAME="action" VALUE="Query !"></TABLE></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>First name :</b></TD>
+<TD><TABLE><INPUT NAME="firstname" SIZE=30></TABLE></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Middle name/initial :</b></TD>
+<TD><TABLE><INPUT NAME="middlename" VALUE="$middlename" SIZE=10></TABLE></TD>
+</TR>
+
+<TR></TR> <TR></TR> <TR></TR> <TR></TR> 
+<TR></TR> <TR></TR> <TR></TR> <TR></TR>
+
+<TR>
+<TD ALIGN="right"><b>email : </b></TD>
+<TD><TABLE><INPUT NAME="email" VALUE="$email" SIZE=15></TABLE></TD>
+</TR>
+
+<TR></TR> <TR></TR> <TR></TR> <TR></TR>
+
+<TR>
+<TD ALIGN="right"><b>Phone : Office :</b></TD>
+<TD><TABLE><INPUT NAME="officephone" VALUE="$officephone" SIZE=20></TABLE></TD>
+<TD ALIGN="right"><b>Lab :</b></TD>
+<TD><TABLE><INPUT NAME="labphone" VALUE="$labphone" SIZE=20></TABLE></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>FAX : </b></TD>
+<TD><TABLE><INPUT NAME="fax" VALUE="$fax" SIZE=20></TABLE></TD>
+</TR>
+
+<TR></TR> <TR></TR> <TR></TR> <TR></TR> 
+<TR></TR> <TR></TR> <TR></TR> <TR></TR>
+
+<TR>
+<TD ALIGN="right"><b>Street :</b></TD>
+<TD><TABLE><INPUT NAME="streetaddress1" VALUE="$streetaddress1" SIZE=30></TABLE></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Street (extra) :</b></TD>
+<TD><TABLE><INPUT NAME="streetaddress2" VALUE="$streetaddress2" SIZE=30></TABLE></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Street (extra) :</b></TD>
+<TD><TABLE><INPUT NAME="streetaddress3" VALUE="$streetaddress3" SIZE=30></TABLE></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>City :</b></TD>
+<TD><TABLE><INPUT NAME="city" VALUE="$city" SIZE=30></TABLE></TD>
+</TR>
+
+
+<TR>
+<TD ALIGN="right"><b>State/Province :</b></TD>
+<TD><TABLE><INPUT NAME="state" VALUE="$state"SIZE=10></TABLE></TD>
+<TD ALIGN="right"><b>ZIP/Postal Code :</b></TD>
+<TD><TABLE><INPUT NAME="zipcode" VALUE="$zipcode" SIZE=10></TABLE></TD>
+</TR>
+
+
+<TR>
+<TD ALIGN="right"><b>Country :</b></TD>
+<TD><TABLE><INPUT NAME="country" VALUE="$country" SIZE=10></TABLE></TD>
+</TR>
+
+<TR></TR> <TR></TR> <TR></TR> <TR></TR> 
+<TR></TR> <TR></TR> <TR></TR> <TR></TR>
+
+<TR>
+<BR><BR>
+For laboratory, write your lab's 2 letter CGC code.  If not sure,
+please find out 
+<A HREF="http://minerva.caltech.edu/~azurebrd/cgi-bin/data/labcore.ace" target=new>here</A>.
+<TR>
+<TD ALIGN="right"><b>Laboratory :</b></TD>
+<TD><TABLE><INPUT NAME="laboratory" VALUE="$laboratory" SIZE=30></TABLE></TD>
+</TR>
+
+<TR></TR> <TR></TR> <TR></TR> <TR></TR> 
+<TR></TR> <TR></TR> <TR></TR> <TR></TR>
+
+<!--
+<TR>
+<TD ALIGN="right"><b>Comment :</b></TD>
+<TD><TABLE><INPUT NAME="comment" VALUE="$comment" SIZE=30></TABLE></TD>
+</TR>-->
+
+<TR><TD COLSPAN=2> </TD></TR>
+<TR>
+<TD> </TD>
+<TD><INPUT TYPE="submit" NAME="action" VALUE="Go !">
+    <INPUT TYPE="reset"></TD>
+</TR>
+</TABLE>
+
+</FORM>
+If you have any problems, questions, or comments, please email <A HREF=\"mailto:azurebrd\@minerva.caltech.edu\">azurebrd\@minerva.caltech.edu</A>
+EndOfText
+
+} # if ($badflag || $first) show form 
+
+# output to authors.ace, show happy ending
+unless ( $badflag + $first + $querying + $updating ) { 
+			# unless bad or first time or querying or updating
+			# + to sum up 0s into one 0 for unless
+  print <<"EndOfText";
+<P>
+<P>
+<P>
+<H1> Thank you, your info will be updated shortly.  </H1>
+EndOfText
+
+
+  open (OUT, ">>$acefile") || die "cannot create  $acefile : $!";
+  print OUT "Author : \"$lastname $firstinit$middleinit\" \n";
+  print "Author : \"$lastname $firstinit$middleinit\" <BR>\n";
+
+  if ($middleinit) {
+    print OUT "Full_name          \"$firstname $middleinit $lastname\" \n";
+    print "Full_name          \"$firstname $middleinit $lastname\" <BR>\n";
+  } else {
+    print OUT "Full_name          \"$firstname $lastname\" \n";
+    print "Full_name          \"$firstname $lastname\" <BR>\n";
+  }
+  unless ($flaglaboratory) {
+    print OUT "Laboratory         \"$laboratory\" \n";
+    print "Laboratory         \"$laboratory\" <BR>\n";
+  }
+  unless ($streetaddress1 eq 'Street-less') {
+    print OUT "Mail               \"$streetaddress1\" \n";
+    print "Mail               \"$streetaddress1\" <BR>\n";
+  } 
+  if ($streetaddress2) {
+    print OUT "Mail               \"$streetaddress2\" \n";
+    print "Mail               \"$streetaddress2\" <BR>\n";
+  }
+  if ($streetaddress3) {
+    print OUT "Mail               \"$streetaddress3\" \n";
+    print "Mail               \"$streetaddress3\" <BR>\n";
+  }
+  unless($flaglastmail) {
+    print OUT "Mail               \"$lastmail\" \n";
+    print "Mail               \"$lastmail\" <BR>\n";
+  }
+  unless($flagcountry) {
+    print OUT "Mail               \"$country\" \n";
+    print "Mail               \"$country\" <BR>\n";
+  }
+  unless($flagemail) {
+    print OUT "E_mail             \"$email\" \n";
+    print "E_mail             \"$email\" <BR>\n";
+  }
+  unless($flagofficephone) {
+    print OUT "Phone              \"$officephone\" \n";
+    print "Phone              \"$officephone\" <BR>\n";
+  }
+  unless($flaglabphone) {
+    print OUT "Phone              \"$labphone\" \n";
+    print "Phone              \"$labphone\" <BR>\n";
+  }
+  unless($flagfax) {
+    print OUT "Fax                \"$fax\" \n";
+    print "Fax                \"$fax\" <BR>\n";
+  }
+  unless($flagcomment) {
+    print OUT "Comment            \"$comment\" \n";
+    print "Comment            \"$comment\" <BR>\n";
+  }
+  print OUT " \n\n";
+  print " <BR>";
+  close (OUT) || die "cannot close $acefile : $!";
+
+  open (ERASE, ">$data_file") || die "cannot access $data_file : $!";
+  print ERASE "";
+  close (ERASE) || die "cannot close $data_file : $!";
+
+  print <<"EndOfText";
+If you wish to modify your submitted information, please go back
+  and resubmit.<BR>
+<P> See all
+<A
+HREF="http://minerva.caltech.edu/~azurebrd/cgi-bin/data/authors.ace">new
+submissions</A>.<P>
+EndOfText
+  
+} # unless ($badflag + $first) output to authors.ace, show happy ending
+
+
+# make end of HTML page
+
+print "$footer";
+
+sub untaint {
+  my $tainted = shift;
+  my $untainted;
+  $tainted =~ s/[^\w\-.,;:?\/\\@#$%^&*(){}[\]+=!~|' \t\n\r\f]//g;
+  if ($tainted =~ m/^([\w\-.,;:?\/\\@#$%&^*(){}[\]+=!~|' \t\n\r\f]+)$/) {
+    $untainted = $1; 
+  } else {
+    die "Bad data in $tainted";
+  }
+  return $untainted;
+} # sub untaint 
+

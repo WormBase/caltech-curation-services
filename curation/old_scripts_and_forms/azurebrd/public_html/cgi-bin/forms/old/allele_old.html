@@ -1,0 +1,121 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<Html>
+<Head>
+  <TITLE size="5">allele form</TITLE>
+  <Base Target="right-top">
+</Head>
+
+<Body bgcolor="#FFFFF0">
+
+<h2><b>Allele Submission Form</b></h2>
+<hr>
+
+<Form align="center">
+  <TABLE>
+    <TR><TD>Allele: </TD>
+	<TD><Input Type="Text" Name="allele" Size="50"></TD>
+	<TD>(eg. e53) => main tag</TD></TR>
+    <TR><TD>CGC locus name of gene: </TD>
+	<TD><Input Type="Text" Name="Gene" Size="50"></TD>
+	<TD>(if known, eg. aap-1) => Gene tag</TD></TR>
+    <TR><TD>Sequence name of gene:</TD>
+	<TD><Input Type="Text" Name="CDS" Size="50"></TD>
+	<TD>(CDS, eg., B0303.3) =>Sequence tag (Source)</TD></TR>
+    <TR><TD>Genomic Sequence that contains allele:</TD>
+	<TD><Input Type="Text" Name="genomic" Size="50"></TD>
+	<TD>(eg., B0303) => for curator's info</TD></TR>
+    <TR><TD>Associated strain: </TD>
+	<TD><Input Type="Text" Name="strain" Size="50"></TD>
+	<TD>(if known, eg. AA18) => strain tag</TD></TR>
+    <TR><TD>Species:</TD>
+	<TD><Input Type="Text" Name="species" Size="50"></TD>
+	<TD>(eg. Caenorhabditis elegance)=> species tag</TD></TR>
+ 
+    <TR></TR><TR><TD><B>Type of Alterations</B></TD></TR><TR></TR>
+                     
+    <TR><TD><Input Type="radio" Name="Type" Value="point_mutation">
+	    &nbsp;&nbsp;Point mutation/dinucleotide mutation: </TD>
+        <TD><Input Type="Text" Name="Gene" Size="50"></TD>
+	<TD> (eg. c to t OR c to ag) => Allelic_difference tag (Sequence_details)
+	    &nbsp;&nbsp&nbsp;&nbsp</TD></TR>
+    <TR><TD><Input Type="radio" Name="Type" Value="insertion">
+	    &nbsp;&nbsp;Insertion:  </TD>
+        <TD></TD><TD>=> Insertion tag (Description)</TD></TR>
+    <TR><TD><Input Type="radio" Name="Type" Value="deletion">
+	    &nbsp;&nbsp;Deletion:</TD>
+        <TD></TD><TD>=> Deletion tag (Description)</TD></TR>
+    <TR><TD>30 bp upstream flanking sequence: </TD>
+        <TD><Input Type="Text" Name="upstream" Size="50"></TD>
+        <TD> => Flanking_sequences UNIQUE tag Text (left)</TD></TR>
+    <TR><TD>30 bp downstream flanking sequence: </TD>
+	<TD><Input Type="Text" Name="upstream" Size="50"></TD>
+	<TD> => Flanking_sequences UNIQUE tag Text (right)</TD></TR>
+
+    <TR></TR><TR><TD><B>Nature of Alleles</B></TD></TR><TR></TR>
+    <TR></TR><TR><TD>Phenotypic Penetrance:</TD></TR><TR></TR>
+
+    <TR><TD><Input Type="radio" Name="Type" Value="nature_1">&nbsp;&nbsp;
+	      Recessive&nbsp;&nbsp; => Recessive tag (Description)</TD></TR>
+    <TR><TD><Input Type="radio" Name="Type" Value="nature_1">&nbsp;&nbsp;
+	      Semi-dominant&nbsp;&nbsp; => Semi_dominant tag (Description)</TD></TR>
+    <TR><TD><Input Type="radio" Name="Type" Value="nature_1">&nbsp;&nbsp;
+	      Dominant&nbsp;&nbsp => Dominant tag (Description)</TD></TR>
+	
+    <TR></TR><TR><TD>Temperature Sensitive:</TD></TR><TR></TR>
+
+    <TR><TD><Input Type="radio" Name="Type" Value="nature_2">&nbsp;&nbsp;
+	      Heat sensitive&nbsp;&nbsp => Heat_sensitive tag (Temperature_sensitive)</TD></TR>
+    <TR><TD><Input Type="radio" Name="Type" Value="nature_2">&nbsp;&nbsp;
+	      Cold sensitive&nbsp;&nbsp => Cold_sensitive tag (Temperature_sensitive)</TD></TR>
+
+    <TR></TR><TR><TD>Loss of Function:</TD>
+        <TD><Select Name="loss_of_function"  Size=1>
+	           <Option Value="unspecified" Selected>unspecified
+		   <Option Value="hypomorph">hypomorph
+		   <Option Value="amorph">null (amorph)
+            </Select></TD>
+	<TD>Note: Drop-down option goes to Remark tag, as currently there is no such tag in 
+	    the ?Allele model. Maybe in the future?</TD></TR><TR></TR>
+
+    <TR></TR><TR><TD>Gain of Function:</TD>
+        <TD><Select Name="gain_of_function"  Size=1>
+	           <Option Value="unspecified" Selected>unspecified
+		   <Option Value="hypomorph">hypomorph
+		   <Option Value="amorph">null (amorph)
+	           <Option Value="antimorph">dorminant negative
+            </Select></TD>
+	<TD>Note: Drop-down option goes to Remark tag, as currently there is no such tag in 
+	    the ?Allele model. Maybe in the future?</TD></TR><TR></TR>
+       
+    <TR><TD>Personal details.<BR>Please enter full name, eg. John Sulston.</TD>
+	<TD><Input Type="Text" Name="person_evidence" Size="50"></TD>
+	<TD>=> Author tag (Isolation)?? Need Caltech feedback</TD></TR>
+    <TR><TD>Has this allele been published? If so, where:</TD>
+	<TD><Input Type="Text" Name="paper_evidence" Size="50"></TD>
+	<TD>=> ?? Need Caltech feedback</TD></TR>
+    <TR><TD>CGC Laboratory designation (if known, eg., CB, PS)</TD>
+        <TD><Input Type="Text" Name="lab" Size="50" Maxlength="3" Align="Left"></TD>
+	<TD>=> Location ?Laboratory XREF Alleles</TD></TR>
+    <TR><TD>Submitter email (please enter for contact purpose)</TD>
+	<TD><Input Type="Text" Name="sumitter_email" Size="50" Maxlength="50" Align="Left"></TD>
+	<TD>=> for curator's info</TD></TR>
+
+    <TR></TR><TR><TD>Phenotypic Description:</TD>
+        <TD><Textarea Rows=5 Cols=50></Textarea></TD>
+	<TD>=> Phenotype tag ?Text</TD></TR><TR></TR>
+
+    <TR></TR><TR><TD>Comment:</TD>
+	<TD><Textarea Rows=3 Cols=50></Textarea></TD>
+	<TD>=> for curtor's info</TD></TR><TR></TR> 
+
+  </TABLE>
+	<Input Type="Submit" Value="Submit" Align="Left">
+	<Input Type="Reset" Value="Reset"  Align="Left"><Br>
+
+</Form>
+</body>
+</html>
+<!-- Created: Mon Nov  4 11:10:16 GMT 2002 -->
+
+

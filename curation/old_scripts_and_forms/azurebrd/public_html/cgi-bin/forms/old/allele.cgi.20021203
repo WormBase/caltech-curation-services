@@ -1,0 +1,430 @@
+#!/usr/bin/perl -T
+
+# Form to submit Allele information.
+
+# an allele form to make .ace files and email curator
+# This version gets headers and footers off of www.wormbase.org with LWP / Jex,
+# untaints and gets HTML values with CGI / Jex, sends mail with Mail::Mailer /
+# Jex   2002 05 14
+#
+# Parses data and outputs names of html fields and values (placed in $body) and
+# also tried to parse out .ace entries (place in $ace_body).  These are emailed
+# and written to the flatfile, then the \n are parsed into <BR>\n for html
+# display.  Some html fields don't have a corresponding .ace entry (NULL), so
+# they are ignored in the .ace part.  Some are radio buttons that do have an
+# entry, so these are part of an if/elsif/else statement that checks if it's one
+# of those fields, and gets the appropriate .ace tag from the selected (radio)
+# value.  Likewise for Flanking_sequences since they need to specify (left) or
+# (right).   2002 11 04
+#
+# Have more meaningful names for the values of loss/gain_of_function.  Place
+# them in Remark specifying loss/gain_of_function.   Parse Allelic_difference
+# to [A\/G] format if possible.  2002 11 06
+#
+# Added penetrance radio and text field.  Added Species radio and text field.
+# Added text field for Insertion and Deletion.  Added link to labcore.ace for
+# Lab designation.  Rearranged form into Mandatory, Genetic, Physical, Personal
+# 2002 11 07
+#
+# Recessive, Semi_dominant, Dominant, Heat_sensitive, Cold_sensitive no longer
+# write vals to .ace file (just tags).  Allele tag no longer has square
+# brackets.  2002 11 08
+
+my $acefile = "/home2/azurebrd/public_html/cgi-bin/data/allele.ace";
+
+my $firstflag = 1;		# flag if first time around (show form for no data)
+
+# use LWP::Simple;
+# use Mail::Mailer;
+
+use Jex;			# untaint, getHtmlVar, cshlNew
+use strict;
+use CGI;
+use Fcntl;
+
+my $query = new CGI;
+my $user = 'allele_form';	# who sends mail
+my $email = 'ck1@sanger.ac.uk';	# to whom send mail
+# my $email = 'azurebrd@minerva.caltech.edu';	# to whom send mail
+my $subject = 'allele data';	# subject of mail
+my $body = '';			# body of mail
+my $ace_body = '';		# body of ace file
+
+print "Content-type: text/html\n\n";
+my $title = 'Allele Data Submission Form';
+my ($header, $footer) = &cshlNew($title);
+print "$header\n";		# make beginning of HTML page
+
+&process();			# see if anything clicked
+&display();			# show form as appropriate
+print "$footer"; 		# make end of HTML page
+
+sub process {			# see if anything clicked
+  my $action;			# what user clicked
+  unless ($action = $query->param('action')) { $action = 'none'; }
+
+  if ($action eq 'Go !') { 
+    $firstflag = "";				# reset flag to not display first page (form)
+
+    my $mandatory_ok = 'ok';			# default mandatory is ok
+    my $sender = '';
+    my @mandatory = qw ( submitter_email allele person_evidence );
+    my %mandatoryName;				# hash of field names to print warnings
+    $mandatoryName{submitter_email} = "Submitter Email";
+    $mandatoryName{allele} = "Allele";
+    $mandatoryName{person_evidence} = "Personal Details";
+ 
+    foreach $_ (@mandatory) {			# check mandatory fields
+      my ($var, $val) = &getHtmlVar($query, $_);
+      if ($_ eq 'submitter_email') {		# check emails
+        unless ($val =~ m/@.+\..+/) { 		# if email doesn't match, warn
+          print "<FONT COLOR=red SIZE=+2>$val is not a valid email address.</FONT><BR>";
+          $mandatory_ok = 'bad';		# mandatory not right, print to resubmit
+        } else { $sender = $val; }
+      } else { 					# check other mandatory fields
+	unless ($val) { 			# if there's no value
+          print "<FONT COLOR=red SIZE=+2>$mandatoryName{$_} is a mandatory field.</FONT><BR>";
+          $mandatory_ok = 'bad';		# mandatory not right, print to resubmit
+        }
+      }
+    } # foreach $_ (@mandatory)
+
+    if ($mandatory_ok eq 'bad') { 
+      print "Please click back and resubmit.<P>";
+    } else { 					# if email is good, process
+      open (OUT, ">>$acefile") or die "Cannot create $acefile : $!";
+      my $host = $query->remote_host();		# get ip address
+      my $body .= "$sender from ip $host sends :\n\n";
+      my @all_vars = qw ( person_evidence submitter_email gene nature_of_allele penetrance partial_penetrance temperature_sensitive loss_of_function gain_of_function sequence genomic strain species species_other alteration_type point_mutation_gene insertion deletion upstream downstream paper_evidence lab phenotypic_description comment );
+#       my @all_vars = qw ( gene sequence genomic strain species species_other alteration_type point_mutation_gene insertion deletion upstream downstream nature_of_allele penetrance partial_penetrance temperature_sensitive loss_of_function gain_of_function person_evidence paper_evidence lab submitter_email phenotypic_description comment );
+#       my @vars = qw( gene strain ref_point sequence start_base end_base upstream downstream alteration insertion person paper phenotypic laboratory );
+#       my @nature = qw( recessive semidominant dominant lossoffunction hypomorph amorph unspecifiedloss gainoffunction unspecifiedgain hypermorph neomorph antimorph);
+  
+      my %aceName;
+      $aceName{allele} = 'Allele';
+      $aceName{gene} = 'Gene';
+      $aceName{sequence} = 'Sequence';
+      $aceName{genomic} = 'NULL';
+      $aceName{strain} = 'Strain';
+      $aceName{species} = 'NULL';		# check that species_other wasn't filled
+      $aceName{species_other} = 'Species';
+      $aceName{alteration_type} = 'NULL';	# Allelic_difference / Insertion / Deletion
+      $aceName{point_mutation_gene} = 'NULL';	# Allelic_difference (needs to be parsed)
+      $aceName{insertion} = 'Insertion';	# Insertion
+      $aceName{deletion} = 'Deletion';		# Deletion
+      $aceName{upstream} = 'NULL';		# Flanking_sequences (left)
+      $aceName{downstream} = 'NULL';		# Flanking_sequences (right)
+      $aceName{nature_of_allele} = 'NULL';	# Recessive / Semi_dominant / Dominant
+      $aceName{penetrance} = 'NULL';
+      $aceName{partial_penetrance} = 'NULL';
+      $aceName{temperature_sensitive} = 'NULL';	# Heat_sensitive / Cold_sensitive
+      $aceName{loss_of_function} = 'NULL';	# Remark "Loss of function: "
+      $aceName{gain_of_function} = 'NULL';	# Remark "Gain of function: "
+      $aceName{person_evidence} = 'NULL';
+#       $aceName{paper_evidence} = 'Reference';
+      $aceName{paper_evidence} = 'NULL';
+      $aceName{lab} = 'Location';
+      $aceName{submitter_email} = 'NULL';
+      $aceName{phenotypic_description} = 'Phenotype';
+      $aceName{comment} = 'NULL';
+
+      my ($var, $val) = &getHtmlVar($query, 'allele');
+      unless ($val =~ m/\S/) {			# if there's no allele text
+        print "<FONT COLOR='red'>Warning, you have not picked an Allele</FONT>.<P>\n";
+      } else {					# if allele text, output
+#         print OUT "Allele : [$val] \n";
+#         print "Allele : [$val]<BR>\n";
+        $body .= "allele\t$val\n";
+        $ace_body .= "Allele : $val\n";
+      } # else # unless ($val =~ m/\S/)
+  
+      foreach $_ (@all_vars) { 			# for all fields, check for data and output
+        my ($var, $val) = &getHtmlVar($query, $_);
+        if ($val =~ m/\S/) { 	# if value entered
+
+#           print OUT "$aceName{$var} \"$val\" \n";
+#           print "$aceName{$var} \"$val\" <BR>\n";
+          if ($aceName{$var} ne 'NULL') { $ace_body .= "$aceName{$var}\t\"$val\"\n"; }
+	  elsif ($var eq 'species') { 
+            my ($var, $species_other) = &getHtmlVar($query, 'species_other');
+	    unless ($species_other) { $ace_body .= "Species\t\"$val\"\n"; }
+          }
+          elsif ($var eq 'point_mutation_gene') {
+            my $ace_val = $val;
+            if ($ace_val =~ m/([aAcCtTgG]+) [tT][oO] ([aAcCtTgG]+)/) { 
+              my $first = uc($1); my $second = uc($2);
+              $ace_val = '[' . $first . '\/' . $second . ']'; 
+            }
+            $ace_body .= "Allelic_difference\t\"$ace_val\"\n";
+          }
+          elsif ($var eq 'alteration_type') { 
+            my ($var, $point_mut) = &getHtmlVar($query, 'point_mutation_gene');
+            my ($var, $insertion) = &getHtmlVar($query, 'insertion');
+            my ($var, $deletion) = &getHtmlVar($query, 'deletion');
+	    unless ( ($point_mut) || ($insertion) || ($deletion) ) {		
+						# ignore alternation_type if any
+						# text field was filled
+	      if ($val eq 'point_mutation') { $ace_body .= "Allelic_difference\t\"$val\"\n"; }
+	      elsif ($val eq 'insertion') { $ace_body .= "Insertion\t\"$val\"\n"; }
+	      elsif ($val eq 'deletion') { $ace_body .= "Deletion\t\"$val\"\n"; }
+	      else { print "ERROR : $var and $val don't have a matching Ace tag<BR>\n"; }
+            }
+	  }					# append to ace entry if proper
+	  elsif ($var eq 'nature_of_allele') {
+	    if ($val eq 'recessive') { $ace_body .= "Recessive\n"; }
+	    elsif ($val eq 'semi_dominant') { $ace_body .= "Semi_dominant\n"; }
+	    elsif ($val eq 'dominant') { $ace_body .= "Dominant\n"; }
+	    else { print "ERROR : $var and $val don't have a matching Ace tag<BR>\n"; }
+	  }					# append to ace entry if proper
+	  elsif ($var eq 'temperature_sensitive') {
+	    if ($val eq 'heat_sensitive') { $ace_body .= "Heat_sensitive\n"; }
+	    elsif ($val eq 'cold_sensitive') { $ace_body .= "Cold_sensitive\n"; }
+	    else { print "ERROR : $var and $val don't have a matching Ace tag<BR>\n"; }
+	  }					# append to ace entry if proper
+	  elsif ($var eq 'upstream') {		# now includes downstream for .ace
+            my $flanking_seq = $val;
+            my ($var, $val) = &getHtmlVar($query, 'downstream');
+            $flanking_seq .= "\"\t\"" . $val;
+	    $ace_body .= "Flanking_sequences\t\"$flanking_seq\"\n"; 
+	  }					# append to ace entry if proper
+# 	  elsif ($var eq 'downstream') {
+# 	    $ace_body .= "Flanking_sequences\t\"(right)$val\"\n"; 
+# 	  }					# append to ace entry if proper
+	  elsif ($var eq 'loss_of_function') {
+            unless ($val eq 'not') { 
+	      $ace_body .= "Remark\t\"Loss of Function: $val.\"\n"; 
+            }
+	  } 
+	  elsif ($var eq 'gain_of_function') {
+            unless ($val eq 'not') { 
+	      $ace_body .= "Remark\t\"Gain of Function: $val.\"\n"; 
+            }
+	  } 
+	  else { 1; }
+          $body .= "$var\t\"$val\"\n";
+        } # if ($val) 
+      } # foreach $_ (@vars) 
+      my $full_body = $body . "\n" . $ace_body;
+      print OUT "$full_body\n";			# print to outfile
+      close (OUT) or die "cannot close $acefile : $!";
+      &mailer($user, $email, $subject, $full_body);	# email the data
+      $body =~ s/\n/<BR>\n/mg;
+      $ace_body =~ s/\n/<BR>\n/mg;
+      print "BODY : <BR>$body<BR><BR>\n";
+      print "ACE : <BR>$ace_body<BR><BR>\n";
+      print "<P><P><P><H1>Thank you, your info will be updated shortly.</H1>\n";
+      print "If you wish to modify your submitted information, please go back and resubmit.<BR><P> See all <A HREF=\"http://minerva.caltech.edu/~azurebrd/cgi-bin/data/allele.ace\">new submissions</A>.<P>\n";
+    } # else # unless ($sender =~ m/@.+\..+/)
+  } # if ($action eq 'Go !') 
+} # sub process
+
+
+sub display {			# show form as appropriate
+  if ($firstflag) { # if first or bad, show form 
+    print <<"EndOfText";
+
+
+<A NAME="form"><H1>Allele Data Submission Form :</H1></A>
+<B>Please fill out as many fields as possible.  First three fields are required.</B><P>
+
+<HR>
+
+
+<FORM METHOD="POST" ACTION="allele.cgi">
+  <TABLE>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR><TD><FONT SIZE=+2><B>REQUIRED</B></FONT></TD></TR>
+    <TR><TD ALIGN="right"><U><FONT COLOR='red'><B>Allele</FONT></U> :</B></TD>
+        <TD><Input Type="Text" Name="allele" Size="50"></TD>
+        <TD>(eg. e53) => main tag</TD></TR>
+    <TR><TD ALIGN="right"><U><FONT COLOR='red'><B>Submitter's Name</FONT></U> :</B>
+	   <BR>Please enter full name, eg. John Sulston</TD>
+        <TD><Input Type="Text" Name="person_evidence" Size="50"></TD>
+        <TD>=> Author tag (Isolation)?? Need Caltech feedback</TD></TR>
+    <TR><TD ALIGN="right"><U><FONT COLOR='red'><B>Submitter's Email</FONT></U> :</B>
+	   <BR>(please enter for contact purpose)</TD>
+        <TD><Input Type="Text" Name="submitter_email" Size="50" Maxlength="50"></TD>
+        <TD>=> for curator's info</TD></TR>
+
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR><TD><FONT SIZE=+2><B>GENETIC</B></FONT></TD></TR>
+
+    <TR><TD ALIGN="right"><B>CGC locus name of gene :</B></TD>
+        <TD><Input Type="Text" Name="gene" Size="50"></TD>
+        <TD>(if known, eg. aap-1) => Gene tag</TD></TR>
+
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR><TD ALIGN="left"><B>Nature of Alleles :</B></TD></TR>
+    <TR><TD ALIGN="right"><B>Recessive :</B>
+	   <Input Type="radio" Name="nature_of_allele" Value="recessive"></TD>
+	<TD></TD>
+	<TD>=> Recessive tag (Description)</TD></TR>
+    <TR><TD ALIGN="right"><B>Semi-dominant :</B>
+	   <Input Type="radio" Name="nature_of_allele" Value="semi_dominant"></TD>
+        <TD></TD>
+	<TD>=> Semi_dominant tag (Description)</TD></TR>
+    <TR><TD ALIGN="right"><B>Dominant :</B>
+	   <Input Type="radio" Name="nature_of_allele" Value="dominant"></TD>
+	<TD></TD>
+        <TD>=> Dominant tag (Description)</TD></TR>
+
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR><TD ALIGN="left"><B>Penetrance :</B></TD>
+	<TD></TD>
+	<TD>% animals displaying the phenotype</TD></TR>
+    <TR><TD ALIGN="right"><B>Complete :</B>
+	   <Input Type="radio" Name="penetrance" Value="complete"></TD>
+	<TD></TD>
+	<TD></TD></TR>
+    <TR><TD ALIGN="right"><B>Partial :</B>
+	   <Input Type="radio" Name="penetrance" Value="partial"></TD>
+        <TD><Input Type="Text" Name="partial_penetrance" Size="50"></TD>
+	<TD></TD></TR>
+
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR><TD ALIGN="left"><B>Temperature Sensitive :</B></TD></TR>
+    <TR><TD ALIGN="right"><B>Heat sensitive :</B>
+	   <Input Type="radio" Name="temperature_sensitive" Value="heat_sensitive"></TD>
+	<TD></TD>
+	<TD>=> Heat_sensitive tag (Temperature_sensitive)</TD></TR>
+    <TR><TD ALIGN="right"><B>Cold sensitive :</B>
+	   <Input Type="radio" Name="temperature_sensitive" Value="cold_sensitive"></TD>
+	<TD></TD>
+	<TD>=> Cold_sensitive tag (Temperature_sensitive)</TD></TR>
+
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR><TR><TD ALIGN="right"><B>Loss of Function :</B></TD>
+        <TD><Select Name="loss_of_function"  Size=1>
+                   <Option Value="not" Selected>Not Applicable
+                   <Option Value="Uncharacterized loss-of-function">Uncharacterized loss-of-function
+                   <Option Value="Haplo-insufficient">Haplo-insufficient
+                   <Option Value="Hypomorph">Hypomorph      
+                   <Option Value="Null (amorph)">Null (amorph)
+            </Select></TD>
+        <TD>Note: Drop-down option goes to Remark tag, as currently there is no such tag in
+            the ?Allele model. Maybe in the future?</TD></TR><TR></TR>
+
+    <TR></TR><TR><TD ALIGN="right"><B>Gain of Function :</B></TD>
+        <TD><Select Name="gain_of_function"  Size=1>
+                   <Option Value="not" Selected>Not Applicable
+                   <Option Value="Uncharacterized gain-of-function">Uncharacterized gain-of-function
+                   <Option Value="Hypermorph">Hypermorph
+                   <Option Value="Neomorph">Neomorph
+                   <Option Value="Dominant Negative">Dominant Negative
+            </Select></TD>
+        <TD>Note: Drop-down option goes to Remark tag, as currently there is no such tag in
+            the ?Allele model. Maybe in the future?</TD></TR><TR></TR>
+
+
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR><TD><FONT SIZE=+2><B>PHYSICAL</B></FONT></TD></TR>
+    <TR><TD ALIGN="right"><B>Sequence name of gene :</B></TD>
+        <TD><Input Type="Text" Name="sequence" Size="50"></TD>
+        <TD>(CDS, eg., B0303.3) =>Sequence tag (Source)</TD></TR>
+    <TR><TD ALIGN="right"><B>Genomic Sequence that contains allele :</B></TD>
+        <TD><Input Type="Text" Name="genomic" Size="50"></TD>
+        <TD>(eg., B0303) => for curator's info</TD></TR>
+    <TR><TD ALIGN="right"><B>Associated strain :</B></TD>
+        <TD><Input Type="Text" Name="strain" Size="50"></TD>
+        <TD>(if known, eg. AA18) => strain tag</TD></TR>
+
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR><TD ALIGN="left"><B>Species :</B></TD>
+	<TD></TD>
+	<TD></TD></TR>
+    <TR><TD ALIGN="right"><B>C. elegans :</B>
+	   <Input Type="radio" checked Name="species" Value="C. elegans"></TD>
+	<TD></TD>
+	<TD></TD></TR>
+    <TR><TD ALIGN="right"><B>C. briggsae :</B>
+	   <Input Type="radio" Name="species" Value="C. briggsae"></TD>
+	<TD></TD>
+	<TD></TD></TR>
+    <TR><TD ALIGN="right"><B>P. pacificus :</B>
+	   <Input Type="radio" Name="species" Value="P. pacificus"></TD>
+	<TD></TD>
+	<TD></TD></TR>
+    <TR><TD ALIGN="right"><B>Other :</B>
+	   <Input Type="radio" Name="species" Value="other"></TD>
+        <TD><Input Type="Text" Name="species_other" Size="50"></TD>
+	<TD></TD></TR>
+
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR><TR><TD ALIGN="left"><B>Type of Alterations</B></TD></TR>
+    <TR><TD align="right"><B>Point mutation/dinucleotide mutation :</B>
+           <Input Type="radio" Name="alteration_type" Value="point_mutation"></TD>
+        <TD><Input Type="Text" Name="point_mutation_gene" Size="50"></TD>
+        <TD> (eg. c to t OR c to ag) => Allelic_difference tag (Sequence_details)</TD></TR>
+    <TR><TD align="right"><B>Insertion :</B>
+	   <Input Type="radio" Name="alteration_type" Value="insertion"></TD>
+        <TD><Input Type="Text" Name="insertion" Size="50"></TD>
+	<TD>=> Insertion tag (Description)</TD></TR>
+    <TR><TD align="right"><B>Deletion :</B>
+	   <Input Type="radio" Name="alteration_type" Value="deletion"></TD>
+        <TD><Input Type="Text" Name="deletion" Size="50"></TD>
+	<TD>=> Deletion tag (Description)</TD></TR>
+
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR><TD align="right"><B>As many as possible up to 30 bp upstream flanking sequence :</B></TD>
+        <TD><Input Type="Text" Name="upstream" Size="50"></TD>
+        <TD> => Flanking_sequences UNIQUE tag Text (left)</TD></TR>
+    <TR><TD align="right"><B>As many as possible up to 30 bp downstream flanking sequence :</B></TD>
+        <TD><Input Type="Text" Name="downstream" Size="50"></TD>
+        <TD> => Flanking_sequences UNIQUE tag Text (right)</TD></TR>
+
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR><TD><FONT SIZE=+2><B>PERSONAL</B></FONT></TD></TR>
+    <TR><TD ALIGN="right"><B>Has this allele been published?</B><BR>If so, where:<BR>
+	   (Please leave blank if unpublished)</TD>
+        <TD><Input Type="Text" Name="paper_evidence" Size="50"></TD>
+        <TD>=> ?? Need Caltech feedback</TD></TR>
+    <TR><TD ALIGN="right"><B>CGC Laboratory designation</B><BR>
+	   (if known, eg., CB, PS.  <BR>See list 
+	    <A HREF="http://minerva.caltech.edu/~azurebrd/cgi-bin/data/labcore.ace">here</A>.)</TD>
+        <TD><Input Type="Text" Name="lab" Size="50" Maxlength="3"></TD>
+        <TD>=> Location ?Laboratory XREF Alleles</TD></TR>
+
+    <TR></TR><TR><TD ALIGN="right"><B>Phenotypic Description :</B></TD>
+        <TD><TEXTAREA Name="phenotypic_description" Rows=5 Cols=50></TEXTAREA></TD>
+        <TD>=> Phenotype tag ?Text</TD></TR><TR></TR>
+
+    <TR></TR><TR><TD ALIGN="right"><B>Comment :</B></TD>
+        <TD><TEXTAREA Name="comment" Rows=3 Cols=50></TEXTAREA></TD>
+        <TD>=> for curator's info</TD></TR><TR></TR>
+
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    <TR></TR> <TR></TR> <TR></TR> <TR></TR>
+    
+    <TR><TD COLSPAN=2> </TD></TR>
+    <TR>
+      <TD> </TD>
+      <TD><INPUT TYPE="submit" NAME="action" VALUE="Go !">
+        <INPUT TYPE="reset"></TD>
+    </TR>
+  </TABLE>
+
+</FORM>
+If you have any problems, questions, or comments, please contact <A HREF=\"mailto:azurebrd\@minerva.caltech.edu\">azurebrd\@minerva.caltech.edu</A>
+EndOfText
+
+  } # if (firstflag) show form 
+} # sub display

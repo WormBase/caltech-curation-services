@@ -1,0 +1,509 @@
+#!/usr/bin/perl
+
+# New for authors to first pass fields
+
+# Added javascript extendable textareas.  Made them hide by default.  Added ``Add information'' link
+# to show hidden textareas.  2009 02 28
+#
+# Changed the link to toggle the hide / show state.  Changed the state to refer to the tr instead
+# of the textarea, which allows a close button on the first td or the tr.  Moved the looping javascript
+# that hid all textareas into first_pass.js, and have it match a regexp of ^tr on the id of the "tr"s 
+# to make sure they're hidden.  2009 03 02
+
+
+use Jex;			# untaint, getHtmlVar, cshlNew
+use strict;
+use CGI;
+# use Ace;
+
+use Pg;
+my $conn = Pg::connectdb("dbname=testdb");
+die $conn->errorMessage unless PGRES_CONNECTION_OK eq $conn->status;
+
+my $blue = '#00ffcc';                   # redefine blue to a mom-friendly color
+my $red = '#00ffff';                    # redefine red to a mom-friendly color
+
+
+my $query = new CGI;
+my $firstflag = 1;
+
+my %hash;
+my %name;
+
+# NEW TABLES  matrices (maybe marker) timeofaction celegans nocuratable  domainanalysis (copy structureinformation)
+# RENAME structurecorrectionsanger to structurecorrection ;  newsnp to snp
+my %indent;
+$indent{"antibody"}++;
+$indent{"transgene"}++;
+$indent{"marker"}++;
+$indent{"otherexpression"}++;
+$indent{"newmutant"}++;
+$indent{"rnai"}++;
+$indent{"lsrnai"}++;
+$indent{"overexpression"}++;
+$indent{"chemicals"}++;
+
+# my @cats = qw( gif int gef pfs seq cell sil rgn oth );
+my @cats = qw( gif gfp int gef pfs seq cell sil oth );
+my @gif = qw( celegans nematode rgngene genesymbol extractedvariation mappingdata );
+my @gfp = qw( genefunction phenotypeanalysis humandiseases );
+my @phenotypeanalysis = qw( newmutant rnai lsrnai overexpression chemicals );
+my @int = qw( geneinteractions functionalcomplementation geneproduct );
+my @gef = qw( expression generegulation mosaic site timeofaction microarray sequencefeatures matrices );
+my @expression = qw( antibody transgene marker otherexpression );
+my @pfs = qw( invitro domainanalysis covalent structureinformation massspec );
+my @seq = qw( structurecorrectionsanger sequencechange newsnp );
+my @cell = qw( ablationdata cellfunction );
+my @sil = qw( phylogenetic othersilico );
+# my @rgn = qw( );
+my @oth = qw( supplemental nocuratable comment );
+$hash{cat}{gif} = [ @gif ];
+$hash{cat}{gfp} = [ @gfp ];
+$hash{cat}{phenotypeanalysis} = [ @phenotypeanalysis ];
+$hash{cat}{int} = [ @int ];
+$hash{cat}{gef} = [ @gef ];
+$hash{cat}{expression} = [ @expression ];
+$hash{cat}{pfs} = [ @pfs ];
+$hash{cat}{seq} = [ @seq ];
+$hash{cat}{cell} = [ @cell ];
+$hash{cat}{sil} = [ @sil ];
+# $hash{cat}{rgn} = [ @rgn ];
+$hash{cat}{oth} = [ @oth ];
+# my @comment = qw( nocuratable comment );
+# $hash{cat}{comment} = [ @comment ];
+
+
+# expression -> Patterns of Gene Expression.  checkbox expands 4 fields below it
+# antibodies / transgene / marker / otherexpression
+# phenotypeanalysis -> Phenotype Analysis.  checkbox expands 5 fields below it
+# newmutant / rnai / lsrnai / overexpression / chemicals
+
+&hashName();
+
+print "Content-type: text/html\n\n";
+my $title = 'Paper Flagging Form';
+my ($header, $footer) = &cshlNew($title);
+$header =~ s/<\/head>/<link rel="stylesheet" href="http:\/\/tazendra.caltech.edu\/~azurebrd\/stylesheets\/jex.css" \/><script type="text\/javascript" src="http:\/\/tazendra.caltech.edu\/~azurebrd\/javascript\/test.js"><\/script><script type="text\/javascript" src="http:\/\/tazendra.caltech.edu\/~azurebrd\/javascript\/first_pass.js"><\/script>\n<\/head>/;
+
+# my $header = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><HTML><HEAD>';
+# $header .= '<link rel="stylesheet" href="http://tazendra.caltech.edu/~azurebrd/stylesheets/jex.css" /><script type="text/javascript" src="http://tazendra.caltech.edu/~azurebrd/javascript/test.js"></script><script type="text/javascript" src="http://tazendra.caltech.edu/~azurebrd/javascript/first_pass.js"></script>';
+# 
+# my $footer = '</HTML>';
+
+# $header = '<HTML><HEAD>';
+# $header = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><HTML><HEAD>';
+
+# $header .= '</HEAD><BODY onLoad="ShowData()">';
+# $header .= '</HEAD><BODY onLoad="cleanForm();">';
+# $header .= '</HEAD><BODY>';
+
+
+# $header =~ s/<\/head>/<link rel="stylesheet" href="http:\/\/tazendra.caltech.edu\/~azurebrd\/stylesheets\/jex.css" \/><script type="text\/javascript" src="http:\/\/tazendra.caltech.edu\/~azurebrd\/cgi-bin\/testing\/javascript\/dynamic_text\/test.js"><\/script>\n<\/head>/;
+
+# $header .= '<SCRIPT type="text/javascript">
+# function ShowData() {
+#   window.status="Page is loaded";
+#   //document.writeln("Page is loaded");
+#   //showData.innerHTML = showData.innerHTML + "page is loaded";
+#   showData.innerHTML = showData.innerHTML + "<TEXTAREA NAME=textareaBox onKeypress=textareaExpand() rows=1 COLS=80></TEXTAREA><BR>";
+#   showData.innerHTML = showData.innerHTML + "<input type=text onKeypress=textInputExpand() name=thebox size=20><BR>";
+# //   for (docprop in document) {
+# //     showData.innerHTML = showData.innerHTML + docprop + "=";
+# //     // showData.innerHTML = showData.innerHTML + eval ("document." + docprop + ")");
+# //     // var stuff = eval ("document." + docprop + "");
+# //     // showData.innerHTML = showData.innerHTML + stuff;
+# //     showData.innerHTML = showData.innerHTML + eval ("document." + docprop + "");
+# //     showData.innerHTML = showData.innerHTML + "<BR>";
+# //   }
+#   //alert("Page is loaded");
+# }
+# function countLines(strtocount, cols) {
+#     var hard_lines = 1;
+#     var last = 0;
+#     while ( true ) {
+#         last = strtocount.indexOf("\n", last+1);
+#         hard_lines ++;
+#         if ( last == -1 ) break;
+#     }
+#     var soft_lines = Math.round(strtocount.length / (cols-1));
+#     var hard = eval("hard_lines  " + unescape("%3e") + "soft_lines;");
+#     if ( hard ) soft_lines = hard_lines;
+#     return soft_lines;
+# }
+# // function cleanForm() {  // use this to set a timeout on all textareas instead of listening for keypress
+# //     var the_form = document.forms[0];
+# //     for ( var x in the_form ) {
+# //         if ( ! the_form[x] ) continue;
+# //         if( typeof the_form[x].rows != "number" ) continue;
+# //         the_form[x].rows = countLines(the_form[x].value,the_form[x].cols) +1;
+# //     }
+# //     setTimeout("cleanForm();", 300);
+# // }
+# function textareaExpand() {
+#   document.all.textareaBox.rows = countLines(document.all.textareaBox.value,document.all.textareaBox.cols) ;
+# }
+# function textInputExpand() {
+#   // Code to make the script easier to use //
+#   boxValue=document.all.thebox.value.length
+# //   boxSize=document.all.thebox.size
+#   minNum=20 // Set this to the MINIMUM size you want your box to be.
+#   maxNum=100 // Set this to the MAXIMUM size you want your box to be.
+#   
+#   // Starts the main portion of the script //
+#   if (boxValue > maxNum) { }
+#   else {
+#     if (boxValue > minNum) { document.all.thebox.size = boxValue }
+#     else if (boxValue < minNum || boxValue != minNum) { document.all.thebox.size = minNum }
+#   }
+# }
+# // This does not work :
+# // Activates the content area if we have the default text
+# //   showData.innerHTML = showData.innerHTML + "<TEXTAREA NAME=textareaBox onfocus=activateArea(this) onkeypress=adjustAreaSize(this) rows=1 COLS=80></TEXTAREA><BR>";
+# // function activateArea(area) {
+# //     if (!area.hasClassName("active")) {
+# //         area.setTextValue("");
+# //         area.addClassName("active");
+# //     }
+# // }
+# // // Adjusts the size of the text area based on how many lines it has in it
+# // function adjustAreaSize(area) {
+# //     area.setRows(5);    // Min height, and causes shrink
+# //     alert(area.getScrollHeight() + " D " + area.getOffsetHeight());
+# //     while (area.getScrollHeight() > area.getOffsetHeight())
+# //         area.setRows(area.getRows() + 1);
+# // }
+# 
+# </SCRIPT>';
+
+# <script type="text/javascript" >
+# function CreateTextbox()
+# {
+# var i = 1;
+# createTextbox.innerHTML = createTextbox.innerHTML +"<input type=text name='mytext'+ i/>"
+# 
+# }
+# </script>
+# </head>
+# <body>
+# 
+# <form name="form" action="post" method="">
+# <input type="button" value="clickHere" onClick="CreateTextbox()">
+# <div id="createTextbox"></div>
+# </form>
+
+
+
+# TODO
+# make checkboxes for textarea be unclearable if there's text in the textarea
+# textareas have a clear button
+
+print "$header\n";		# make beginning of HTML page
+
+&process();			# see if anything clicked
+# &displayQuery();		# show query box
+print "$footer"; 		# make end of HTML page
+
+sub process {			# see if anything clicked
+  my $action;			# what user clicked
+  unless ($action = $query->param('action')) { $action = 'none'; &displayTypeTwo(); }
+
+  if ($action eq 'Curate') { &displayTypeOne(); }
+  elsif ($action eq 'Flag') { &gotFlagged(); }
+  elsif ($action eq 'Submit Text') { &gotText(); }
+  elsif ($action eq 'nocuratable') { &gotNocuratable(); }
+}
+
+sub gotNocuratable {
+  my ($paper, $passwd) = &checkPaperPasswd();
+  return if ($paper eq 'bad');
+  print "Not a primary research article.<BR>\n";
+  &writePg('nocuratable', $paper, 'checked');
+  &messageAndrei("$paper is a review");
+} # sub gotNocuratable
+
+sub writePg {
+  my ($table, $joinkey, $data) = @_;
+  next unless ($data);		# skip if there's no data
+  $table = 'afp_' . $table;
+  my $result = $conn->exec( "SELECT * FROM $table WHERE joinkey = '$joinkey';" );
+  my @row = $result->fetchrow();
+# UNCOMMENT THESE TO WRITE TO POSTGRES
+#   if ($row[0]) {				# if there was previous data in postgres
+#       my $update = 0;
+#       if ($data ne 'checked') { $update++; }	# real data, always update
+#       elsif ( ($row[1] eq 'checked') && ($data eq 'checked') ) { $update++; }	# was checked and is checked, update to get new timestamp
+#       elsif ( ($row[1] ne 'checked') && ($data eq 'checked') ) { $update = 0; }	# was real data and is now checked, ignore, not new data
+#       if ($update > 0) {
+#         $result = $conn->exec( "UPDATE $table SET $table = '$data' WHERE joinkey = '$joinkey';" );
+#         $result = $conn->exec( "UPDATE $table SET afp_timestamp = CURRENT_TIMESTAMP WHERE joinkey = '$joinkey';" ); } }
+#     else { $result = $conn->exec( "INSERT INTO $table VALUES ('$joinkey', '$data');" ); }
+} # sub updatePg
+
+sub messageAndrei {
+  my $body = shift;
+  my $user = 'paper_fields.cgi';
+  my $email = 'petcherski@gmail.com';
+#   my $email = 'azurebrd@tazendra.caltech.edu';
+  my $subject = 'Updated Author Flagging Form';
+#   print "$body<BR>\n";
+#   &mailer($user, $email, $subject, $body);    # email CGI to user
+} # sub messageAndrei
+
+sub gotText {
+  my ($paper, $passwd) = &checkPaperPasswd();
+  return if ($paper eq 'bad');
+  my $body = "Paper $paper Text data\n";
+  foreach my $cat (@cats, "comment") {
+    foreach my $table (@{ $hash{cat}{$cat} }) { 
+      (my $oop, my $text) = &getHtmlVar($query, "${table}_text");
+      if ($text) { 
+        &writePg($table, $paper, $text);
+        $body .= "$table :\t$text\n";
+        &textTable($table, $text); }
+    } # foreach my $table (@{ $hash{cat}{$cat} })
+  } # foreach my $cat (@cats)
+  &messageAndrei($body);
+} # sub gotText
+
+sub gotFlagged {
+  my ($paper, $passwd) = &checkPaperPasswd();
+  return if ($paper eq 'bad');
+  &printForm();
+  print "<INPUT TYPE=HIDDEN NAME=paper VALUE=$paper>\n"; print "<INPUT TYPE=HIDDEN NAME=passwd VALUE=$passwd>\n";
+  (my $oop, my $paper) = &getHtmlVar($query, 'paper');
+  ($oop, my $passwd) = &getHtmlVar($query, 'passwd');
+  print "<INPUT TYPE=HIDDEN NAME=paper VALUE=$paper>\n";
+  print "<INPUT TYPE=HIDDEN NAME=passwd VALUE=$passwd>\n";
+  print "This page is optional. Brief notes that will help curators to locate the data you flagged on the previous page are highly appreciated (e.g.  \"Y2H fig.5\").<P><BR>\n";
+
+  my $body = "Paper $paper flagged\n";
+  foreach my $cat (@cats, "comment") {
+    foreach my $table (@{ $hash{cat}{$cat} }) { 
+      (my $oop, my $checked) = &getHtmlVar($query, "${table}_check");
+      if ( ($checked) || ($table eq 'comment') ) { 
+        &writePg($table, $paper, 'checked');
+        $body .= "$table\tchecked\n";
+        my ($data) = &getPgData($table, $paper);
+        &checkedTable($table, $data); }
+    } # foreach my $table (@{ $hash{cat}{$cat} })
+  } # foreach my $cat (@cats)
+  print "<P><BR><INPUT TYPE=submit NAME=action VALUE=\"Submit Text\"><BR>\n";
+  print "</FORM>\n";
+  &messageAndrei($body);
+} # sub gotFlagged
+
+sub textTable {
+  my ($table, $text) = @_;
+  print "$hash{name}{$table} : $text<P>\n"; 
+} # sub textTable
+
+sub checkedTable {
+  my ($table, $data) = @_;
+  if ($data eq 'checked') { $data = ''; }
+  my $textarea_name = $hash{name}{$table}; if ($hash{name2}{$table}) { $textarea_name = $hash{name2}{$table}; }
+  print "$textarea_name :<BR><TEXTAREA NAME=\"${table}_text\" ROWS=4 COLS=80>$data</TEXTAREA><BR><P>\n"; 
+} # sub checkedTable
+
+
+sub printForm {
+  print "<FORM METHOD=POST ACTION=\"first_pass.cgi\">\n";
+} # sub printForm
+
+sub checkPaperPasswd {
+  (my $oop, my $paper) = &getHtmlVar($query, 'paper');
+  ($oop, my $passwd) = &getHtmlVar($query, 'passwd');
+  my $result = $conn->exec( "SELECT * FROM afp_passwd WHERE joinkey = '$paper' AND afp_passwd = '$passwd';" );
+  my @row = $result->fetchrow;
+# UNCOMMENT THIS TO PUT PASSWORD CHECKING BACK
+#   unless ($row[0]) { print "Invalid Password<BR>\n"; return "bad"; }
+  my $time = time;
+# print "TIME $time<BR>\n";
+  my $timediff = $passwd - $time;
+  if ($timediff > 604800) { print "Password has expired after 7 days, please email Andrei for renewal<BR>\n"; return "bad"; }
+  return ($paper, $passwd);
+} # sub checkPaperPasswd
+
+sub displayTypeTwo {
+  my ($paper, $passwd) = &checkPaperPasswd();
+  return if ($paper eq 'bad');
+  print "<FORM NAME=typeTwoForm METHOD=POST ACTION=\"first_pass.cgi\">\n";
+#   print "<div id=\"showData\"></div>";
+#   print "<INPUT TYPE=BUTTON VALUE=\"testing\" onClick=\"ShowData()\"><BR><P>\n";
+#   print << "EndOfText";
+#   <input type="text" id="txtToHide" onfocus="hide(this.form,1)"/>
+#   <textArea id="txtArea" style="overflow:auto;" onblur="hide(this.form,2)"></textArea><br>
+# EndOfText
+# 
+# print '<script type=text/javascript>
+# for (docprop in document) {
+#   document.writeln(docprop + "=");
+#   eval ("document.writeln(document." + docprop + ")");
+#   document.writeln("<BR>");
+# }
+# </script>';
+ 
+  print "<input type=\"hidden\" name=\"paper\" value=\"$paper\" />\n"; 
+  print "<input type=\"hidden\" name=\"passwd\" value=\"$passwd\" />\n";
+#   print "<b>If this is a <span style=\"color:red\">Review</span> just click this button and ignore the fields below : </b><input type=\"submit\" id=\"action\" value=\"Review\"><br />\n";
+  print "<b>If this is not a primary research article, please click <a href=http:\/\/tazendra.caltech.edu\/~azurebrd\/cgi-bin\/first-pass.cgi?paper=$paper&passwd=$passwd&action=nocuratable><span style=\"color:chocolate\">here</span></a>.  You may ignore the fields below.  Thank you. </b><br />\n";
+  print "<table>";
+  foreach my $cat (@cats) {
+    print "<td colspan=3><h1 style=\"margin-top: 30; margin-bottom: 10\">$hash{name}{$cat} :</h1></td></tr>\n";
+#     print "<td colspan=3><h1>$hash{name}{$cat} :</h1></td></tr>\n";
+    foreach my $table (@{ $hash{cat}{$cat} }) { 
+      &showTr($table, $paper);
+      if ($hash{cat}{$table}) { 
+        foreach my $subcat ( @{ $hash{cat}{$table} } ) { &showTr($subcat, $paper, "subcat"); } 
+        print "</table>";	# close the table that holds subcategories
+      }
+    }
+  } # foreach my $cat (@cats)
+  print "</table>";
+  print "<P><BR><INPUT TYPE=submit NAME=action VALUE=\"Flag\"><BR>\n";
+  print "</FORM>\n";
+} # sub displayTypeTwo
+
+sub showTr {
+  my ($table, $paper, $catOrSubcat) = @_;
+  my $trId = '';
+  if ($catOrSubcat eq 'subcat') { $trId = "tr_hidden_$table"; }
+  my $left = '';
+  if ($catOrSubcat eq 'subcat') { $left = "style=\"left: 20px\""; }
+  print "<tr id=\"$trId\" $left>\n";
+  my ($data) = &getPgData($table, $paper);
+  if ($data) { $data = 'checked="checked"'; }
+  my ($id) = $table . '_check';
+  if ($hash{cat}{$table}) { 
+    my $subcats = join", ", @{ $hash{cat}{$table} };
+    $data .= " onClick=\"ToggleHideSubcategories(\'$subcats\')\""; }
+  print "<td valign=\"top\">";
+#   if ($catOrSubcat eq 'subcat') { print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\n"; }
+#   if ($catOrSubcat eq 'subcat') { print "spacer\n"; }
+  print "<input type=\"checkbox\" id=\"${table}_check\" $data /></td><td>\n";
+#   if ($indent{$table}) { print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\n"; }
+  print "<table border=\"0\"><tr><td colspan=\"2\">";		# open a table for description and textarea to be aligned
+  print "$hash{name}{$table}";
+  if ($hash{cat}{$table}) { print "<table border=\"0\">"; } 	# open a table for subcategories
+    else {
+      print " <a href=javascript:ToggleHideSpan(\"$table\")>Add information</a>."; 
+#     if ($curatorOnly{$table}) { print " <span style=\"color:red\">Only curators will see this line.</span>\n"; }
+      print "<span style=\"color:white\">$table</span>\n"; 
+#     print "<BR><TEXTAREA ID=\"$table\" style=\"overflow:auto;\" onKeyUp=ExpandTextarea(\"$table\") ROWS=4 COLS=80></TEXTAREA>\n";
+      print "<span id=\"span_hidden_$table\"><br />";
+#     if ($catOrSubcat eq 'subcat') { print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\n"; }
+#     if ($catOrSubcat eq 'subcat') { print "<span style\"left: 40px\">&nbsp;</span>\n"; }
+#     print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;";
+      print "<textarea id=\"$table\" style=\"overflow:auto; left:10px\" onKeyUp=ExpandTextarea(\"$table\") rows=\"4\" cols=\"80\"></textarea>";
+      print "<a href=javascript:ToggleHideSpan(\"$table\") style=\"vertical-align: top\">x</a>";
+      print "</span>\n";
+  }
+  print "</td></tr></table>";					# close table for description and textarea alignment
+  print "</td></tr>\n";
+#   print "<tr id=\"tr_hidden_$table\"><td valign=\"top\" align=\"right\" style=\"font-variant: small-caps\"><a href=javascript:ToggleHideSpan(\"$table\")>x</a></td>";
+#   print "<td><textarea id=\"$table\" style=\"overflow:auto;\" onKeyUp=ExpandTextarea(\"$table\") rows=\"4\" cols=\"80\"></textarea></td></tr>\n";
+}
+
+sub displayTypeOne {
+  my ($paper, $passwd) = &checkPaperPasswd();
+  return if ($paper eq 'bad');
+  &printForm();
+  print "<INPUT TYPE=HIDDEN NAME=paper VALUE=$paper>\n"; print "<INPUT TYPE=HIDDEN NAME=passwd VALUE=$passwd>\n";
+  print "<B>If this is a <FONT COLOR=red>Review</FONT> just click this button and ignore the fields below : </B><INPUT TYPE=submit NAME=action VALUE=\"Review\"><BR><P>\n";
+  foreach my $cat (@cats) {
+    print "<H1>$hash{name}{$cat} :</H1><P>\n";
+    foreach my $table (@{ $hash{cat}{$cat} }) { 
+      my ($data) = &getPgData($table, $paper);
+      if ($data) { $data = 'checked'; }
+#       print "<INPUT TYPE=checkbox NAME=\"${table}_check\" $data>$hash{name}{$table} <FONT COLOR=red>$table</FONT><BR>\n"; 
+#       if ($curatorOnly{$table}) { print "<FONT COLOR=red>Only curators will see this line : </FONT>\n"; }
+      print "<INPUT TYPE=checkbox NAME=\"${table}_check\" $data>$hash{name}{$table} <FONT COLOR=white>$table</FONT><BR>\n"; 
+    }
+  } # foreach my $cat (@cats)
+  print "<P><BR><INPUT TYPE=submit NAME=action VALUE=\"Flag\"><BR>\n";
+  print "</FORM>\n";
+} # sub displayTypeOne
+
+sub getPgData {
+  my ($table, $joinkey) = @_;
+  my $result = $conn->exec( "SELECT * FROM afp_$table WHERE joinkey = '$joinkey';" );
+  my @row = $result->fetchrow();
+  if ($row[1]) { return $row[1]; }
+  return;
+} # sub getPgData
+
+
+
+sub hashName {
+  $hash{name}{gif} = 'Gene Identification and Mapping';
+  $hash{name}{celegans} = '<i>C. elegans</i>.';
+  $hash{name}{nematode} = 'Nematodes other than <i>C. elegans</i>.  E.g., <i>C. briggsae, Pristionchus pacificus, Brugia malayi,</i> etc.';
+  $hash{name}{rgngene} = 'Genes studied in this paper.';
+  $hash{name2}{rgngene} = 'Relevant Genes.  Please list genes studied in the paper.  Exclude common markers and reporters.';
+#   $hash{name}{genesymbol} = 'Newly cloned Novel Gene Symbol or Gene-CDS link.  E.g., xyz-1 gene was cloned and it turned out to be the same as abc-1 gene.';
+  $hash{name}{genesymbol} = 'Newly cloned gene.';
+  $hash{name}{extractedvariation} = 'Newly characterized alleles.';
+  $hash{name}{mappingdata} = 'Genetic mapping data.  E.g., 3-factor mapping, deficiency mapping.';
+
+  $hash{name}{gfp} = 'Gene Function';
+  $hash{name}{genefunction} = 'Gene function (novel function for a gene not reported in WormBase under Concise Description on the Gene page).';
+  $hash{name}{phenotypeanalysis} = 'Phenotype analysis.';
+  $hash{name}{newmutant} = 'Allele.';
+  $hash{name}{rnai}   = 'RNAi (small scale, less than 100 individual experiments).';
+  $hash{name}{lsrnai} = 'RNAi (large scale, greater than 100 individual experiments).';
+  $hash{name}{humandiseases} = 'Human diseases.  Data relevant to human diseases in some way.  E.g., study of an ortholog of a human disease gene, of a phenotype similar to a human pathology, or of some aspect of nematode infections.';
+
+  $hash{name}{int} = 'Interactions';
+  $hash{name}{geneinteractions} = 'Genetic interactions.  E.g., <i>daf-16(mu86)</i> suppresses <i>daf-2(e1370), daf-16</i>(RNAi) suppresses <i>daf-2</i>(RNAi).';
+  $hash{name}{functionalcomplementation} = 'Functional complementation.';
+  $hash{name}{geneproduct} = 'Gene product interaction (protein-protein, RNA-protein, DNA-protein interactions, etc.).';
+
+  $hash{name}{gef} = 'Gene Expression and Function';
+  $hash{name}{expression} = 'Patterns of gene expression.';
+  $hash{name}{antibody} = '<i>C. elegans</i> antibodies.  This covers both antibodies created in the work described by the paper, and antibodies used in the paper that had been described elsewhere.';
+  $hash{name}{transgene} = 'Integrated transgene.';
+  $hash{name}{marker} = 'Transgene marker.';
+  $hash{name}{otherexpression} = 'Expression pattern data.  E.g., GFP reporter assay or immunostaining;  exclude data for the reporters used exclusively as markers.';
+  $hash{name}{generegulation} = 'Altered gene expression.  E.g., in a mutant, transgenic, or RNAi background; geneA-gfp reporter is misexpressed in geneB mutant background.';
+  $hash{name}{overexpression} = 'Overexpression.  E.g., over-expression of a gene results in a phenotypic change: genetic interactions, etc.';
+  $hash{name}{chemicals} = 'Chemicals.  E.g., effects of small-molecules, chemicals, or drugs were studied on worms, such as butanol, fluoxetine, etc.';
+  $hash{name}{mosaic} = 'Mosaic analysis.  E.g., extra-chromosomal transgene loss in a particular cell lineage abolishes mutant rescue.';
+  $hash{name}{site} = 'Tissue / cell.  Site of action.  E.g., specific expression rescues mutant phenotype.';
+  $hash{name}{timeofaction} = 'Life stage.  Time of action.  E.g., temperature shift, heat shock, or other assays to infer temporal requirement of gene function.';
+  $hash{name}{microarray} = 'Microarray.';
+  $hash{name}{sequencefeatures} = 'Sequence feature (transcription factor binding sites, DNA/RNA elements required for gene expression etc.).';
+  $hash{name}{matrices} = 'Position frequency matrix (PFM) or Position weight matrix (PWM).  These matrices are typically used to define regulatory sites in genomic DNA (e.g., bound by transcription factors) or mRNA (e.g., bound by translational factors or miRNA).  PFMs define simple nucleotide frequencies, while PWMs are scaled logarithmically against a background frequency.';
+
+  $hash{name}{pfs} = 'Protein Function and Structure';
+  $hash{name}{invitro} = 'Protein analysis <i>in vitro</i>.  E.g., kinase assay.';
+  $hash{name}{domainanalysis} = 'Analysis of protein domains.  Functions of particular domains within a protein.  E.g., \'Removal of the first 50 residues causes mislocalization of the protein.\'.';
+  $hash{name}{covalent} = 'Covalent modification.  E.g., phosphorylation site studies via mutagenesis and <i>in vitro</i> assaies.';
+  $hash{name}{structureinformation} = 'Structural information. This would include NMR structures, X-ray crystallographic structures.';
+  $hash{name}{massspec} = 'Mass spectrometry.';
+  
+  $hash{name}{seq} = 'Genome Sequence Data';
+  $hash{name}{structurecorrectionsanger} = 'Gene structure correction. Use if an experimentally determined gene structure is different from the one reported in WormBase.  E.g., different splice-site, SL1 instead of SL2, etc.';
+  $hash{name}{sequencechange} = 'Sequencing mutant alleles.';
+  $hash{name}{newsnp} = 'New SNPs, not already in WormBase.';
+  
+  $hash{name}{cell} = 'Cell Data';
+  $hash{name}{ablationdata} = 'Ablation data.  E.g., cells were ablated by laser microsurgery, by cell-specific expression of a toxic protein, or by other means.';
+  $hash{name}{cellfunction} = 'Cell function.  E.g., the paper describes a function for a cell or tissue (not mentioned elsewhere on this form).';
+
+  $hash{name}{sil} = 'In Silico Data';
+  $hash{name}{phylogenetic} = 'Phylogenetic analysis.';
+  $hash{name}{othersilico} = 'Other bioinformatics analysis.  E.g., computational modeling of signaling pathways, genetic and physical interactions, etc.';
+
+#   $hash{name}{rgn} = 'Reagents.';
+
+  $hash{name}{oth} = 'Other';
+  $hash{name}{supplemental} = 'Supplemental materials.';
+  $hash{name}{nocuratable} = 'NONE of the aforementioned data types are in this research article.';
+  $hash{name}{comment} = 'Comment.';
+} # sub hashName
+
+__END__
+
+
+# my $DB = Ace->connect(-path  =>  '/home/acedb/ts',
+#                       -program => '/home/acedb/bin/tace') || die "Connection failure: ",Ace->error;
+

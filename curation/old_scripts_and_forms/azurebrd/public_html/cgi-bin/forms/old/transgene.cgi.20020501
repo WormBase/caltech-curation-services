@@ -1,0 +1,947 @@
+#!/usr/bin/perl -T
+
+# Form to submit Transgene information.
+
+# A transgene form to make .ace files.
+# This version queries with AcePerl, gets headers and footers off of
+# www.wormbase.org with LWP, has better tables
+
+$data_file = '/home/azurebrd/public_html/cgi-bin/data/transgene.txt';
+$acefile = "/home2/azurebrd/public_html/cgi-bin/data/transgene.ace";
+
+$badflag = 0;		# flag if needs to reinput (needs to show form again)
+$first = 1;		# flag if first time around (show form for no data)
+$badname = 0;		# flag if name needs to be re-entered
+
+$max_entries =  0; # how many transgene entries to save?
+                   # set to '0' (zero) for infinite entries...
+		   # replace $max_entries with $entry for last entry
+
+use LWP::Simple;
+
+my $header; my $footer;
+
+&cshlNew();
+
+sub cshlNew {
+  my $page = get "http://www.wormbase.org";
+  $page =~ s/href="/href="http:\/\/www.wormbase.org/g;
+  $page =~ s/src="/src="http:\/\/www.wormbase.org/g;
+  ($header) = $page =~ m/^(.*?\<hr\>.*?\<hr\>)/s;
+  ($footer) = $page =~ m/.*(\<hr\>.*?)$/s;
+} # sub cshlNew
+
+sub caltechOld {
+  $page = get "http://caltech.wormbase.org";            # get template
+  $page =~ s/href="\//href="http:\/\/caltech.wormbase.org\//gi; # set references right
+  $page =~ s/src="/src="http:\/\/caltech.wormbase.org/gi;       # set references right
+  $page =~ s/Home Page/Expression Pattern Form/g;       # set references right
+  @page = split("\n", $page);                   # break up to play with
+  my $i = 0;                                    # counter
+  while ($line !~ m/long-release-start/) {      # until what we don't want
+    $line = $page[$i];                          # get line
+    @header = (@header, $page[$i]);             # add to header
+    $i++                                                # add to counter
+  } # while ($line !~ ...
+  $toomany = scalar(@header);                   # get last line to remove
+  $header[$toomany-1] = "";                     # remove last line
+  $header = join("\n", @header);                        # put header together
+  while ($line !~ m/footer/) {                  # until we get to footer
+    $line = $page[$i];                          # read lines
+    $i++                                                # add to counter
+  } # while ($line !~ ...
+  for (my $j = $i; $j <= scalar(@page)-1; $j++) { # from here to out of lines
+    @footer = (@footer, $page[$j]);             # add to footer
+  } # for (my $j ...
+  $footer = join("\n", @footer);                        # put footer together
+} # sub caltechOld
+
+
+use CGI;
+use Fcntl;
+$query = new CGI;
+
+unless ($action = $query->param('action')) {
+    $action = 'none';
+}
+
+
+# make beginning of HTML page
+
+print "Content-type: text/html\n\n";
+print "$header";
+
+
+# if someone submitted the form, i.e. pressed the ``Go !'' button
+
+if ($action eq 'Go !') {
+    
+    $first = 0; # turn off flag to display form first time
+    $querying = 0;		# not querying
+    $updating = 0;		# not updating
+
+    # process the form submission
+    # and assemble the transgeneform entry
+
+    $transgene = $query->param('transgene');
+    $summary = $query->param('summary');
+    $driven_by_locus = $query->param('driven_by_locus');
+    $driven_by_sequence = $query->param('driven_by_sequence');
+    $drives_gfp = $query->param('drives_gfp');
+    $drives_lacz = $query->param('drives_lacz');
+    $drives_other_reporter = $query->param('drives_other_reporter');
+    $drives_worm_gene = $query->param('drives_worm_gene');
+    $drives_worm_sequence = $query->param('drives_worm_sequence');
+    $author = $query->param('author');
+    $clone = $query->param('clone');
+    $injected_into_cgc_strain = $query->param('injected_into_cgc_strain');
+    $injected_into = $query->param('injected_into');
+    $integrated_by = $query->param('integrated_by');
+    $cgc_number = $query->param('cgc_number');
+    $other_id = $query->param('other_id');
+    $reference_info = $query->param('reference_info');
+    $remark = $query->param('remark');
+
+    # clean up and fiddle with $transgene
+      # get rid of all non-(letters, hyphon, underscore)
+    $transgene =~ s/[^0-9a-zA-Z_\-\.\,\(\)\s]//g;
+    if ( ($transgene eq "") || ($transgene eq "Transgene-less") ) {
+        # set transgene for showing mistake
+#      $transgene = 'Transgene-less';
+        # set flags for showing mistake and form
+      $badtransgene = 1; # $badflag = 1;
+    }
+      # disable all HTML tags
+    $transgene =~ s/</&lt;/g;
+      # untaint variable
+    unless ($transgene =~ /^([^<]*)$/) {
+        die "couldn't untaint transgene: $transgene\n";
+    }
+    $transgene = $1;
+
+    # clean up and fiddle with $summary
+      # get rid of all non-(letters, hyphon, underscore)
+    $summary =~ s/[^0-9a-zA-Z_\-\.\,\(\)\[\]\:\+\s]//g;
+    if ( ($summary eq "") || ($summary eq "Summary-less") ) {
+        # set summary for showing mistake
+#      $summary = 'Summary-less';
+        # set flags for showing mistake and form
+      $badsummary = 1; # $badflag = 1;
+    }
+      # disable all HTML tags
+    $summary =~ s/</&lt;/g;
+      # untaint variable
+    unless ($summary =~ /^([^<]*)$/) {
+        die "couldn't untaint summary: $summary\n";
+    }
+    $summary = $1;
+
+    # clean up and fiddle with $driven_by_locus
+      # get rid of all non-(letters, hyphon, underscore)
+    $driven_by_locus =~ s/[^0-9a-zA-Z_\-\.\,\(\)\s]//g;
+    unless ($driven_by_locus) {
+#       $driven_by_locus = 'Driven_by_Locus-less';
+      $baddriven_by_locus = 1; 
+    }
+      # disable all HTML tags
+    $driven_by_locus =~ s/</&lt;/g;
+      # untaint variable
+    unless ($driven_by_locus =~ /^([^<]*)$/) {
+        die "couldn't untaint driven_by_locus: $driven_by_locus\n";
+    }
+    $driven_by_locus = $1;
+
+    # clean up and fiddle with $driven_by_sequence
+      # get rid of all non-(letters, hyphon, underscore)
+    $driven_by_sequence =~ s/[^0-9a-zA-Z_\-\.\,\(\)\s]//g;
+    unless ($driven_by_sequence) {
+        # set driven_by_sequence for showing mistake
+#       $driven_by_sequence = 'Driven_by_sequence-less';
+        # set flags for showing mistake and form
+      $baddriven_by_sequence = 1; 
+    }
+      # disable all HTML tags
+    $driven_by_sequence =~ s/</&lt;/g;
+      # untaint variable
+    unless ($driven_by_sequence =~ /^([^<]*)$/) {
+        die "couldn't untaint driven_by_sequence: $driven_by_sequence\n";
+    }
+    $driven_by_sequence = $1;
+
+    # clean up and fiddle with $drives_gfp
+      # get rid of all non-(letters, hyphon, underscore)
+    $drives_gfp =~ s/[^0-9a-zA-Z_\-\.\,\(\)\s]//g;
+    unless ($drives_gfp) {
+        # set drives_gfp for showing mistake
+#       $drives_gfp = 'Drives_gfp-less';
+        # set flags for showing mistake and form
+      $baddrives_gfp = 1; 
+    }
+      # disable all HTML tags
+    $drives_gfp =~ s/</&lt;/g;
+      # untaint variable
+    unless ($drives_gfp =~ /^([^<]*)$/) {
+        die "couldn't untaint drives_gfp: $drives_gfp\n";
+    }
+    $drives_gfp = $1;
+
+    # clean up and fiddle with $drives_lacz
+      # get rid of all non-(letters, hyphon, underscore)
+    $drives_lacz =~ s/[^0-9a-zA-Z_\-\.\,\(\)\s]//g;
+    unless ($drives_lacz) {
+        # set drives_lacz for showing mistake
+#       $drives_lacz = 'drives_lacz-less';
+        # set flags for showing mistake and form
+      $baddrives_lacz = 1; 
+    }
+      # disable all HTML tags
+    $drives_lacz =~ s/</&lt;/g;
+      # untaint variable
+    unless ($drives_lacz =~ /^([^<]*)$/) {
+        die "couldn't untaint drives_lacz: $drives_lacz\n";
+    }
+    $drives_lacz = $1;
+
+    # clean up and fiddle with $drives_other_reporter
+      # get rid of all non-(letters, hyphon, underscore)
+    $drives_other_reporter =~ s/[^0-9a-zA-Z_\-\.\,\(\)\s]//g;
+    unless ($drives_other_reporter) {
+        # set drives_other_reporter for showing mistake
+#       $drives_other_reporter = 'Drives_other_reporter-less';
+        # set flags for showing mistake and form
+      $baddrives_other_reporter = 1; 
+    }
+      # disable all HTML tags
+    $drives_other_reporter =~ s/</&lt;/g;
+      # untaint variable
+    unless ($drives_other_reporter =~ /^([^<]*)$/) {
+        die "couldn't untaint drives_other_reporter: $drives_other_reporter\n";
+    }
+    $drives_other_reporter = $1;
+
+    # clean up and fiddle with $drives_worm_gene
+      # get rid of all non-(letters, hyphon, underscore)
+    $drives_worm_gene =~ s/[^0-9a-zA-Z_\-\.\,\(\)\s]//g;
+    unless ($drives_worm_gene) {
+        # set drives_worm_gene for showing mistake
+#       $drives_worm_gene = 'Drives_worm_gene-less';
+        # set flags for showing mistake and form
+      $baddrives_worm_gene = 1; 
+    }
+      # disable all HTML tags
+    $drives_worm_gene =~ s/</&lt;/g;
+      # untaint variable
+    unless ($drives_worm_gene =~ /^([^<]*)$/) {
+        die "couldn't untaint drives_worm_gene: $drives_worm_gene\n";
+    }
+    $drives_worm_gene = $1;
+
+    # clean up and fiddle with $drives_worm_sequence
+      # get rid of all non-(letters, hyphon, underscore)
+    $drives_worm_sequence =~ s/[^0-9a-zA-Z_\-\.\,\(\)\s]//g;
+    unless ($drives_worm_sequence) {
+        # set drives_worm_sequence for showing mistake
+#       $drives_worm_sequence = 'Drives_worm_sequence-less';
+        # set flags for showing mistake and form
+      $baddrives_worm_sequence = 1; 
+    }
+      # disable all HTML tags
+    $drives_worm_sequence =~ s/</&lt;/g;
+      # untaint variable
+    unless ($drives_worm_sequence =~ /^([^<]*)$/) {
+        die "couldn't untaint drives_worm_sequence: $drives_worm_sequence\n";
+    }
+    $drives_worm_sequence = $1;
+
+    # clean up and fiddle with $author
+      # get rid of all non-(letters, hyphon, underscore)
+    $author =~ s/[^0-9a-zA-Z_\-\.\,\(\)\s]//g;
+    unless ($author) {
+        # set author for showing mistake
+#       $author = 'Author-less';
+        # set flags for showing mistake and form
+      $badauthor = 1; 
+    }
+      # disable all HTML tags
+    $author =~ s/</&lt;/g;
+      # untaint variable
+    unless ($author =~ /^([^<]*)$/) {
+        die "couldn't untaint author: $author\n";
+    }
+    $author = $1;
+
+    # clean up and fiddle with $clone
+      # get rid of all non-(letters, hyphon, underscore)
+    $clone =~ s/[^0-9a-zA-Z_\-\.\,\(\)\s]//g;
+    unless ($clone) {
+        # set clone for showing mistake
+#       $clone = 'Clone-less';
+        # set flags for showing mistake and form
+      $badclone = 1; 
+    }
+      # disable all HTML tags
+    $clone =~ s/</&lt;/g;
+      # untaint variable
+    unless ($clone =~ /^([^<]*)$/) {
+        die "couldn't untaint clone: $clone\n";
+    }
+    $clone = $1;
+
+    # clean up and fiddle with $injected_into_cgc_strain
+      # get rid of all non-(letters, hyphon, underscore)
+    $injected_into_cgc_strain =~ s/[^0-9a-zA-Z_\-\.\,\(\)\s]//g;
+    unless ($injected_into_cgc_strain) {
+        # set injected_into_cgc_strain for showing mistake
+#       $injected_into_cgc_strain = 'Injected_into_cgc_strain-less';
+        # set flags for showing mistake and form
+      $badinjected_into_cgc_strain = 1; 
+    }
+      # disable all HTML tags
+    $injected_into_cgc_strain =~ s/</&lt;/g;
+      # untaint variable
+    unless ($injected_into_cgc_strain =~ /^([^<]*)$/) {
+        die "couldn't untaint injected_into_cgc_strain:
+$injected_into_cgc_strain\n";
+    }
+    $injected_into_cgc_strain = $1;
+
+    # clean up and fiddle with $injected_into
+      # get rid of all non-(letters, hyphon, underscore)
+    $injected_into =~ s/[^0-9a-zA-Z_\-\.\,\(\)\s]//g;
+    unless ($injected_into) {
+        # set injected_into for showing mistake
+#       $injected_into = 'Injected_into-less';
+        # set flags for showing mistake and form
+      $badinjected_into = 1; 
+    }
+      # disable all HTML tags
+    $injected_into =~ s/</&lt;/g;
+      # untaint variable
+    unless ($injected_into =~ /^([^<]*)$/) {
+        die "couldn't untaint injected_into: $injected_into\n";
+    }
+    $injected_into = $1;
+
+    # clean up and fiddle with $integrated_by
+      # get rid of all non-(letters, hyphon, underscore)
+    $integrated_by =~ s/[^0-9a-zA-Z_\-\.\,\(\)\s]//g;
+    unless ($integrated_by) {
+        # set integrated_by for showing mistake
+#       $integrated_by = 'Integrated_by-less';
+        # set flags for showing mistake and form
+      $badintegrated_by = 1; 
+    }
+      # disable all HTML tags
+    $integrated_by =~ s/</&lt;/g;
+      # untaint variable
+    unless ($integrated_by =~ /^([^<]*)$/) {
+        die "couldn't untaint integrated_by: $integrated_by\n";
+    }
+    $integrated_by = $1;
+
+    # clean up and fiddle with $location
+      # get rid of all non-(letters, hyphon, underscore)
+    $location =~ s/[^0-9a-zA-Z_\-\.\,\(\)\s]//g;
+    unless ($location) {
+        # set location for showing mistake
+#       $location = 'Location-less';
+        # set flags for showing mistake and form
+      $badlocation = 1; 
+    }
+      # disable all HTML tags
+    $location =~ s/</&lt;/g;
+      # untaint variable
+    unless ($location =~ /^([^<]*)$/) {
+        die "couldn't untaint location: $location\n";
+    }
+    $location = $1;
+
+    # clean up and fiddle with $strain
+      # get rid of all non-(letters, hyphon, underscore)
+    $strain =~ s/[^0-9a-zA-Z_\-\.\,\(\)\s]//g;
+    unless ($strain) {
+        # set strain for showing mistake
+#       $strain = 'Strain-less';
+        # set flags for showing mistake and form
+      $badstrain = 1; 
+    }
+      # disable all HTML tags
+    $strain =~ s/</&lt;/g;
+      # untaint variable
+    unless ($strain =~ /^([^<]*)$/) {
+        die "couldn't untaint strain: $strain\n";
+    }
+    $strain = $1;
+
+    # clean up and fiddle with $map
+      # get rid of all non-(letters, hyphon, underscore)
+    $map =~ s/[^0-9a-zA-Z_\-\.\,\(\)\s]//g;
+    unless ($map) {
+        # set map for showing mistake
+#       $map = 'Map-less';
+        # set flags for showing mistake and form
+      $badmap = 1; 
+    }
+      # disable all HTML tags
+    $map =~ s/</&lt;/g;
+      # untaint variable
+    unless ($map =~ /^([^<]*)$/) {
+        die "couldn't untaint map: $map\n";
+    }
+    $map = $1;
+
+    # clean up and fiddle with $phenotype
+      # get rid of all non-(letters, hyphon, underscore)
+    $phenotype =~ s/[^0-9a-zA-Z_\-\.\,\(\)\s]//g;
+    unless ($phenotype) {
+        # set phenotype for showing mistake
+#       $phenotype = 'Phenotype-less';
+        # set flags for showing mistake and form
+      $badphenotype = 1; 
+    }
+      # disable all HTML tags
+    $phenotype =~ s/</&lt;/g;
+      # untaint variable
+    unless ($phenotype =~ /^([^<]*)$/) {
+        die "couldn't untaint phenotype: $phenotype\n";
+    }
+    $phenotype = $1;
+
+    # clean up and fiddle with $rescue
+      # get rid of all non-(letters, hyphon, underscore)
+    $rescue =~ s/[^0-9a-zA-Z_\-\.\,\(\)\s]//g;
+    unless ($rescue) {
+        # set rescue for showing mistake
+#       $rescue = 'Rescue-less';
+        # set flags for showing mistake and form
+      $badrescue = 1; 
+    }
+      # disable all HTML tags
+    $rescue =~ s/</&lt;/g;
+      # untaint variable
+    unless ($rescue =~ /^([^<]*)$/) {
+        die "couldn't untaint rescue: $rescue\n";
+    }
+    $rescue = $1;
+
+    # clean up and fiddle with $cgc_number
+      # get rid of all non-(letters, hyphon, underscore)
+    $cgc_number =~ s/[^0-9a-zA-Z_\-\.\,\(\)\s]//g;
+    unless ($cgc_number) {
+        # set cgc_number for showing mistake
+#       $cgc_number = 'Cgc_number-less';
+        # set flags for showing mistake and form
+      $badcgc_number = 1; 
+    }
+      # disable all HTML tags
+    $cgc_number =~ s/</&lt;/g;
+      # untaint variable
+    unless ($cgc_number =~ /^([^<]*)$/) {
+        die "couldn't untaint cgc_number: $cgc_number\n";
+    }
+    $cgc_number = $1;
+
+    # clean up and fiddle with $other_id
+      # get rid of all non-(letters, hyphon, underscore)
+    $other_id =~ s/[^0-9a-zA-Z_\-\.\,\(\)\s]//g;
+    unless ($other_id) {
+        # set other_id for showing mistake
+#       $other_id = 'Other_id-less';
+        # set flags for showing mistake and form
+      $badother_id = 1; 
+    }
+      # disable all HTML tags
+    $other_id =~ s/</&lt;/g;
+      # untaint variable
+    unless ($other_id =~ /^([^<]*)$/) {
+        die "couldn't untaint other_id: $other_id\n";
+    }
+    $other_id = $1;
+
+    # clean up and fiddle with $reference_info
+      # get rid of all non-(letters, hyphon, underscore)
+    $reference_info =~ s/[^0-9a-zA-Z_\-\.\,\(\)\s]//g;
+    unless ($reference_info) {
+        # set reference_info for showing mistake
+#       $reference_info = 'Reference_info-less';
+        # set flags for showing mistake and form
+      $badreference_info = 1; 
+    }
+      # disable all HTML tags
+    $reference_info =~ s/</&lt;/g;
+      # untaint variable
+    unless ($reference_info =~ /^([^<]*)$/) {
+        die "couldn't untaint reference_info: $reference_info\n";
+    }
+    $reference_info = $1;
+
+    # clean up and fiddle with $remark
+      # get rid of all non-(letters, hyphon, underscore)
+    $remark =~ s/[^0-9a-zA-Z_\-\.\,\(\)\s]//g;
+    unless ($remark) {
+        # set remark for showing mistake
+#       $remark = 'Remark-less';
+        # set flags for showing mistake and form
+      $badremark = 1; 
+    }
+      # disable all HTML tags
+    $remark =~ s/</&lt;/g;
+      # untaint variable
+    unless ($remark =~ /^([^<]*)$/) {
+        die "couldn't untaint remark: $remark\n";
+    }
+    $remark = $1;
+
+    # begin comment
+    # clean up and fiddle with $comment
+      # length filter 
+    if (length($comment) > 32768) {
+      $comment = '...more than I feel like posting in the transgeneform.';
+    }
+    unless ($comment) {
+      $comment = '...nothing to speak of.';
+      $flagcomment = 1;
+    } else {
+      if ($comment eq '...nothing to speak of.') {
+        $flagcomment = 1;
+      }
+    }
+      # fix line-endings
+    $comment =~ s/\r\n?/\n/g;
+      # will not get rid of odd characters
+      # lose HTML tags
+    $comment =~ s/</&lt;/g;
+      # untaint variable
+    unless ($comment =~ /^([^<]*)$/) {
+        die "couldn't untaint comment: $comment\n";
+    }
+    $comment = $1;
+    # end comment
+
+
+
+
+    # insert text for flags here, e.g.
+    # nameflag for $entry
+#     if ($badname) { # write an entry to the $data_file 
+#     $entry .= <<"EndOfText";
+# <P>
+# <b>You are required to enter a First name and Last name.
+# <br></b>
+# 
+# EndOfText
+#     }
+# 
+#     if ($badflag) { # write the rest of an entry to the $data_file 
+#     $entry .= <<"EndOfText";
+# <P>
+# <b>You have previously entered : </b><br><br>
+# <b>$sequence, $method $author</b> &nbsp; <EM>living at 
+# $reference $phenotype $remark, 
+# $city, $state, $zipcode, $country, wrote :</EM><BR>
+# <BLOCKQUOTE>Email : $strain &nbsp;&nbsp;&nbsp;   
+#             Office Phone : $delivered_by &nbsp;&nbsp;&nbsp;   
+#             Lab Phone : $predicted_gene &nbsp;&nbsp;&nbsp;   
+# 	    Fax : $locus &nbsp;&nbsp;&nbsp;   
+# 	    Laboratory : $laboratory</BLOCKQUOTE><BR>
+# <BLOCKQUOTE>$comment</BLOCKQUOTE></P>
+# <HR>
+# EndOfText
+# 
+#     # open non-destructively, read old entries, write out new
+# 
+#     # initialize all_entries with $entry
+#     $all_entries = $entry;
+#     sysopen(ENTRIES, "$data_file", O_RDWR)
+#                              or die "can't open $data_file: $!";
+#     flock(ENTRIES, 2)        or die "can't LOCK_EX $data_file: $!";
+# 		# 2 gives an exclusive lock on the file, as opposed to 1
+# 		# which gives a shared lock for multiple viewers
+# 
+#     while(<ENTRIES>) {
+#         $all_entries .= $_;
+# 		# for each loop, all read is stored in $_, which is .='ed
+#     }
+# 
+#     # this loop is useless in our case
+#     if ($max_entries) {
+#         # lop the head off the authorform, if necessary
+#         @all_entries = split(/<HR>/i, $all_entries);  # i makes case insensitive
+#         $entry_count = @all_entries - 1;
+#         while ($entry_count > $max_entries) {
+#             pop @all_entries;
+#             $entry_count = @all_entries - 1;
+#         }
+#         $all_entries = join('<HR>', @all_entries);
+#     }
+# 
+#     # now write out to $data_file
+#     seek(ENTRIES, 0, 0)        or die "can't rewind $data_file: $!";
+#     truncate(ENTRIES, 0)       or die "can't truncate $data_file: $!";
+# # modify from $all_entries to be just $entry for last mess up case
+#     print ENTRIES $all_entries or die "can't print to $data_file: $!";
+#     close(ENTRIES)             or die "can't close $data_file: $!";
+# 
+#     } # if ($badflag) to write entry 
+
+} # if ($action eq 'Go !')
+
+
+
+# display if error
+
+# if ($badflag) { # flagged for name data, show what entered
+#   open (IN, "$data_file") or die "Can't open $data_file for reading: $!";
+#   flock(IN, 1)            or die "Can't get LOCK_SH on $data_file: $!";
+#   while (<IN>) {
+#       print;
+#   }
+#   close IN                or die "Can't close $data_file: $!";
+# } # if $badflag
+
+
+
+# display the form	
+
+if ($badflag || $first) { # if first or bad, show form 
+  print <<"EndOfText";
+<A NAME="form"><H1>NEW TRANSGENE DATA SUBMISSION :</H1></A>
+
+Use this form for reporting new Transgene data.<BR><BR>
+We only accept integrated transgenic lines.<BR><BR>
+If you don't know or don't have something, leave the field
+blank.<BR><BR>
+<!--If you have any problems or questions, please email me.<BR><BR>-->
+
+<HR>
+
+<FORM METHOD="POST" ACTION="transgene.cgi">
+<TABLE>
+
+<TR>
+<TD ALIGN="left"><b>Transgene : </b></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Transgene :</b></TD>
+<TD><TABLE><INPUT NAME="transgene" VALUE="$transgene" SIZE=30></TABLE></TD>
+<TD>e.g. : syIs17</TD>
+</TR>
+
+<TR></TR> <TR></TR> <TR></TR> <TR></TR> 
+<TR></TR> <TR></TR> <TR></TR> <TR></TR>
+
+<TR>
+<TD ALIGN="left"><b>Transgene Composition : </b></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Summary :</b></TD>
+<TD><TABLE><INPUT NAME="summary" VALUE="$summary" SIZE=30></TABLE></TD>
+<TD>e.g : [hsp16-2::goa-1(Q205L)\; dpy-20(+)]. ...</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Driven by Locus :</b></TD>
+<TD><TABLE><INPUT NAME="driven_by_locus" VALUE="$driven_by_locus" SIZE=30></TABLE></TD>
+<TD>e.g. : HSP16B</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Driven By Sequence :</b></TD>
+<TD><TABLE><INPUT NAME="driven_by_sequence" VALUE="$driven_by_sequence" SIZE=30></TABLE></TD>
+<TD>e.g. : ZK863.1</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Drives GFP :</b></TD>
+<TD><TABLE><INPUT NAME="drives_gfp" VALUE="$drives_gfp" SIZE=30></TABLE></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Drives lacZ :</b></TD>
+<TD><TABLE><INPUT NAME="drives_lacz" VALUE="$drives_lacz" SIZE=30></TABLE></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Drives Other Reporter : </b></TD>
+<TD><TABLE><INPUT NAME="drives_other_reporter" VALUE="$drives_other_reporter" SIZE=30></TABLE></TD>
+<TD>e.g. : HA tag ...</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Drives Worm Gene :</b></TD>
+<TD><TABLE><INPUT NAME="drives_worm_gene" VALUE="$drives_worm_gene" SIZE=30></TABLE></TD>
+<TD>e.g. : goa-1, with Q205L mutation ...</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Drives Worm Sequence :</b></TD>
+<TD><TABLE><INPUT NAME="drives_worm_sequence" VALUE="$drives_worm_sequence" SIZE=30></TABLE></TD>
+<TD>e.g. : ZK863.1 ...</TD>
+</TR>
+
+<TR></TR> <TR></TR> <TR></TR> <TR></TR> 
+<TR></TR> <TR></TR> <TR></TR> <TR></TR>
+
+<TR>
+<TD ALIGN="left"><b>Isolation : </b></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Author : </b></TD>
+<TD><TABLE><INPUT NAME="author" VALUE="$author" SIZE=30></TABLE></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Clone :</b></TD>
+<TD><TABLE><INPUT NAME="clone" VALUE="$clone" SIZE=30></TABLE></TD>
+<TD>e.g. : ZK863</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Injected into CGC Strain :</b></TD>
+<TD><TABLE><INPUT NAME="injected_into_cgc_strain" VALUE="$injected_into_cgc_strain" SIZE=30></TABLE></TD>
+<TD>e.g. : PS99</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Injected Into :</b></TD>
+<TD><TABLE><INPUT NAME="injected_into" VALUE="$injected_into" SIZE=30></TABLE></TD>
+<TD>e.g. : goa-1(n363); dpy-20(e1282)...</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Integrated By :</b></TD>
+<TD><TABLE><INPUT NAME="integrated_by" VALUE="$integrated_by" SIZE=30></TABLE></TD>
+<TD>e.g. : X_ray</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Location :</b></TD>
+<TD><TABLE><INPUT NAME="location" VALUE="$location" SIZE=30></TABLE></TD>
+<TD>e.g. : PS</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Strain :</b></TD>
+<TD><TABLE><INPUT NAME="strain" VALUE="$strain" SIZE=30></TABLE></TD>
+<TD>e.g. : PS3351</TD>
+</TR>
+
+<TR></TR> <TR></TR> <TR></TR> <TR></TR>
+<TR></TR> <TR></TR> <TR></TR> <TR></TR>
+
+<TR>
+<TD ALIGN="left"><b>Related Information : </b></TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Map :</b></TD>
+<TD><TABLE><INPUT NAME="map" VALUE="$map" SIZE=30></TABLE></TD>
+<TD>e.g. : Chromosome IV, tightly linked to...</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Phenotype :</b></TD>
+<TD><TABLE><INPUT NAME="phenotype" VALUE="$phenotype" SIZE=30></TABLE></TD>
+<TD>e.g. : Unc, Egl, Let. animals paralyzed ...</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Rescue :</b></TD>
+<TD><TABLE><INPUT NAME="rescue" VALUE="$rescue" SIZE=30></TABLE></TD>
+<TD>e.g. : goa-1(n363)</TD>
+</TR>
+
+<TR></TR> <TR></TR> <TR></TR> <TR></TR> 
+<TR></TR> <TR></TR> <TR></TR> <TR></TR>
+
+<TR>
+<TD ALIGN="left"><b>Data Source : </b></TD>
+<TD></TD>
+<TD> (where curators can confirm the data)</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>CGC Number :</b></TD>
+<TD><TABLE><INPUT NAME="cgc_number" VALUE="$cgc_number" SIZE=30></TABLE></TD>
+<TD>e.g. : 4501</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Other ID :</b></TD>
+<TD><TABLE><INPUT NAME="other_id" VALUE="$other_id" SIZE=30></TABLE></TD>
+<TD>e.g. : PMID11134024, or medline ...</TD>
+</TR>
+
+<TR>
+<TD ALIGN="right"><b>Reference Info :</b></TD>
+<TD><TABLE><INPUT NAME="reference_info" VALUE="$reference_info" SIZE=30></TABLE></TD>
+<TD>e.g. : Science 274, 113-115 ...</TD>
+</TR>
+
+<TR></TR> <TR></TR> <TR></TR> <TR></TR> 
+<TR></TR> <TR></TR> <TR></TR> <TR></TR>
+
+<TR>
+<TD ALIGN="right"><b>Remark :</b></TD>
+<TD><TABLE><INPUT NAME="remark" VALUE="$remark" SIZE=30></TABLE></TD>
+<TD>Write comments here</TD>
+</TR>
+
+<!--
+<TR>
+<TD ALIGN="right"><b>Comment :</b></TD>
+<TD><TABLE><INPUT NAME="comment" VALUE="$comment" SIZE=30></TABLE></TD>
+</TR>-->
+
+<TR><TD COLSPAN=2> </TD></TR>
+<TR>
+<TD> </TD>
+<TD><INPUT TYPE="submit" NAME="action" VALUE="Go !">
+    <INPUT TYPE="reset"></TD>
+</TR>
+</TABLE>
+
+</FORM>
+If you have any problems, questions, or comments, please email <A HREF=\"mailto:azurebrd\@minerva.caltech.edu\">azurebrd\@minerva.caltech.edu</A>
+EndOfText
+
+} # if ($badflag || $first) show form 
+
+# output to transgene.ace, show happy ending
+unless ( $badflag + $first + $querying + $updating ) { 
+			# unless bad or first time or querying or updating
+			# + to sum up 0s into one 0 for unless
+  print <<"EndOfText";
+<P>
+<P>
+<P>
+<H1> Thank you, your info will be updated shortly.  </H1>
+EndOfText
+
+
+  open (OUT, ">>$acefile") || die "cannot create  $acefile : $!";
+  print OUT "Transgene : [$transgene] \n";
+  print "Transgene : [$transgene] <BR>\n";
+
+#  unless ($badtransgene) { 
+#    print OUT "Transgene                \"$transgene\" \n";
+#    print "Transgene                \"$transgene\" <BR>\n";
+#  }
+  unless ($badsummary) { 
+    print OUT "Summary                  \"$summary\" \n";
+    print "Summary                  \"$summary\" <BR>\n";
+  }
+  unless ($baddriven_by_locus) { 
+    print OUT "Driven_by_Locus          \"$driven_by_locus\" \n";
+    print "Driven_by_Locus          \"$driven_by_locus\" <BR>\n";
+  }
+  unless ($baddriven_by_sequence) {
+    print OUT "Driven_by_Sequence       \"$driven_by_sequence\" \n";
+    print "Driven_by_Sequence       \"$driven_by_sequence\" <BR>\n";
+  }
+  unless ($baddrives_gfp) {
+    print OUT "GFP                      \"$drives_gfp\" \n";
+    print "GFP                      \"$drives_gfp\" <BR>\n";
+  }
+  unless ($baddrives_lacz) {
+    print OUT "LacZ                     \"$drives_lacz\" \n";
+    print "LacZ                     \"$drives_lacz\" <BR>\n";
+  }
+  unless ($baddrives_other_reporter) {
+    print OUT "Other_reporter           \"$drives_other_reporter\" \n";
+    print "Other_reporter           \"$drives_other_reporter\" <BR>\n";
+  }
+  unless ($baddrives_worm_gene) {
+    print OUT "Worm_gene                \"$drives_worm_gene\" \n";
+    print "Worm_gene                \"$drives_worm_gene\" <BR>\n";
+  }
+  unless ($baddrives_worm_sequence) {
+    print OUT "Worm_sequence            \"$drives_worm_sequence\" \n";
+    print "Worm_sequence            \"$drives_worm_sequence\" <BR>\n";
+  }
+  unless ($badauthor) {
+    print OUT "Author                   \"$author\" \n";
+    print "Author                   \"$author\" <BR>\n";
+  }
+  unless ($badclone) {
+    print OUT "Clone                    \"$clone\" \n";
+    print "Clone                    \"$clone\" <BR>\n";
+  }
+  unless ($badinjected_into_cgc_strain) {
+    print OUT "Injected_into_CGC_strain \"$injected_into_cgc_strain\" \n";
+    print "Injected_into_CGC_strain \"$injected_into_cgc_strain\" <BR>\n";
+  }
+  unless ($badinjected_into) {
+    print OUT "Injected_into            \"$injected_into\" \n";
+    print "Injected_into            \"$injected_into\" <BR>\n";
+  }
+  unless ($badintegrated_by) {
+    print OUT "Integrated_by            \"$integrated_by\" \n";
+    print "Integrated_by            \"$integrated_by\" <BR>\n";
+  }
+  unless ($badlocation) {
+    print OUT "Location                 \"$location\" \n";
+    print "Location                 \"$location\" <BR>\n";
+  }
+  unless ($badstrain) {
+    print OUT "Strain                   \"$strain\" \n";
+    print "Strain                   \"$strain\" <BR>\n";
+  }
+  unless ($badmap) {
+    print OUT "Map                      \"$map\" \n";
+    print "Map                      \"$map\" <BR>\n";
+  }
+  unless ($badphenotype) {
+    print OUT "Phenotype                \"$phenotype\" \n";
+    print "Phenotype                \"$phenotype\" <BR>\n";
+  }
+  unless ($badrescue) {
+    print OUT "Rescue                   \"$rescue\" \n";
+    print "Rescue                   \"$rescue\" <BR>\n";
+  }
+  unless ($badcgc_number) {
+    print OUT "CGC_number               \"$cgc_number\" \n";
+    print "CGC_number               \"$cgc_number\" <BR>\n";
+  }
+  unless ($badother_id) {
+    print OUT "Other_ID                 \"$other_id\" \n";
+    print "Other_ID                 \"$other_id\" <BR>\n";
+  }
+  unless ($badreference_info) {
+    print OUT "Reference                \"$reference_info\" \n";
+    print "Reference                \"$reference_info\" <BR>\n";
+  }
+  unless ($badremark) {
+    print OUT "Remark                   \"$remark\" \n";
+    print "Remark                   \"$remark\" <BR>\n";
+  }
+  unless($flagcomment) {
+    print OUT "Comment            \"$comment\" \n";
+    print "Comment            \"$comment\" <BR>\n";
+  }
+  print OUT " \n\n";
+  print " <BR>";
+  close (OUT) || die "cannot close $acefile : $!";
+
+  open (ERASE, ">$data_file") || die "cannot access $data_file : $!";
+  print ERASE "";
+  close (ERASE) || die "cannot close $data_file : $!";
+
+  print <<"EndOfText";
+If you wish to modify your submitted information, please go back
+  and resubmit.<BR>
+<P> See all
+<A
+HREF="http://minerva.caltech.edu/~azurebrd/cgi-bin/data/transgene.ace">new
+submissions</A>.<P>
+EndOfText
+  
+} # unless ($badflag + $first) output to transgene.ace, show happy ending
+
+
+# make end of HTML page
+
+print "$footer";

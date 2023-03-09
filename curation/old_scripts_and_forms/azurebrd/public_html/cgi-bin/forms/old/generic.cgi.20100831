@@ -1,0 +1,378 @@
+#!/usr/bin/perl 
+
+# Generic public tasks. (show ip, verify papers, update obo_ for app_tempname)
+
+# updated ip.cgi to update obo_ tables for Jolene, and verify person connections, replacing 
+# confirm_paper.cgi   2010 06 10
+# 
+# made &showAntibodyData() for Xiaodong to get antibody results from textpresso minus
+# first-passed as false-positive minus curated under abp_reference  2010 07 15
+#
+# made  &addToVariationObo  as a counter to  &updateVariationObo
+# http://tazendra.caltech.edu/~azurebrd/cgi-bin/forms/generic.cgi?action=AddToVariationObo
+# this only adds new entries to obo_<stuff>_app_tempname (in some 33 seconds), while the 
+# latter does a wipe and rewrite in about 55 minutes (timing out on browsers).  2010 08 20
+#
+# /home/postgres/work/pgpopulation/obo_oa_ontologies/update_obo_oa_ontologies.pl
+# call UpdateVariationObo  on 1st of month and  AddToVariationObo  other days of the month.
+# (a full update takes too long to run every day)  2010 08 23
+
+
+
+use Jex;			# untaint, getHtmlVar, cshlNew
+use strict;
+use diagnostics;
+use CGI;
+use LWP::UserAgent;		# for variation_nameserver file
+use LWP::Simple;		# for simple gets
+use DBI;
+
+my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n"; 
+
+my $ua = new LWP::UserAgent;
+
+
+my $query = new CGI;
+my $host = $query->remote_host();		# get ip address
+
+&process();                     # see if anything clicked
+
+sub process {                   # see if anything clicked
+  my $action;                   # what user clicked
+  unless ($action = $query->param('action')) { $action = 'none'; }
+
+  if ($action eq 'VerifyPaper') { &verifyPaper(); }
+  elsif ($action eq 'ShowAntibodyData') { &showAntibodyData(); }
+  elsif ($action eq 'UpdateVariationObo') { &updateVariationObo(); }
+  elsif ($action eq 'AddToVariationObo') { &addToVariationObo(); }
+  else { &showIp(); }
+}
+
+
+
+sub showIp {
+  print "Content-type: text/html\n\n";
+  my $title = 'Your IP';
+  my ($header, $footer) = &cshlNew($title);
+  print "$header\n";		# make beginning of HTML page
+  my $action;                   # what user clicked
+  unless ($action = $query->param('action')) { $action = 'none'; }
+  print "Your IP is : $host<BR>\n";
+  print "$footer"; 		# make end of HTML page
+} # sub showIp
+
+sub showAntibodyData {
+  print "Content-type: text/html\n\n";
+  my $title = 'Antibody textpresso data minus FP minus curated';
+  my ($header, $footer) = &cshlNew($title);
+  print "$header\n";		# make beginning of HTML page
+  my %fp; my %curated; my @results;
+  my $result = $dbh->prepare( "SELECT joinkey FROM cfp_antibody WHERE LOWER(cfp_antibody ) ~ 'false positive';" ); $result->execute;
+  while (my @row = $result->fetchrow) { $fp{$row[0]}++; }
+  $result = $dbh->prepare( "SELECT DISTINCT(abp_reference) FROM abp_reference;" ); $result->execute;
+  while (my @row = $result->fetchrow) { 
+    my (@entries) = $row[0] =~ m/(\d+)/g;
+    foreach my $entry (@entries) { $curated{$entry}++; } }
+  my $url = "http://textpresso-dev.caltech.edu/azurebrd/wen/anti_protein_wen";
+  my $textpresso_data = get $url;
+  my (@lines) = split/\n/, $textpresso_data;
+  foreach my $line (@lines) {
+    my ($id) = $line =~ m/WBPaper(\d+)\t/;
+    unless ($fp{$id} || $curated{$id}) { push @results, "$line<br />"; } }
+  print "There are " . scalar(@results) . " entries from $url MINUS curated in abp_reference MINUS flagged as FALSE POSITIVE in cfp_antibody<br /><br />\n";
+  foreach my $line (@results) { print $line; }
+  print "$footer"; 		# make end of HTML page
+} # sub showAntibodyData
+
+sub verifyPaper {
+  print "Content-type: text\/html\n\n<html><head><title>Confirm Author-Paper-Person Connections</title>\n</head>\n";        # don't resize window  2009 03 17
+#  print "Content-type: text\/html\n\n<html><head><title>Confirm Author-Paper-Person Connections</title>\n<script>window.resizeTo(320, 150);</script></head>\n";
+
+  my ($two, $aid, $pap_join, $curator, $yes_no);
+  if ($query->param('two_number')) { $two = $query->param('two_number'); }
+  if ($query->param('aid')) { $aid = $query->param('aid'); }
+  if ($query->param('pap_join')) { $pap_join = $query->param('pap_join'); }
+  if ($query->param('yes_no')) { $yes_no = $query->param('yes_no'); }
+  if ($two) {
+    my $result = $dbh->prepare( "SELECT two_standardname FROM two_standardname WHERE joinkey = '$two';" ); $result->execute;
+    my @row = $result->fetchrow;
+    if ($row[0]) { $curator = $row[0]; } }
+  my $error = 0;
+  unless ($two) { print "ERROR, no WBPerson number : $aid, $pap_join<BR>\n"; $error++; }
+  unless ($aid) { print "ERROR, no AuthorID number : $two, $pap_join<BR>\n"; $error++; }
+  unless ($pap_join) { print "ERROR, no pap_join number : $two, $aid<BR>\n"; $error++; }
+  unless ($curator) { print "ERROR, no Curator Standardname : $two, $aid, $pap_join<BR>\n"; $error++; }
+  unless ($yes_no) { print "ERROR, no selection for Yours or Not Yours : $two, $aid, $pap_join<BR>\n"; $error++; }
+  if ($error) { die "Improper selections on single connection\n"; }
+
+  if ($curator =~ m/\"/) { $curator =~ s/\"/\\\"/g; }                   # escape double quotes for postgres and html display
+  if ($curator =~ m/\'/) { $curator =~ s/\'/''/g; }                     # escape single quotes for postgres and html display
+
+#   my $command = "INSERT INTO wpa_author_verified VALUES ($aid, '$yes_no $curator', $pap_join, 'valid', '$two', CURRENT_TIMESTAMP);";
+  my @pgcommands;
+  my $command = "DELETE FROM pap_author_verified WHERE author_id ='$aid' AND pap_join = $pap_join;";
+  push @pgcommands, $command;
+  $command = "INSERT INTO pap_author_verified VALUES ($aid, '$yes_no $curator', $pap_join, '$two', CURRENT_TIMESTAMP);";
+  push @pgcommands, $command;
+  $command = "INSERT INTO h_pap_author_verified VALUES ($aid, '$yes_no $curator', $pap_join, '$two', CURRENT_TIMESTAMP);";
+  push @pgcommands, $command;
+
+  foreach my $command (@pgcommands) {
+    my $result = $dbh->do( $command );               # uncomment this for sub to work
+    print "<!--$command<BR>-->\n";
+  }
+  print "Thank you for connecting this paper as $yes_no<BR>\n";
+  &mailConfirmation($two, $curator);
+
+  print "</html>";
+} # sub verifyPaper
+
+sub mailConfirmation {
+  my ($two, $std_name) = @_;
+  my $result = $dbh->prepare( "SELECT two_email FROM two_email WHERE joinkey = '$two' ORDER BY two_timestamp DESC;" );
+  $result->execute;
+  my @row = $result->fetchrow;
+  my $email = "$row[0], cecnak\@gmail.com";
+  my $user = 'cecilia@tazendra.caltech.edu';
+  my $subject = "WBPerson$two Thank you for updating your Author Person Paper connection";
+#   my $std_name = 'C. elegans researcher';
+  my $body = "Dear $std_name :\n\n";
+  $body .= $row[0] . ' Thank you very much for helping associate your C. elegans publications and
+abstracts.
+
+Your updated bibliography will show in our next release (approx 8 weeks) in your WBPerson page under author/Person search http://www.wormbase.org
+
+Please do not hesitate to contact me if you have any questions.
+
+Have a great day.
+
+Cecilia';
+    # Added a file to only email confirmations if they haven't confirmed within the last 86400 seconds  2006 10 02
+  my $data_file = '/home/postgres/public_html/cgi-bin/data/confirm_paper_mailing.txt';
+  my %time_hash;
+  open (IN, "<$data_file") or die "Cannot open $data_file : $!";
+  while (<IN>) { chomp; my ($file_two, $time) = split/\t/, $_; $time_hash{$file_two} = $time; }
+  close (IN) or die "Cannot close $data_file : $!";
+  my $time = time;
+  my $mail_stuff = 1;						# by default mail confimation
+  my ($only_num) = $two; $only_num =~ s/two//; 
+  if ($time_hash{$only_num}) {
+    my $diff = $time - $time_hash{$only_num};
+    if ($diff < 86400) { $mail_stuff = 0; } }			# less than a day
+  if ($mail_stuff) {
+    &mailer($user, $email, $subject, $body);			# email letter
+    $time_hash{$only_num} = $time;
+    open (OUT, ">$data_file") or die "Cannot create $data_file : $!";
+    foreach my $only_num (sort keys %time_hash) { print OUT "$only_num\t$time_hash{$only_num}\n"; }
+    close (OUT) or die "Cannot close $data_file : $!";
+  }
+} # sub mailConfirmation
+
+
+sub addToVariationObo {
+  my $start_time = time;
+  &printHeader('Update obo_ tables only appending new entries for Variation from Nameserver and WS dumps');
+  my %pg_data;
+  my $result = $dbh->prepare( "SELECT joinkey FROM obo_name_app_tempname WHERE joinkey ~ 'WBVar';" ); $result->execute;
+  while (my @row = $result->fetchrow) { $pg_data{$row[0]}++; }
+
+  my $jo_path = '/home/acedb/jolene/WS_AQL_queries/';
+  my %junk_variation;		# junk variations are total variations minus latest set of real variations from Variation_gene.txt   These junk vars are excluded from going into obo_ when getting all values from nameserver.
+  my $all_ws_variation_file = $jo_path . 'total_variations.txt';
+  open(IN, "<$all_ws_variation_file") or die "Cannot open $all_ws_variation_file : $!";
+  while (my $line = <IN>) { chomp $line; my ($junk) = $line =~ m/\"(.*?)\"\t/; $junk_variation{$junk}++; } 
+  close(IN) or die "Cannot open $all_ws_variation_file : $!";
+  
+  my $infile = $jo_path . 'Variation_gene.txt';
+  open (IN, "<$infile") or die "Cannot open $infile : $!";
+  while (my $line = <IN>) {
+    if ($line =~ m/\"(.*?)\"\t\"(WBGene\d+)\"\t\"(.*?)\"/) {
+      my ($varid, $gene, $pub) = $line =~ m/\"(.*?)\"\t\"(WBGene\d+)\"\t\"(.*?)\"/;
+      my $data = "$gene\t$pub";
+      if ($junk_variation{$varid}) { delete $junk_variation{$varid}; } }
+    elsif ($line =~ m/\"(.*?)\"/) { 
+      if ($junk_variation{$1}) { delete $junk_variation{$1}; } } }
+  close (IN) or die "Cannot close $infile : $!";
+  
+  my %var_data;			# to get name and dead when writing data
+  my $url = 'http://www.sanger.ac.uk/cgi-bin/Projects/C_elegans/nameserver_json.pl?domain=Variation';
+  print "downloading from $url<br /><br />\n";
+  my $request = HTTP::Request->new(GET => $url); #grabs url
+  my $response = $ua->request($request);       #checks url, dies if not valid.
+  unless ($response-> is_success) { print "nameserver not responding\n"; }
+  my $variation_nameserver_file = $response->content;	# LWP::Simple fails for some reason
+
+  my @pgcommands;
+  $variation_nameserver_file =~ s/^\[\n\s+\[\n//s;
+  $variation_nameserver_file =~ s/\n\s+\]\n\]//s;
+  my @var_entries = split/\n\s+\],\n\s+\[\n\s+/, $variation_nameserver_file;
+  foreach my $entry (@var_entries) {
+    my (@lines) = split/\n/, $entry;
+    my ($id) = $lines[0] =~ m/(WBVar\d+)/;
+    next if ($junk_variation{$id});
+    next if ($pg_data{$id});
+    my ($name) = $lines[2] =~ m/\"(.*)\",/;
+    my ($dead) = $lines[3] =~ m/\"([10])\"/;
+    my $pgcommand = "INSERT INTO obo_name_app_tempname VALUES ('$id', '$name', CURRENT_TIMESTAMP);";
+    push @pgcommands, $pgcommand;
+    my $data = "id: $name\n";
+#     $data .= "allele: \"$line\" []";
+    if ($dead) { $data .= "dead: \"dead\"\n"; }
+    if ($data =~ m/\'/) { $data =~ s/\'/''/g; }	# escape '
+    if ($data =~ m/\\/) { 			# \ have to be escaped in E'' quote
+        $data =~ s/\\/\\\\/g; 
+        $data = "E'" . $data . "'"; }
+      else { $data = "'" . $data . "'"; }
+    $pgcommand = "INSERT INTO obo_data_app_tempname VALUES ('$id', $data, CURRENT_TIMESTAMP);";
+    push @pgcommands, $pgcommand;
+  }
+  if (scalar (@pgcommands > 1)) { 		# only wipe and repopulate if there's something to enter
+    print "data parsed, writing to postgres<br /><br />\n";
+    foreach my $pgcommand (@pgcommands) {
+#       print "$pgcommand<br />\n";
+      $dbh->do( $pgcommand );
+    } # foreach my $pgcommand (@pgcommands)
+  }
+  my $end_time = time;
+  my $diff_time = $end_time - $start_time;
+  print "This took $diff_time seconds<br />\n";
+  &printFooter();
+} # sub addToVariationObo
+
+sub updateVariationObo {
+  &printHeader('Update obo_ tables for Variation from Nameserver and WS dumps');
+
+  my %hash;
+
+  my $jo_path = '/home/acedb/jolene/WS_AQL_queries/';
+
+  my %junk_variation;		# junk variations are total variations minus latest set of real variations from Variation_gene.txt   These junk vars are excluded from going into obo_ when getting all values from nameserver.
+  my $all_ws_variation_file = $jo_path . 'total_variations.txt';
+  open(IN, "<$all_ws_variation_file") or die "Cannot open $all_ws_variation_file : $!";
+  while (my $line = <IN>) {
+    chomp $line;
+    my ($junk) = $line =~ m/\"(.*?)\"\t/;
+    $junk_variation{$junk}++;
+  } # while (my $line = <IN>)
+  close(IN) or die "Cannot open $all_ws_variation_file : $!";
+  
+# my $infile = 'Variation_gene.txt';
+  my $infile = $jo_path . 'Variation_gene.txt';
+  open (IN, "<$infile") or die "Cannot open $infile : $!";
+# my $junk = <IN>;	# no longer expecting a junk line
+  while (my $line = <IN>) {
+    if ($line =~ m/\"(.*?)\"\t\"(WBGene\d+)\"\t\"(.*?)\"/) {
+      my ($varid, $gene, $pub) = $line =~ m/\"(.*?)\"\t\"(WBGene\d+)\"\t\"(.*?)\"/;
+      my $data = "$gene\t$pub";
+      if ($junk_variation{$varid}) { delete $junk_variation{$varid}; }
+      $hash{$varid}{allele}{$data}++; }
+    elsif ($line =~ m/\"(.*?)\"/) { 
+      if ($junk_variation{$1}) { delete $junk_variation{$1}; }
+      $hash{$1}{allele}{blank}++; }
+  } # while (my $line = <IN>)
+  close (IN) or die "Cannot close $infile : $!";
+  
+#   foreach my $id (sort keys %junk_variation) { print "JUNK $id JUNK\n"; }
+  my %var_data;			# to get name and dead when writing data
+  my $url = 'http://www.sanger.ac.uk/cgi-bin/Projects/C_elegans/nameserver_json.pl?domain=Variation';
+#   my $url = 'http://tazendra.caltech.edu/~azurebrd/var/work/nameserverVariation_temp';
+  print "downloading from $url<br /><br />\n";
+  my $request = HTTP::Request->new(GET => $url); #grabs url
+  my $response = $ua->request($request);       #checks url, dies if not valid.
+  unless ($response-> is_success) { print "nameserver not responding\n"; }
+  my $variation_nameserver_file = $response->content;	# LWP::Simple fails for some reason
+
+  $variation_nameserver_file =~ s/^\[\n\s+\[\n//s;
+  $variation_nameserver_file =~ s/\n\s+\]\n\]//s;
+  my @var_entries = split/\n\s+\],\n\s+\[\n\s+/, $variation_nameserver_file;
+  foreach my $entry (@var_entries) {
+    my (@lines) = split/\n/, $entry;
+    my ($id) = $lines[0] =~ m/(WBVar\d+)/;
+    next if ($junk_variation{$id});
+    my ($name) = $lines[2] =~ m/\"(.*)\",/;
+    my ($dead) = $lines[3] =~ m/\"([10])\"/;
+    $var_data{$id}{name} = $name;
+    $var_data{$id}{dead} = !$dead;
+    $hash{$id}{allele}{""}++; 
+  }
+  
+  $infile = $jo_path . 'transgene_summary.txt';
+  open (IN, "<$infile") or die "Cannot open $infile : $!";
+# my $junk = <IN>;	# no longer expecting a junk line
+  while (my $line = <IN>) {
+    if ($line =~ m/\"(.*?)\"\t\"(WBPaper\d+)\"\t\"(.*?)\"/) {
+      my ($transgene, $paper, $summary) = $line =~ m/\"(.*?)\"\t\"(WBPaper\d+)\"\t\"(.*?)\"/;
+#     my $data = "$gene\t$pub";
+#     $hash{$transgene}{paper}{$paper}++;
+      $hash{$transgene}{transgene}{$summary}++; }
+    elsif ($line =~ m/\"(.*?)\"/) { $hash{$1}{transgene}{blank}++; }
+  } # while (my $line = <IN>)
+  close (IN) or die "Cannot close $infile : $!";
+
+  $infile = $jo_path . 'rearr_simple.txt';
+  open (IN, "<$infile") or die "Cannot open $infile : $!";
+  # my $junk = <IN>;
+  while (my $line = <IN>) {
+    if ($line =~ m/\"(.*?)\"\t\"(.*?)\"/) {
+#     my ($allele, $gene, $pub) = $line =~ m/\"(.*?)\"\t\"(WBGene\d+)\"\t\"(.*?)\"/;
+      my ($rearrangement, $stuff) = $line =~ m/\"(.*?)\"\t\"(.*)\"/;
+      $stuff =~ s/\"//g;
+      $hash{$rearrangement}{rearrangement}{$stuff}++; }
+    elsif ($line =~ m/\"(.*?)\"/) { $hash{$1}{rearrangement}{blank}++; }
+  } # while (my $line = <IN>)
+  close (IN) or die "Cannot close $infile : $!";
+
+
+# uncomment this and the print OUT lines to make an .obo file
+#   my $outfile = '/home/azurebrd/public_html/cgi-bin/forms/temp/var.obo';
+#   open (OUT, ">$outfile") or die "Cannot create $outfile : $!";
+#   print OUT "default-namespace: wb_variation\n";
+#   my $date = &getOboDate();
+#   print OUT "date: $date\n\n";
+
+  my @pgcommands;
+  foreach my $object_id (sort keys %hash) { 
+    my $id = $object_id;
+    my $name = $object_id;
+    if ($var_data{$object_id}{name}) { $name = $var_data{$object_id}{name}; }
+#     print OUT "[Term]\nid: $id\n";
+    my $data = "id: $id\n";
+    $name =~ s/\\/\\\\/g;			# \ need to be escaped in name for some reason
+#     print OUT "name: \"$name\"\n";
+    $data .= "name: \"$name\"\n";
+    if ($var_data{$object_id}{dead}) { 
+#       print OUT "dead: \"dead\"\n"; 
+      $data .= "dead: \"dead\"\n"; }
+    foreach my $type (%{ $hash{$object_id} }) {
+      foreach my $line (sort keys %{ $hash{$object_id}{$type} }) {
+        if ($line) {
+#           print OUT "$type: \"$line\" []\n";
+          $data .= "$type: \"$line\" []"; } } }
+#     print OUT "\n";
+    my $pgcommand = "INSERT INTO obo_name_app_tempname VALUES ('$id', '$name', CURRENT_TIMESTAMP);";
+    push @pgcommands, $pgcommand;
+    if ($data =~ m/\'/) { $data =~ s/\'/''/g; }	# escape '
+    if ($data =~ m/\\/) { 			# \ have to be escaped in E'' quote
+        $data =~ s/\\/\\\\/g; 
+        $data = "E'" . $data . "'"; }
+      else { $data = "'" . $data . "'"; }
+    $pgcommand = "INSERT INTO obo_data_app_tempname VALUES ('$id', $data, CURRENT_TIMESTAMP);";
+    push @pgcommands, $pgcommand;
+  } # foreach my $object_id (sort keys %hash) 
+  
+  if (scalar (@pgcommands > 1)) { 		# only wipe and repopulate if there's something to enter
+    print "data parsed, writing to postgres<br /><br />\n";
+    $dbh->do( "DELETE FROM obo_name_app_tempname;" );
+    $dbh->do( "DELETE FROM obo_data_app_tempname;" );
+    foreach my $pgcommand (@pgcommands) {
+#       print "$pgcommand<br />\n";
+      $dbh->do( $pgcommand );
+    } # foreach my $pgcommand (@pgcommands)
+  }
+#   close (OUT) or die "Cannot close $outfile : $!";
+
+  print "Thanks for updating the variation / rearrangement / transgene OA autocomplete data based on four files in $jo_path and $url<br />\n";
+
+  &printFooter();
+} # sub updateVariationObo
+
