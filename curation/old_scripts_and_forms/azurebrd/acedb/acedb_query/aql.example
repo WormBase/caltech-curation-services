@@ -1,0 +1,20 @@
+#!/usr/bin/perl
+
+# many examples here :
+# http://www.acedb.org/Software/whelp/AQL/examples_worm.shtml
+
+
+use Ace;
+$db=Ace->connect(-host=>'aceserver.cshl.org',-port=>'2005');
+
+# follow hash example here :
+my $aql_interactors = 'select a, b, c, d, e from a in class Gene where a.name like "WBGene00003003", b in a->Interaction, c in b->Interaction_type, d in c[Effector], e in c[Effected]';
+my @objects = $db->aql($aql_interactors);
+foreach my $object (@objects) {
+  my $text = join"\t", @$object;
+#   $hash{$$object[2]}++;
+  print "$text\n";
+}
+# foreach (sort keys %hash) { print "$_\n"; }
+
+

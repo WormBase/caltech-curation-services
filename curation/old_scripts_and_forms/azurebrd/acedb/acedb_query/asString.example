@@ -1,0 +1,65 @@
+http://stein.cshl.org/AcePerl/
+
+#!/usr/local/bin/perl
+# This example will pull some information on various authors
+# from the C. Elegans ACEDB.
+
+use Ace;
+use strict vars;
+
+use constant HOST => $ENV{ACEDB_HOST} || 'beta.crbm.cnrs-mop.fr';
+use constant PORT => $ENV{ACEDB_PORT} || 20000100;
+$|=1;
+
+print "Opening the database....";
+my $db = Ace->connect(-host=>HOST,-port=>PORT)
+         || die "Connection failure: ",Ace->error;
+print "done.\n\n";
+
+my @authors = $db->fetch('Author','S*');
+print "There are ",scalar(@authors)," Author objects starting with the letter \"S\".\n",
+      "The first one's name is ",$authors[0],"\n",
+      "His mailing address is ",join(',',$authors[0]->Mail),"\n\n";
+
+my @papers = $authors[0]->Paper;
+print "He has published ",scalar(@papers)," papers.\n\n";
+
+my $paper = $papers[$#papers]->fetch;
+print "The title of his most recent paper is ",$paper->Title,"\n",
+      "The coauthors were ",join(", ",$paper->Author),"\n\n",
+      "Here is all the information on the first coauthor:\n",
+      (($paper->Author)[0]->fetch->asString);
+
+Here's the output from this script:
+
+Opening the database....done.
+
+There are 543 Author objects starting with the letter "S".
+The first one's name is Saari B
+His mailing address is Department of Genetics,445 Henry Mall,Madison, WI  53706
+
+He has published 8 papers.
+
+The title of his most recent paper is TISSUE-SPECIFIC EXPRESSION AND
+    SUB-CELLULAR LOCALIZATION OF RYANODINE RECEPTOR CHANNELS IN CAENORHABDITIS ELEGANS
+The coauthors were Maryon EB, Saari B, Anderson P
+
+Here is all the information on the first coauthor:
+Maryon EB  Full_name  Ed Maryon
+           Address    Mail          445 Henry Mall
+                                    Laboratory of Genetics
+                                    Madison, WI  53706
+                      E_mail        maryon@ums2.macc.wisc.edu
+                      Phone         (608)262-0203
+                      Fax           (608)262-2976
+           Paper      [wbg12.4p69]
+                      [cgc1646]
+                      [wbg13.4p74]
+                      [wm93p304]
+                      [wm95p77]
+                      [wbg14.3p11]
+                      [cgc2536]
+                      [wm97ab390]
+                      [wm97ab632]
+
+
