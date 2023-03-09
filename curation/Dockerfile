@@ -26,6 +26,8 @@ COPY curation/website/apache_conf/options-ssl-apache.conf /etc/apache2/options-s
 COPY curation/website/apache_conf/httpd.conf /etc/apache2/httpd.conf
 COPY curation/scripts/perl_modules/Jex.pm /usr/local/lib/perl5/5.18.4/Jex.pm
 COPY curation/container_startup_setup.sh .
+COPY curation/.zshrc /root/.zshrc
+COPY curation/.vimrc /root/.vimrc
 RUN touch /etc/apache2/additional_listeners.conf
 RUN chown -R www-data:www-data /usr/lib/cgi-bin/
 RUN find /usr/lib/cgi-bin/ \( -name "*.cgi" -o -name "*.pl" \) -exec chmod +x {} \;
