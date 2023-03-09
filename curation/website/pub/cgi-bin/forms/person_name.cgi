@@ -523,7 +523,7 @@ information.<INPUT TYPE=submit NAME=action VALUE=\"Edit\"></B></FONT><P>\n";
   print "</FORM>\n";
 } # sub preview
 
-sub mailCeciliaData {
+sub OBSOLETEmailCeciliaData {
   my $sender_email = shift;
 #   my $user = 'Person_Form_Minerva <cecilia@tazendra.caltech.edu>';
   my $user = $sender_email;
@@ -573,7 +573,7 @@ sub mailCeciliaData {
   open (OUT, ">>$outfile") or die "Cannot append to $outfile : $!";
   print OUT "$body\n\n";
   close (OUT) or die "Cannot close to $outfile : $!";
-} # mailCeciliaData
+} # OBSOLETEmailCeciliaData
 
 sub checkFields {
   my $sender_email = '';
