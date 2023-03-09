@@ -1,0 +1,65 @@
+sub annotSummaryJsonp {
+# http://131.215.12.204/~azurebrd/cgi-bin/amigo.cgi?action=annotSummaryJsonp&focusTermId=WBGene00000899
+#   print qq(Content-type: application/json\n\n);	# this was for json
+# for cross domain access, needs to be jsonp with header below, content-type is different, json has a function wrapped around it.
+  print $query->header(
+    -type => 'application/javascript',
+    -access_control_allow_origin => '*',
+  );
+  my ($var, $focusTermId) = &getHtmlVar($query, 'focusTermId');
+  my ($var, $datatype)    = &getHtmlVar($query, 'datatype');
+  my ($return, $nodesHashref, $edgesLcaHashref) = &calculateNodesAndEdges($focusTermId, $datatype);
+  my %nodes    = %$nodesHashref;
+  my %edgesLca = %$edgesLcaHashref;
+  my @nodes = ();
+#   my $rootNode = '0008150';
+#   my $rootNode = '0005575';
+  my $rootNode = '0003674';
+  my $diameterMultiplier = 60;
+  foreach my $node (sort keys %nodes) {
+    my $name = $nodes{$node}{label};
+    $name =~ s/ /\\n/g;
+    my @annotCounts;
+    foreach my $evidenceType (sort keys %{ $nodes{$node}{'counts'} }) {
+      next if ($evidenceType eq 'any');				# skip 'any', only used for relative size to max value
+#       my $annotationCount = $nodes{$node}{'counts'}{$evidenceType}; my $type = $evidenceType;
+#       if ($annotationCount > 1) { $type .= 's'; }
+#       push @annotCounts, qq($annotationCount $type);
+      push @annotCounts, qq($nodes{$node}{'counts'}{$evidenceType} $evidenceType); }
+    my $annotCounts = join"; ", @annotCounts;
+    my $diameter = $diameterMultiplier * &calcNodeWidth($nodes{$node}{'counts'}{'any'}, $nodes{"GO:$rootNode"}{'counts'}{'any'});
+    my $diameter_unweighted = 40;
+    my $diameter_weighted = $diameter;
+    my $fontSize = $diameter * .2; if ($fontSize < 4) { $fontSize = 4; }
+    my $fontSize_weighted = $fontSize;
+    my $fontSize_unweighted = 6;
+    my $borderWidth = 2; 
+    my $borderWidth_weighted = $borderWidth;
+    my $borderWidth_unweighted = 2;				# scaled diameter and fontSize to keep borderWidth the same, but passing values in case we ever want to change them, we won't have to change the cytoscape receiving the json
+    if ($node eq "GO:$rootNode") {  $node =~ s/GO://; push @nodes, qq({ "data" : { "id" : "$node", "name" : "$name", "annotCounts" : "$annotCounts", "borderStyle" : "dashed", "nodeColor" : "blue", "borderWidthUnweighted" : "$borderWidth_unweighted", "borderWidthWeighted" : "$borderWidth_weighted", "borderWidth" : "$borderWidth", "fontSizeUnweighted" : "$fontSize_unweighted", "fontSizeWeighted" : "$fontSize_weighted", "fontSize" : "$fontSize", "diameter" : $diameter, "diameter_weighted" : $diameter_weighted, "diameter_unweighted" : $diameter_unweighted, "nodeShape" : "rectangle" } }); }
+      elsif ($nodes{$node}{lca}) {           $node =~ s/GO://; push @nodes, qq({ "data" : { "id" : "$node", "name" : "$name", "annotCounts" : "$annotCounts", "borderStyle" : "dashed", "nodeColor" : "blue", "borderWidthUnweighted" : "$borderWidth_unweighted", "borderWidthWeighted" : "$borderWidth_weighted", "borderWidth" : "$borderWidth", "fontSizeUnweighted" : "$fontSize_unweighted", "fontSizeWeighted" : "$fontSize_weighted", "fontSize" : "$fontSize", "diameter" : $diameter, "diameter_weighted" : $diameter_weighted, "diameter_unweighted" : $diameter_unweighted, "nodeShape" : "ellipse" } });   }
+      elsif ($nodes{$node}{annot}) {         $node =~ s/GO://; push @nodes, qq({ "data" : { "id" : "$node", "name" : "$name", "annotCounts" : "$annotCounts", "borderStyle" : "solid", "nodeColor" : "red", "borderWidthUnweighted" : "$borderWidth_unweighted", "borderWidthWeighted" : "$borderWidth_weighted", "borderWidth" : "$borderWidth", "fontSizeUnweighted" : "$fontSize_unweighted", "fontSizeWeighted" : "$fontSize_weighted", "fontSize" : "$fontSize", "diameter" : $diameter, "diameter_weighted" : $diameter_weighted, "diameter_unweighted" : $diameter_unweighted, "nodeShape" : "ellipse" } });     } }
+
+  my $nodes = join",\n", @nodes; 
+  print qq(jsonCallback\(\n);
+  print qq({ "elements" : {\n);
+  print qq("nodes" : [\n);
+  print qq($nodes\n);
+  print qq(],\n);
+  my @edges = ();
+  foreach my $source (sort keys %edgesLca) {
+    foreach my $target (sort keys %{ $edgesLca{$source } }) {
+      my $cSource = $source; $cSource =~ s/GO://;
+      my $cTarget = $target; $cTarget =~ s/GO://;
+      my $name = $cSource . $cTarget;
+      push @edges, qq({ "data" : { "id" : "$name", "weight" : 1, "source" : "$cSource", "target" : "$cTarget" } }); } }
+#   push @edges, qq({ "data" : { "id" : "legend_nodirect_legend_yesdirect", "weight" : 1, "source" : "legend_nodirect", "target" : "legend_yesdirect" } });
+#   push @edges, qq({ "data" : { "id" : "legend_root_legend_nodirect", "weight" : 1, "source" : "legend_root", "target" : "legend_nodirect" } });
+#   push @edges, qq({ "data" : { "id" : "legend_legend_legend_root", "weight" : 1, "source" : "legend_legend", "target" : "legend_root" } });
+  my $edges = join",\n", @edges; 
+  print qq("edges" : [\n);
+  print qq($edges\n);
+  print qq(]\n);
+  print qq(} }\n);
+  print qq(\);\n);
+} # sub annotSummaryJsonp
