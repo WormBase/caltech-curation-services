@@ -1,0 +1,1767 @@
+#!/usr/bin/perl -w
+
+# new ccc go curation for Kimberly + tair + dicty
+
+# show all results for query, submit curates all in form.  2013 03 19
+# editing an annotation gives is the delete flag and creates a new one with the current curator.  
+# curated annotations show the curated genename-geneid, component-go-pair, and allow change.
+#
+# indexed in postgres yuling's sentence-components  in  ccc_componentindex 
+#   sentence-geneprod|geneid|uniprot&uniprot<tab>geneprod|geneid|uniprot&uniprot  in   ccc_geneprodindex 
+# search filters for AND matches across  sourcefiles, geneprod, paper, component, goterm  based on
+#   data indexed in postgres (also  ccc_component_go_index  for curated component-goterm index)
+# 2013 05 03
+
+# change "new only" checkbox  to "sentece-curation" dropdown with "search all", "exclude curated", "exclude noncurated"
+# clicking a gene shows an extra row
+# allow selection of multiple gene products to create multiple annotations
+# add goid field that is greyed out that matches values from goterm from obo_ with   namespace: cellular_component
+#   store text term in postgres, send goid to ptgo ;  keep search of go term as is with substring matches to 
+#   multiple goterms => multiple components
+# restrict pair of component-goterm to only show those where the goterm maps to a goid
+# write Search code to work with data in postgres
+# selecting a geneproduct shows another annotation row (javascript)
+# not sure when these changes happened, probably 2013 06 11
+
+# pmids link to pubmed, wbpapers and tair IDs link to tazendra and a firewall-hidden local URL.
+# section of sentence display is big bold and red.  2013 10 28
+#
+# changed font size of sentences to 14pt
+# added sub  &printColorKey();  to show the meaning of color and underline for each sentence
+# added sub  &printGeneProductLinks($sentenceCounter, $data{$papid}{$section}{$sentnum}{$filename}{geneprod});  to make
+# links out to uniprot, wormbase, and dicty for each geneproduct
+# search field for goterm now autocompletes based on ccc_component_go_index  2013 10 29
+
+# TODO :
+# get ptgo curator IDs to set to notSent and work out that notSent code
+
+
+# NEED : gene-synonym to ID mapping file + pipeline
+
+# http://wiki.wormbase.org/index.php/CCC_Form_2.0_Specifications
+# http://wiki.wormbase.org/index.php/Specifications_for_WB_gpi_file
+# http://wiki.wormbase.org/index.php/Testing_Search_Results_-_20130509
+# http://wiki.wormbase.org/index.php/WormBase#Feedback_on_Form_-_dictyBase
+#
+# http://www.ebi.ac.uk/seqdb/confluence/display/GOAP/Protein2GO+Web+Services
+
+# to make annotations to ptgo, change the GOID to allow testing of a new annotation, change pmid to create new ones
+# http://www.ebi.ac.uk/internal-tools/protein2go/InsertAnnotation?userid=test:vanauken@caltech.edu&AC=Q7JPE2&EVIDENCE=IDA&GOID=GO%3A0042643&QUALIFIER&REF_DBC=PMID&REF_ID=23283987&WITH_STR&ANN_EXT&EXTRA_TAXID
+# http://www.ebi.ac.uk/internal-tools/protein2go/InsertAnnotation?userid=test:vanauken@caltech.edu&AC=O16850&EVIDENCE=IDA&GOID=GO%3A0005634&QUALIFIER&REF_DBC=PMID&REF_ID=23717214&WITH_STR&ANN_EXT&EXTRA_TAXID
+# http://www.ebi.ac.uk/internal-tools/protein2go/InsertAnnotation?userid=test:vanauken@caltech.edu&AC=O16850&EVIDENCE=IPI&GOID=GO%3A0005680&QUALIFIER&REF_DBC=PMID&REF_ID=23717214&WITH_STR=UniProtKB:P81299&ANN_EXT&EXTRA_TAXID
+# http://www.ebi.ac.uk/internal-tools/protein2go/InsertAnnotation?userid=test:vanauken@caltech.edu&AC=P81299&EVIDENCE=IPI&GOID=GO%3A0005680&QUALIFIER&REF_DBC=PMID&REF_ID=23717214&WITH_STR=UniProtKB:O16850&ANN_EXT&EXTRA_TAXID
+
+
+# textpresso bibliography at
+# http://textpresso-dev.caltech.edu/celegans//tdb/celegans/txt/bib-all/WBPaper00037556
+# http://textpresso-dev.caltech.edu/dicty25/tdb/dicty25/txt/bib-all/19692569
+# http://textpresso-dev.caltech.edu/arabidopsis/tdb/arabidopsis/txt/bib-all/11042
+#
+# textpresso modID to PMID mapping at 
+# http://textpresso-dev.caltech.edu/ccc_results/accession
+
+
+
+# curator login, maps to mods
+# main page, search options, fields, one search button to find all fields
+#   checkboxes for annotated and for not annotated (to allow both selected)
+#   option of how many annotations to make to a given paper-sentence (say 3)
+# search page searches all fields and returns sentences that match and all its
+#   annotations regardless of whether the annotation has the search (like 
+#   searching for a GO Term and getting all the annotation even those without
+#   the matching GO Term).
+#  - source_file, paper, gene, component  search sentence files
+#  - go term, classification, curator, date, annotation_extension, with_string, p2goID  search postgres
+#  - evidence code, qualifier  don't search
+# search results with all papers listed at the top as links to anchors in page.
+# each paper has own form and submit this paper button
+# foreach paper show bibliography and list all sentences
+# for each sentence show 1 set, hide all others, if any data in set show next one.
+# for each sentence, show the paperID, sentence ID, sentence, classification 
+#   multiselect (store this in separate table ?)
+# submitting to paper-sentence with blank ID gets new ID, existing pairs already 
+#   have an ID
+# hide postgres id
+# show Gene (list of IDs from textpresso)
+# show component free text
+# show component (list of terms from textpresso)
+# show GO term free text
+# show GO term (list of gene_comp_go mappings)
+# evidence code (ida OR ipi)
+# qualifiers (not / with) multiselect
+# with_string multiselect
+# annotation_extension free text
+# curator   (display, don't allow manual change)
+# p2go ID   (display, don't allow manual change)
+# timestamp (display, don't allow manual change)
+# in postgres 
+# annotations : pg_annotation_id, paperId, sentNum, gene (id), component, go (id), evidence, qualifier, with, annot, curator, p2go, timestamp
+# sentences_classification : paperId, sentNum, classification, curator, timestamp
+# ?? sentences_to_files : paperId, sentNum, files-pipe-separated
+# biblio for paper - generate once, store somewhere
+
+
+
+# Read sentences from flatfile.  By default look at last sentence (joinkey)
+# entered in ggi_gene_gene_interaction, and read the next sentence.  Either :
+# click on no genes and (No_interaction / Possible_genetic / Possible_non-genetic)
+# or click on two genes and click on any other option.  Go back and reselect
+# options to enter more than 3 connections / sentence. 
+# New option to dump out last 10 sentences with connections.
+# New option to search by sentence number.  2006 03 14
+#
+# Adapting for ccc go curation from gene_gene_inteaction.cgi  2007 03 15
+#
+# Created &addToGo($gene, $paps, $goterm); to add positive data to the GO
+# curation got_ tables.  If an entry already exists, enter data, otherwise make
+# a link to the go curation form to create the entry (for synonym data and so
+# forth).  2007 04 27
+#
+# Added option of different source files, recreated the ccc_gene_comp_go table
+# to allow a ccc_source_file column.  Made a symlink to the directory with the
+# source files to make an html link to them in the form.  Will set up a script
+# to redo this every week.  2007 07 18
+#
+# Set src_file_name on options as default value in case it's been changed.
+# 2007 08 01
+# 
+# Fixed showing sentence, which wasn't working from an extra column in the file
+# data.  
+# Sorting by paper -> sentence -> score, instead of paper -> score -> sentence
+# Added a checkbox for ``add to go form data'', and only do &addToGo($gene, $paps,
+# $goterm); if the checkbox is checked on.  (for those sentences and not all the
+# other ones).
+# For Kimberly.  2008 03 07
+#
+# Added search of paper in source files for Kimberly.  2008 04 10
+#
+# Broke up sentences to have their own radio buttons for ``goterm''
+# curate_radio, instead of separate buttons for those choices, since each
+# sentence needed its own.  2008 04 14
+#
+# Changed to work with phenote tables.  2008 07 30
+#
+# Read data from /home2/postgres/work/pgpopulation/ccc_gocuration/sentences/
+# since the files were taking up too much space. 
+# Read in bad proteins and bad components, excluded from already being annotated.
+# 2009 05 25
+#
+# Was adding $src_file_name instead of $ccc_src_file to ccc_gene_comp_go
+# ccc_source_file column.
+# Was adding marked up link to wormbase dev into ccc_gene_comp_go
+# ccc_paper_sentence column.  2010 02 14
+
+
+
+# yuling file :
+# SSC:29	PMID:23594951:introduction:67	CDC-42|LGL-1|PAR-1|PAR-2|PAR-3|PAR-6|PKC-3	Boundary|Cytosol|Plasma membrane|cortex|membrane	All rights reserved Molecular Cell Biology 0 1 1 <localization_cell_components_2011-02-11>Boundary</localization_cell_components_2011-02-11> 0 aPARs : <protein_celegans>PAR-3</protein_celegans> 
+# 
+# 
+# take col3 to get list of genes for col1 of form :
+#   gpi file :
+# WBGene00000390	cdc-42	R07G3.1|WP:CE02020	gene	taxon:6239	WB:WBGene00000390	CCD:CCD70511|UniProtKB:Q05062
+#   get :
+# CCD:CCD70511|UniProtKB:Q05062
+#   map this into column 1 of form (yuling, col1, col8 uniprot part)
+# CDC-42:WBGene00000390:UniProtKB:Q05062
+# 
+# take col4 as list of component terms, and map them to existing annotations to goterms, from pg ccc_component_go_index 
+
+
+
+
+use strict;
+use CGI;
+use DBI;
+use Jex;
+use LWP::Simple;
+use Time::HiRes qw(time);
+use Tie::IxHash;
+
+
+
+
+
+my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n"; 
+my $result;
+
+my $query = new CGI;
+
+my $src_file_name = 'good_senteces_file.20070316.1802';
+# my $src_directory = '/home2/postgres/work/pgpopulation/ccc_gocuration/sentences/';
+# my $src_directory = '/home/azurebrd/public_html/cgi-bin/forms/ccc/source/';
+my $src_directory = '/home/acedb/kimberly/ccc/ccc_source/';
+my $src_file = $src_directory . $src_file_name;
+
+# my %accession_map;	# mapping of paper accession IDs pmid to modid
+# my %textpresso_chars;	# textpresso characters that got converted to underscored codes
+# &popTextpressoChars();
+
+my %comp_index;		# component to goterm index that have already been added to postgres
+&popCompIndex();	# populate %comp_index;
+
+my %curators;
+my %curatorToEmail;
+&populateCurators();
+
+my %pgCurated;		# data queried from postgres
+
+my %classificationOptions;
+$classificationOptions{"scrambled"}   = "Scrambled sentence";
+$classificationOptions{"runon"}       = "Run-on sentence";
+$classificationOptions{"falsepos"}    = "False positive";
+$classificationOptions{"poslocneggo"} = "Positive for localization, but not for GO";
+# my @classificationOptions = ( 'Scrambled sentence', 'Run-on sentence', 'False positive', 'Positive for localization, but not for GO' );
+my $maxAnnotationsPerSentence = '10';
+
+my %paperInfo;		# paper information from mod flatfiles from textpresso, map pmid to modid/title/abstract
+
+my %goTermGoId;		# mapping of go terms to go ids, terms are lowercased
+
+# &printHeader('gene_product component goterm');
+&process();
+# &mockup();
+# &printFooter();
+
+
+sub process {
+  my ($var, $action) = &getHtmlVar($query, 'action');
+  unless ($action) { $action = 'frontpage'; }
+  if ($action eq "frontpage") { &frontPage(); }
+  elsif ($action eq "Login !") { &searchPage(); }
+  elsif ($action eq "List Component-GO Term !") { &listComponentGOTermPage(); }
+  elsif ($action eq "Search !") { &searchResultsPage(); }
+  elsif ($action eq "Submit") { &submitPage(); }
+  elsif ($action eq "autocompleteJQ") { &autocompleteJQ(); }
+#   elsif ($action eq "textpressoInfo") { &textpressoInfoPage(); }	# used to show title/abstract in iframe, now loading from each mod flatfile populated during gpi sentence conversion
+#   elsif ($action eq "Submit !") { &newEntry(); }
+#   elsif ($action eq "Source File !") { &changeSourceFile(); }
+#   elsif ($action eq "Dump 10 !") { &dump10(); } 
+#   elsif ($action eq "Search Pap Source !") { &findPapSourceFile(); } 
+}
+
+sub printFormOpen { print qq(<form method="post" action="ccc.cgi">\n); }
+
+sub autocompleteJQ {
+  my ($var, $type)      = &getHtmlVar($query, 'type');
+  ($var, my $term)      = &getHtmlVar($query, 'term');
+  print qq(Content-type: text/html\n\n);
+  my @matches = ();
+  if ($type eq 'goterm') {			# for entering goterms in the annotations, need goid and gotermName
+      my $lcterm = lc($term);
+      $result = $dbh->prepare( "SELECT * FROM obo_name_goid WHERE LOWER(obo_name_goid) ~ '$lcterm' AND joinkey IN (SELECT joinkey FROM obo_data_goid WHERE obo_data_goid ~ 'cellular_component' AND obo_data_goid !~ 'is_obsolete');" );
+      $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+      while (my @row = $result->fetchrow) { push @matches, qq({"item":"label","value":"$row[0] $row[1]"}); }
+    }
+    elsif ($type eq 'searchGoTermName') {	# for search field, need just the go term name for mapping to components in ccc_component_go_index
+      my $lcterm = lc($term);
+      $result = $dbh->prepare( "SELECT DISTINCT(ccc_goterm) FROM ccc_component_go_index WHERE LOWER(ccc_goterm) ~ '^$lcterm' ORDER BY ccc_goterm;" );
+      $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+      while (my @row = $result->fetchrow) { push @matches, qq({"item":"label","value":"$row[0]"}); }
+      $result = $dbh->prepare( "SELECT DISTINCT(ccc_goterm) FROM ccc_component_go_index WHERE LOWER(ccc_goterm) ~ '$lcterm' AND LOWER(ccc_goterm) !~ '^$lcterm' ORDER BY ccc_goterm;" );
+      $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+      while (my @row = $result->fetchrow) { push @matches, qq({"item":"label","value":"$row[0]"}); }
+    }
+  my $matches = join",", @matches; 
+  print qq([$matches]\n);
+#   print <<"EndOfText";			# sample json format
+# Content-type: text/html\n\n
+# [{"item":"mylabe1","value":"myvalu1"}, 
+# {"item":"mylabe2","value":"myvalu2"}, 
+# {"item":"mylabe3","value":"myvalu3"}, 
+# {"item":"mylabe4","value":"myvalu4"}, 
+# {"item":"mylabe5","value":"myvalu5"}, 
+# {"item":"mylabe6","value":"myvalu6"}] 
+# EndOfText
+} # sub autocompleteJQ
+
+sub submitPage {
+  &printHeader('gene_product component goterm');
+  &printFormOpen();
+  my ($var, $curator)      = &getHtmlVar($query, 'curator');
+  my $mod = $curators{$curator};
+
+  my @pgcommands;			# inserts for new data go here
+  &populateGoTermGoId(); 		# create mapping of valid goterms to goids
+
+  my $tableClassification = qq(<table border="1");
+  $tableClassification   .= qq(<tr>);
+  $tableClassification   .= qq(<td>mod</td><td>filename</td><td>papid</td><td>section</td><td>sentnum</td>);
+  $tableClassification   .= qq(<td>classification</td><td>comment</td><td>curator</td><td>timestamp</td></tr>);
+  my $tableAnnotation     = qq(<table border="1">);
+  $tableAnnotation       .= qq(<tr>);
+  $tableAnnotation       .= qq(<td>mod</td><td>filename</td><td>papid</td><td>section</td><td>sentnum</td>);
+  $tableAnnotation       .= qq(<td>geneprod</td><td>component</td><td>goterm</td><td>evidencecode</td><td>with</td><td>alreadycurated</td><td>valid</td><td>ptgo ID</td><td>curator</td><td>timestamp</td></tr>);
+  ($var, my $sentenceCounter)      = &getHtmlVar($query, 'sentenceCounter');
+  for my $i (1 .. $sentenceCounter) {
+    my $valid = 'valid'; my $timestamp = 'now';		# all new annotations are valid and now
+    my ($papid, $section, $sentnum, $filename, $comment, $pgComment, $pgClassification) = ('', '', '', '', '', '', '');
+    ($var, $papid)            = &getHtmlVar($query, "papid_$i");
+    ($var, $section)          = &getHtmlVar($query, "section_$i");
+    ($var, $sentnum)          = &getHtmlVar($query, "sentnum_$i");
+    ($var, $filename)         = &getHtmlVar($query, "filename_$i");
+    ($var, $comment)          = &getHtmlVar($query, "comment_$i");
+    ($var, $pgComment)        = &getHtmlVar($query, "pgComment_$i");
+    ($var, $pgClassification) = &getHtmlVar($query, "pgClassification_$i");
+#     print qq($i $papid $section $sentnum $filename $comment<br/>);
+    my @chosenClassifications;
+    foreach my $option (sort keys %classificationOptions) { 
+      ($var, my $value)    = &getHtmlVar($query, "${option}_$i");
+      if ($value) { push @chosenClassifications, $option; } }
+    my $chosenClassifications = join"|", @chosenClassifications;
+    if ($chosenClassifications || $comment || $pgComment || $pgClassification) {	# if a value existed or has been entered
+      if ( ($comment ne $pgComment) || ($chosenClassifications ne $pgClassification) ) {	# if either value has changed
+        push @pgcommands, qq(DELETE FROM ccc_sentenceclassification WHERE ccc_mod = '$mod' AND ccc_file = '$filename' AND ccc_paper = '$papid' AND ccc_section = '$section' AND ccc_sentnum = '$sentnum'; );	# delete classification for that sentence
+#       print qq(CHOSE $chosenClassifications COMMENT $comment END<br/>\n); 
+        if ($chosenClassifications || $comment) {					# if a value has been entered
+          push @pgcommands, qq(INSERT INTO ccc_sentenceclassification VALUES ('$mod', '$filename', '$papid', '$section', '$sentnum', '$chosenClassifications', '$comment', '$curator', CURRENT_TIMESTAMP));	# add curation
+          $tableClassification .= qq(<tr>);
+          $tableClassification .= qq(<td>$mod</td><td>$filename</td><td>$papid</td><td>$section</td><td>$sentnum</td>);
+          $tableClassification .= qq(<td>$chosenClassifications</td><td>$comment</td>);
+          $tableClassification .= qq(<td>$curator</td><td>$timestamp</td></tr>); } } }
+
+    ($var, my $pgCuratedAmount)    = &getHtmlVar($query, "pgCuratedAmount_$i");
+    if ($pgCuratedAmount) { 
+      for my $j (1 .. $pgCuratedAmount) {
+        ($var, my $newValid)       = &getHtmlVar($query, "deleteCheckbox_${i}_${j}");
+        ($var, my $prevTimestamp)  = &getHtmlVar($query, "pgCuratedTimestamp_${i}_${j}");
+        if ($newValid && $prevTimestamp) { 
+          push @pgcommands, qq(UPDATE ccc_sentenceannotation SET ccc_valid = '$newValid' WHERE ccc_timestamp = '$prevTimestamp' AND ccc_mod = '$mod' AND ccc_file = '$filename' AND ccc_paper = '$papid' AND ccc_section = '$section' AND ccc_sentnum = '$sentnum';);
+        } # if ($newValid && $prevTimestamp)
+      } # for my $j (1 .. $pgCuratedAmount)
+    } # if ($pgCuratedAmount) 
+
+    for my $j (1 .. $maxAnnotationsPerSentence) {
+      my $snumRnum = $i . '_' . $j;
+      my ($pair, $component, $component_new, $component_list, $goterm, $evidencecode, $with, $alreadycurated) = ('', '', '', '', '', '', '', '', '' );
+      my (@geneprods)          = &getHtmlSelectVars($query, "geneprod_$snumRnum");	# allow multiple gene products
+      ($var, $pair)            = &getHtmlVar($query, "pair_$snumRnum");
+      ($var, $component_new)   = &getHtmlVar($query, "component_new_$snumRnum");
+      ($var, $component_list)  = &getHtmlVar($query, "component_list_$snumRnum");
+      ($var, $goterm)          = &getHtmlVar($query, "goterm_$snumRnum");
+      ($var, $evidencecode)    = &getHtmlVar($query, "evidencecode_$snumRnum");
+      ($var, $with)            = &getHtmlVar($query, "with_$snumRnum");
+      ($var, $alreadycurated)  = &getHtmlVar($query, "alreadycurated_$snumRnum");
+      my $annotcomment = 'NULL'; my $ptgoid = 'NULL';	# for now these values are always null
+      if ($component_new) { $component = $component_new; }
+        elsif ($component_list) { $component = $component_list; }
+      unless ($component && $goterm) {
+        if ($pair) { ($component, $goterm) = split/ -- /, $pair; } }
+# print qq( G $geneprod C $component G $goterm EC $evidencecode E <br/> );
+      my $goid = ''; if ($goterm =~ m/(GO:\d+)/) { $goid = $1; }
+      my $gotermName = $goterm; if ($goterm =~ m/(GO:\d+) /) { $gotermName =~ s/GO:\d+ //; }
+      my $ptgoUser = $curatorToEmail{$curator};
+      foreach my $geneprod (@geneprods) {
+        if ($geneprod && $component && $goid && $evidencecode) {
+          my $ptgoId = 'notSent'; my $bgcolor = 'white';
+          if ($ptgoUser) {
+            my @ptgoFields = ();
+            push @ptgoFields, "userid=test:$ptgoUser"; 
+            my ($ac) = $geneprod =~ m/UniProtKB:(\w+)/;
+            push @ptgoFields, "AC=$ac"; 
+            push @ptgoFields, "EVIDENCE=$evidencecode"; 
+            push @ptgoFields, "GOID=$goid"; 
+            push @ptgoFields, "QUALIFIER"; 
+            push @ptgoFields, "REF_DBC=PMID"; 
+            my ($refId) = $papid =~ m/(\d+)/;
+            push @ptgoFields, "REF_ID=$refId"; 
+            if ($with) { push @ptgoFields, "WITH_STR=$with"; } else { push @ptgoFields, "WITH_STR"; }
+            push @ptgoFields, "ANN_EXT"; 
+            push @ptgoFields, "EXTRA_TAXID"; 
+            my $ptgoFields = join"&", @ptgoFields;
+            my $url = 'http://www.ebi.ac.uk/internal-tools/protein2go/InsertAnnotation?' . $ptgoFields;
+#             print "URL <a href=\"$url\">$url</a> URL<br>";
+            my ($ptgoPage) = get $url;		# LWP::Simple 
+#             my $copy = $ptgoPage; $copy =~ s/</&lt;/g; print "\nPTGO $copy PTGO\n";	# print copy of &lt;-converted xml to screen
+
+            if ($ptgoPage =~ m/<add_annotation ID="(\d+)" status="success"\/?>/) { $ptgoId = $1; }
+              elsif ($ptgoPage =~ m/<add_annotation status="error">/) { 
+                if ($ptgoPage =~ m/<error message=".*?"\/?>/) {
+                  my (@errors) = $ptgoPage =~ m/<error message="(.*?)"\/?>/g; $ptgoId = join" | ", @errors; $bgcolor = 'red'; } }
+              else { $ptgoId = "unaccounted for XML in ptgo"; $bgcolor = 'red'; }
+          } # if ($ptgoUser)
+          unless ($comp_index{$component}{$gotermName}) {		# add to  ccc_component_go_index  if it's a new entry
+            push @pgcommands, qq(INSERT INTO ccc_component_go_index VALUES ('$component', '$gotermName'));
+#             print qq(INSERT INTO ccc_component_go_index VALUES ('$component', '$gotermName')<br/>);
+            $comp_index{$component}{$gotermName}++; }
+          if ($alreadycurated || ($bgcolor eq 'white') ) {				# add to postgres if it was already curated, or ptgo didn't give an error message
+            push @pgcommands, qq(INSERT INTO ccc_sentenceannotation VALUES ('$mod', '$filename', '$papid', '$section', '$sentnum', '$geneprod', '$component', '$goterm', '$evidencecode', '$with', '$alreadycurated', NULL, '$valid', '$ptgoId', '$curator', CURRENT_TIMESTAMP)); }
+          $tableAnnotation .= qq(<tr style="background-color: $bgcolor">);
+          $tableAnnotation .= qq(<td>$mod</td><td>$filename</td><td>$papid</td><td>$section</td><td>$sentnum</td>);
+          $tableAnnotation .= qq(<td>$geneprod</td><td>$component</td><td>$goterm</td><td>$evidencecode</td><td>$with</td><td>$alreadycurated</td><td>$valid</td><td>$ptgoId</td>);
+          $tableAnnotation .= qq(<td>$curator</td><td>$timestamp</td></tr>);
+        } # if ($geneprod && $component && $goterm && $evidencecode)
+      } # foreach my $geneprod (@geneprods)
+    } # for my $i (1 .. $maxAnnotationsPerSentence)
+  } # for my $i (1 .. $sentenceCounter)
+  $tableClassification .= qq(</table>);
+  $tableAnnotation .= qq(</table>);
+  print qq($tableClassification\n);
+  print qq($tableAnnotation\n);
+  print qq(</form>);
+
+  foreach my $pgcommand (@pgcommands) {
+    print qq($pgcommand<br/>\n);
+# UNCOMMENT TO POPULATE
+    $dbh->do( $pgcommand );
+  } # foreach my $pgcommand (@pgcommands)
+
+  &searchResultsSection();
+  &printFooter();
+} # sub submitPage
+
+sub searchResultsPage {
+  &printHeader('gene_product component goterm');
+  &searchResultsSection();
+  &printFooter();
+} # sub searchResultsPage
+
+sub searchResultsSection {
+  &printFormOpen();
+  my ($var, $curator)      = &getHtmlVar($query, 'curator');
+  my $mod = $curators{$curator};
+  my $src_dir = $src_directory . $mod;
+  ($var, my $papersToShow) = &getHtmlVar($query, 'papersToShow');
+  ($var, my $newOnly)      = &getHtmlVar($query, 'newOnly');	# all exclude_curated exclude_noncurated
+# CONFIRMED : filtering out curated/noncurated works at the sentence level, not paper
+  my (@sourcefiles)        = &getHtmlSelectVars($query, 'sourcefiles');
+  ($var, my $geneprod)     = &getHtmlVar($query, 'geneprod');
+  ($var, my $paper)        = &getHtmlVar($query, 'paper');
+  ($var, my $annotcurator) = &getHtmlVar($query, 'annotcurator');
+  ($var, my $annotdate)    = &getHtmlVar($query, 'annotdate');
+  ($var, my $component)    = &getHtmlVar($query, 'component');
+  ($var, my $goterm)       = &getHtmlVar($query, 'goterm');
+  unless ($geneprod)         { $geneprod = '';     }
+  unless ($paper)            { $paper = '';        }
+  unless ($annotcurator)     { $annotcurator = ''; }
+  unless ($annotdate)        { $annotdate = '';    }
+  unless ($component)        { $component = '';    }
+  unless ($goterm)           { $goterm = '';       }
+  print qq(<input type="hidden" name="curator" value="$curator">\n);
+  print qq(<table border="0">);
+
+  &populateGoTermGoId(); 		# create mapping of valid goterms to goids for display pairs
+
+  my %data;
+  if (scalar @sourcefiles < 1) { (@sourcefiles) = <$src_dir/20*>; }	# if none selected, use all for that mod
+  my @pgquery_sourcefiles;
+  foreach my $infile (reverse @sourcefiles) {
+    my $filename = $infile; $filename =~ s/$src_dir\///g; push @pgquery_sourcefiles, $filename; }
+  my $pgquery_sourcefiles = join"','", @pgquery_sourcefiles;
+  my $matchesCount = 0;
+
+  my $searchParametersAmount = 0;
+  my %searchResults;				# for all search parameters : file / paper / section / sentnum / found-type
+  my %sentenceIndices;				# for sentence-source or postgres indices : paper / section / sentnum / file / index -> data
+  my $geneprodPostgresPart = '';		# add restriction if searching for specific terms, otherwise find all
+  if ($geneprod) { 
+    my $lc_geneprod = lc($geneprod);		# make search case insensitive
+    $geneprodPostgresPart = qq( AND LOWER(ccc_geneprodindex) ~ '$lc_geneprod' ); }
+  $searchParametersAmount++;			# count this as being a search parameter, even if searching for blank
+  $result = $dbh->prepare( "SELECT * FROM ccc_geneprodindex WHERE ccc_mod = '$mod' AND ccc_file IN ('$pgquery_sourcefiles') $geneprodPostgresPart ORDER BY ccc_timestamp DESC;" );
+#   print qq( SELECT * FROM ccc_geneprodindex WHERE ccc_mod = '$mod' AND ccc_file IN ('$pgquery_sourcefiles') $geneprodPostgresPart ORDER BY ccc_timestamp DESC; <br/>);
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+  while (my @row = $result->fetchrow()) { 
+#     print qq( ROW @row ROW<br/> );
+    my ($mod, $filename, $paper, $section, $sentnum, $data, $timestamp) = @row;
+    $sentenceIndices{$paper}{$section}{$sentnum}{$filename}{geneprod} = $data;
+    $searchResults{$filename}{$paper}{$section}{$sentnum}{geneprod}++;
+  } # while (my @row = $result->fetchrow())
+
+  my $componentPostgresPart = ''; my $lc_component = ''; if ($component) { $lc_component = lc($component); }
+#   if ($component) {
+#     $lc_component = lc($component);
+#     $componentPostgresPart = qq( AND LOWER(ccc_componentindex) ~ '$lc_component' ); }
+#   $result = $dbh->prepare( "SELECT * FROM ccc_componentindex WHERE ccc_mod = '$mod' AND ccc_file IN ('$pgquery_sourcefiles') $componentPostgresPart ORDER BY ccc_timestamp DESC;" );
+#   print qq( SELECT * FROM ccc_componentindex WHERE ccc_mod = '$mod' AND ccc_file IN ('$pgquery_sourcefiles') $componentPostgresPart ORDER BY ccc_timestamp DESC; <br/>);
+  $searchParametersAmount++;		# always search all components to index all components
+  $result = $dbh->prepare( "SELECT * FROM ccc_componentindex WHERE ccc_mod = '$mod' AND ccc_file IN ('$pgquery_sourcefiles') ORDER BY ccc_timestamp DESC;" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+  while (my @row = $result->fetchrow()) { 
+#     print qq( ROW @row ROW<br/> );
+    my ($mod, $filename, $paper, $section, $sentnum, $data, $timestamp) = @row;
+    $sentenceIndices{$paper}{$section}{$sentnum}{$filename}{component} = $data;		# always index all components
+    if ($data =~ m/$lc_component/i) {	# if there is a search component, add to %searchResults
+      $searchResults{$filename}{$paper}{$section}{$sentnum}{component}++; }
+  } # while (my @row = $result->fetchrow())
+      # find the sentence if it's been annotated to a component substring, skip if already found in textpresso indices ; need in case manual component
+
+  if ($goterm) {
+    $searchParametersAmount++;
+    my $lc_goterm = lc($goterm); my %components;	# match the curated component-go index to the curator's go term, and get components
+    $result = $dbh->prepare( "SELECT * FROM ccc_component_go_index WHERE LOWER(ccc_goterm) ~ '$lc_goterm'" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow()) {
+      next unless $row[0]; next unless $row[1]; $components{$row[0]}++; }
+    foreach my $component (sort keys %components) {
+      print "GO TERM $goterm matches with COMPONENT $component<br/>\n";
+      my $lc_component = lc($component);		# match each component on the curated component-go index to the index of all sentence-components
+      $result = $dbh->prepare( "SELECT * FROM ccc_componentindex WHERE ccc_mod = '$mod' AND ccc_file IN ('$pgquery_sourcefiles') AND LOWER(ccc_componentindex) ~ '$lc_component' ORDER BY ccc_timestamp DESC;" );
+#       print "SELECT * FROM ccc_componentindex WHERE ccc_mod = '$mod' AND ccc_file IN ('$pgquery_sourcefiles') AND LOWER(ccc_componentindex) ~ '$lc_component' ORDER BY ccc_timestamp DESC;<br/>\n" ;
+      $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+      while (my @row = $result->fetchrow()) {
+        my ($mod, $filename, $paper, $section, $sentnum, $data, $timestamp) = @row;
+        my (@data) = split/\|/, $data; my $match = 0;	# it's a match if it's an exact match of an indexed sentence-component term, not a substring match of all terms
+        foreach my $sent_component (@data) { if ($component eq $sent_component) { $match++; } }
+        if ($match > 0) {
+          $searchResults{$filename}{$paper}{$section}{$sentnum}{goterm}++; } }
+    } # foreach my $component (sort keys %components)
+  } # if ($goterm)
+
+  if ($paper) {
+    $searchParametersAmount++;
+    my $lc_paper = lc($paper);
+    $result = $dbh->prepare( "SELECT * FROM ccc_geneprodindex WHERE LOWER(ccc_paper) ~ '$lc_paper'" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow()) {
+      my ($mod, $filename, $paper, $section, $sentnum, $data, $timestamp) = @row;
+      $searchResults{$filename}{$paper}{$section}{$sentnum}{paper}++; } }
+
+#    if ($annotcurator) {
+#      $searchParametersAmount++;
+#      $result = $dbh->prepare( "SELECT * FROM ccc_sentenceannotation WHERE ccc_mod = '$mod' AND ccc_file IN ('$pgquery_sourcefiles') AND ccc_curator = '$curator' ORDER BY ccc_timestamp DESC;" );
+#  #     print qq(SELECT * FROM ccc_sentenceannotation WHERE ccc_mod = '$mod' AND ccc_file IN ('$pgquery_sourcefiles') AND ccc_curator = '$curator' ORDER BY ccc_timestamp DESC;<br/>\n);
+#      $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+#      while (my @row = $result->fetchrow()) { 
+#        my ($mod, $filename, $paper, $section, $sentnum, $geneprod, $component, $goterm, $evidencecode, $with, $alreadycurated, $comment, $valid, $ptgoid, $curator, $timestamp) = @row;
+#        print qq( ROW @row ROW<br/> );
+#        $searchResults{$filename}{$paper}{$section}{$sentnum}{annotcurator}++; } }
+ 
+#   if ($annotdate) {
+#     $searchParametersAmount++;
+#     $result = $dbh->prepare( "SELECT * FROM ccc_sentenceannotation WHERE ccc_mod = '$mod' AND ccc_file IN ('$pgquery_sourcefiles') AND ccc_timestamp::text ~ '$annotdate' ORDER BY ccc_timestamp DESC;" );
+# #     print qq( SELECT * FROM ccc_sentenceannotation WHERE ccc_mod = '$mod' AND ccc_file IN ('$pgquery_sourcefiles') AND ccc_timestamp::text ~ '$annotdate' ORDER BY ccc_timestamp DESC;<br/>\n );
+#     $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+#     while (my @row = $result->fetchrow()) { 
+#       my ($mod, $filename, $paper, $section, $sentnum, $geneprod, $component, $goterm, $evidencecode, $with, $alreadycurated, $comment, $valid, $ptgoid, $curator, $timestamp) = @row;
+# #       print qq( ROW @row ROW<br/> );
+#       $searchResults{$filename}{$paper}{$section}{$sentnum}{annotdate}++; } }
+
+  if ($annotcurator) { $searchParametersAmount++; }	# if these have been searched, add to search amounts
+  if ($annotdate) { $searchParametersAmount++; }	# if these have been searched, add to search amounts
+  my %pgAnnotated;					# sentences annotated in postgres, to exclude with $newOnly flag in sentence-curation field
+  $result = $dbh->prepare( "SELECT * FROM ccc_sentenceannotation WHERE ccc_mod = '$mod' AND ccc_file IN ('$pgquery_sourcefiles') ORDER BY ccc_timestamp DESC;" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+  while (my @row = $result->fetchrow()) { 
+    my ($mod, $filename, $paper, $section, $sentnum, $geneprod, $pgcomponent, $pggoterm, $evidencecode, $with, $alreadycurated, $comment, $valid, $ptgoid, $pgcurator, $pgtimestamp) = @row;
+    if ($annotdate) { if ($pgtimestamp =~ m/$annotdate/) { $searchResults{$filename}{$paper}{$section}{$sentnum}{annotdate}++; } }
+    if ($annotcurator) { if ($pgcurator =~ m/$annotcurator/i) { $searchResults{$filename}{$paper}{$section}{$sentnum}{annotcurator}++; } }
+    if ($component) { if ($pgcomponent =~ m/$component/i) { $searchResults{$filename}{$paper}{$section}{$sentnum}{component}++; } }
+    if ($goterm) { if ($pggoterm =~ m/$goterm/i) { $searchResults{$filename}{$paper}{$section}{$sentnum}{goterm}++; } }
+    $pgAnnotated{$filename}{$paper}{$section}{$sentnum}++; 
+  } # while (my @row = $result->fetchrow())
+  my %pgClassified;					# sentences annotated in postgres, to exclude with $newOnly flag in sentence-curation field
+  $result = $dbh->prepare( "SELECT * FROM ccc_sentenceclassification WHERE ccc_mod = '$mod' AND ccc_file IN ('$pgquery_sourcefiles') ORDER BY ccc_timestamp DESC;" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+  while (my @row = $result->fetchrow()) { 
+    my ($mod, $filename, $paper, $section, $sentnum, $pgclassification, $pgcomment, $pgcurator, $pgtimestamp) = @row;
+    $pgClassified{$filename}{$paper}{$section}{$sentnum}++; 
+  } # while (my @row = $result->fetchrow())
+
+  my %good;
+  foreach my $filename (sort keys %searchResults) {
+    foreach my $paper (sort keys %{ $searchResults{$filename} }) {
+      foreach my $section (sort keys %{ $searchResults{$filename}{$paper} }) {
+        foreach my $sentnum (sort keys %{ $searchResults{$filename}{$paper}{$section} }) {
+            # if sentence-curation $newOnly set to exclude, skip if %pgAnnotated corresponds
+          next if (($newOnly eq 'exclude_curated') && ($pgClassified{$filename}{$paper}{$section}{$sentnum} || $pgAnnotated{$filename}{$paper}{$section}{$sentnum}) );
+          next if (($newOnly eq 'exclude_noncurated') && !( $pgClassified{$filename}{$paper}{$section}{$sentnum} || $pgAnnotated{$filename}{$paper}{$section}{$sentnum}) );
+
+          my @searchParametersMatches = keys %{ $searchResults{$filename}{$paper}{$section}{$sentnum} };
+#           my $SPMcount = scalar @searchParametersMatches;
+#           print qq(SPMcount $SPMcount SPMcount<br>);
+          if (scalar @searchParametersMatches == $searchParametersAmount) {
+            foreach my $searchParameter (sort keys %{ $searchResults{$filename}{$paper}{$section}{$sentnum} }) {
+# print "GOOD $paper $section SN $sentnum FN $filename SP $searchParameter E<br>";
+              $good{$paper}{$section}{$sentnum}{$filename}++;
+#               $good{$filename}{$paper}{$section}{$sentnum}{$searchParameter}++;
+#               foreach my $data (sort keys %{ $searchResults{$filename}{$paper}{$section}{$sentnum}{$searchParameter} }) {
+#                 $good{$filename}{$paper}{$section}{$sentnum}{$searchParameter}{$data}++;
+#               } # foreach my $data (sort keys %{ $searchResults{$filename}{$paper}{$section}{$sentnum}{$searchParameter} })
+            } # foreach my $searchParameter (sort keys %{ $searchResults{$filename}{$paper}{$section}{$sentnum} })
+          } # if (scalar @searchParametersMatches == $searchParametersAmount)
+
+        } # foreach my $sentnum (sort keys %{ $searchResults{$filename}{$paper}{$section} })
+      } # foreach my $section (sort keys %{ $searchResults{$filename}{$paper} })
+    } # foreach my $paper (sort keys %{ $searchResults{$filename} })
+  } # foreach my $filename (sort keys %searchResults)
+
+# my %pgCurated;		# data queried from postgres
+  my $in_papers = join"','", sort keys %good;
+#   print qq( "SELECT * FROM ccc_sentenceclassification WHERE ccc_paper IN ('$in_papers');" <br/>\n);
+  $result = $dbh->prepare( "SELECT * FROM ccc_sentenceclassification WHERE ccc_paper IN ('$in_papers');" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+  while (my @row = $result->fetchrow()) {
+    my ($mod, $file, $paper, $section, $sentnum, $classifications, $comment, $rowcurator, $timestamp) = @row;
+    $pgCurated{$paper}{$section}{$sentnum}{$file}{classification} = $classifications;
+    $pgCurated{$paper}{$section}{$sentnum}{$file}{comment} = $comment;
+#     print qq(ROW @row ROW<br/>\n);
+  }
+  $result = $dbh->prepare( "SELECT * FROM ccc_sentenceannotation WHERE ccc_paper IN ('$in_papers');" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+  while (my @row = $result->fetchrow()) {
+#     my ($mod, $file, $paper, $section, $sentnum, $geneprod, $component, $goterm, $evidencecode, $with, $alreadycurated, $comment, $valid, $ptgoid, $rowcurator, $timestamp) = @row;
+    my $mod = shift @row; my $file = shift @row; my $paper = shift @row; my $section = shift @row; my $sentnum = shift @row;
+    push @{ $pgCurated{$paper}{$section}{$sentnum}{$file}{curated} }, \@row;
+#     print qq(ROW @row ROW<br/>\n);
+  }
+
+  my %sourceFilesToRead;
+  my $paperMatchCount = 0; my $sentenceMatchCount = 0;		# papers, sentences that match
+  foreach my $paper (sort keys %good) { 
+    $paperMatchCount++;
+    foreach my $section (sort keys %{ $good{$paper} }) {
+      foreach my $sentnum (sort keys %{ $good{$paper}{$section} }) {
+        $sentenceMatchCount++; 
+        foreach my $filename (sort keys %{ $good{$paper}{$section}{$sentnum} }) { $sourceFilesToRead{$filename}++; }
+  } } }
+
+  foreach my $filename (sort keys %sourceFilesToRead) {
+    my $infile = $src_dir . '/' . $filename;
+    open (IN, "<$infile") or die "Cannot open $infile : $!";
+    while (my $line = <IN>) {
+      chomp $line;
+      my ($score, $pap, $geneprods, $components, $sentence) = split/\t/, $line;
+      my ($paptype, $papnum, $section, $sentnum) = split/:/, $pap;
+      my $paper = $paptype . ':' . $papnum;
+      if ( $good{$paper} ) {					# only checking deepest creates hash keys
+        if ( $good{$paper}{$section} ) {
+          if ( $good{$paper}{$section}{$sentnum} ) {
+            if ( $good{$paper}{$section}{$sentnum}{$filename} ) {
+              $sentenceIndices{$paper}{$section}{$sentnum}{$filename}{sentence} = $sentence;  } } } }
+    } # while (my $line = <IN>)
+    close (IN) or die "Cannot close $infile : $!";
+  } # foreach my $filename (sort keys %sourceFilesToRead)
+
+#   &populateTextpressoAccession();		# http://textpresso-dev.caltech.edu/ccc_results/accession
+  &populatePaperInfo($mod);
+
+  my $papersShown = 0;
+  my $sentenceCounter = 0;
+  my $toPrint = '';
+  my $paperHrefs = '';
+  foreach my $papid (sort keys %good) {
+    $papersShown++;
+    last if ($papersShown > $papersToShow);
+    $paperHrefs .= qq(<a href="#$papid">go to $papid</a><br/>\n);
+    $toPrint .= qq(<table border="1" style="border-color: blue">);
+#     my $modid = $papid; if ( $accession_map{$papid} ) { $modid = $accession_map{$papid}; }
+    my $modid    = "textpresso does not have a ModID for $papid";
+    my $title    = "textpresso does not have a ModID for $papid";
+    my $abstract = "textpresso does not have a ModID for $papid";
+    if ($paperInfo{$papid}{modid})    { $modid    = $paperInfo{$papid}{modid};    } 
+    if ($paperInfo{$papid}{title})    { $title    = $paperInfo{$papid}{title};    }
+    if ($paperInfo{$papid}{abstract}) { $abstract = $paperInfo{$papid}{abstract}; } 
+    my $pubmedLink = $papid; if ($pubmedLink =~ m/PMID:(\d+)/) { $pubmedLink = qq(<a href="http://www.ncbi.nlm.nih.gov/pubmed/$1" target="new">$papid</a>); }
+    my $modPaperLink = $modid; 
+    if ($modid =~ m/WBPaper(\d+)/) { $modPaperLink = qq(<a href="http://tazendra.caltech.edu/~azurebrd/cgi-bin/forms/paper_display.cgi?action=Search+!&data_number=$1" target="new">$modid</a>); }
+      elsif ($modid =~ m/TAIR:(\d+)/) { $modPaperLink = qq(<a href="http://lu:8080/pubsearch/DisplayArticle?article_id=$1" target="new">$modid</a>); }
+    $toPrint .= qq(<tr><td><a name="$papid"></a>paper $pubmedLink $modPaperLink <input type="submit" name="action" value="Submit"></td></tr>\n);
+#     my ($title, $abstract) = &getTextpressoTitleAbstract($modid, $mod);	# to load dynamically and print to screen, whcih is slow to get each URL from textpresso and makes the whole thing slow
+    $toPrint .= qq(<tr><td style="background-color: #FFCCCC">Title : $title</td</tr>);
+    $toPrint .= qq(<tr><td style="background-color: #FFCCCC">Abstract : $abstract</td</tr>);
+#     $toPrint .= qq(<tr><td><iframe height="200" width="1300" src="ccc.cgi?action=textpressoInfo&modid=$modid&mod=$mod"></iframe></td></tr>);		# use an iframe to load this information later, won't fit as well but will load much faster
+
+#               $good{$paper}{$section}{$sentnum}{$filename}{$searchParameter}++;
+    foreach my $section (sort keys %{ $good{$papid} }) {
+# print "S $section<br>";
+      foreach my $sentnum (sort keys %{ $good{$papid}{$section} }) {
+# print "SN $sentnum<br>";
+        foreach my $filename (sort keys %{ $good{$papid}{$section}{$sentnum} }) {
+# print "ST $papid $section $sentnum $filename E<br>";
+          $sentenceCounter++;
+          $toPrint .= &showSentCuration(\%sentenceIndices, $papid, $section, $sentnum, $filename, $sentenceCounter );
+        } # foreach my $filename (sort keys %{ $good{$papid}{$section}{$sentnum} })
+      } # foreach my $sentnum (sort keys %{ $good{$papid}{$section} })
+    } # foreach my $section (sort keys %{ $good{$papid} })
+    $toPrint .= qq(</table>);
+  } # foreach my $papid (sort keys %good)
+  print qq(<input type="hidden" id="sentenceCounter" name="sentenceCounter" value="$sentenceCounter">\n);
+  print qq(<input type="hidden" id="maxAnnotationsPerSentence" name="maxAnnotationsPerSentence" value="$maxAnnotationsPerSentence">\n);	# for javascript autocomplete
+
+  &printSearchTable($curator, \@sourcefiles, $geneprod, $paper, $annotcurator, $annotdate, $component, $goterm, $newOnly, $papersToShow);
+  my $papersDisplayed = 'all'; if ($papersToShow < $paperMatchCount) { $papersDisplayed = $papersToShow; }
+  print qq(The above search has $paperMatchCount papers with $sentenceMatchCount sentences, here are $papersDisplayed papers :<br/>\n);
+
+  print $paperHrefs;
+  print qq(<table border="1" style="border-color: blue">);
+  print $toPrint;
+  print "<br>$curator";
+  print qq(</table>);
+  print qq(</form>);
+  &printFooter();
+} # sub searchResultsSection
+
+sub populatePaperInfo {
+# my %paperInfo;		# paper information from textpresso from pmid to modid/title/abstract
+  my ($mod) = @_;
+#   my $infile = 'source/' . $mod . '/pmid_data.' . $mod;
+  my $infile = $src_directory . $mod . '/pmid_data.' . $mod;
+  open (IN, "<$infile") or die "Cannot open $infile : $!";
+  while (<IN>) { chomp;
+    my ($pmid, $modid, $title, $abstract) = split/\t/, $_;
+    $paperInfo{$pmid}{modid}    = $modid;
+    $paperInfo{$pmid}{title}    = $title;
+    $paperInfo{$pmid}{abstract} = $abstract;
+  } # while (<IN>) 
+  close (IN) or die "Cannot close $infile : $!";
+} # sub populatePaperInfo
+
+sub populateGoTermGoId {
+  my $start = &time();
+  $result = $dbh->prepare( "SELECT * FROM obo_name_goid WHERE joinkey IN (SELECT joinkey FROM obo_data_goid WHERE obo_data_goid ~ 'cellular_component' AND obo_data_goid !~ 'is_obsolete');" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+  while (my @row = $result->fetchrow) { my $lcname = lc($row[1]); $goTermGoId{$lcname} = $row[0]; }	# .87 sec with lc
+  my $end = &time(); my $diff = $end - $start; print "Reading GO name to ID mappings took $diff seconds<br/>";
+} # sub populateGoTermGoId
+
+sub listComponentGOTermPage {
+  &printHeader('gene_product component goterm');
+  &populateGoTermGoId(); 		# create mapping of valid goterms to goids
+  print qq(<a href="ccc.cgi">front page</a>);
+  print qq(<table>);
+  print "<tr><td>component</td><td>GO Term</td><td>GO ID</td></tr>\n";
+  foreach my $comp (sort keys %comp_index) {
+    foreach my $goterm (sort keys %{ $comp_index{$comp} }) {
+      my $fontcolor = 'red'; my $goid = 'no go id found';
+#       if ($goterm =~ m/(GO:\d+) (.+)/) { $goid = $1; $goterm = $2; }
+      my $lc_goterm = lc($goterm); 
+      if ($goTermGoId{$lc_goterm}) { $goid = $goTermGoId{$lc_goterm}; $fontcolor = 'black'; }
+      print qq(<tr style='color: $fontcolor'><td>$comp</td><td>$goterm</td><td>$goid</td></tr>\n);
+    } # foreach my $goterm (sort keys %{ $comp_index{$comp} })
+  } # foreach my $comp (sort keys %comp_index)
+  print qq(<table>);
+  &printFooter();
+} # sub listComponentGOTermPage
+
+sub searchPage {
+  &printHeader('gene_product component goterm');
+  &printFormOpen();
+  my ($var, $curator) = &getHtmlVar($query, 'curator');
+  unless ($curator) { print "You must choose a curator<br>\n"; &frontPage(); last; }
+  print qq(<input type="hidden" name="curator" value="$curator">\n);
+#   print qq(<table border="1" style="border-color: blue">);
+  &printSearchTable($curator);
+  print qq(</table>);
+  print qq(</form>);
+  &printFooter();
+} # sub searchPage
+
+sub printSearchTable {
+  my ($curator, $sourcefilesRef, $geneprod, $paper, $annotcurator, $annotdate, $component, $goterm, $newOnly, $papersToShow) = @_;
+  my %chosenSourceFiles; foreach (@$sourcefilesRef) { $chosenSourceFiles{$_}++; }
+  print qq(<table border="0">);
+  print qq(<tr><td>search</td><td><input type="submit" name="action" value="Search !"></td></tr>\n); 
+  print qq(<tr><td>sentence-curation</td><td><select name="newOnly" size="1">);
+  my %newOnlyHash; tie %newOnlyHash, "Tie::IxHash";
+  $newOnlyHash{"all"} = "search all";
+  $newOnlyHash{"exclude_curated"} = "exclude curated";
+  $newOnlyHash{"exclude_noncurated"} = "exclude noncurated";
+  foreach my $option_value (keys %newOnlyHash) {
+    my $selected = '';
+    if ($newOnly eq $option_value) { $selected = 'selected="selected"'; } 
+    print qq(<option value="$option_value" $selected>$newOnlyHash{$option_value}</option>); }
+#   print qq(<option value="all" selected="selected">search all</option>);
+#   print qq(<option value="exclude_curated">exclude curated</option>);
+#   print qq(<option value="exclude_noncurated">exclude noncurated</option>);
+  print qq(</select></td></tr>\n);
+#   print qq(<tr><td>new only</td>);
+#   print qq(<td><input type="checkbox" name="newOnly" checked="checked"></td>);
+  print qq(</tr>\n);
+  print qq(<tr><td>papers to show</td>);
+  unless ($papersToShow) { $papersToShow = '10'; }
+  print qq(<td><input name="papersToShow" value="$papersToShow"></td>);
+  print qq(</tr>\n);
+# my $src_directory = '/home/azurebrd/public_html/cgi-bin/forms/ccc/source/';
+  my $mod = $curators{$curator};
+  my $src_dir = $src_directory . $mod;
+  my (@files) = <$src_dir/20*>;
+  my $sou_size = '10';
+  print qq(<tr><td>source</td><td><select name="sourcefiles" size="$sou_size" multiple="multiple">);
+  foreach my $file (reverse @files) { 
+    my $filename = $file;
+    $filename =~ s/$src_dir\///; 
+    my $selected = ""; if ($chosenSourceFiles{$file}) { $selected = qq(selected="selected"); }
+    print qq(<option value="$file" $selected>$filename</option>); }
+  print qq(</select></td></tr>\n);
+  print qq(<tr><td>gene product</td>);
+  print qq(<td><input name="geneprod" value="$geneprod"></td>);
+  print qq(</tr>\n);
+  print qq(<tr><td>paper</td>);
+  print qq(<td><input name="paper" value="$paper"></td>);
+  print qq(</tr>\n);
+  print qq(<tr><td>annotation curator</td>);
+  print qq(<td><input name="annotcurator" value="$annotcurator"></td>);
+  print qq(</tr>\n);
+  print qq(<tr><td>annotation date</td>);
+  print qq(<td><input name="annotdate" value="$annotdate"></td>);
+  print qq(</tr>\n);
+  print qq(<tr><td>component</td>);
+  print qq(<td><input name="component" value="$component"></td>);
+  print qq(</tr>\n);
+  print qq(<tr><td>go term</td>);
+  print qq(<td><input id="searchGoTermName" name="goterm" value="$goterm"></td>);
+  print qq(</tr>\n);
+  print "$curator $mod $src_dir";
+  print qq(<tr><td>search</td><td><input type="submit" name="action" value="Search !"></td></tr>\n); 
+  print qq(</table>);
+} # sub printSearchTable
+  
+sub frontPage {
+  &printHeader('gene_product component goterm');
+  &printFormOpen();
+  my $cur_size = scalar keys %curators;
+  print qq(<select name="curator" size="$cur_size">);
+  foreach my $curator (sort keys %curators) { print "<option>$curator</option>"; }
+  print qq(</select><br/>\n);
+  print qq(<input type="submit" name="action" value="Login !"><br/>\n); 
+  print qq(<input type="submit" name="action" value="List Component-GO Term !">\n); 
+  print qq(</form>);
+  &printFooter();
+} # sub frontPage
+
+sub showSentCuration {
+  my ($dataHashRef, $papid, $section, $sentnum, $filename, $sentenceCounter) = @_;
+  my $toPrint = '';
+  my %data = %$dataHashRef;
+  my $sentence          = ''; if ($data{$papid}{$section}{$sentnum}{$filename}{sentence}) { $sentence = $data{$papid}{$section}{$sentnum}{$filename}{sentence}; }
+  my $comment           = ''; if ($pgCurated{$papid}{$section}{$sentnum}{$filename}{comment}) { $comment = $pgCurated{$papid}{$section}{$sentnum}{$filename}{comment}; }
+  my $classification    = ''; if ($pgCurated{$papid}{$section}{$sentnum}{$filename}{classification}) { $classification = $pgCurated{$papid}{$section}{$sentnum}{$filename}{classification}; }
+  if ($comment) {        $toPrint .= qq(<input type="hidden" name="pgComment_$sentenceCounter" value="$comment">); }
+  if ($classification) { $toPrint .= qq(<input type="hidden" name="pgClassification_$sentenceCounter" value="$classification">); }
+  
+  my ($color_converted_sentence) = &convertSentenceXmlToSpans($sentence);
+  $toPrint .= "<tr><td>";
+  $toPrint .= qq(<table border="1" style="border-color: red">);
+  $toPrint .= qq(<tr><td colspan="100">);
+  $toPrint .= qq(<input type="hidden" name="papid_$sentenceCounter"    value="$papid">\n);
+  $toPrint .= qq(<input type="hidden" name="section_$sentenceCounter"  value="$section">\n);
+  $toPrint .= qq(<input type="hidden" name="sentnum_$sentenceCounter"  value="$sentnum">\n);
+  $toPrint .= qq(<input type="hidden" name="filename_$sentenceCounter" value="$filename">\n);
+  my $pubmedLink = $papid; if ($pubmedLink =~ m/PMID:(\d+)/) { $pubmedLink = qq(<a href="http://www.ncbi.nlm.nih.gov/pubmed/$1" target="new">$papid</a>); }
+  $toPrint .= qq($pubmedLink <span style="color: red; font-weight: bold; font-size: 14pt">$section</span> $sentnum $filename<br/>);
+  $toPrint .= qq(<span style="font-size: 14pt">$color_converted_sentence</span><br/>);
+  $toPrint .= &printClassification($sentenceCounter, $classification);
+  $toPrint .= qq(<textarea name="comment_$sentenceCounter">$comment</textarea><br/>);
+  $toPrint .= &printColorKey();
+  $toPrint .= &printGeneProductLinks($sentenceCounter, $data{$papid}{$section}{$sentnum}{$filename}{geneprod});
+  $toPrint .= qq(</td></tr>);
+
+  if ( $pgCurated{$papid}{$section}{$sentnum}{$filename}{curated} ) {
+    my $pgCuratedAmount = scalar @{ $pgCurated{$papid}{$section}{$sentnum}{$filename}{curated} };
+    print qq(<input type="hidden" name="pgCuratedAmount_$sentenceCounter" value="$pgCuratedAmount">\n);
+    my $pgCuratedCounter = 0;
+    foreach my $annotationRef (@{ $pgCurated{$papid}{$section}{$sentnum}{$filename}{curated} }) {
+      $pgCuratedCounter++;
+#       my ($geneprod, $component, $goterm, $evidencecode, $with, $alreadycurated, $valid, $rowcurator, $timestamp) = @$annotationRef;
+      my ($geneprod, $component, $goterm, $evidencecode, $with, $alreadycurated, $comment, $valid, $ptgoid, $rowcurator, $timestamp) = @$annotationRef;
+      my $timestampToDisplay = ''; if ($timestamp) { if ($timestamp =~ m/^(\d+\-\d+\-\d+ \d+:\d+:\d+)/) { $timestampToDisplay = $1; } }
+      my $validCell = qq(<td><input type="checkbox" name="deleteCheckbox_${sentenceCounter}_$pgCuratedCounter" value="invalid"> Delete</td>);
+      if ($valid eq 'invalid') { $validCell = qq(<td style="background-color: red"><input type="checkbox" name="deleteCheckbox_${sentenceCounter}_$pgCuratedCounter" value="valid"> Undelete</td>); }
+      print qq(<input type="hidden" name="pgCuratedTimestamp_${sentenceCounter}_$pgCuratedCounter" value="$timestamp">\n);
+#       $toPrint .= qq(<tr><td colspan="100">$geneprod -- $component -- $goterm -- $evidencecode -- $with -- AC $alreadycurated -- VALID $valid -- RC $rowcurator -- TS $timestamp</td></tr>);
+#       $toPrint .= "<tr><td>CURATED $papid $section $sentnum $filename -- $pgCuratedAmount -- $geneprod, $component, $goterm, $evidencecode, $with, $alreadycurated, $valid, $rowcurator, $timestamp</td></tr>";
+      $toPrint .= qq(<tr><td>$geneprod</td><td>$component</td><td>$goterm</td><td>$evidencecode $with</td><td>$alreadycurated</td>$validCell<td>$rowcurator $timestampToDisplay</td></tr>);
+    } # foreach my $annotation (@{ $pgCurated{$papid}{$section}{$sentnum}{$filename}{curated} })
+  }
+
+  for my $i (1 .. $maxAnnotationsPerSentence) { 
+    my $snumRnum = $sentenceCounter . '_' . $i;
+    $toPrint .= &showAnnotationRows($snumRnum, \%data, $papid, $section, $sentnum, $filename); }
+        #   for my $i (1 .. 10) { &showAnnotationRows($i); }
+  $toPrint .= qq(</table>);
+  $toPrint .= "</td></tr>";
+  return $toPrint;
+} # sub showSentCuration
+
+sub convertSentenceXmlToSpans {
+  my ($sentence) = @_;
+  my %colorMap;
+  $colorMap{"CCC_dicty"} = "brown";
+  $colorMap{"CCC_TAIR"} = "brown";
+  $colorMap{"localization_cell_components_082208"} = "brown";
+  $colorMap{"localization_cell_components_2011-02-11"} = "brown";
+  $colorMap{"protein_celegans"} = "blue";
+  $colorMap{"genes_arabidopsis"} = "blue";
+  $colorMap{"dicty_genes"} = "blue";
+  $colorMap{"localization_verbs_082008"} = "green";
+  $colorMap{"localization_verbs_082208"} = "green";
+  $colorMap{"localization_other_082008"} = "orange";
+  $colorMap{"localization_experimental_082008"} = "orange";
+  $colorMap{"localization_experimental_082208"} = "orange ";
+  foreach my $tag (sort keys %colorMap) {
+    if ($colorMap{$tag} eq 'brown') { 
+        if ($sentence =~ m/<${tag}>/) {   $sentence =~ s/<${tag}>/<span style="color: $colorMap{$tag}; text-decoration:underline">/g; }
+        if ($sentence =~ m/<\/${tag}>/) { $sentence =~ s/<\/${tag}>/<\/span>/g; } }
+      else {
+        if ($sentence =~ m/<${tag}>/) {   $sentence =~ s/<${tag}>/<span style="color: $colorMap{$tag}">/g; }
+        if ($sentence =~ m/<\/${tag}>/) { $sentence =~ s/<\/${tag}>/<\/span>/g; } }
+  } # foreach my $tag (sort keys %colorMap)
+#   if ($sentence =~ m/<CCC_TAIR>/
+#     CCC_TAIR = red/brown + underlined
+#     localization_cell_components_082208 = red/brown + underlined
+  return $sentence;
+} # sub convertSentenceXmlToSpans
+
+sub printColorKey {			# petra wanted a color key
+  my $toPrint = 'color key : ';
+  my %colorMap;
+  $colorMap{"Gene Product"} = 'blue';
+  $colorMap{"Textpresso Cellular Component"} = 'brown';
+  $colorMap{"Assay Term"} = 'orange';
+  $colorMap{"Verb"} = 'green';
+  my @types = ( "Gene Product", "Textpresso Cellular Component", "Assay Term", "Verb" );
+  foreach my $type (@types) { 
+    if ($colorMap{$type} eq 'brown') { $toPrint .= qq(<span style="color: $colorMap{$type}; text-decoration:underline">$type</span> ); }
+      else { $toPrint .= qq(<span style="color: $colorMap{$type}">$type</span> ); } }
+#   $toPrint .= qq(<span style="text-decoration:underline">Underline indicates that one or more terms is represented in multiple Textpresso categories.</span><br/>); 
+  $toPrint .= qq(<span>Terms underlined, but not brown, are also present in a Textpresso category other than cellular component.</span><br/>); 
+  return $toPrint;
+} # sub printColorKey
+
+sub printGeneProductLinks {				# make links for gene products to mod and uniprot URLs
+  my ($sentenceCounter, $geneprods) = @_;		# getting sentence counter in case we want to toggle show-hide later
+  my $toPrint = '';
+  my @geneprods;
+  my (@triplets) = split/\t/, $geneprods;
+  foreach my $triplet (@triplets) {
+    my ($geneprod, $geneid, $uniprots) = split/\|/, $triplet;
+    my @uniprots;
+    if ($uniprots =~ m/&/) { (@uniprots) = split/\&/, $uniprots; }
+      else { push @uniprots, $uniprots; }
+    foreach my $uniprot (@uniprots) {
+      my $uniprotLink = $uniprot;
+      if ($uniprot =~ m/UniProtKB:(.{6})/) { $uniprotLink = qq(<a href="http://www.uniprot.org/uniprot/$1" target="new">$uniprot</a>); }
+      my $geneidLink  = $geneid;
+      if ($geneid =~ m/(WBGene\d{8})/) { $geneidLink = qq(<a href="http://www.wormbase.org/species/c_elegans/gene/$1" target="new">$geneid</a>); }
+        elsif ($geneid =~ m/(DDB_.*)/) { $geneidLink = qq(<a href="http://dictybase.org/gene/$1" target="new">$geneid</a>); }
+      $toPrint .= qq($geneprod $geneidLink $uniprotLink<br/>);
+    } # foreach my $uniprot (@uniprots)
+  } # foreach my $triplet (@triplets)
+  return $toPrint;
+} # sub printGeneProductLinks
+
+sub printClassification {
+  my ($sentenceCounter, $classifications) = @_;
+  my $toPrint = '';
+  my (@classifications) = split/\|/, $classifications;
+  my %classifications; foreach (@classifications) { $classifications{$_}++; }
+  foreach my $option (sort keys %classificationOptions) { 
+    my $checked = ''; if ($classifications{$option}) { $checked = 'checked="checked"'; }
+    $toPrint .= qq(<input type="checkbox" name="${option}_$sentenceCounter" $checked >$classificationOptions{$option} - );
+  } # foreach my $option (sort keys %classificationOptions) 
+  $toPrint .= qq(<br/>);
+  return $toPrint;
+} # sub printClassification
+
+sub showAnnotationRows {
+  my ($snumRnum, $dataHashRef, $papid, $section, $sentnum, $filename) = @_;
+  my %data = %$dataHashRef;
+  my $geneprods  =  $data{$papid}{$section}{$sentnum}{$filename}{geneprod};
+  my $components =  $data{$papid}{$section}{$sentnum}{$filename}{component};
+  my $toPrint = qq(<tr id="tr_$snumRnum">);
+  $toPrint .= &printSelectGeneprod($snumRnum, $geneprods);
+  $toPrint .= &printSelectPair($snumRnum, $components);
+  $toPrint .= &printNewCompGo($snumRnum, $components);
+  $toPrint .= &printEvidenceCode($snumRnum);
+  $toPrint .= &printAlreadyCurated($snumRnum);
+  $toPrint .= &printDeletion($snumRnum);
+  $toPrint .= &printSelectCurator($snumRnum);
+  $toPrint .= "</td>";
+  return $toPrint;
+} # sub showAnnotationRows
+
+sub printSelectGeneprod {
+  my ($snumRnum, $geneprods) = @_;
+  my @geneprods;
+  my (@triplets) = split/\t/, $geneprods;
+  foreach my $triplet (@triplets) {
+    my ($geneprod, $geneid, $uniprots) = split/\|/, $triplet;
+    my @uniprots;
+    if ($uniprots =~ m/&/) { (@uniprots) = split/\&/, $uniprots; }
+      else { push @uniprots, $uniprots; }
+    foreach my $uniprot (@uniprots) {
+      my @group = ();
+      push @group, $geneprod; push @group, $geneid; push @group, $uniprot;
+      my $group = join"|", @group;
+      push @geneprods, $group;
+    } # foreach my $uniprot (@uniprots)
+  } # foreach my $triplet (@triplets)
+  unshift @geneprods, "";
+  my $size = scalar @geneprods;
+  
+  my ($i, $j) = $snumRnum =~ m/(\d+)_(\d+)/; 
+  my $onclick = '';
+  if ($j < $maxAnnotationsPerSentence) {
+    my $jPlusOne = $j + 1; my $nextSnumRnum = $i . '_' . $jPlusOne;
+    $onclick = qq(onclick="document.getElementById('tr_$nextSnumRnum').style.display = '';"); }
+  my $toPrint  = qq(<td><select size="$size" name="geneprod_$snumRnum" id="geneprod_$snumRnum" $onclick; multiple="multiple">);
+  foreach my $geneprod (@geneprods) { $toPrint .= "<option>$geneprod</option>"; }
+  $toPrint .= qq(</select></td>);
+  return $toPrint;
+} # sub printSelectGeneprod
+
+sub printSelectPair {
+#   my @pairs = ("transition zone -- nonmotile primary cilium", "surface -- cell surface", "mitochondria -- mitochondrion");
+#   my ($dataHashRef, $papid, $section, $sentnum, $filename) = @_;
+#   my %data = %$dataHashRef;
+#   my @components = @{ $data{$papid}{$section}{$sentnum}{$filename}{components} };
+  my ($snumRnum, $components) = @_;
+  my (@components) = split/\|/, $components;
+  my @pairs;
+  foreach my $component (@components) {
+#   while (my @row = $result->fetchrow) { my $lcname = lc($row[1]); $goTermGoId{$lcname} = $row[0]; }	# .87 sec with lc
+    if ($comp_index{$component}) { 
+      foreach my $goterm (keys %{ $comp_index{$component}}) {
+#         if ($goterm =~ m/GO:\d+/) { push @pairs, "$component -- $goterm"; } 	# this was to always this play component-goterm mappings, even if the goids were invalid
+#         if ($goterm =~ m/GO:\d+ /) { $goterm =~ s/GO:\d+ //; }	# I think this is redundant, J 2013 06 11
+        my $lcgoterm = lc($goterm); 
+        if ($goTermGoId{$lcgoterm}) {
+          push @pairs, "$component -- $goTermGoId{$lcgoterm} $goterm"; } } } }
+  unshift @pairs, "";
+  my $size = scalar @pairs;
+  my $toPrint = qq(<td><select size="$size" name="pair_$snumRnum">);
+  foreach my $pair (@pairs) { $toPrint .= "<option>$pair</option>"; }
+  $toPrint .= qq(</select></td>);
+  return $toPrint;
+} # sub printSelectPair
+
+sub printNewCompGo {
+#   my @components = ("transition zone", "surface", "mitochondria");
+#   my ($dataHashRef, $papid, $section, $sentnum, $filename) = @_;
+#   my %data = %$dataHashRef;
+#   my @components = @{ $data{$papid}{$section}{$sentnum}{$filename}{components} };
+  my ($snumRnum, $components) = @_;
+  my (@components) = split/\|/, $components;
+  my $toPrint = qq(<td>component <input size="20" name="component_new_$snumRnum"><br/>);
+  unshift @components, "";
+  $toPrint .= qq(<select size="1" name="component_list_$snumRnum">);
+  foreach my $comp (@components) { $toPrint .= "<option>$comp</option>"; }
+  $toPrint .= qq(</select><br/>);
+#   $toPrint .= qq(go term <input size="20" name="goterm_$snumRnum"><br/>);
+  $toPrint .= qq(<div class="ui-widget"> <label for="goterm_$snumRnum">go term </label><input size="20" name="goterm_$snumRnum" id="goterm_$snumRnum" /> </div>);
+  return $toPrint;
+} # sub printNewCompGo
+
+sub printEvidenceCode {
+  my ($snumRnum, $rownum) = @_;
+  my $toPrint = qq(<td>evidence code );
+  my @ecs = qw(IDA IPI); my $ddsize = scalar(@ecs); my $selected = qq(selected="selected");
+  $toPrint .= qq(<select size="$ddsize" name="evidencecode_$snumRnum">);
+  foreach my $ec (@ecs) { 
+    if ($ec eq 'IDA') { $selected = qq(selected="selected"); } else { $selected = ''; }
+    $toPrint .= "<option $selected>$ec</option>"; }
+  $toPrint .= qq(</select><br/>);
+  $toPrint .= qq(with <input size="20" name="with_$snumRnum"><br/>);
+  return $toPrint;
+} # sub printEvidenceCode
+
+sub printDeletion {
+  my ($snumRnum) = @_;
+  my $toPrint .= qq(<td>VALID</td>);
+#   my $toPrint;
+#   if ($snumRnum % 2 == 0) {
+#       $toPrint .= qq(<td style="background-color: red">DELETED<br/><input type="checkbox" name="undelete">undelete</td>); }
+#     else {
+#       $toPrint .= qq(<td>VALID<br/><input type="checkbox" name="delete">delete</td>); }
+  return $toPrint;
+} # sub printDeletion
+
+sub printAlreadyCurated {
+  my ($snumRnum) = @_;
+  my $toPrint = qq(<td>);
+  $toPrint .= qq(<input type="checkbox" name="alreadycurated_$snumRnum" value="alreadycurated">already curated );
+  $toPrint .= qq(</td>);
+  return $toPrint;
+} # sub printAlreadyCurated
+
+
+sub printSelectCurator {
+  my $toPrint = qq(<td>you now</td>);
+  return $toPrint;
+} # sub printSelectCurator
+
+
+sub popCompIndex {
+  $result = $dbh->prepare( "SELECT * FROM ccc_component_go_index;" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+  while (my @row = $result->fetchrow) { 
+    next unless $row[0]; next unless $row[1];
+    $comp_index{$row[0]}{$row[1]}++; } 
+} # sub popCompIndex
+
+sub populateCurators {
+  $curators{petra}    = 'dicty';
+  $curators{robert}   = 'dicty';
+  $curators{tanya}    = 'tair';
+  $curators{donghui}  = 'tair';
+  $curators{kimberly} = 'worm';
+  $curators{ranjana}  = 'worm';
+  $curatorToEmail{petra}    = 'pfey@northwestern.edu';
+  $curatorToEmail{robert}   = 'robert_dodson@northwestern.edu';
+  $curatorToEmail{tanya}    = 'vanauken@caltech.edu';
+  $curatorToEmail{donghui}  = 'vanauken@caltech.edu';
+  $curatorToEmail{kimberly} = 'vanauken@caltech.edu';
+  $curatorToEmail{ranjana}  = 'ranjana@caltech.edu';
+#     dictyBase - Petra Fey and Robert Dodson
+#     TAIR - Tanya Berardini and Donghui Li
+#     WormBase - Kimberly Van Auken, Ranjana Kishore (others?) 
+} # sub populateCurators
+
+
+sub printHeader { 
+  my ($title) = @_;
+  print <<"EndOfText";
+Content-type: text/html\n\n
+
+<HTML>
+<LINK rel="stylesheet" type="text/css" href="http://minerva.caltech.edu/~azurebrd/stylesheets/wormbase.css">
+<HEAD>
+EndOfText
+  print qq(<title>$title</title>\n);
+# <link rel="stylesheet" href="http://jqueryui.com/resources/demos/style.css" />	# this doesn't do much
+  print <<"EndOfText";
+<script src="ccc.js"></script>
+<link rel="stylesheet" href="jquery/css/jquery-ui.css" />
+<script src="jquery/javascript/jquery-1.9.1.js"></script>
+<script src="jquery/javascript/ui/1.10.3/jquery-ui.js"></script>
+<style>.ui-autocomplete-loading { background: white url('jquery/images/ui-anim_basic_16x16.gif') right center no-repeat; }</style>
+</HEAD>
+
+<BODY bgcolor=#aaaaaa text=#000000 link=cccccc alink=eeeeee vlink=bbbbbb>
+<HR>
+EndOfText
+
+  print << "EndOfText";
+EndOfText
+} # sub printHeader
+
+__END__
+
+sub changeSourceFile {
+  my ($var, $oop) = &getHtmlVar($query, 'source_file');
+  if ($oop) { $src_file_name = $oop; $src_file = $src_directory . $src_file_name; }
+} # sub changeSourceFile
+
+sub findPapSourceFile { 
+  my ($var, $paper) = &getHtmlVar($query, 'pap_sfile_search');
+#   my (@src_files) = </home/postgres/work/pgpopulation/ccc_gocuration/recent_sentences_file.*>;
+  my (@src_files) = </home2/postgres/work/pgpopulation/ccc_gocuration/sentences/recent_sentences_file.*>;
+  my @good_files;
+  foreach my $src_file (reverse @src_files) { 
+    $/ = undef;
+    open (IN, "<$src_file") or die "Cannot open $src_file : $!";
+    my $all_file = <IN>;
+    close (IN) or die "Cannot close $src_file : $!";
+    if ($all_file =~ m/$paper/) { 
+      $src_file =~ s/\/home2\/postgres\/work\/pgpopulation\/ccc_gocuration\/sentence\///g; 
+      print "Match for $paper in sourcefile <A HREF=http://tazendra.caltech.edu/~postgres/cgi-bin/data/ccc_gocuration/$src_file>$src_file</A><BR>\n"; } }
+} # sub findPapSourceFile
+
+sub dump10 {
+  my $sentence = 0;
+  $result = $dbh->prepare( "SELECT joinkey FROM ccc_gene_comp_go WHERE ccc_source_file = '$src_file_name' ORDER BY joinkey DESC;" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+  my @row = $result->fetchrow; if ($row[0]) { $sentence = $row[0]; } $sentence -= 10;
+  open (IN, "<$src_file") or die "Cannot open $src_file : $!";
+  for ( 1 .. $sentence ) { <IN>; }
+  for my $sent ( ($sentence + 1) .. ($sentence + 10) ) {
+    my $sentence = <IN>; 
+    print "SENT $sentence\n";
+#     print "SELECT * FROM ccc_gene_comp_go WHERE joinkey = '$sent';<BR>\n";
+  $result = $dbh->prepare( "SELECT * FROM ccc_gene_comp_go WHERE ccc_source_file = '$src_file_name' AND joinkey = '$sent';" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) { print "$row[2]\t$row[3]\t$row[4]<BR>\n"; }
+    print "<P>\n"; }
+} # sub dump10
+
+# to use useragent
+# use LWP::UserAgent;
+# my $ua = LWP::UserAgent->new(timeout => 30);  # instantiates a new user agent
+# $ua->agent( 'Mozilla/5.0 (X11; U; Linux x86_64; en-US; rv:1.9.2.18) Gecko/20110615 Ubuntu/10.04 (lucid) Firefox/3.6.18');
+#             my $request = HTTP::Request->new(GET => $url); 	# LWP::UserAgent   getting a 500 error
+#             my $response = $ua->request($request);        # checks url, dies if not valid.
+#             unless ($response-> is_success) {
+#               print "Error while getting ", $response->request->uri," -- ", $response->status_line, "\nABORTING QUERY PTGO\n";
+#               die "program dying now\n";
+#             }
+#             my $ptgoPage =  $response-> content;
+
+# The first two are for WB and the last one is for DDB (dictyBase).  We won't yet be sending any annotations to P2GO for TAIR, but I believe their userid = TAIR.
+# 
+# http://www.ebi.ac.uk/internal-tools/protein2go/InsertAnnotation?userid=WB&AC=Q7JPE2&EVIDENCE=IDA&GOID=GO%3A0003674&QUALIFIER&REF_DBC=PMID&REF_ID=23283987&WITH_STR&ANN_EXT&EXTRA_TAXID
+# 
+# userid = WB
+# AC = Q7JPE2
+# EVIDENCE = IDA
+# GOID  = GO%3A0003674
+# REF_DBC = PMID
+# REF_ID = 23283987
+# 
+# http://www.ebi.ac.uk/internal-tools/protein2go/InsertAnnotation?userid=WB&AC=Q7JPE2&EVIDENCE=IPI&GOID=GO%3A0003674&QUALIFIER&REF_DBC=PMID&REF_ID=23283987&WITH_STR=Q27874&ANN_EXT&EXTRA_TAXID
+# 
+# userid = WB
+# AC = Q7JPE2
+# EVIDENCE = IPI
+# GOID  = GO%3A0003674
+# REF_DBC = PMID
+# REF_ID = 23283987
+# WITH_STR = Q27874
+# 
+# http://www.ebi.ac.uk/internal-tools/protein2go/InsertAnnotation?userid=DDB&AC=Q55G87&EVIDENCE=IPI&GOID=GO%3A0005955&QUALIFIER&REF_DBC=PMID&REF_ID=11352578&WITH_STR=Q7YSW8&ANN_EXT&EXTRA_TAXID
+# 
+# userid = DDB
+# AC = Q55G87
+# EVIDENCE = IPI
+# GOID  = GO%3A0005955
+# REF_DBC = PMID
+# REF_ID = 11352578
+# WITH_STR = Q7YSW8
+
+# TO DYNAMICALLY GET TEXTPRESSO DATA use subs below ;  now populating to pmid_data.<mod> file when processing sentences to gpi files.
+sub textpressoInfoPage {		# display title and abstract info from textpresso in an iframe
+#   print "TITLE ABSTRACT GO HERE";
+  print qq(Content-type: text/html\n\n);
+  print qq(<HTML><HEAD></HEAD><BODY bgcolor=#ffcccc text=#000000 link=cccccc alink=eeeeee vlink=bbbbbb>);
+  my ($var, $modid) = &getHtmlVar($query, 'modid');
+  ($var, my $mod) = &getHtmlVar($query, 'mod');
+#   my ($title, $abstract) = &getTextpressoTitleAbstract($modid, $mod);
+  print qq(Title : $title<br/>);
+  print qq(Abstract : $abstract<br/>);
+  &printFooter();
+#   print qq(<table border="5" style="border-color: blue">);
+#   print qq(<tr><td>Title : $title</td></tr>);
+#   print qq(<tr><td>Abstract : $abstract</td></tr>);
+#   print qq(</table>);
+#    $toPrint .= qq(<tr><td><iframe src="ccc.cgi?action=textpressoInfo&modid=$modid&mod=$mod"></td></tr>);
+} # sub textpressoInfoPage
+
+sub getTextpressoTitleAbstract {	# for a given mod ID and selected form mod, get paper title and abstract by URL
+#   $curators{robert}   = 'dicty';
+#   $curators{tanya}    = 'tair';
+#   $curators{kimberly} = 'worm';
+  my ($modid, $formMod) = @_;
+  my ($title, $abstract) = ('', '');
+  my $modsDontMatch = 0;
+  my ($urlMod, $num) = split/:/, $modid;
+  if ($urlMod eq 'PMID') { $urlMod = 'dicty25'; unless ($formMod eq 'dicty') { $modsDontMatch++; } }
+    elsif ($urlMod eq 'TAIR') { $urlMod = 'arabidopsis'; unless ($formMod eq 'tair') { $modsDontMatch++; } }
+    elsif ($urlMod eq 'celegans') { unless ($formMod eq 'worm') { $modsDontMatch++; } }
+  unless ($modsDontMatch) { 
+    my $url = 'http://textpresso-dev.caltech.edu/' . $urlMod . '/tdb/' . $urlMod . '/txt/bib-all/' . $num;
+#     print "URL $url URL\n";
+    my ($tdata) = get $url;
+    my (@lines) = split/\n/, $tdata;
+    my @abstract; my @title;
+    foreach my $line (@lines) {
+      if ($line =~ m/^abstract_#(.*)$/) { my ($sentence) = &convertTextpressoSentence($1); push @abstract, $sentence; }
+        elsif ($line =~ m/^title_#(.*)$/) { my ($sentence) = &convertTextpressoSentence($1); push @title, $sentence; } }
+    $abstract = join" ", @abstract;
+    $title = join" ", @title; }
+  unless ($title) {    $title    = 'cannot find title from textpresso'; }
+  unless ($abstract) { $abstract = 'cannot find abstract from textpresso'; }
+# http://textpresso-dev.caltech.edu/celegans/tdb/celegans/txt/bib-all/WBPaper00037556
+# http://textpresso-dev.caltech.edu/dicty25/tdb/dicty25/txt/bib-all/19692569
+# http://textpresso-dev.caltech.edu/arabidopsis/tdb/arabidopsis/txt/bib-all/11042
+  return ($title, $abstract);
+} # sub getTextpressoTitleAbstract
+
+sub convertTextpressoSentence {		# convert underscore coded textpresso sentence to human readable sentence
+  my ($origSentence) = @_; my @sentence;
+  my (@words) = split/\s+/, $origSentence;
+  foreach my $word (@words) {
+    if ($textpresso_chars{$word}) { $word = $textpresso_chars{$word}; }
+    push @sentence, $word; }
+  my $sentence = join" ", @sentence;
+  return $sentence;
+} # sub convertTextpressoSentence
+
+sub populateTextpressoAccession {
+#   my $url = 'http://textpresso-dev.caltech.edu/ccc_results/accession';	# to get accession dynamically
+#   my ($accession_data) = get $url;
+#   my (@lines) = split/\n/, $accession_data;
+#   foreach my $line (@lines) 
+  my $infile = 'accession';						# use flatfile from a cronjob
+  open (IN, "<$infile") or warn "Cannot open $infile : $!";
+  while (my $line = <IN>) {
+    chomp $line;
+    my ($pmid, $modid) = split/\s+/, $line;
+    $accession_map{$pmid} = $modid;
+  } # while (my $line = <IN>)
+  close (IN) or warn "Cannot close $infile : $!";
+#   print "AC $accession_data AC";
+} # sub populateTextpressoAccession
+
+sub popTextpressoChars {			# to convert textpresso underscore codes to punctuation
+# my %textpresso_chars;	# textpresso characters that got converted to underscored codes
+  $textpresso_chars{"_DQ_"}   =  '"' ;
+  $textpresso_chars{"_SQ_"}   =  "'" ;
+  $textpresso_chars{"_LT_"}   =  '<' ;
+  $textpresso_chars{"_GT_"}   =  '>' ;
+  $textpresso_chars{"_EQ_"}   =  '=' ;
+  $textpresso_chars{"_AND_"}  =  '&' ;
+  $textpresso_chars{"_AT_"}   =  '@' ;
+  $textpresso_chars{"_SLH_"}  =  '/' ;
+  $textpresso_chars{"_DLR_"}  =  '$' ;
+  $textpresso_chars{"_PCT_"}  =  '%' ;
+  $textpresso_chars{"_CRT_"}  =  '^' ;
+  $textpresso_chars{"_STR_"}  =  '*' ;
+  $textpresso_chars{"_PLS_"}  =  '+' ;
+  $textpresso_chars{"_VRT_"}  =  '|' ;
+  $textpresso_chars{"_BSL_"}  =  '\\' ;
+  $textpresso_chars{"_HSH_"}  =  '#' ;
+  $textpresso_chars{"_PRD_"}  =  '.' ;
+  $textpresso_chars{"_QMK_"}  =  '?' ;
+  $textpresso_chars{"_EMK_"}  =  '!' ;
+  $textpresso_chars{"_CMM_"}  =  ',' ;
+  $textpresso_chars{"_SCL_"}  =  ';' ;
+  $textpresso_chars{"_CLN_"}  =  ':' ;
+  $textpresso_chars{"_OSB_"}  =  '[' ;
+  $textpresso_chars{"_CSB_"}  =  ']' ;
+  $textpresso_chars{"_ORB_"}  =  '(' ;
+  $textpresso_chars{"_CRB_"}  =  ')' ;
+  $textpresso_chars{"_OCB_"}  =  '{' ;
+  $textpresso_chars{"_CCB_"}  =  '}' ;
+} # sub popTextpressoChars
+
+sub mockup {
+  my @sentences = ('Reporter gene expression was detected for both HAG2 / MYB76 and HAG3 / MYB29 in seedlings , in the case of HAG2 / MYB76 mainly in the transition zone between roots and the foliar part and in stems ( Fig . 8a , b ) , whereas expression of HAG3 / MYB29 was observed in stems and also in the midvein of leaves ( Fig . 9a , b ) .', 'The <genes_arabidopsis>TGD4</genes_arabidopsis> <localization_experimental_082208>protein</localization_experimental_082208> was <localization_verbs_082208>enriched</localization_verbs_082208> in isolated <CCC_TAIR>chloroplasts</CCC_TAIR> in wild-type plants ( <tables_and_figures>Figure</tables_and_figures> 4b ) in parallel with the <CCC_TAIR>chloroplast</CCC_TAIR> outer <CCC_TAIR>envelope</CCC_TAIR> <localization_experimental_082208>marker</localization_experimental_082208> TOC75 ( Tranel et al . , 1995 ) .');
+
+  print qq(<table border="1" style="border-color: blue">);
+  print qq(<tr><td>Title : HAG2 / MYB76 and HAG3 / MYB29 exert a specific and coordinated control on the regulation of aliphatic glucosinolate biosynthesis in Arabidopsis thaliana .</td</tr>);
+  print qq(<tr><td>Abstract : In a previous transactivation screen , two Arabidopsis thaliana R2R3-MYB transcription factors , HAG2 / MYB76 and HAG3 / MYB29 , along with the already characterized HAG1 / MYB28 , were identified as putative regulators of aliphatic glucosinolate biosynthesis . Molecular and biochemical characterization of HAG2 / MYB76 and HAG3 / MYB29 functions was performed using transformants with increased or repressed transcript levels . Real-time PCR assays , cotransformation assays and measurements of glucosinolate contents were used to assess the impact of both MYB factors on the steady-state level of glucosinolate biosynthetic genes and accumulation of aliphatic glucosinolates . Both HAG2 / MYB76 and HAG3 / MYB29 were shown to be positive regulators of aliphatic glucosinolate biosynthesis . Expression of promoter-beta-glucuronidase ( GUS ) fusions indicated GUS activities in both vegetative and generative organs , with distinct characteristics for each MYB factor . HAG1 / MYB28 , HAG2 / MYB76 and HAG3 / MYB29 reciprocally transactivated each other in the control of aliphatic glucosinolate biosynthesis and downregulated the expression of genes involved in the control of indolic glucosinolate biosynthesis , pointing to a reciprocal negative regulation of these two pathways . All three HAG transcription factors exert a coordinated control on aliphatic glucosinolate biosynthesis .</td></tr>);
+  foreach my $sentence (@sentences) { &showSentCuration($sentence); }
+  print qq(</table>);
+} # sub mockup
+
+
+
+
+
+
+sub process {
+  my ($var, $action) = &getHtmlVar($query, 'action');
+  if ($action) {
+    if ($action eq "Submit !") { &newEntry(); }
+    elsif ($action eq "Source File !") { &changeSourceFile(); }
+#     elsif ($action eq "Already !") { &newEntry('already curated'); }
+#     elsif ($action eq "Not GO !") { &newEntry('not go curatable'); }
+#     elsif ($action eq "Scrambled Sentence !") { &newEntry('scrambled sentence'); }
+#     elsif ($action eq "False Positive !") { &newEntry('false positive'); }
+    elsif ($action eq "Dump 10 !") { &dump10(); } 
+    elsif ($action eq "Search Pap Source !") { &findPapSourceFile(); } 
+  }
+  return if ($action eq "Search Pap Source !"); 
+
+  &changeSourceFile();		# always check the sourcefile since it defaults to original list
+
+  my $sentence = 0;
+
+  my $result = $dbh->prepare( "SELECT joinkey FROM ccc_gene_comp_go WHERE ccc_source_file = '$src_file_name' ORDER BY joinkey DESC;" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+  print "SELECT joinkey FROM ccc_gene_comp_go WHERE ccc_source_file = '$src_file_name' ORDER BY joinkey DESC;\n";
+  my @row = $result->fetchrow;
+  if ($row[0]) { $sentence = $row[0]; }
+#   $sentence = 2617;
+
+  if ($action) { if ($action eq "Search !") { (my $var, $sentence) = &getHtmlVar($query, "sent_search"); $sentence--; } }
+
+  my $sentence_count;
+  open (IN, "<$src_file") or die "Cannot open $src_file : $!";
+  for ( 1 .. $sentence ) { <IN>; $sentence_count++; }
+  my $sent_line = <IN>;
+  my ($paper) = $sent_line =~ m/(WBPaper\d+)/;
+  my @lines; my $abs = ''; my $title = '';
+  push @lines, $sent_line;
+  while (my $sent_line = <IN>) {
+    if ($sent_line =~ m/\d+\tS \d+ P $paper S/) { push @lines, $sent_line; $sentence_count++; }
+    elsif ($sent_line =~ m/ABSTRACT/) { if ($sent_line =~ m/ABSTRACT\t$paper\t(.*?)$/) { $abs = $1; } }
+    elsif ($sent_line =~ m/TITLE/) { if ($sent_line =~ m/TITLE\t$paper\t(.*?)$/) { $title = $1; } }
+    else { $sentence_count++; }
+  } # while (my $sent_line = <IN>)
+  close (IN) or die "Cannot close $src_file : $!";
+  print "<FORM METHOD=POST ACTION=http://tazendra.caltech.edu/~postgres/cgi-bin/ccc_go_curation.cgi>\n";
+  print "Make connections : <INPUT TYPE=\"submit\" NAME=\"action\" VALUE=\"Submit !\">\n"; 
+#   print "Make connections : <INPUT TYPE=\"submit\" NAME=\"action\" VALUE=\"Submit !\">\n"; 
+#   print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Already Curated : <INPUT TYPE=\"submit\" NAME=\"action\" VALUE=\"Already !\">\n"; 
+#   print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Not GO curatable : <INPUT TYPE=\"submit\" NAME=\"action\" VALUE=\"Not GO !\"><BR>\n"; 
+#   print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;False Positive : <INPUT TYPE=\"submit\" NAME=\"action\" VALUE=\"False Positive !\">\n"; 
+#   print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Scrambled Sentence : <INPUT TYPE=\"submit\" NAME=\"action\" VALUE=\"Scrambled Sentence !\"><BR>\n"; 
+  print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Dump last 10 sentences : <INPUT TYPE=\"submit\" NAME=\"action\" VALUE=\"Dump 10 !\">\n"; 
+  print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Search for sentence : <INPUT NAME=\"sent_search\"><INPUT TYPE=\"submit\" NAME=\"action\" VALUE=\"Search !\"><BR>\n"; 
+  print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Search for paper in source files : <INPUT NAME=\"pap_sfile_search\"><INPUT TYPE=\"submit\" NAME=\"action\" VALUE=\"Search Pap Source !\"><BR>\n"; 
+  my $text = "Title : $title<BR>Abstract : $abs<BR>\n";
+  $text =~ s/<protein_celegans>(.*?)<\/protein_celegans>/<FONT COLOR='blue'>$1<\/FONT>/g;
+  $text =~ s/<genes_arabidopsis>(.*?)<\/genes_arabidopsis>/<FONT COLOR='blue'>$1<\/FONT>/g;
+  $text =~ s/<localization_cell_components_082208>(.*?)<\/localization_cell_components_082208>/<FONT COLOR='brown'>$1<\/FONT>/g;
+  $text =~ s/<localization_verbs_082208>(.*?)<\/localization_verbs_082208>/<FONT COLOR='green'>$1<\/FONT>/g;
+  $text =~ s/<localization_other_082208>(.*?)<\/localization_other_082208>/<FONT COLOR='orange'>$1<\/FONT>/g;
+  print $text;
+  print "<TABLE>\n";
+
+  my $box = 0;
+  foreach my $line (@lines) {
+    $line = $src_file_name . "\t" . $line;
+    $box++;
+    &newReadSentence($line, $box); } 
+  print "<INPUT TYPE=HIDDEN NAME=box_count VALUE=\"$box\">\n";
+  print "</TABLE>\n";
+  print "Make connections : <INPUT TYPE=\"submit\" NAME=\"action\" VALUE=\"Submit !\"><BR>\n"; 
+  print "Enter comments for this sentence here : <TEXTAREA NAME=comment ROWS=4 COLS=80></TEXTAREA><BR>\n";
+  print "There are $sentence_count sentences in the sourcefile <A HREF=http://tazendra.caltech.edu/~postgres/cgi-bin/data/ccc_gocuration/sentences/$src_file_name>$src_file</A><BR>\n";
+#   my (@src_files) = </home/postgres/work/pgpopulation/ccc_gocuration/recent_sentences_file.*>;
+  my (@src_files) = </home2/postgres/work/pgpopulation/ccc_gocuration/sentences/recent_sentences_file.*>;
+#   my (@tair_src_files) = </home2/postgres/work/pgpopulation/ccc_gocuration/sentences/2008_*>;
+  foreach (reverse @src_files) { $_ =~ s/\/home2\/postgres\/work\/pgpopulation\/ccc_gocuration\/sentences\///g; }
+#   foreach (reverse @tair_src_files) { $_ =~ s/\/home2\/postgres\/work\/pgpopulation\/ccc_gocuration\/sentences\///g; }
+  print "Select a source_file : <SELECT NAME=\"source_file\" SIZE=1>\n";
+  if ($src_file_name) { print "<OPTION>$src_file_name</OPTION>\n"; }
+  foreach (reverse @src_files) { print "      <OPTION>$_</OPTION>\n"; }
+#   foreach (reverse @tair_src_files) { print "      <OPTION>$_</OPTION>\n"; }
+  print "      <OPTION>good_senteces_file.20070316.1802</OPTION>\n";
+  print "    </SELECT>\n ";
+  print "<INPUT TYPE=\"submit\" NAME=\"action\" VALUE=\"Source File !\"><BR>\n"; 
+  print "</FORM>\n";
+
+
+
+#   open (IN, "<$src_file") or die "Cannot open $src_file : $!";
+#   my $sentence_count;
+#   for ( 1 .. $sentence ) { <IN>; $sentence_count++; }
+#   print "<FORM METHOD=POST ACTION=http://tazendra.caltech.edu/~postgres/cgi-bin/ccc_go_curation.cgi>\n";
+#   print "Make connections : <INPUT TYPE=\"submit\" NAME=\"action\" VALUE=\"Submit !\">\n"; 
+#   print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Already Curated : <INPUT TYPE=\"submit\" NAME=\"action\" VALUE=\"Already !\">\n"; 
+#   print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Not GO curatable : <INPUT TYPE=\"submit\" NAME=\"action\" VALUE=\"Not GO !\"><BR>\n"; 
+#   print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;False Positive : <INPUT TYPE=\"submit\" NAME=\"action\" VALUE=\"False Positive !\">\n"; 
+#   print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Scrambled Sentence : <INPUT TYPE=\"submit\" NAME=\"action\" VALUE=\"Scrambled Sentence !\"><BR>\n"; 
+#   print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Dump last 10 sentences : <INPUT TYPE=\"submit\" NAME=\"action\" VALUE=\"Dump 10 !\">\n"; 
+#   print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Search for sentence : <INPUT NAME=\"sent_search\"><INPUT TYPE=\"submit\" NAME=\"action\" VALUE=\"Search !\"><BR>\n"; 
+#   print "<TABLE>\n";
+#   my $line = <IN>;
+#   for my $box (1 .. 3) {
+#     &readSentence($sentence, $line, $box); } $sentence_count++; 
+#   while (<IN>) { $sentence_count++; }
+#   print "</TABLE>\n";
+#   print "Make connections : <INPUT TYPE=\"submit\" NAME=\"action\" VALUE=\"Submit !\"><BR>\n"; 
+#   print "Enter comments for this sentence here : <TEXTAREA NAME=comment ROWS=4 COLS=80></TEXTAREA><BR>\n";
+#   print "There are $sentence_count sentences in the sourcefile <A HREF=http://tazendra.caltech.edu/~postgres/cgi-bin/data/ccc_gocuration/$src_file_name>$src_file</A><BR>\n";
+#   my (@src_files) = </home/postgres/work/pgpopulation/ccc_gocuration/recent_sentences_file.*>;
+#   foreach (reverse @src_files) { $_ =~ s/\/home\/postgres\/work\/pgpopulation\/ccc_gocuration\///g; }
+#   print "Select a source_file : <SELECT NAME=\"source_file\" SIZE=1>\n";
+#   if ($src_file_name) { print "<OPTION>$src_file_name</OPTION>\n"; }
+#   foreach (@src_files) { print "      <OPTION>$_</OPTION>\n"; }
+#   print "      <OPTION>good_senteces_file.20070316.1802</OPTION>\n";
+#   print "    </SELECT>\n ";
+#   print "<INPUT TYPE=\"submit\" NAME=\"action\" VALUE=\"Source File !\"><BR>\n"; 
+#   print "</FORM>\n";
+#   close (IN) or die "Cannot close $src_file : $!";
+} # sub process
+
+
+sub newEntry {	# old version
+  my $goterm = shift;
+  print "You've entered stuff : <BR>\n";
+  my $badData = 0; my @pgcommands;
+  my ($var, my $paps) = &getHtmlVar($query, "paps");
+  ($var, my $ccc) = &getHtmlVar($query, "ccc");
+  ($var, my $ccc_src_file) = &getHtmlVar($query, "ccc_src_file");
+  if ( ($goterm eq 'already curated') || ($goterm eq 'not go curatable') || ($goterm eq 'scrambled sentence') || ($goterm eq 'false positive') ) {
+      push @pgcommands, "INSERT INTO ccc_gene_comp_go VALUES ('$ccc', '$ccc_src_file', '$paps', NULL, NULL, '$goterm', CURRENT_TIMESTAMP);"; }
+    else {
+      for my $count ( 1 .. 3 ) {
+        ($var, my $gene) = &getHtmlVar($query, "gene_$count");
+        ($var, my $component) = &getHtmlVar($query, "component_$count");
+        unless ( ($goterm eq 'already curated') || ($goterm eq 'not go curatable') || ($goterm eq 'scrambled sentence') || ($goterm eq 'false positive') ) {
+          ($var, $goterm) = &getHtmlVar($query, "goterm_$count");
+          ($var, my $new_goterm) = &getHtmlVar($query, "new_goterm_$count");
+          if ($new_goterm) { $goterm = $new_goterm; &addTerm($component, $new_goterm); } }
+    
+#         print "Gene $gene Component $component GO_term $goterm Paper-Sentence $paps SentenceID $ccc<BR>\n";
+        if ($goterm) {
+          unless ( ($goterm eq 'already curated') || ($goterm eq 'not go curatable') || ($goterm eq 'scrambled sentence') || ($goterm eq 'false positive') ) {
+            unless ($gene) { print "<FONT COLOR=red>ERROR $goterm has no gene</FONT><BR>\n"; $badData++; } 
+            unless ($component) { print "<FONT COLOR=red>ERROR $goterm has no component</FONT><BR>\n"; $badData++; } 
+            unless ($badData) { 
+              &addToGo($gene, $paps, $goterm);
+              push @pgcommands, "INSERT INTO ccc_gene_comp_go VALUES ('$ccc', '$src_file_name', '$paps', '$gene', '$component', '$goterm', CURRENT_TIMESTAMP);"; } }
+        }
+      } } # for my $count ( 1 .. 3 ) # else
+  ($var, my $comment) = &getHtmlVar($query, "comment");
+  if ($comment) { push @pgcommands, "INSERT INTO ccc_comment VALUES ('$ccc', '$comment', CURRENT_TIMESTAMP);"; }
+    
+  if ($badData) { print "<FONT COLOR=red>Click BACK, fix the bad data, and resubmit</FONT><P><P>\n"; return; }
+    else {
+      foreach my $pgcommand (@pgcommands) {
+        my $result = $conn->exec( "$pgcommand" );
+        print "<FONT COLOR='green'>$pgcommand</FONT><BR>\n"; } }
+  print "<P>\n";
+} # sub newEntry
+
+
+sub newEntry {	# obsolete 2013 11 14
+#   my $goterm = shift;
+  print "You've entered stuff : <BR>\n";
+  my $badData = 0; my @pgcommands;
+  my ($var, my $paps) = &getHtmlVar($query, "paps");
+  ($var, my $box_count) = &getHtmlVar($query, "box_count");
+
+  for my $box ( 1 .. $box_count ) {
+    ($var, my $sentid) = &getHtmlVar($query, "sentid_$box");
+# print "BOX $box S $sentid E<BR>\n";
+
+    ($var, my $comment) = &getHtmlVar($query, "comment");
+    if ($comment) { push @pgcommands, "INSERT INTO ccc_comment VALUES ('$sentid', '$comment', CURRENT_TIMESTAMP);"; }
+
+    ($var, my $ccc_src_file) = &getHtmlVar($query, "ccc_src_file");
+    ($var, my $goterm) = &getHtmlVar($query, "curate_radio_$box");
+#     if ( ($goterm eq 'already curated') || ($goterm eq 'not go curatable') || ($goterm eq 'scrambled sentence') || ($goterm eq 'false positive') ) # require already curated to have protein and component  for Kimberly  2009 05 21
+    if ( ($goterm eq 'not go curatable') || ($goterm eq 'scrambled sentence') || ($goterm eq 'false positive') ) {
+      push @pgcommands, "INSERT INTO ccc_gene_comp_go VALUES ('$sentid', '$ccc_src_file', '$paps', NULL, NULL, '$goterm', CURRENT_TIMESTAMP);"; }
+    else {
+        ($var, my $gene) = &getHtmlVar($query, "gene_$box");
+        ($var, my $component) = &getHtmlVar($query, "component_$box");
+        unless ( ($goterm eq 'already goterm') || ($goterm eq 'not go curatable') || ($goterm eq 'scrambled sentence') || ($goterm eq 'false positive') ) {
+          ($var, $goterm) = &getHtmlVar($query, "goterm_$box");
+          ($var, my $new_goterm) = &getHtmlVar($query, "new_goterm_$box");
+          if ($new_goterm) { $goterm = $new_goterm; &addTerm($component, $new_goterm); } }
+    
+        print "Gene $gene Component $component GO_term $goterm Paper-Sentence $paps SentenceID $sentid<BR>\n";
+        if ($goterm) {
+#           unless ( ($goterm eq 'already curated') || ($goterm eq 'not go curatable') || ($goterm eq 'scrambled sentence') || ($goterm eq 'false positive') ) # require already curated to have protein and component  for Kimberly  2009 05 21
+          unless ( ($goterm eq 'not go curatable') || ($goterm eq 'scrambled sentence') || ($goterm eq 'false positive') ) {	# already curated to have protein and component  for Kimberly  2009 05 21
+            unless ($gene) { print "<FONT COLOR=red>ERROR $goterm has no gene</FONT><BR>\n"; $badData++; } 
+            unless ($component) { print "<FONT COLOR=red>ERROR $goterm has no component</FONT><BR>\n"; $badData++; } 
+            unless ($badData) { 
+              ($var, my $add_to_go) = &getHtmlVar($query, "add_to_go_$box");
+#               if ($add_to_go eq 'checked') { &addToGoCGI($gene, $paps, $goterm); }
+              if ($add_to_go eq 'checked') { &addToGoPhenote($gene, $paps, $goterm); }
+              push @pgcommands, "INSERT INTO ccc_gene_comp_go VALUES ('$sentid', '$ccc_src_file', '$paps', '$gene', '$component', '$goterm', CURRENT_TIMESTAMP);"; } }
+        }
+      } } # for my $box ( 1 .. $box_count )
+    
+  if ($badData) { print "<FONT COLOR=red>Click BACK, fix the bad data, and resubmit</FONT><P><P>\n"; return; }
+    else {
+      foreach my $pgcommand (@pgcommands) {
+        $result = $dbh->prepare( "$pgcommand" );
+        $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+        print "<FONT COLOR='green'>$pgcommand</FONT><BR>\n"; } }
+  print "<P>\n";
+} # sub newEntry
+
+sub addTerm {
+  my ($component, $goterm) = @_;
+  unless ($comp_index{$component}{$goterm}) {
+    print "<FONT COLOR='blue'>Adding</FONT> new <FONT COLOR='orange'>$goterm</FONT> - <FONT COLOR='brown'>$component</FONT> relationship to index<BR>\n";
+    $result = $dbh->do( "INSERT INTO ccc_component_go_index VALUES ('$component', '$goterm');" ); }
+} # sub addTerm
+
+sub addToGoCGI {
+  my ($gene, $paps, $goterm) = @_;
+#   my ($pap) = $paps =~ m/P (WBPaper\d+) S/;
+  my ($pap) = $paps =~ m/name=(WBPaper\d+);class=Paper/;
+  my $time = &getPgDate();
+  $gene = lc($gene);		# now using proteins, so need to lc to get locus 2007 08 07
+  $result = $dbh->prepare( "SELECT * FROM got_locus WHERE got_locus = '$gene'; ");
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+  my @row = $result->fetchrow;
+  if ($row[0]) {		# entry exists, append to it
+      my $joinkey = $row[0];
+      my %filter_hash;
+      $result = $dbh->prepare( "SELECT * FROM got_cell_goid WHERE joinkey = '$joinkey' ORDER BY got_timestamp;" );
+      $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+      while (my @row = $result->fetchrow) {
+        if ($row[2]) { $filter_hash{$row[1]} = $row[2]; }
+          else { delete $filter_hash{$row[1]}; } }
+      my @vals = sort {$a<=>$b} keys %filter_hash;
+      my $high_count = pop @vals;
+      my $order = $high_count + 1;
+      $result = $dbh->prepare( "SELECT * FROM got_goterm WHERE got_goterm = '$goterm';" );
+      $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+      @row = $result->fetchrow;
+      unless ($row[0]) { print "<FONT COLOR=red>ERROR $goterm is not a valid GO term</FONT>."; die "$goterm is not a valid GO term : $!"; }
+      my $goid = $row[0];
+      my @pgcommands = ();
+      my $pgcommand = "INSERT INTO got_cell_goterm VALUES ('$joinkey', '$order', '$goterm')";
+      push @pgcommands, $pgcommand;
+      $pgcommand = "INSERT INTO got_cell_goid VALUES ('$joinkey', '$order', '$goid')";
+      push @pgcommands, $pgcommand;
+      $pgcommand = "INSERT INTO got_cell_paper_evidence VALUES ('$joinkey', '$order', '$pap')";
+      push @pgcommands, $pgcommand;
+      $pgcommand = "INSERT INTO got_cell_curator_evidence VALUES ('$joinkey', '$order', 'Kimberly Van Auken')";
+      push @pgcommands, $pgcommand;
+      $pgcommand = "INSERT INTO got_cell_goinference VALUES ('$joinkey', '$order', 'IDA')";
+      push @pgcommands, $pgcommand;
+      $pgcommand = "INSERT INTO got_cell_dbtype VALUES ('$joinkey', '$order', 'protein')";
+      push @pgcommands, $pgcommand;
+      $pgcommand = "INSERT INTO got_cell_lastupdate VALUES ('$joinkey', '$order', '$time')";
+      push @pgcommands, $pgcommand;
+      foreach my $pgcommand (@pgcommands) {
+        $result = $dbh->prepare( $pgcommand );
+        $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+        print "<FONT COLOR=green>$pgcommand</FONT><BR>\n"; } }
+    else { print "<FONT SIZE=+2 COLOR=red>$gene has not been curated for GO curation</FONT>, please <A HREF=\"http://tazendra.caltech.edu/~postgres/cgi-bin/go_curation.cgi?action=Query+locus+%21&html_value_main_locus=$gene\" TARGET=new>curate for go</A>.<BR>\n"; }
+} # sub addToGoCGI
+
+sub addToGoPhenote {
+  my ($locus, $paps, $goterm) = @_;
+#   my ($pap) = $paps =~ m/P (WBPaper\d+) S/;
+#   my ($pap) = $paps =~ m/name=(WBPaper\d+);class=Paper/;
+  my ($pap) = $paps =~ m/(WBPaper\d+)/;
+  my $time = &getPgDate();
+  $locus = lc($locus);		# now using proteins, so need to lc to get locus 2007 08 07
+  my $wbgene = '';
+  $result = $dbh->prepare( "SELECT * FROM gin_locus WHERE gin_locus = '$locus';" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+  my @row = $result->fetchrow; if ($row[0]) { $wbgene = $row[0]; }
+  unless ($wbgene) { 
+    $result = $dbh->prepare( "SELECT * FROM gin_synonyms WHERE gin_synonyms = '$locus';" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    my @row = $result->fetchrow; if ($row[0]) { $wbgene = $row[0]; } }
+  unless ($wbgene) { print "<FONT COLOR=red>ERROR $locus has no WBGene match.  No data entered into go phenote tables.</FONT><BR>\n"; return; }
+
+  my $joinkey = 0;
+  $result = $dbh->prepare( "SELECT * FROM gop_wbgene ;" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+  while (my @row = $result->fetchrow) { if ($row[0] > $joinkey) { $joinkey = $row[0]; } }
+  $joinkey++;
+#   $result = $dbh->prepare( "SELECT * FROM got_goterm WHERE got_goterm = '$goterm';" );
+  $result = $dbh->prepare( "SELECT * FROM obo_name_goid WHERE obo_name_goid = '$goterm';" );	# look at new obo tables for valid terms 2011 06 14
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+  @row = $result->fetchrow;
+  unless ($row[0]) { print "<FONT COLOR=red>ERROR $goterm is not a valid GO term</FONT>."; die "$goterm is not a valid GO term : $!"; }
+  my $goid = $row[0];
+  my @pgcommands = ();
+  my $pgcommand = "INSERT INTO gop_goid VALUES ('$joinkey', '$goid')";
+  push @pgcommands, $pgcommand;
+  $pgcommand = "INSERT INTO gop_paper VALUES ('$joinkey', '$pap')";
+  push @pgcommands, $pgcommand;
+  $pgcommand = "INSERT INTO gop_wbgene VALUES ('$joinkey', 'WBGene$wbgene')";
+  push @pgcommands, $pgcommand;
+  $pgcommand = "INSERT INTO gop_goontology VALUES ('$joinkey', 'cell')";
+  push @pgcommands, $pgcommand;
+  $pgcommand = "INSERT INTO gop_curator VALUES ('$joinkey', 'WBPerson1843')";
+  push @pgcommands, $pgcommand;
+  $pgcommand = "INSERT INTO gop_goinference VALUES ('$joinkey', 'IDA')";
+  push @pgcommands, $pgcommand;
+  $pgcommand = "INSERT INTO gop_dbtype VALUES ('$joinkey', 'protein')";
+  push @pgcommands, $pgcommand;
+  $pgcommand = "INSERT INTO gop_lastupdate VALUES ('$joinkey', '$time')";
+  push @pgcommands, $pgcommand;
+  $pgcommand = "INSERT INTO gop_goid_hst VALUES ('$joinkey', '$goid')";
+  push @pgcommands, $pgcommand;
+  $pgcommand = "INSERT INTO gop_paper_hst VALUES ('$joinkey', '$pap')";
+  push @pgcommands, $pgcommand;
+  $pgcommand = "INSERT INTO gop_wbgene_hst VALUES ('$joinkey', 'WBGene$wbgene')";
+  push @pgcommands, $pgcommand;
+  $pgcommand = "INSERT INTO gop_goontology_hst VALUES ('$joinkey', 'cell')";
+  push @pgcommands, $pgcommand;
+  $pgcommand = "INSERT INTO gop_curator_hst VALUES ('$joinkey', 'WBPerson1843')";
+  push @pgcommands, $pgcommand;
+  $pgcommand = "INSERT INTO gop_goinference_hst VALUES ('$joinkey', 'IDA')";
+  push @pgcommands, $pgcommand;
+  $pgcommand = "INSERT INTO gop_dbtype_hst VALUES ('$joinkey', 'protein')";
+  push @pgcommands, $pgcommand;
+  $pgcommand = "INSERT INTO gop_lastupdate_hst VALUES ('$joinkey', '$time')";
+  push @pgcommands, $pgcommand;
+  foreach my $pgcommand (@pgcommands) {
+    print "<FONT COLOR=green>$pgcommand</FONT><BR>\n";
+    $result = $dbh->prepare( $pgcommand );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; }
+} # sub addToGoPhenote
+
+sub newReadSentence {
+  my ($line, $box) = @_;
+  my ($junk, $src_file, $sentid, $paps, $genes, $components, $text, $badProt, $badComp) = split/\t/, $line;
+
+#   my ($src_file, $line_count, $genes, $components, $text) = split/\t/, $line;
+#   my ($paps) = $line_count =~ m/(WBPaper\d+)/;
+# print "S $src_file LINE $sentid PAPS $paps GENES $genes COMPONENTS $components TEXT $text E<BR>\n";
+  my (@genes) = split/, /, $genes;
+  my (@components) = split/, /, $components;
+  my %goTerms;
+  foreach my $comp (@components) {
+    if ($comp_index{$comp}) { foreach my $goterm (keys %{ $comp_index{$comp}}) { $goTerms{$goterm}++; } } }
+
+  $text =~ s/<protein_celegans>(.*?)<\/protein_celegans>/<FONT COLOR='blue'>$1<\/FONT>/g;
+  $text =~ s/<genes_arabidopsis>(.*?)<\/genes_arabidopsis>/<FONT COLOR='blue'>$1<\/FONT>/g;
+  $text =~ s/<localization_cell_components_082208>(.*?)<\/localization_cell_components_082208>/<FONT COLOR='brown'>$1<\/FONT>/g;
+  $text =~ s/<localization_verbs_082208>(.*?)<\/localization_verbs_082208>/<FONT COLOR='green'>$1<\/FONT>/g;
+  $text =~ s/<localization_other_082208>(.*?)<\/localization_other_082208>/<FONT COLOR='orange'>$1<\/FONT>/g;
+  $text =~ s/<localization_experimental_082208>(.*?)<\/localization_experimental_082208>/<FONT COLOR='orange'>$1<\/FONT>/g;
+
+  print "<TR>\n";
+  print "<TD><SELECT NAME=\"gene_$box\" SIZE=12>\n";
+  print "      <OPTION> </OPTION>\n";
+  foreach (@genes) { print "      <OPTION>$_</OPTION>\n"; }
+  print "    </SELECT></TD>\n ";
+
+  print "<TD><SELECT NAME=\"component_$box\" SIZE=12>\n";
+  print "      <OPTION > </OPTION>\n";
+  foreach (@components) { print "      <OPTION>$_</OPTION>\n"; }
+  print "    </SELECT></TD>\n ";
+
+  print "<TD><INPUT NAME=\"new_goterm_$box\" SIZE=30><BR><SELECT NAME=\"goterm_$box\" SIZE=10>\n";
+  foreach (sort keys %goTerms) { print "      <OPTION>$_</OPTION>\n"; }
+  print "    </SELECT></TD>\n ";
+
+
+  my $paps_link = $paps;
+  if ($paps_link =~ m/WBPaper\d{8}/) { $paps_link =~ s/(WBPaper\d{8})/<A HREF=http:\/\/dev.wormbase.org\/db\/misc\/paper?name=$1;class=Paper TARGET=new>$1<\/A>/g; }			# link paper to dev.wormbase  2007 08 14
+  print "<TD>curate<INPUT TYPE=radio NAME=\"curate_radio_$box\" VALUE=\"curate\">&nbsp;&nbsp;";
+  print "already curated<INPUT TYPE=radio NAME=\"curate_radio_$box\" VALUE=\"already curated\">&nbsp;&nbsp;";
+  print "scrambled sentence<INPUT TYPE=radio NAME=\"curate_radio_$box\" VALUE=\"scrambled sentence\">&nbsp;&nbsp;<BR>";
+  print "false positive<INPUT TYPE=radio NAME=\"curate_radio_$box\" VALUE=\"false positive\">&nbsp;&nbsp;";
+  print "not go curatable<INPUT TYPE=radio NAME=\"curate_radio_$box\" VALUE=\"not go curatable\">&nbsp;&nbsp;<BR>";
+  print "Add To Go : <INPUT NAME=\"add_to_go_$box\" TYPE=CHECKBOX VALUE=\"checked\"><BR>\n";
+  print "SentenceID $sentid -- $paps_link<BR>$text<br /><span style=\"color:red\">already done : $badProt $badComp</span></TD>\n";
+  print "<INPUT TYPE=HIDDEN NAME=\"sentid_$box\" VALUE=\"$sentid\">\n";
+  print "<INPUT TYPE=HIDDEN NAME=paps VALUE=\"$paps\">\n";
+  print "<INPUT TYPE=HIDDEN NAME=ccc_src_file VALUE=\"$src_file\">\n";
+  print "</TR>\n";
+} # sub newReadSentence
+
+sub readSentence {
+  my ($sentence, $line, $count) = @_;
+  $sentence++;
+#   print "SENT $sentence SENT<BR>\n";
+#   my ($src_file, $line_count, $paps, $genes, $components, $text) = split/\t/, $line;
+  my ($src_file, $line_count, $genes, $components, $text) = split/\t/, $line;
+  my ($paps) = $line_count =~ m/(WBPaper\d+)/;
+print "S $src_file LINE $line_count PAPS $paps GENES $genes COMPONENTS $components TEXT $text E<BR>\n";
+#   unless ($line_count == $sentence) { print "<FONT COLOR='red'>ERROR between sentence count in line read $sentence and sentence ID $line_count.</FONT><BR>\n"; }
+  my (@genes) = split/, /, $genes;
+  my (@components) = split/, /, $components;
+  my %goTerms;
+  foreach my $comp (@components) {
+    if ($comp_index{$comp}) { foreach my $goterm (keys %{ $comp_index{$comp}}) { $goTerms{$goterm}++; } } }
+
+  $text =~ s/<protein_celegans>(.*?)<\/protein_celegans>/<FONT COLOR='blue'>$1<\/FONT>/g;
+  $text =~ s/<genes_arabidopsis>(.*?)<\/genes_arabidopsis>/<FONT COLOR='blue'>$1<\/FONT>/g;
+  $text =~ s/<localization_cell_components_012607>(.*?)<\/localization_cell_components_012607>/<FONT COLOR='brown'>$1<\/FONT>/g;
+  $text =~ s/<localization_verbs_012607>(.*?)<\/localization_verbs_012607>/<FONT COLOR='green'>$1<\/FONT>/g;
+  $text =~ s/<localization_other_012607>(.*?)<\/localization_other_012607>/<FONT COLOR='orange'>$1<\/FONT>/g;
+  $text =~ s/<localization_experimental_082208>(.*?)<\/localization_experimental_082208>/<FONT COLOR='orange'>$1<\/FONT>/g;
+
+  print "<TR>\n";
+  print "<TD><SELECT NAME=\"gene_$count\" SIZE=12>\n";
+  print "      <OPTION> </OPTION>\n";
+  foreach (@genes) { print "      <OPTION>$_</OPTION>\n"; }
+  print "    </SELECT></TD>\n ";
+
+  print "<TD><SELECT NAME=\"component_$count\" SIZE=12>\n";
+  print "      <OPTION > </OPTION>\n";
+  foreach (@components) { print "      <OPTION>$_</OPTION>\n"; }
+  print "    </SELECT></TD>\n ";
+
+  print "<TD><INPUT NAME=\"new_goterm_$count\" SIZE=30><BR><SELECT NAME=\"goterm_$count\" SIZE=10>\n";
+  foreach (sort keys %goTerms) { print "      <OPTION>$_</OPTION>\n"; }
+  print "    </SELECT></TD>\n ";
+
+  if ($paps =~ m/WBPaper\d{8}/) { $paps =~ s/(WBPaper\d{8})/<A HREF=http:\/\/dev.wormbase.org\/db\/misc\/paper?name=$1;class=Paper TARGET=new>$1<\/A>/g; }			# link paper to dev.wormbase  2007 08 14
+  print "<TD>SentenceID $sentence -- $paps<BR><BR>$text</TD>\n";
+  print "<INPUT TYPE=HIDDEN NAME=ccc VALUE=\"$sentence\">\n";
+  print "<INPUT TYPE=HIDDEN NAME=paps VALUE=\"$paps\">\n";
+  print "<INPUT TYPE=HIDDEN NAME=ccc_src_file VALUE=\"$src_file\">\n";
+  print "</TR>\n";
+} # sub readSentence
+

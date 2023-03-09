@@ -1,0 +1,60 @@
+echo  "\n\n2_pt_data.cgi"
+diff  2_pt_data.cgi			~/public_html/cgi-bin/forms/2_pt_data.cgi			
+echo  "\n\nallele.cgi"
+diff  allele.cgi                        ~/public_html/cgi-bin/forms/allele.cgi
+echo  "\n\nauthor.cgi"
+diff  author.cgi                        ~/public_html/cgi-bin/forms/author.cgi
+echo  "\n\nbreakpoint.cgi"
+diff  breakpoint.cgi                    ~/public_html/cgi-bin/forms/breakpoint.cgi
+echo  "\n\ncategories_ontology.cgi"
+diff  categories_ontology.cgi           ~/public_html/cgi-bin/forms/categories_ontology.cgi
+echo  "\n\nconfirm_paper.cgi"
+diff  confirm_paper.cgi                 ~/public_html/cgi-bin/forms/confirm_paper.cgi
+echo  "\n\ndf_dp.cgi"
+diff  df_dp.cgi                         ~/public_html/cgi-bin/forms/df_dp.cgi
+echo  "\n\nfirst_pass.cgi"
+diff  first_pass.cgi                    ~/public_html/cgi-bin/forms/first_pass.cgi
+echo  "\n\ngene_name.cgi"
+diff  gene_name.cgi                     ~/public_html/cgi-bin/forms/gene_name.cgi
+echo  "\n\ngeneric.cgi"
+diff  generic.cgi                       ~/public_html/cgi-bin/forms/generic.cgi
+echo  "\n\ngene_rtv.cgi"
+diff  gene_rtv.cgi                      ~/public_html/cgi-bin/forms/gene_rtv.cgi
+echo  "\n\ngo_gene.cgi"
+diff  go_gene.cgi                       ~/public_html/cgi-bin/forms/go_gene.cgi
+echo  "\n\nip.cgi"
+diff  ip.cgi                            ~/public_html/cgi-bin/forms/ip.cgi
+echo  "\n\nmeeting_abstracts.cgi"
+diff  meeting_abstracts.cgi             ~/public_html/cgi-bin/forms/meeting_abstracts.cgi
+echo  "\n\nmulti_pt.cgi"
+diff  multi_pt.cgi                      ~/public_html/cgi-bin/forms/multi_pt.cgi
+echo  "\n\npaper_display.cgi"
+diff  paper_display.cgi                 ~/public_html/cgi-bin/forms/paper_display.cgi
+echo  "\n\nperson.cgi"
+diff  person.cgi                        ~/public_html/cgi-bin/forms/person.cgi
+echo  "\n\nperson_lineage.cgi"
+diff  person_lineage.cgi                ~/public_html/cgi-bin/forms/person_lineage.cgi
+echo  "\n\nperson_name.cgi"
+diff  person_name.cgi                   ~/public_html/cgi-bin/forms/person_name.cgi
+echo  "\n\nperson_name_withAce.cgi"
+diff  person_name_withAce.cgi           ~/public_html/cgi-bin/forms/person_name_withAce.cgi
+echo  "\n\nphenotype_ontology_obo.cgi"
+diff  phenotype_ontology_obo.cgi        ~/public_html/cgi-bin/forms/phenotype_ontology_obo.cgi
+echo  "\n\npmid_wo_pdf.cgi"
+diff  pmid_wo_pdf.cgi                   ~/public_html/cgi-bin/forms/pmid_wo_pdf.cgi
+echo  "\n\nrearrangement.cgi"
+diff  rearrangement.cgi                 ~/public_html/cgi-bin/forms/rearrangement.cgi
+echo  "\n\nrnai.cgi"
+diff  rnai.cgi                          ~/public_html/cgi-bin/forms/rnai.cgi
+echo  "\n\ntransgene.cgi"
+diff  transgene.cgi                     ~/public_html/cgi-bin/forms/transgene.cgi
+echo  "\n\nuniprot.cgi"
+diff  uniprot.cgi                       ~/public_html/cgi-bin/forms/uniprot.cgi
+echo  "\n\nwild_isolate.cgi"
+diff  wild_isolate.cgi                  ~/public_html/cgi-bin/forms/wild_isolate.cgi
+echo  "\n\nwormbook_comment.cgi"
+diff  wormbook_comment.cgi              ~/public_html/cgi-bin/forms/wormbook_comment.cgi
+echo  "\n\nwpa_xref_backwards.cgi"
+diff  wpa_xref_backwards.cgi            ~/public_html/cgi-bin/forms/wpa_xref_backwards.cgi
+echo  "\n\nwpa_xref.cgi"
+diff  wpa_xref.cgi                      ~/public_html/cgi-bin/forms/wpa_xref.cgi
