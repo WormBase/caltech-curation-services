@@ -1,0 +1,112 @@
+<HTML>
+  <HEAD><TITLE>Trying JavaScript Form</TITLE></HEAD>
+  <BODY>
+    <form name "everything">
+      <TABLE border = "border" cellpadding="5">
+        <TR>
+          <TD>Username<BR>[1]<input type="text" name="username" size="15"></TD>
+          <TD>Password<BR>[2]<input type="password" name="password" size="15"></TD>
+          <TD rowspan="4">Input Events[3]<BR>
+            <textarea name="textarea" rows="20" cols="28">bob</textarea></TD>
+          <TD rowspan="4" align="center" valign="center">
+            [9]<INPUT TYPE="button" value="Clear" name="clearbutton"><BR>
+            [10]<INPUT TYPE="submit" value="Submit" name="submitbutton"><BR>
+            [11]<INPUT TYPE="reset" value="Reset" name="resetbutton"><BR></TD>
+        </TR>
+        <TR>
+          <TD colspan="2">
+            Filename : [4]<INPUT TYPE="file" name="file" size="15"></TD>
+        </TR>
+        <TR>
+          <TD>My Computer Peripherals :<BR>
+            [5]<INPUT TYPE="checkbox" name="peripherals" value="modem">56k Modem<BR>
+            [5]<INPUT TYPE="checkbox" name="peripherals" value="printer">Printer<BR>
+            [5]<INPUT TYPE="checkbox" name="peripherals" value="tape">Tape Backup<BR></TD>
+          <TD>My Web Browser :<BR>
+            [6]<INPUT TYPE="radio" name="browser" value="nn">Netscape<BR>
+            [6]<INPUT TYPE="radio" name="browser" value="ie">Internet Explorer<BR>
+            [6]<INPUT TYPE="radio" name="browser" value="other">Other<BR></TD>
+        </TR>
+        <TR>
+          <TD>My hobbies : [7]<BR>
+            <select multiple="multiple" name="hobbies" size="4">
+              <option VALUE="programming">Code</option>
+              <option VALUE="surfing">Browse</option>
+              <option VALUE="caffine">Yuck</option>
+              <option VALUE="annoying">Yuck II</option>
+            </select></TD>
+          <TD align="center" valign="center">Fav Color :<br>[8]
+            <SELECT NAME="color">
+              <OPTION VALUE="red">Red</OPTION>		<OPTION VALUE="green">Green</OPTION>
+              <OPTION VALUE="blue">Blue</OPTION>	<OPTION VALUE="white">White</OPTION>
+              <OPTION VALUE="violet">Violet</OPTION>	<OPTION VALUE="black">Black</OPTION>
+            </SELECT></TD>
+        </TR>
+      </TABLE>
+    </form>
+
+    <DIV ALIGN="center">
+      <TABLE border="4" bgcolor="pink" cellspacing="1" cellpadding="4">
+        <TR>
+          <TD ALIGN="center"><B>Form Elements</B></TD>
+          <TD>[1] Text</TD> <TD>[2] Password</TD> <TD>[3] Textarea</TD>
+          <TD>[4] FileUpload</TD> <TD>[5] Checkbox</TD>
+        </TR>
+        <TR>
+          <TD>[6] Radio</TD> <TD>[7] Select (list)</TD>
+          <TD>[8] Select (menu)</TD> <TD>[9] Button</TD>
+          <TD>[10] Submit</TD> <TD>[11] Reset</TD>
+        </TR>
+      </TABLE>
+    </DIV>
+
+    <script language="JavaScript">
+    function report(element, event) {
+//      element.form.textarea.value = element.form.textarea.value + 'moo';
+      var elmtname = element.name;
+//      element.form.username.value = element.type;
+      if ((element.type == "select-one") || (element.type == "select-multiple")) {
+        value = " ";
+        for(var i = 0; i < element.options.length; i++) {
+          if (element.options[i].selected) {
+            value += element.options[i].value + " ";
+          }
+        }
+      } 
+      else if (element.type == "textarea") { value = "..."; }
+      else { value = element.value; }
+
+      element.form.username.value = 'cow';
+      var msg = event + ": " + elmtname + ' (' + value + ')\n';
+//      this.form.username.value = 'moo';
+//      this.form.textarea.value = this.form.textarea.value + msg;
+      var t = element.form.textarea;
+      t.value = t.value + msg;
+    }
+
+    function addhandlers(f) {
+      for (var i = 0; i < f.elements.length; i++) {
+        var e = f.elements[i];
+        e.onclick = function() { report(this, 'Click'); }
+        e.onchange = function() { report(this, 'Change'); }
+//        e.onchange = function() { this.form.username.value='odd'; report(this, 'Change'); }
+        e.onfocus = function() { report(this, 'Focus'); }
+        e.onblue = function() { report(this, 'Blur'); }
+        e.onselect = function() { report(this, 'Select'); }
+      }
+      f.clearbutton.onclick = function() {
+        this.form.textarea.value='shoo'; report(this,'Click');
+      }
+      f.submitbutton.onclick = function() {
+        report(this,'Click'); return false;
+      }
+      f.resetbutton.onclick = function() {
+        this.form.reset(); report(this,'Click'); return false;
+      }
+    }
+    
+    addhandlers(document.forms[0]);
+    </script>
+
+  </BODY>
+</HTML>

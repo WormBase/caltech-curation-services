@@ -1,0 +1,5 @@
+http://s.ytimg.com/yt/js/base_all_with_bidi-vfl79923.js
+off of 
+http://www.youtube.com/watch?v=x6H-w9Rm46o&feature=PlayList&p=79184D14F872B80D&index=2&playnext=3&playnext_from=PL
+
+<a id="watch-video-desc-toggle-more" href="#" class="eLink" onClick="togglePanel(ref('watch-video-details')); togglePanel(ref('watch-video-details-toggle')); urchinTracker('/Events/VideoWatch/VideoDescMoreInfo'); return false;">more info</a>

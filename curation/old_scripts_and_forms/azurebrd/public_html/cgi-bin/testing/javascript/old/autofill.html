@@ -1,0 +1,39 @@
+<!--
+Author: Badrinath Chebbi
+Date  : 02-14-02
+Note:   This page displays the effect of autofill feature for a select box simulator using Input text box.
+        It works well only on Internet Explorer only.nETSCAPE6 HAS SOME MINOR PROBLEMS. It doesnt work on Netscape4.
+-->		
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+<head>
+	<title>Autofilling drop down</title>
+	<style type="text/css">
+	.insidedropdown {font-size:12px;font-family:times,serif;font-weight:normal;}
+	</style>
+	<script src="autofilldropdown.js"></script>
+</head>
+
+<body onload="init()">
+<form>
+<div style="position:absolute;top:45" class="insidedropdown">Type in the first character of any month in the box above.</div>
+<table border="0" cellspacing="0" cellpadding="0">
+		<tr>
+		<td><input id="testinput" value="Enter text here" onKeyUp="autofill(this.value,event)" style="padding-left:5px;background-color:#dcf0fc;" onclick="javascript:this.select();" ></input>
+</td>
+		<td><img src="downarrow.gif" onClick="builddropdown()"></td>
+		</td>
+		</tr>
+		<tr>
+		<td>
+		    <div id="dropdowndiv" style="padding:5px;height:120px;overflow-y:scroll;border-style:inset;position:absolute;display:none;background-color:#dcf0fc;"></div>
+		</td>
+		</td>
+		<td></td>
+		</tr>
+</table>
+
+</form>
+</body>
+</html>

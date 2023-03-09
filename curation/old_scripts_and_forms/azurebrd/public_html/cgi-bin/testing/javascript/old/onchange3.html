@@ -1,0 +1,206 @@
+<html><head><title>onchange</title></head><body bgcolor="white">
+<form name ="loandata">
+<table>
+  <tr><td colspan="3"><b>enter loan info :</b></td></tr>
+  <tr>
+    <td>1</td>
+    <td>amount of the loan</td>
+    <td><input type="text" name="principal" size="12" onchange="calculate();"></td>
+  </tr>
+  <tr>
+    <td>2</td>
+    <td>apr of the loan</td>
+<!--
+    <td><input type="text" name="interest" size="12" onchange="calculate();"></td>
+  -->
+<!--
+    <td>My Web Browser :<br>
+      <INPUT TYPE="radio" name="interest" value="arf" onclick="calculate();">1<br>
+      <INPUT TYPE="radio" name="interest" value="bark" onclick="calculate();">2<br>
+      <INPUT TYPE="radio" name="interest" value="moo" onclick="calculate();">3<br></td>
+  -->
+    <td><SELECT name="interest" size="1" onclick="report(this);">
+      <option value="1">1</option>
+      <option value="2">2</option>
+      <option value="3">3</option>
+      <option value="4">4</option></td>
+  </tr>
+  <tr>
+    <td>3</td>
+    <td>repayment period in years</td>
+    <td><input type="text" name="years" size="12" onchange="calculate();"></td>
+  </tr>
+  <tr><td colspan="3">
+    <input type="button" value="Compute" onclick="calculate();"></td>
+  </tr>
+  <tr><td colspan="3">
+    <b>payment info :</b></td>
+  </tr>
+  <tr>
+    <td>4</td>
+    <td>monthly payment :</td>
+    <td><input type="text" name="payment" size="12"></td>
+  </tr>
+  <tr>
+    <td>5</td>
+    <td>total payment will be :</td>
+    <td><input type="text" name="total" size="12"></td>
+  </tr>
+  <tr>
+   <td>6</td>
+   <td>your total interest payments will be :</td>
+   <td><input type="text" name="totalinterest" size="12"></td>
+  </tr>
+  <tr>
+    <td>7</td>
+    <td>value of stuff</td>
+    <td><SELECT name="delta" size="1" onclick="report(this);">
+      <option value="1">bark</option>
+      <option value="2">mooo</option>
+      <option value="3">peeg</option>
+      <option value="4">meow</option></td>
+  </tr>
+</table>
+</form>
+
+<script language="JavaScript">
+
+function dynoMenu(txt, val) {
+  this.txt = txt;
+  this.val = val;
+  this.sub = new Array();
+}
+
+mymenu = new dynoMenu(null, null);
+mymenu.sub[0] = new dynoMenu("Guys", null);
+mymenu.sub[0].sub[0] = new dynoMenu("Dog", null);
+mymenu.sub[0].sub[1] = new dynoMenu("Cow", null);
+mymenu.sub[0].sub[2] = new dynoMenu("Pig", null);
+mymenu.sub[0].sub[3] = new dynoMenu("Cat", null);
+mymenu.sub[1] = new dynoMenu("Food", null);
+mymenu.sub[1].sub[0] = new dynoMenu("Chocolate", null);
+mymenu.sub[1].sub[1] = new dynoMenu("Gummy", null);
+mymenu.sub[1].sub[2] = new dynoMenu("Kit Kat", null);
+
+function setmenu(m, optArray) {
+  options = m.options;
+  clearmenu(m);
+  if (optArray != null) {
+    for (var i = 0; i < optArray.length; i++) {
+      options[i+1] = new Option(optArray[i].txt, optArray[i].val);
+    }
+  }
+  options[0].selected = true;
+}
+
+function clearmenu(m) {
+  options = m.options;
+  for (var i = options.length; i >= 1; i--) {
+    options[i] = null;
+  }
+  options[0].selected = true;
+}
+
+function setitems(N) {
+  document.forms[1].option[0].value = "BOO";
+  clr = false;
+  if (N < depth - 1) {
+    mmm = mymenu;
+    for (i = 0; i <= N; i++) {
+      set = eval ("document.forms[1].m" + i);
+      selinx = sel.selectedIndex - 1;
+      if (selinx < 0) { break; }
+      mmm = mmm.sub[selinx];
+    }
+    sel = eval ("document.forms[1].m" + (i));
+    setmenu(sel, mmm.sub);
+    options[2] = new Option("BOO", "boo");
+    i++;
+    while (i < depth) {
+      sel = eval ("document.forms[1].m" + (i));
+      clearmenu(sel);
+      i++;
+    }
+  }
+  
+  sel = eval("document.forms[1].m" + N);
+  selinx = sel.selectedIndex;
+  if (selinx > 0) {
+    urrl = sel.options[selinx].value;
+    if (urrl != 'null') {
+      element.form.payment.value = urrl;
+    }
+  }
+}
+
+var depth = 2;
+
+document.writeln("<FORM name='mm'>");
+for(i=0;i<depth;i++) {
+  document.writeln("<SELECT name='m"+i+"' onChange='setitems("+i+")'>");
+  for(j=0;j<5;j++) { document.writeln("<option >----Please, select-----"); }
+  document.writeln("</select>");
+}
+document.writeln("</form>");
+setitems(0,0);
+
+function report(element) {
+  element.form.totalinterest.value = element.form.total.value + 'moo';
+  if ( element.type == "select-one" ) {
+    element.form.total.value = "bob";
+    value = " ";
+    for (var i = 0; i < element.options.length; i++) {
+      if (element.options[i].selected) {
+        value += element.options[i].value + " ";
+        element.form.payment.value = value;
+        element.form.delta[value - 1].selected = true;
+      }
+    }
+  } else { value = document.forms[0].value; }
+} // function report(element)
+
+function calculate() {
+//  document.loandata.total.value = "yes";
+  if ( document.forms[0].type == "select-one" ) {
+  document.loandata.total.value = "bob";
+    value = " ";
+    for (var i = 0; i < document.forms[0].options.length; i++) {
+      if (document.forms[0].options[i].selected) {
+        value += document.forms[0].options[i].value + " ";
+  document.loandata.total.value = value;
+      }
+    }
+  } else { value = document.forms[0].value; }
+  document.forms[0].payment.value = value;
+  document.loandata.totalinterest.value = "no";
+//  document.forms[0].payment.value = document.forms[0].interest[1].value;
+
+  var principal = document.loandata.principal.value;
+  var interest = document.loandata.interest.value / 100 / 12;
+  var payments = document.loandata.years.value * 12;
+
+
+  var x = Math.pow(1 + interest, payments);
+  var monthly = (principal * x * interest) / (x-1);
+
+  if ( !isNaN(monthly) &&
+      (monthly != Number.POSITIVE_INFINITY) &&
+      (monthly != Number.NEGATIVE_INFINITY) ) {
+//         document.loandata.payment.value = round(monthly);
+//         document.loandata.total.value = round(monthly * payments);
+//         document.loandata.totalinterest.value = round((monthly * payments) - principal);
+  }
+  else {
+//     document.loandata.payment.value = "1";
+//     document.loandata.total.value = "1";
+//     document.loandata.totalinterest.value = "1";
+  }
+}
+
+function round(x) { return Math.round(x*100)/100; }
+</script>
+</body>
+</html>
+
+
+

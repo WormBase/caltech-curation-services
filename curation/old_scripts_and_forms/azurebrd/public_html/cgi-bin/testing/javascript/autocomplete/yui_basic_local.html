@@ -1,0 +1,164 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+
+
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+<title>Basic Local Data</title>
+
+<style type="text/css">
+/*margin and padding on body element
+  can introduce errors in determining
+  element position and are not recommended;
+  we turn them off as a foundation for YUI
+  CSS treatments. */
+body {
+	margin:0;
+	padding:0;
+}
+</style>
+
+<!-- extra fonts <link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/2.7.0/build/fonts/fonts-min.css" />-->
+<link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/2.7.0/build/autocomplete/assets/skins/sam/autocomplete.css" />
+<script type="text/javascript" src="http://yui.yahooapis.com/2.7.0/build/yahoo-dom-event/yahoo-dom-event.js"></script>
+
+<!-- this makes it slower <script type="text/javascript" src="http://yui.yahooapis.com/2.7.0/build/animation/animation-min.js"></script>-->
+<script type="text/javascript" src="http://yui.yahooapis.com/2.7.0/build/datasource/datasource-min.js"></script>
+<script type="text/javascript" src="http://yui.yahooapis.com/2.7.0/build/autocomplete/autocomplete-min.js"></script>
+
+
+<!--begin custom header content for this example-->
+<style type="text/css">
+#myAutoComplete {
+    width:15em; /* set width here or else widget will expand to fit its container */
+    padding-bottom:2em;
+}
+</style>
+<!--end custom header content for this example-->
+
+</head>
+
+
+<body class="yui-skin-sam">
+
+
+<h1>Basic Local Data</h1>
+
+<div class="exampleIntro">
+	<p>This AutoComplete implementation points to a JavaScript array that is available in-memory, allowing for a zippy user interaction without the need for a server-side component. Enabling the <code>prehighlightClassName</code> and <code>useShadow</code> features, as well as pulling in the Animation utility, provides an ehanced visual user experience.</p>
+			
+
+</div>
+
+
+<h3>Enter a state:</h3>
+<div id="myAutoComplete">
+	<input id="myInput" type="text">
+	<div id="myContainer"></div>
+</div>
+
+<script type="text/javascript" src="assets/js/data.js"></script>
+<script type="text/javascript">
+// YAHOO.example.BasicRemote = function() { 
+//     // Use an XHRDataSource 
+// //     var oDS = new YAHOO.util.XHRDataSource("http://developer.yahoo.com/yui/examples/autocomplete/assets/php/ysearch_flat.php"); 
+//     var oDS = new YAHOO.util.XHRDataSource("http://tazendra.caltech.edu/~azurebrd/cgi-bin/testing/javascript/ajax/gethint.cgi"); 
+//     // Set the responseType 
+//     oDS.responseType = YAHOO.util.XHRDataSource.TYPE_TEXT; 
+//     // Define the schema of the delimited results 
+//     oDS.responseSchema = { 
+//         recordDelim: "\n", 
+//         fieldDelim: "\t" 
+//     }; 
+//     // Enable caching 
+//     oDS.maxCacheEntries = 5; 
+//  
+//     // Instantiate the AutoComplete 
+//     var oAC = new YAHOO.widget.AutoComplete("myInput", "myContainer", oDS); 
+//      
+//     return { 
+//         oDS: oDS, 
+//         oAC: oAC 
+//     }; 
+// }(); 
+
+YAHOO.example.Data = {
+   arrayStates: [ 
+     "Alabama", 
+     "Alaska", 
+     "Arizona", 
+     "Arkansas", 
+     "California", 
+     "Colorado", 
+     "Connecticut", 
+     "Delaware", 
+     "Florida"
+   ] 
+}; 
+
+YAHOO.example.BasicLocal = function() {
+    // Use a LocalDataSource
+    var oDS = new YAHOO.util.LocalDataSource(YAHOO.example.Data.arrayStates);
+    // Optional to define fields for single-dimensional array
+    oDS.responseSchema = {fields : ["state"]};
+
+    // Instantiate the AutoComplete
+    var oAC = new YAHOO.widget.AutoComplete("myInput", "myContainer", oDS);
+    oAC.prehighlightClassName = "yui-ac-prehighlight";
+    oAC.useShadow = true;
+    
+    return {
+        oDS: oDS,
+        oAC: oAC
+    };
+}();
+</script>
+
+</body>
+</html>
+
+
+
+
+<!--  from gethint.js
+function GetXmlHttpObject() {
+    var xmlHttp=null;
+    try {               // Firefox, Opera 8.0+, Safari
+       xmlHttp=new XMLHttpRequest();
+    }
+    catch (e) {         // Internet Explorer
+        try { xmlHttp=new ActiveXObject("Msxml2.XMLHTTP"); }
+        catch (e) { xmlHttp=new ActiveXObject("Microsoft.XMLHTTP"); }
+    }
+    return xmlHttp;
+}
+
+function stateChanged() {
+    if (xmlHttp.readyState==4) {
+        document.getElementById("txtHint").innerHTML=xmlHttp.responseText;
+    }
+}
+
+function showHint(text) {
+    if (text.length==0) {
+        document.getElementById("txtHint").innerHTML="";
+        return;
+    }
+    xmlHttp=GetXmlHttpObject();
+    if (xmlHttp==null) {
+        alert ("Your browser does not support AJAX!");
+        return;
+    }
+    var words = text.split(/\s/);
+    var str = words.pop();
+//     var url="gethint.php";
+    var url="gethint.cgi";
+    url=url+"?q="+str;
+    url=url+"&all="+text;
+    url=url+"&sid="+Math.random();
+    xmlHttp.onreadystatechange=stateChanged;
+    xmlHttp.open("GET",url,true);
+    xmlHttp.send(null);
+}
+-->
+

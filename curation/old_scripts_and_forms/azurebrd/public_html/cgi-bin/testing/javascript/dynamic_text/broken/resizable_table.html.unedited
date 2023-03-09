@@ -1,0 +1,159 @@
+<!--
+  http://www.activewidgets.com/examples/grid/v2basic.htm
+  -->
+
+
+<html>
+<head>
+	<title>ActiveWidgets Grid :: Examples</title>
+	<style>
+		body, html {margin:0px; padding: 0px; overflow: hidden;border:none}
+		.line, .line2 {
+			color: #009;
+			font-family: Tahoma, MS Sans Serif, helvetica;
+			font-weight: bold;
+			font-size: 11px;
+			margin-bottom: 5px;
+		}
+
+		.line2 {
+			font-weight: normal;
+		}
+
+		.loading {
+			width:400px;
+			height:20px;
+			background:url(../../runtime/styles/xp/loading.gif) no-repeat;
+		}
+	</style>
+
+	<!-- grid data -->
+	<script>
+		var myData = [
+			["MSFT","Microsoft Corporation", "314,571.156", "32,187.000", "55000"],
+			["ORCL", "Oracle Corporation", "62,615.266", "9,519.000", "40650"],
+			["SAP", "SAP AG (ADR)", "40,986.328", "8,296.420", "28961"],
+			["CA", "Computer Associates Inter", "15,606.335", "3,164.000", "16000"],
+			["ERTS", "Electronic Arts Inc.", "14,490.895", "2,503.727", "4000"],
+			["SFTBF", "Softbank Corp. (ADR)", "14,485.840", ".000", "6865"],
+			["VRTS", "Veritas Software Corp.", "14,444.272", "1,578.658", "5647"],
+			["SYMC", "Symantec Corporation", "9,932.483", "1,482.029", "4300"],
+			["INFY", "Infosys Technologies Ltd.", "9,763.851", "830.748", "15400"],
+			["INTU", "Intuit Inc.", "9,702.477", "1,650.743", "6700"],
+			["ADBE", "Adobe Systems Incorporate", "9,533.050", "1,230.817", "3341"],
+			["PSFT", "PeopleSoft, Inc.", "8,246.467", "1,941.167", "8180"],
+			["SEBL", "Siebel Systems, Inc.", "5,434.649", "1,417.952", "5909"],
+			["BEAS", "BEA Systems, Inc.", "5,111.813", "965.694", "3063"],
+			["SNPS", "Synopsys, Inc.", "4,482.535", "1,169.786", "4254"],
+			["CHKP", "Check Point Software Tech", "4,396.853", "424.769", "1203"],
+			["MERQ", "Mercury Interactive Corp.", "4,325.488", "444.063", "1822"],
+			["DOX", "Amdocs Limited", "4,288.017", "1,427.088", "9400"],
+			["CTXS", "Citrix Systems, Inc.", "3,946.485", "554.222", "1670"],
+			["KNM", "Konami Corporation (ADR)", "3,710.784", ".000", "4313"]
+		];
+
+		var myColumns = [
+			"Ticker", "Company Name", "Market Cap.", "$ Sales", "Employees"
+		];
+	</script>
+</head>
+<body>
+<div id="box" style="height:100%;width:100%;">
+	<div style="padding:0px 50px">
+		<div class="line">&nbsp;</div>
+		<div class="line2">Loading grid demo...</div>
+		<div class="loading"></div>
+	</div>
+</div>
+
+	<!-- ActiveWidgets stylesheet and scripts -->
+	<!--<link href="../../runtime/styles/xp/grid.css" rel="stylesheet" type="text/css" ></link>-->
+	<!--<script src="../../runtime/lib/grid.js"></script>-->
+	<link href="grid.css" rel="stylesheet" type="text/css" ></link>
+	<script src="grid.js"></script>
+
+	<!-- grid format -->
+	<style>
+		.active-controls-grid {height: 100%; font: menu;}
+
+		.active-column-0 {width:  80px;}
+		.active-column-1 {width: 200px; }
+		.active-column-2 {text-align: right;  color: #009}
+		.active-column-3 {text-align: right;}
+		.active-column-4 {text-align: right;}
+
+		.active-grid-column {border-right: 1px solid threedlightshadow;}
+		.active-grid-row {border-bottom: 1px solid threedlightshadow;}
+
+		.active-templates-row.gecko {
+			 display: -moz-box;
+			 width: auto;
+			 min-width: 100%;
+		}
+
+		.active-row-highlight {background-color: #ddeeff!important}
+		.active-row-highlight .active-row-cell {background-color: #ddeeff;}
+
+		.active-mark-true .active-column-2 {color: #f00}
+
+	</style>
+
+	<script>
+
+try {
+
+	//	create ActiveWidgets Grid javascript object
+	var obj = new Active.Controls.Grid;
+
+	//	set number of rows/columns
+	obj.setRowProperty("count", 20);
+	obj.setColumnProperty("count", 5);
+
+	//	provide cells and headers text
+	obj.setDataProperty("text", function(i, j){return myData[i][j]});
+	obj.setColumnProperty("text", function(i){return myColumns[i]});
+
+	//	set headers width/height
+	obj.setRowHeaderWidth("28px");
+	obj.setColumnHeaderHeight("20px");
+
+	obj.setSelectionMultiple(true);
+
+	var alternate = function(){
+	    return this.getProperty("row/order") % 2 ? "#fcfaf6" : "#ffffff";
+	  }
+
+	var mark = function(){
+		var i = this.getProperty("row/index");
+		return (i==2 || i==4 || i==5) ? true : false;
+	  }
+
+	var row = new Active.Templates.Row;
+	row.setStyle("background", alternate);
+	row.setClass("mark", mark);
+	row.setEvent("onmouseover", "mouseover(this, 'active-row-highlight')");
+	row.setEvent("onmouseout", "mouseout(this, 'active-row-highlight')");
+	obj.setTemplate("row", row);
+
+	//	set click action handler
+	obj.setAction("click", function(src){window.status = src.getItemProperty("text")});
+
+	//	write grid html to the page
+
+	window.setTimeout(function(){
+		try {
+			document.getElementById("box").innerHTML = obj;
+		}
+		catch(e){
+		}
+	}, 100);
+
+//	document.write(obj);
+
+}
+catch(e){
+}
+
+	</script>
+</body>
+</html>

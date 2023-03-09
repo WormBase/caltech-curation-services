@@ -1,0 +1,105 @@
+<html>
+<body>
+
+<script language="JavaScript1.1">
+
+function dynoMenu(txt,url) {
+  this.txt=txt;
+  this.url=url;
+  this.sub=new Array();
+}
+
+//---==+0+==--- USER DEFINABLE SECTION ---==+0+==---
+
+mymenu  = new dynoMenu(null,null);
+mymenu.sub[0] = new dynoMenu("Cows", null);
+mymenu.sub[0].sub[0] = new dynoMenu("Moo", null);
+mymenu.sub[0].sub[0].sub[0] = new dynoMenu("Ride", "ride");
+mymenu.sub[0].sub[0].sub[1] = new dynoMenu("Dance", "dance");
+mymenu.sub[0].sub[1] = new dynoMenu("Wanda", null);
+mymenu.sub[0].sub[1].sub[0] = new dynoMenu("Stare","stare");
+mymenu.sub[0].sub[1].sub[1] = new dynoMenu("Sit","sit");
+
+mymenu.sub[1] = new dynoMenu("Guys",null);
+mymenu.sub[1].sub[0] = new dynoMenu("Sheep", null);
+mymenu.sub[1].sub[0].sub[0] = new dynoMenu("Fly"," fly");
+mymenu.sub[1].sub[0].sub[1] = new dynoMenu("Poke"," poke");
+mymenu.sub[1].sub[1] = new dynoMenu("Shark", null);
+mymenu.sub[1].sub[1].sub[0] = new dynoMenu("Munch", "munch");
+mymenu.sub[1].sub[1].sub[1] = new dynoMenu("Swim", "swim");
+
+//---==+0+==---END OF USER DEFINABLE SECTION ---==+0+==---
+
+function clearmenu(m) {
+  options  = m.options;
+  for (var i=options.length; i>=1; i--) options[i] = null;  
+  options[0].selected = true;
+}
+
+function setmenu(m,optArray) {
+  options  = m.options;
+  clearmenu(m);
+  if(optArray!=null) {
+  for (var i = 0; i < optArray.length; i++)
+    options[i+1]=new Option(optArray[i].txt, optArray[i].url);
+    document.forms[0].thingie.value += options[i+1] + ' ';
+  }
+  options[0].selected = true;
+}
+
+function setitems(N) {
+  clr=false;
+  if(N<depth-1) {
+    mmm = mymenu;
+    for(i=0;i<=N;i++) {
+      sel = eval("document.mm.m"+i);
+      selinx = sel.selectedIndex-1;
+    document.forms[0].doohey.value = sel.selectedIndex;
+      if(selinx<0) break;
+      mmm=mmm.sub[selinx];
+    }
+    sel = eval("document.mm.m"+(i));
+    setmenu(sel,mmm.sub);
+//     options[2] = new Option("BOO", "boo");
+//     document.forms[0].thingie.value += 'boo ';
+    i++;
+    while(i<depth) {
+      sel = eval("document.mm.m"+(i));
+      clearmenu(sel);
+      i++;
+    }
+  }
+
+  sel = eval("document.mm.m"+N);
+  selinx = sel.selectedIndex;
+  if(selinx>0) {
+    urrl=sel.options[selinx].value;
+    if(urrl!='null')
+    document.forms[0].thingie.value = urrl;
+//    openwin(urrl);
+  }
+}
+
+
+function openwin(url)
+{if(url!=null) window.open(url,"_blank");}
+
+var depth=3;
+var d=document;
+
+
+d.writeln("<FORM name='mm'>");
+for(i=0;i<depth;i++) {
+  d.writeln("<SELECT name='m"+i+"' onChange='setitems("+i+")'>");
+  for(j=0;j<5;j++) d.writeln("<option >----Please, select-----");
+  d.writeln("</select>");
+}
+d.writeln("<br><input type='text' name='thingie' size='50' onchange='setitems(1);'>");
+d.writeln("<br><input type='text' name='doohey' size='50' onchange='setitems(1);'>");
+d.writeln("</form>");
+setitems(0,0);
+</script>
+
+
+</body>
+</html>

@@ -1,0 +1,1382 @@
+/* hiding 1x1pixel from being visible to avoid placement issues*/
+.noAd
+{
+	display:none;
+}
+/* ------------------------------------------------------- */
+/* burl mini toolbar (fully collapsed bar) */
+/* ------------------------------------------------------- */
+#burlMiniToolbar, #burlFullContainer {
+	min-width: 960px;
+}
+#burlFullContainer {
+	min-width: 1016px;
+}
+/* mini container */
+#burlMiniToolbar {
+	position: relative; /* needs to be relative to contain all inner absolute elements */
+	z-index: 60;
+	height: 24px;
+	overflow: hidden;
+}
+/* for padding or other nested div features */
+#burlMiniToolbarSupport {
+}
+/* left cap */
+#burlIcon {
+	position: absolute;
+	display: block;
+	height: 24px;
+	width: 26px;
+	z-index: 110;
+}
+/* search bar container */
+#searchbar {
+	position: absolute;
+	top: 0;
+	left: 26px;
+	height: 24px;
+	width: 160px;
+	z-index: 105;
+}
+/* actual input field */
+#searchText {
+	position: absolute;
+	top: 5px;
+	left: 2px;
+	height: 14px;
+	width: 140px;
+	border: none;
+	font-size: 11px;
+	background: transparent;
+}
+/* hidden submit button */
+#hiddenSubmit {
+	display: none;
+}
+/* expand/collapse/close buttons */
+#toolbarControls {
+	position: absolute;
+	top: 0;
+	right: 0;
+	z-index: 100;
+}
+#toolbarControls img {
+	cursor: pointer;
+}
+#collapseIcon,
+#expandIcon {
+	display: none;
+}
+/* digg/stumbleupon/reddit link tools container */
+#linkTools {
+	position: absolute;
+	top: 2px;
+	right: 100px;
+	height: 24px;
+	z-index: 80;
+}
+
+#linkToolsInternal {
+	height: 24px;
+	width:90px;
+}
+
+#linkTools img,
+#linkToolsInternal img {
+	margin: 0 2px;
+}
+
+/* Partner Logo in burl page */
+.burlPartnerLogo
+{
+	float:right;
+	margin-top:4px;
+}
+.burlPartnerLogo_v2 img
+{
+	vertical-align: middle;
+	margin-left: 10px;
+}
+
+/* Browse menu section */
+#ddtopmenubar {
+	position: absolute;
+	right: 47px;
+	height: 24px;
+	z-index: 80;
+	width:45px;
+}
+
+#ddtopmenubar ul {
+	margin-top:4px;
+}
+
+
+
+
+/* media duration time and source */
+#secondaryData {
+	position: absolute;
+	top: 0;
+	right: 250px;
+	height: 24px;
+	z-index: 96;
+}
+#secondaryData p {
+	height: 24px;
+	color: #ffffff;
+	display: inline;
+	font-size: 11px;
+	margin-left: 25px; /* so the title and the secondary data don't run together */
+}
+/* put spacing between duration and source (this rule scales) */
+#secondaryData p + p {
+	margin-left: 1em;
+}
+/* title header */
+#burlMiniToolbar h1 {
+	position: absolute;
+	top: 0;
+	left: 208px;
+	color: #ffffff;
+	font-size: 11px;
+	line-height: 2em;
+	height: 24px;
+	overflow: hidden;
+	z-index: 90;
+}
+
+
+/* ------------------------------------------------------- */
+/* burl full toolbar (expandable bar) */
+/* ------------------------------------------------------- */
+/* collapsible container, wraps both primary content and the collapse bar */
+#burlFullContainer {
+	/*position: relative;*/
+	z-index: 50;
+	height: 200px;
+	overflow: hidden;
+	overflow: visible;
+	position: absolute;
+	top: -300px;
+}
+/* primary content container, includes both breadcrumbs and main content */
+#burlFullToolbar {
+	background-color: #fefefe;
+	height: 184px; /* full toolbar (200px) - collapse bar (16px) = primary content container (184px) */
+}
+/* for padding or other nested div features */
+#burlFullToolbarSupport {
+}
+/* breadcrumbs */
+#breadcrumbs {
+	height: 18px;
+	padding: 0 25px;
+	list-style: none;
+	font-weight: bold;
+	font-size: 10px;
+	color: #959494;
+	min-width: 100%;
+}
+#breadcrumbs li {
+	display: inline;
+	line-height: 1.5em;
+}
+#breadcrumbs li a,
+#breadcrumbs li a:link,
+#breadcrumbs li a:visited {
+	text-decoration: none;
+	color: #959494;
+}
+#breadcrumbs li a:hover,
+#breadcrumbs li a:active {
+	color: #333333;
+}
+/* separators between breadcrumb elements */
+.chevron {
+	position: relative;
+	top: -1px;
+	color: #333333;
+	margin: 0 8px;
+}
+/* main content container */
+#contentContainer {
+	/*position: relative; /* needs to be relative to contain all inner absolute elements */
+	padding: 0 25px;
+}
+
+
+/* ------------------------------------------------------- */
+/* share this */
+/* ------------------------------------------------------- */
+.stico_rotate {
+	position: relative;
+}
+a.stbutton {
+	color: #ffffff;
+	text-decoration: none;
+	font-size: 12px;
+}
+#linkToolsInternal a.stbutton {
+	color: #363636;
+}
+#burlMiniToolbar {background: url('http://cdn.blinkx.com/images/blinkx3/images/toolbarMini_bg.jpg') repeat-x;}
+#searchbar {background: url('http://cdn.blinkx.com/images/blinkx3/images/toolbarMini_search.jpg') top left no-repeat;}
+#secondaryData {background: url('http://cdn.blinkx.com/images/blinkx3/images/toolbarMini_bg.jpg') repeat-x;}
+#burlMiniToolbar h1 {background: url('http://cdn.blinkx.com/images/blinkx3/images/toolbarMini_bg.jpg') repeat-x;}
+#breadcrumbs {background: url('http://cdn.blinkx.com/images/blinkx3/images/breadcrumb_bg.jpg') repeat-x;}
+ul.tabNav li a {background: url('http://cdn.blinkx.com/images/blinkx3/images/categorytabs_img.jpg') top left no-repeat;}
+#tabTranscription {background: url('http://cdn.blinkx.com/images/blinkx3/images/transcriptionTab_img.jpg') top left no-repeat;}
+.tabs {background: url('http://cdn.blinkx.com/images/blinkx3/images/tabSection_bg.jpg') repeat-x;}
+.tiledTranscriptionTab {background: url('http://cdn.blinkx.com/images/blinkx3/images/tabSection_bg_large.jpg') repeat-x;}
+.prev span {background: url('http://cdn.blinkx.com/images/blinkx3/images/prevButton_img.jpg') top no-repeat;}
+.next span {background: url('http://cdn.blinkx.com/images/blinkx3/images/nextButton_img.jpg') top no-repeat;}
+#relatedVideos li a:hover,#popularVideos li a:hover,#relatedCategories li a:hover {background: url('http://cdn.blinkx.com/images/blinkx3/images/tabSectionHighlightedThumb_img.jpg') top left no-repeat;}
+#burlCollapseBar {background: url('http://cdn.blinkx.com/images/blinkx3/images/collapseBar_bg.jpg') bottom repeat-x;}
+.additional_links_brazil {background: url('http://cdn.blinkx.com/images/blinkx3/images/brazil/burl-button-bg.gif') top left no-repeat}/* ------------------------------------------------------- */
+/* starting point */
+/* ------------------------------------------------------- */
+body { font-size: 100%; font-family: Helvetica, Arial, sans-serif; }
+* { margin: 0; padding: 0; }
+img { border: none; }
+.clearFloat { clear: both; }
+
+/* ------------------------------------------------------- */
+/* something */
+/* ------------------------------------------------------- */
+body {
+	background: #747e84;
+}
+/* going to hold the bg ad, if any */
+#bodyContainer {
+	background-repeat: no-repeat;
+	background-position: top center;
+
+}
+#realBodyContainer {
+	width: 994px;
+	margin: auto;
+	background-color: #ffffff;
+	overflow: hidden;
+}
+/* ------------------------------------------------------- */
+/* page header */
+/* ------------------------------------------------------- */
+#headerContainer {
+	position: relative;
+	margin-bottom: 10px;
+}
+#blinkxLogo {
+	display: block;
+	margin-top: 5px;
+	margin-left: 20px;
+}
+.logoSubheader {
+	font-weight: bold;
+	font-size: 14px;
+	margin-top: 10px;
+	margin-left: 20px;
+}
+.logoDescription {
+	color: #666666;
+	font-size: 16pt;
+	margin-left: 20px;
+	width: 200px;
+
+}
+#adBanner_header {
+	display: block;
+	width: 727px;
+	height: 90px;
+	position: absolute;
+	top: 5px;
+	right: 20px;
+}
+/* ------------------------------------------------------- */
+/* searchbar */
+/* ------------------------------------------------------- */
+/*
+#searchbar {
+	position: relative;
+	border: 1px solid #cccccc;
+	height: 51px;
+	margin: 0 20px;
+	margin-bottom: 14px;
+	overflow: hidden;
+}
+#searchbar h1 {
+	font-family: Trebuchet MS, Arial, Helvetica, sans-serif;
+	font-size: 20px;
+	font-weight: normal;
+	position: absolute;
+	top: 12px;
+	left: 5px;
+}
+#searchbar form {
+	position: absolute;
+	top: 12px;
+	left: 450px;
+	left: 470px;
+}
+#id_searchtext {
+	width: 240px;
+	width: 220px;
+	height: 18px;
+	font-family: Verdana, Arial, Helvetica, sans-serif;
+}
+#hiddenSubmit {
+	display: none;
+}
+#searchform_go {
+	position: absolute;
+	top: 14px;
+	left: 700px;
+}
+#searchform_wallit {
+	position: absolute;
+	top: 14px;
+	left: 760px;
+}
+#safeSearchLink {
+	position: absolute;
+	top: 10px;
+	left: 849px;
+}
+#advancedLink {
+	position: absolute;
+	top: 26px;
+	left: 849px;
+}
+.searchBarAdvancedLink {
+	color: #E8790D;
+	text-decoration: none;
+	font-family: Verdana, Arial, Helvetica, sans-serif;
+	font-size: 11px;
+}
+*/
+/* ------------------------------------------------------- */
+/* navigation links */
+/* ------------------------------------------------------- */
+.backToLink {
+	margin: 0px 20px;
+	font-size: 12px;
+	margin-top: 20px;
+}
+.backToLink a {
+	color: #333333;
+	display: block;
+	width: 84px;
+	height: 31px;
+	/*float: left;*/
+	text-indent: -9999px;
+	/*display: inline;*/
+}
+.backToLink a:hover,
+.backToLink a:active {
+	color: #336699;
+	background-position: 0px -31px;
+}
+
+/* ------------------------------------------------------- */
+/* tv show breadcrumb */
+/* ------------------------------------------------------- */
+.tvShowBreadcrumbs {
+	font-size: 12px;
+	color: #666666;
+}
+.tvShowBreadcrumbs .tvShowBreadcrumbs_seperator {}
+.tvShowBreadcrumbs .tvShowBreadcrumbs_value {
+	margin-right: 10px;
+}
+
+/* ------------------------------------------------------- */
+/* content containers (columns) */
+/* ------------------------------------------------------- */
+#primaryContentContainer {
+	float: left;
+	/*width: 634px;*/
+	width: 646px;
+	margin: 20px 0px 20px 14px;
+	overflow: hidden;
+	display: inline; /* double-margin IE6 float bug! */
+}
+#secondaryContentContainer {
+	float: right;
+	width: 310px;
+	margin: 20px 20px 20px 0px;
+	overflow: hidden;
+}
+
+/* ------------------------------------------------------- */
+/* show details */
+/* ------------------------------------------------------- */
+#showContainer {}
+#showContainerTopCap {
+	height: 13px;
+}
+#showContainerBottomCap {
+	height: 13px;
+}
+#showContainerSupport {
+	padding: 0px 20px 20px;
+}
+/* show title */
+#showContainer h2 {}
+/* watch now link */
+.watchNow {
+	margin: 10px 0px 20px 0px;
+}
+.watchNow a {
+	font-size: 12px;
+	color: #666666;
+	text-decoration: none;
+}
+.watchNow a:hover,
+.watchNow a:active {
+	color: #336699;
+	text-decoration: underline;
+}
+/* show static preview */
+.showPreviewImage {
+	float: left;
+	background-color: #ffffff;
+	border: 1px solid #cccccc;
+	padding: 4px;
+	margin: 0px 20px 10px 0px;
+}
+/* show description */
+.showDescription,
+.movieExtraDetails {
+	color: #333333;
+	font-size: 14px;
+	line-height: 1.4em;
+}
+.movieExtraDetails {
+	font-size: 12px;
+}
+.movieExtraDetails a:link, .movieExtraDetails a:visited {
+	color: #666666;
+}
+.movieExtraDetails a:hover, .movieExtraDetails a:active {
+	color: #336699;
+}
+.showDetailsSeparator { /* DEPRECATED for showDetailsHR */
+	height: 1px;
+	background-color: #cccccc;
+	color: #cccccc;
+	margin: 10px 0px;
+	clear: both;
+}
+.showDetailsHR {
+	height:0;
+	line-height:0;
+	font-size: 0;
+	border-width:1px 0 0 0;
+	border-color:#CCCCCC;
+	border-style: solid;
+	color:white;
+	margin: 10px 0 10px 0;
+	clear: both;
+	position:relative;
+}
+#showContainer p.error {
+	color: #d44343;
+	text-align: center;
+	margin: auto;
+}
+.infoLinks {
+	vertical-align:top;
+}
+.infoLinks a {
+	text-decoration: none;
+	color: #666666;
+	margin-right: 8px;
+	font-size: 12px;
+	font-weight: bold;
+}
+.infoLinks a:hover,
+.infoLinks a:active {
+	color: #336699;
+}
+/* ------------------------------------------------------- */
+/* rss link */
+/* ------------------------------------------------------- */
+#moreInfoContainer {
+	position: relative;
+}
+#moreInfoContainer .partnerLogo{
+	float:left;
+	width:69px;
+	height:20px;
+	margin-right:10px;
+	margin-top:0;
+	position:relative;
+	top:0;
+	display:block;
+}
+#moreInfoContainer .partnerLogo a,
+#moreInfoContainer .partnerLogo img {
+	display:block;
+}
+#rssLink {
+	float: right;
+	vertical-align:top;
+}
+#rssLink img {
+	margin-right: 4px;
+}
+#rssLink a {
+	font-size: 12px;
+	text-decoration: none;
+	color: #666666;
+}
+#rssLink a:link,
+#rssLink a:visited {
+}
+#rssLink a:hover,
+#rssLink a:active {
+	text-decoration: underline;
+}
+/* ------------------------------------------------------- */
+/* email updates */
+/* ------------------------------------------------------- */
+#emailUpdatesContainer {
+	position: absolute;
+	top: 28px;
+	right: 0px;
+	background-color: #858585;
+	padding: 8px;
+	display: none;
+}
+#emailUpdatesContainer p {
+	font-size: 12px;
+	color: #ffffff;
+	padding: 4px;
+}
+#emailUpdatesContainer table {
+	font-size: 12px;
+	color: #ffffff;
+}
+#emailUpdatesContainer table th {
+	padding-right: 4px;
+}
+#emailUpdatesContainer .textField {
+	width: 250px;
+}
+#emailUpdatesContainer .submitButton {
+	font-size: 12px;
+}
+#emailUpdates {
+	float: right;
+	margin-right: 10px;
+	height:20px;
+	vertical-align:top;
+}
+#emailUpdates img {
+	margin-right: 4px;
+}
+#emailUpdates a {
+	font-size: 12px;
+	text-decoration: none;
+	color: #666666;
+}
+#emailUpdates a:link,
+#emailUpdates a:visited {
+}
+#emailUpdates a:hover,
+#emailUpdates a:active {
+	text-decoration: underline;
+}
+
+/* ------------------------------------------------------- */
+/* seasons */
+/* ------------------------------------------------------- */
+#seasonsContainer {
+	margin-top: 14px;
+	width: 646px;
+}
+#seasonsContainerSupport {
+	padding: 20px;
+}
+.seasonsRoot {
+	list-style: none;
+}
+.seasonGroup {
+	border-bottom: 1px dashed #cccccc;
+}
+/* h3 element - season header (ex. season 1, season 2, season 3) */
+.season_toggler {
+	color: #333333;
+	font-size: 16px;
+	cursor: pointer;
+	height: 2em; /* IE hasLayout bug */
+}
+.season_toggler a {
+	display: block;
+	padding: 5px 0 5px 5px;
+	color: #333333;
+	text-decoration: none;
+}
+.season_toggler a:hover {
+	color: #336699;
+}
+.updated {
+	color:red;
+	font-weight:normal;
+	font-size:8pt;
+	margin-top:4px;
+	margin-left:5px;
+	margin-right:5px;
+}
+/* arrow image - closed */
+.season_arrow_closed {
+	float: left;
+	width: 10px;
+	height: 11px;
+	margin-top: 3px;
+	margin-right: 10px;
+}
+/* arrow image - open */
+.season_arrow_open {}
+/* opens up to contain: episode togglers, episode toggle elements */
+.season_toggleElement {
+	margin-left: 20px;
+	display: none;
+	padding-bottom: 1px;
+}
+/* opens up to contain: episode togglers, episode toggle elements */
+.season_toggleElement_open {
+	display: block;
+}
+/* remove list bullets on episodes */
+.season_toggleElement ul {
+	list-style: none;
+	margin-bottom: 20px;
+}
+/* episode container (toggler + toggle element), 882px usable width (?) */
+.season_toggleElement li {
+	padding-left: 10px;
+	width: 575px; /* IE hasLayout bugfix */
+}
+/* episode toggler */
+.episode_toggler {
+	padding: 5px 10px 5px 0;
+	background: transparent; /* weird spacing bug */
+	cursor: pointer;
+}
+/* arrow image - closed */
+.arrow_closed {
+	float: left;
+	width: 10px;
+	height: 11px;
+	margin-top: 2px;
+	margin-right: 10px;
+}
+/* arrow image - open */
+.arrow_open {}
+/* episode number (ex: episode 01, episode 02) */
+.episode_toggler h4 {
+	float: left;
+	width: 80px;
+	overflow: hidden;
+	font-size: 12px;
+	color: #333333;
+}
+/* episode title */
+.episode_toggler h3 {
+	float: left;
+	width: 310px;
+	overflow: hidden;
+	font-size: 12px;
+	margin-left: 10px;
+}
+.airdate {
+	float: left;
+	overflow: hidden;
+	font-size: 11px;
+	color: #333333;
+	margin-left: 10px;
+}
+.sourceimage {
+	margin-right: 6px;
+	position: relative;
+	top: 4px;
+}
+.sourcelinks a {
+	margin-right: 6px;
+}
+.duration {
+	float: right;
+	width: 60px;
+	font-size: 12px;
+	color: #333333;
+	overflow: hidden;
+}
+.fromTheWebHeader {
+	font-weight: bold;
+	border-top: 1px solid #cccccc;
+	color: #666666;
+	padding-top: 10px;
+}
+/* contains: media sources for each episode */
+.episode_toggleElement {
+	margin-left: 83px; /* line description text up with episode title */
+	padding: 0px 10px 10px 10px;
+	display: none;
+}
+
+.episode_toggleElement .title {
+	color: #454545;
+	font-weight:bold;
+}
+
+.episode_toggleElement .description {
+	color: #454545;
+	padding-bottom: 10px;
+	line-height: 1.4em;
+	margin-left: 18px;
+}
+/* episode link to source */
+.episode_toggleElement p {
+	font-size: 12px;
+	padding: 5px 0;
+	margin-left: 18px;
+}
+/* episode link to source */
+.episode_toggleElement p a:link,
+.episode_toggleElement p a:visited {
+	color: #333333;
+}
+.episode_toggleElement p a:hover,
+.episode_toggleElement p a:active {
+	color: #666666;
+}
+/* opened episode details */
+.episode_toggleElement_open {
+	display: block;
+}
+
+/* alternating background colors */
+.episodeBackground_o {
+	background: #ededed;
+}
+.episodeBackground_e {
+	background: #ffffff;
+}
+
+.episode_toggleElement_open .airdate_2 {
+	height: 1.4em;
+	overflow: hidden;
+	font-size: 11px;
+	color: #333333;
+	margin-left: 337px;
+}
+
+/* ------------------------------------------------------- */
+/* adverts */
+/* ------------------------------------------------------- */
+#advert_300x250 {
+	background-color: #ffffff;
+	text-align: center;
+	color: #bbbbbb;
+	font-size: 10px;
+	line-height: 1.5em;
+}
+
+#advert_300x500 {
+	background-color: #ffffff;
+	width: 300px;
+	height: 500px;
+	margin-left:10px;
+	margin-bottom:10px;
+}
+/* ------------------------------------------------------- */
+/* footerbar */
+/* ------------------------------------------------------- */
+#footerbar {
+	position: relative;
+	border: 1px solid #cccccc;
+	height: 51px;
+	margin: 14px 20px;
+	overflow: hidden;
+}
+#footerbar ul {
+	position: absolute;
+	top: 14px;
+	left: 10px;
+}
+#footerbar ul li {
+	display: inline;
+}
+#footerbar ul li a:link,
+#footerbar ul li a:visited {
+	text-decoration: none;
+	color: #656565;
+	font-size: 11px;
+	font-family: Verdana, Arial, Helvetica, sans-serif;
+}
+#footerbar ul li a:hover,
+#footerbar ul li a:active {
+	text-decoration: underline;
+}
+#footerbar ul li img {
+	width: 5px;
+	height: 9px;
+	margin: 0 10px;
+}
+#footerbar p {
+	position: absolute;
+	top: 18px;
+	right: 10px;
+	color: #656565;
+	font-size: 11px;
+	font-family: Verdana,Arial,Helvetica,sans-serif;
+}
+
+/* override burl toolbar style */
+#burlMiniToolbar, #burlFullContainer {
+	min-width: none;
+	width: auto;
+}
+
+/* ------------------------------------------------------- */
+/* overlay */
+/* ------------------------------------------------------- */
+#overlay {
+	display: block;
+	position: absolute;
+	left: 0px;
+	top: 0px;
+	width: 100%;
+	height: 100%;
+	z-index: 500;
+	background-color: #000000;
+	filter:alpha(opacity=50);
+	-moz-opacity: 0.5;
+	opacity: 0.5;
+}
+#overlayMessageContainer {
+	display: block;
+	position: absolute;
+	top: 35%;
+	left: 50%;
+	margin-left: -250px;
+	width: 500px;
+	z-index: 510;
+}
+#overlayMessage {
+	padding: 30px;
+	font-family: Helvetica, Arial, san-serif;
+	font-size: 13px;
+	font-weight: bold;
+	color: #666666;
+	position: relative;
+}
+#overlayMessageTopCap {
+	position: absolute;
+	top: 0;
+	left: 0;
+	margin: 0;
+}
+#overlayMessageBottomCap {
+	position: absolute;
+	bottom: 0;
+	left: 0;
+	margin: 0;
+}
+#overlayAlert {
+	float: left;
+}
+#overlayText {
+	text-align: center;
+}
+#overlayText select {
+	color: #666666;
+	font-size: 11px;
+	font-weight: normal;
+}
+
+/* ------------------------------------------------------- */
+/* Show Comments */
+/* ------------------------------------------------------- */
+
+#commentsContainer {
+	margin-top: 14px;
+	width: 646px;
+}
+#commentsContainerSupport {
+	padding: 20px;
+}
+.commentsRoot {
+	list-style: none;
+}
+.commentGroup {
+	border-bottom: 1px dashed #cccccc;
+	padding: 10px 0px;
+}
+.commentsHeader {
+	color: #333333;
+	font-size: 16px;
+	height: 2em; /* IE hasLayout bug */
+}
+
+div.commentNameAndDate
+{
+	float: left;
+	width: 120px;
+}
+
+p.commentName {
+	font-weight: bold;
+	font-size: 10pt;
+	padding-bottom: 5px;
+}
+p.commentDate {
+	font-size: 8pt;
+}
+
+div.commentText {
+	float: left;
+	font-size: 10pt;
+	margin-left: 10px;
+	width: 475px;
+}
+.addCommentLink {
+	padding-top: 10px;
+	text-align: center;
+}
+.addCommentLink a {
+	color: #333333;
+	font-size: 12px;
+}
+#detailedViewSearchbarContainer {
+	margin-left: 20px;
+	height: 62px;
+	position: relative;
+}
+#detailedViewSearchbarTopCap {
+	height: 12px;
+	width: 956px;
+	position: absolute;
+	top: 0;
+}
+#detailedViewSearchbarBottomCap {
+	height: 13px;
+	width: 956px;
+	position: absolute;
+	bottom: 0;
+}
+#detailedViewSearchbarContentWrapper {
+	position: absolute;
+	top: 13px;
+	width: 956px;
+	z-index:150;
+}
+#detailedViewSearchbarContent {
+	position: relative;
+	left: 10px;
+}
+.backToLink_2 {
+	position: absolute;
+	right: 10px;
+	top: 2px;
+}
+.backToLink_2 a {
+	color: #333333;
+	display: block;
+	width: 84px;
+	height: 31px;
+	/*float: left;*/
+	text-indent: -9999px;
+	/*display: inline;*/
+}
+.backToLink_2 a:hover,
+.backToLink_2 a:active {
+	color: #336699;
+	background-position: 0px -31px;
+}
+
+/* ------------------------------------------------------- */
+/* search bar */
+/* ------------------------------------------------------- */
+#showSearchBox {
+	width: 600px;
+	height: 36px;
+	position: relative;
+	margin-bottom: 10px;
+}
+#showSearchBox_alt {
+	width: 590px;
+	height: 36px;
+	position: relative;
+	margin-bottom: 10px;
+}
+#showSearchTextBox {
+	border: 0px none;
+	position: absolute;
+	left: 40px;
+	top: 0pt;
+	width: 493px;
+	height: 36px;
+	font-size: 18px;
+	color: #666666;
+	padding-top: 8px;
+}
+span.sboxLeft {
+	position: absolute;
+	top: 0pt;
+	left: 0pt;
+	width: 40px;
+	height: 36px;
+}
+span.sboxRight {
+	position: absolute;
+	top: 0pt;
+	left: 533px;
+	width: 4px;
+	height: 36px;
+}
+#searchClearBtn {
+	position: absolute;
+	top: 7pt;
+	left: 505px;
+	width: 19px;
+	height: 19px;
+	cursor: pointer;
+	background-color: red;
+}
+#autoCompleteSearchResults {
+	position: absolute;
+	top: 32px;
+	left: 0;
+	width: 537px;
+	z-index: 160;
+}
+#autoCompleteSearchResults ul {
+	list-style: none;
+	border: 2px solid #cccccc;
+}
+#autoCompleteSearchResults ul li {
+	background-color: #ffffff;
+}
+#autoCompleteSearchResults ul li p {
+	font-size: 12px;
+	padding: 4px;
+	color: #666666;
+	width: 525px;
+}
+#autoCompleteSearchResults ul li a {
+	font-size: 12px;
+	text-decoration: none;
+	display: block;
+	padding: 4px;
+	width: 525px;
+}
+#autoCompleteSearchResults ul li .defaultState {
+	color: #666666;
+	background-color: #ffffff;
+}
+#autoCompleteSearchResults ul li .selectedState {
+	color: #ffffff;
+	background-color: #858585;
+}
+
+/* --------------------- */
+/* similar popular shows */
+/* --------------------- */
+#similarAndPopularShowsContainer {
+	width: 300px;
+	margin-left: 10px;
+}
+#similarAndPopularShowsContainer .tabs {
+	width: 100px;
+	height: 20px;
+	color: #ffffff;
+	font-size: 9px;
+	line-height: 19px;
+	text-align: center;
+}
+#similarAndPopularShowsInnerContainer {
+}
+#similarAndPopularShowsInnerContainerSupport {
+	padding: 0px 15px;
+}
+.similarAndPopularShowsColumn {
+	width: 134px;
+}
+.similarAndPopularShowsColumn a {
+	display: block;
+	text-decoration: underline;
+	margin-bottom: 10px;
+	font-size: 12px;
+}
+.similarAndPopularShowsColumn a:link, .similarAndPopularShowsColumn a:visited {
+	color: #666666;
+}
+.similarAndPopularShowsColumn a:hover, .similarAndPopularShowsColumn a:active {
+	color: #336699;
+}
+/* Comments section */
+div#commentsPageNavigator
+{
+	float:right;
+}
+.commentPageNavigator_page,
+.commentPageNavigator_previous,
+.commentPageNavigator_next
+{
+	display:inline;
+	margin-left:4px;
+	color:#333333;
+	font-size:16px;
+	font-weight:bold;
+	height:2em;
+}
+
+#commentFormContainerSupport
+{
+	padding-left:20px;
+	padding-right:20px;
+}
+
+#commentFormContainer_topCap {
+	position: relative;
+	top: 0px;
+	left: 0px;
+	width: 645px;
+	height: 12px;
+}
+#commentFormContainer_bottomCap {
+	position: relative;
+	bottom: 0px;
+	left: 0px;
+	width: 645px;
+	height: 13px;
+}
+
+
+
+
+
+#commentLoginForm
+{
+	text-align: center;
+}
+
+#commentSignupForm
+{
+	text-align: left;
+}
+
+
+#commentFormContainerSupport form input
+{
+	vertical-align: middle;
+	margin:0;
+	padding:0;
+}
+
+#commentFormContainerSupport form p
+{
+	margin-bottom:10px;
+	margin-bottom:10px;
+}
+
+#commentFormContainerSupport p
+{
+	margin-bottom:10px;
+	font-size:12px;
+}
+
+#commentFormContainerSupport span
+{
+	font-size:12px;
+}
+
+#commentFormContainerSupport form span
+{
+	margin-left:15px;
+}
+
+#commentFormContainerSupport form input[type="text"],
+#commentFormContainerSupport form input[type="password"]
+{
+	width:100px;
+	margin-left:5px;
+	margin-right:15px;
+}
+
+.loginButton
+{
+	width:142px;
+	height:40px;
+	line-height: 40px;
+	text-align: left;
+	vertical-align: middle;
+	padding-left:20px;
+	color:white;
+	font-family:Helvetica,Arial,san-serif;
+	font-size:14px;
+	font-weight:bold;
+	margin-left:auto;
+	margin-right:auto;
+}
+
+#signinButton
+{
+	float:left;
+}
+
+#emailHolder,
+#passwordHolder
+{
+	margin-top:10px;
+	float:left;
+}
+
+#commentFormContainerSupport p
+{
+	clear:both;
+}
+
+#commentSignupForm
+{
+	height:170px;
+}
+
+#commentSignupForm div.signupFormLabel
+{
+	float:left;
+	width:180px;
+	text-align: right;
+	margin-top:8px;
+}
+#commentSignupForm input
+{
+	float:left;
+	margin-left:5px;
+	margin-top:8px;
+	clear:right;
+}
+
+#commentSignupForm input[type="text"],
+#commentSignupForm input[type="password"]
+{
+	width:180px;
+}
+
+#commentPostForm
+{
+	position:relative;
+	height:100px;
+}
+
+#commentSignupForm #overlayCancelButton
+{
+	float:left;
+	position:absolute;
+	bottom:15px;
+	left:85px;
+}
+
+#commentSignupForm #overlaySignupButton
+{
+	float:left;
+	position:absolute;
+	bottom:15px;
+	left:245px;
+}
+
+#commentPostForm #logoutButton
+{
+	float:left;
+	position:absolute;
+	bottom:0px;
+	left:85px;
+}
+
+#commentPostForm #postButton
+{
+	float:left;
+	position:absolute;
+	bottom:0px;
+	left:362px;
+}
+
+#successfulRegistrationForm #overlayContinueButton
+{
+	margin-left:auto;
+	margin-right:auto;
+}
+
+textarea#b_comment
+{
+	width:100%;
+	height:50px;
+	overflow: auto;
+}
+
+.clearBoth
+{
+	clear:both;
+}
+
+#showContainerSupport h1,
+#showContainerSupport h2
+{
+	float:left;
+	font-size: 32px;
+}
+#showContainerSupport .watchNow
+{
+	float:left;
+	width:75px;
+	height:21px;
+	margin-left:10px;
+}
+
+#showContainerSupport a.watchNow:hover,
+#showContainerSupport a.watchNow:active {
+	background-position: bottom;
+}
+
+#secondaryContentContainerSupport iframe
+{
+	margin-left:10px;
+	margin-bottom:10px;
+}
+#blinkxLogo {background: url('http://cdn.blinkx.com/images/blinkx3/images/blinkxRemote3D.png') top left no-repeat; width: 200px; height: 90px;}
+#headerSeparator {background: url('http://cdn.blinkx.com/images/blinkx3/images/separator.png') top left no-repeat; width: 994px; height: 60px;}
+#footerbar {background: #f0f0f0 url('http://cdn.blinkx.com/images/tv/bkg_search.jpg') repeat-x;}
+#seasonsContainer {background: url('http://cdn.blinkx.com/images/blinkx3/images/infoListBkg.png') top right no-repeat;}
+#commentsContainer {background: url('http://cdn.blinkx.com/images/blinkx3/images/infoListBkg.png') top right no-repeat;}
+.season_arrow_closed {background: url('http://cdn.blinkx.com/images/blinkx3/images/arrowRight.png') top left no-repeat;}
+.season_arrow_open {background: url('http://cdn.blinkx.com/images/blinkx3/images/arrowDown.png') top left no-repeat;}
+.arrow_closed {background: url('http://cdn.blinkx.com/images/blinkx3/images/arrowRight.png') top left no-repeat;}
+.arrow_open {background: url('http://cdn.blinkx.com/images/blinkx3/images/arrowDown.png') top left no-repeat;}
+.backToLink a {background: url('http://cdn.blinkx.com/images/blinkx3/images/remote/back_to_search.png') top left no-repeat;}
+#overlayMessageContainer {background: #efefef url('http://cdn.blinkx.com/images/blinkx3/images/overlaybkg_middle.png') repeat-y;}
+#overlayMessageTopCap {background: transparent url('http://cdn.blinkx.com/images/blinkx3/images/overlaybkg_top.png') no-repeat top left; width: 500px; height: 15px;}
+#overlayMessageBottomCap {background: transparent url('http://cdn.blinkx.com/images/blinkx3/images/overlaybkg_bottom.png') no-repeat bottom left; width: 500px; height: 15px;}
+#overlayAlert {background: url('http://cdn.blinkx.com/images/blinkx3/images/overlay_alertsymbol.png') no-repeat; width: 97px; height: 88px; margin-right: 20px;}
+#detailedViewSearchbarContainer {background: url('http://cdn.blinkx.com/images/blinkx3/images/filter_bg.jpg') top left repeat-y;}
+#detailedViewSearchbarTopCap {background: url('http://cdn.blinkx.com/images/blinkx3/images/filter_topcap.jpg') top left no-repeat;}
+#detailedViewSearchbarBottomCap {background: url('http://cdn.blinkx.com/images/blinkx3/images/filter_bottomcap.jpg') bottom left no-repeat;}
+#showSearchTextBox {background: transparent url('http://cdn.blinkx.com/images/blinkx3/images/sbox_bg.gif') repeat-x top center scroll;}
+span.sboxLeft {background: transparent url('http://cdn.blinkx.com/images/blinkx3/images/sbox_left.gif') no-repeat top left;}
+span.sboxRight {background: transparent url('http://cdn.blinkx.com/images/blinkx3/images/sbox_right.gif') no-repeat top left;}
+#searchClearBtn {background: transparent url('http://cdn.blinkx.com/images/blinkx3/images/searchClearBtn.gif') no-repeat top right;}
+.backToLink_2 a {background: url('http://cdn.blinkx.com/images/blinkx3/images/remote/back_to_search.png') top left no-repeat;}
+#similarAndPopularShowsInnerContainer {background: #efefef url('http://cdn.blinkx.com/images/blinkx3/images/remote/gradient_middle_300px.png') repeat-y;}
+#similarAndPopularShowsTopCap {background: transparent url('http://cdn.blinkx.com/images/blinkx3/images/remote/gradient_topcap_300px.png') no-repeat top left; width: 300px; height: 15px;}
+#similarAndPopularShowsBottomCap {background: transparent url('http://cdn.blinkx.com/images/blinkx3/images/remote/gradient_bottomcap_300px.png') no-repeat bottom left; width: 300px; height: 15px;}
+#similarAndPopularShowsContainer .tabs {background: url('http://cdn.blinkx.com/images/blinkx3/images/categorytabs_img.jpg') top left no-repeat;}
+.previous_page {background: url('http://cdn.blinkx.com/images/blinkx3/images/arrowRight.png') top left no-repeat;}
+.next_page {background: url('http://cdn.blinkx.com/images/blinkx3/images/arrowRight.png') top left no-repeat;}
+#commentFormContainer {background: url('http://cdn.blinkx.com/images/blinkx3/images/remote/comment_bg.jpg') top left repeat-y;}
+#commentFormContainer_topCap {background: url('http://cdn.blinkx.com/images/blinkx3/images/remote/comment_topcap.jpg') top left no-repeat;}
+#commentFormContainer_bottomCap {background: url('http://cdn.blinkx.com/images/blinkx3/images/remote/comment_bottomcap.jpg') bottom left no-repeat;}
+.loginButton{background: url('http://cdn.blinkx.com/images/blinkx3/images/remote/button.png') top left no-repeat;}
+.watchNow{background: url('http://cdn.blinkx.com/images/blinkx3/images/remote/button_watchnow.png') top left no-repeat;}
+

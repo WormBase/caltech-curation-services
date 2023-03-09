@@ -1,0 +1,74 @@
+#!/usr/bin/perl 
+
+# for ajax calls from curator_first_pass.cgi / curator_first_pass.js to send in data from
+# a textarea (genestudied, genesymbol, structcorr) and get the words that match a 
+# gene / locus / sequence and the corresponding WBGene or Laboratory.  2009 03 19
+#
+# match on lower case word, but return typed word.  2009 03 21
+#
+# changed from Pg.pm to DBI.pm  2009 05 06
+#
+# gin_genesequencelab not being updated, curator FP form not being used.  lab won't work,
+# using gin_locus / synonyms / sequence / wbgene instead.  for wbpaper editor.  2009 11 02
+#
+# added gin_seqname for Kimberly  2011 05 06
+#
+# updated to keep handling gin_ info as 'genestudied' and also gic_ gene comparator info
+# as genecomparator.  for Kimberly.  2022 02 11 
+
+
+use CGI;
+use Jex;
+use DBI;
+
+my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n"; 
+
+
+my $query = new CGI;
+
+print "Content-type: text/html\n\n";
+
+my $oop;
+
+($oop, my $words) = &getHtmlVar($query, 'all');		# all data in textarea
+($oop, my $type) = &getHtmlVar($query, 'type');		# pgtable name 
+# ($oop, my $sid) = &getHtmlVar($query, 'sid');		# random number to prevent browser cache
+
+my @matches;						# results to return
+my @words = split/\s+/, $words;				# array of words from textarea
+
+
+foreach my $word (@words) {				# for each word, query postgres for exact match
+#   print "$word\n";
+  if ($word =~ m/,$/) { $word =~ s/,$//g; }		# strip commas at the end for Karen  2009 07 24
+  my ($lcword) = lc($word);		# words on the table are lowercased for ease of matching
+  if ($lcword =~ m/\'/) { $lcword =~ s/\'/''/g; }
+  my $found = ""; my @tables = qw( gin_wbgene gin_locus gin_synonyms gin_sequence gin_seqname ); my $result = "";
+  if ($type eq 'genecomparator') { @tables = qw( gic_wbgene gic_pubname gic_cds ); }
+  while ( ($found eq "") && (scalar(@tables) > 0) ) {
+    my $table = shift @tables;
+    $result = $dbh->prepare( "SELECT * FROM $table WHERE LOWER($table) = '$lcword';" );
+    $result->execute();
+    my @row = $result->fetchrow;
+    if ($row[0]) { $found = $row[0]; } 			# if a word matched
+  }
+  next unless ($found);
+  if ( ($type eq 'structcorr') || ($type eq 'genecomparator') ) {
+    push @matches, "$word \($found\)"; } 		# structcorr returns lab
+  elsif ( ($type eq 'genestudied') || ($type eq 'genesymbol') ) { 
+    push @matches, "$word \(WBGene$found\)"; }	# genestudied and genesymbol return wbgene
+  else { push @matches, "error on type"; }		# other fields not allowed
+#   my $result = $dbh->prepare( "SELECT * FROM gin_genesequencelab WHERE gin_genesequencelab = '$lcword';" );
+#   if ($row[0]) { 					# if a word matched
+#     if ($type eq 'structcorr') {
+#       push @matches, "$word \($row[2]\)"; } 		# structcorr returns lab
+#     elsif ( ($type eq 'genestudied') || ($type eq 'genesymbol') ) { 
+# print "EH<br>\n";
+#       push @matches, "$word \(WBGene$row[1]\)"; }	# genestudied and genesymbol return wbgene
+#     else { push @matches, "error on type"; }		# other fields not allowed
+#   }
+}
+
+my $matches = join", ", @matches;			# comma separate results
+print "$matches\n";					# return by printing to screen
+

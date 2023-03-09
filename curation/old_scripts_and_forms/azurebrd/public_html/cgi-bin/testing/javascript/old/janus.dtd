@@ -1,0 +1,290 @@
+<!--			JANUS DTD, VERSION 3.1				-->
+<!-- 			Eimear E. Kenny and Hans-Michael Muller		-->
+<!--			08/09/2002					-->
+
+
+<!--		******** DOCUMENT CONTENT MODEL********			-->
+<!-- Document is being parsed by Perl scripts: In each ELEMENT and -->
+<!-- ATTLIST line , leave comments as they are. -->
+
+<!-- ** document root tag ** -->
+
+<!ENTITY commasign       "&#44;">
+<!ENTITY colonsign       "&#58;">
+<!ENTITY roundbracket    "&#40;">
+
+<!ELEMENT	article (sentence+)>
+
+<!--**document parent tag**-->
+
+<!ELEMENT	sentence (organism | drugs | gene | clone | transgene | allele | strain | phenotype | sex | involvement |
+association | cnsort | regulation | effect | itention | localization |method | process | pathway | nmber | negation | pnoun | modality |
+auxiliary | cjunction | punctuation | pposition | determiner | mark | cell | life_stage | component | function | cmparison |
+spatial_relation | characterization | time_relation | entity_feature | nucleic_acid | bracket | action | dscriptor | mutants | text)*>
+<!ATTLIST	sentence id ID #REQUIRED>
+
+
+<!-- ** document children tags ** -->
+
+<!-- # -->
+
+<!ELEMENT       text (#PCDATA)>
+
+<!-- # -->
+
+<!ELEMENT	action (#PCDATA)> <!-- action -->
+<!ATTLIST	action  grammar (FW | JJ | JJR | JJS | NN | NNS | NNP | NNPS | PDT | PRP | RBR | RBS | VB | VBD | VBG | VBN | VBP | VBZ | WDT | WP | WPS) #REQUIRED>
+
+<!-- # -->
+
+<!ELEMENT	allele (#PCDATA)> <!-- allele -->
+<!ATTLIST       allele reference (direct | indirect | unknown) #IMPLIED>
+<!ATTLIST	allele grammar (FW | NN | NNS | NNP | NNPS | PDT | PRP | PRS | RBR | RBS | WDT | WP | WPS) #REQUIRED>
+
+<!-- # -->
+
+<!ELEMENT	association (#PCDATA)> <!-- association -->
+<!ATTLIST	association grammar (FW | JJ | JJR | JJS | NN | NNS | NNP | NNPS | PDT | PRP | RBR | RBS | VB | VBD | VBG | VBN | VBP | VBZ | WDT | WP | WPS) #REQUIRED>
+
+<!-- # -->
+
+<!ELEMENT       auxiliary (#PCDATA)>
+<!ATTLIST       auxiliary grammar (VB | VBD | VBN | VBP | VBZ) #REQUIRED>
+<!ATTLIST       auxiliary type (be | have) #IMPLIED>
+
+<!-- # -->
+
+<!ELEMENT       bracket (#PCDATA)>
+<!ATTLIST       bracket grammar (roundbracket | SYM) #REQUIRED>
+<!ATTLIST       bracket type (so | sc | ro | rc) #IMPLIED>
+
+<!-- # -->
+
+<!ELEMENT       cell (#PCDATA)> <!-- cell or cell group -->
+<!ATTLIST       cell reference (direct | indirect | unknown) #IMPLIED>
+<!ATTLIST       cell grammar (FW | NN | NNS | NNP | NNPS | PDT | PRP |PRS | RBR | RBS | WDT | WP | WPS) #REQUIRED>
+<!ATTLIST       cell type (name | lineage | group) #IMPLIED> <!-- (na-name | li-lineage | gr-group) cell or cell group type -->
+
+<!-- # -->
+
+<!ELEMENT       characterization (#PCDATA)> <!-- characterization -->
+<!ATTLIST       characterization grammar (FW | JJ | JJR | JJS | NN | NNS | NNP | NNPS | PDT | PRP | RBR | RBS | VB | VBD | VBG | VBN | VBP | VBZ | WDT | WP | WPS) #REQUIRED>
+
+<!-- # -->
+
+<!ELEMENT       cjunction (#PCDATA)>
+<!ATTLIST       cjunction grammar (CC) #REQUIRED>
+<!ATTLIST       cjunction type (coordinating | necessity | reasoning) #IMPLIED>
+
+<!-- # -->
+
+<!ELEMENT       cmparison (#PCDATA)> <!-- comparison -->
+<!ATTLIST       cmparison grammar (RB | RBR | RBS | JJ | JJR | JJS | VB | VBD | VBG | VBN | VBP | VBZ | NN | NNS) #REQUIRED>
+<!ATTLIST       cmparison type (similar | identical | different | unknown) #IMPLIED> <!-- (si-similar | id-identical | di-different) comparison type -->
+
+<!-- # -->
+
+<!ELEMENT       cnsort (#PCDATA)> <!-- consort -->
+<!ATTLIST	cnsort grammar (FW | JJ | JJR | JJS | NN | NNS | NNP | NNPS | PDT | PRP | RBR | RBS | VB | VBD | VBG | VBN | VBP | VBZ | WDT | WP | WPS) #REQUIRED>
+<!ATTLIST       cnsort type (positive | negative | unknown) #IMPLIED> <!-- (po-positive | ne-negative) consort type -->
+
+<!-- # -->
+
+<!ELEMENT       component (#PCDATA)> <!-- component -->
+<!ATTLIST       component reference (direct | indirect ) #IMPLIED>
+<!ATTLIST       component grammar (NN | NNS | NNP | NNPS) #REQUIRED>
+<!ATTLIST       component source (go | janus) #IMPLIED> <!-- (go-go | ja-janus) component source -->
+
+<!-- # -->
+
+<!ELEMENT       determiner (#PCDATA)>
+<!ATTLIST       determiner grammar (DT) #REQUIRED>
+
+<!-- # -->
+
+<!ELEMENT	drugs (#PCDATA)> <!-- drugs -->
+<!ATTLIST       drugs reference (direct | indirect | unknown) #IMPLIED>
+<!ATTLIST	drugs grammar (FW | JJ | JJR | JJS | NN | NNS | NNP | NNPS | PDT | PRP | RBR | RBS | VB | VBD | VBG | VBN | VBP | VBZ | WDT | WP | WPS) #REQUIRED>
+<!ATTLIST       drugs type (antibiotic | unknown) #IMPLIED> <!-- (an-antibiotic) drugs type -->
+
+<!-- # -->
+
+<!ELEMENT       dscriptor (#PCDATA)> <!-- descriptor -->
+<!ATTLIST       dscriptor grammar (FW | JJ | JJR | JJS | NN | NNS | NNP | NNPS | PDT | PRP | RBR | RBS | VB | VBD | VBG | VBN | VBP | VBZ | WDT | WP | WPS) #REQUIRED>
+
+<!-- # -->
+
+<!ELEMENT	effect (#PCDATA)> <!-- effect -->
+<!ATTLIST	effect grammar (FW | JJ | JJR | JJS | NN | NNS | NNP | NNPS | PDT | PRP | RBR | RBS | VB | VBD | VBG | VBN | VBP | VBZ | WDT | WP | WPS) #REQUIRED>
+<!ATTLIST       effect type (positive | negative | unknown) #IMPLIED> <!-- (po-positive | ne-negative) effect type -->
+
+<!-- # -->
+
+<!ELEMENT	entity_feature (#PCDATA)> <!-- entity feature -->
+<!ATTLIST       entity_feature reference (direct | indirect | unknown) #IMPLIED>
+<!ATTLIST	entity_feature grammar (FW | NN | NNS | NNP | NNPS | PDT | PRP | PRS | RBR | RBS | WDT | WP | WPS) #REQUIRED>
+<!ATTLIST       entity_feature type (protein | DNA  | RNA | other) #IMPLIED> <!-- (pr-protein | DN-DNA | RN-RNA) entity feature type -->
+
+<!-- # -->
+
+<!ELEMENT       function (#PCDATA)> <!-- molecular function -->
+<!ATTLIST       function reference (direct | indirect | unknown) #IMPLIED>
+<!ATTLIST       function grammar (FW | JJ | JJR | JJS | NN | NNS | NNP | NNPS | PDT | PRP | RBR | RBS | VB | VBD | VBG | VBN | VBP | VBZ | WDT | WP | WPS) #REQUIRED>
+<!ATTLIST       function source (go | janus) #IMPLIED> <!-- (go-go | ja-janus) molecular function source -->
+<!ATTLIST       function protein (yes | no) #IMPLIED> <!-- (ye-yes | no-no) molecular function protein -->
+
+<!-- # -->
+
+<!ELEMENT       gene (#PCDATA)> <!-- gene -->
+<!ATTLIST       gene reference (direct | indirect | unknown) #IMPLIED>
+<!ATTLIST       gene grammar (FW | NN | NNS | NNP | NNPS | PDT | PRP |PRS | RBR | RBS | WDT | WP | WPS) #REQUIRED>
+
+<!-- # -->
+
+<!ELEMENT       clone (#PCDATA)> <!-- clone -->
+<!ATTLIST       clone reference (direct | indirect | unknown) #IMPLIED>
+<!ATTLIST       clone grammar (FW | NN | NNS | NNP | NNPS | PDT | PRP |PRS | RBR | RBS | WDT | WP | WPS) #REQUIRED>
+
+<!-- # -->
+
+<!ELEMENT       involvement (#PCDATA)> <!-- involvement -->
+<!ATTLIST	involvement grammar (FW | JJ | JJR | JJS | NN | NNS | NNP | NNPS | PDT | PRP | RBR | RBS | VB | VBD | VBG | VBN | VBP | VBZ | WDT | WP | WPS) #REQUIRED>
+<!ATTLIST       involvement requirement (yes | no) #IMPLIED> <!-- (ye-yes | no-no) involvement requirement -->
+
+<!-- # -->
+
+<!ELEMENT	itention (#PCDATA)> <!-- purpose -->
+<!ATTLIST	itention grammar (FW | JJ | JJR | JJS | NN | NNS | NNP | NNPS | PDT | PRP | RBR | RBS | VB | VBD | VBG | VBN | VBP | VBZ | WDT | WP | WPS) #REQUIRED>
+
+<!-- # -->
+
+<!ELEMENT       localization (#PCDATA)> <!-- localization -->
+<!ATTLIST       localization grammar (FW | JJ | JJR | JJS | NN | NNS | NNP | NNPS | PDT | PRP | RBR | RBS | VB | VBD | VBG | VBN | VBP | VBZ | WDT | WP | WPS) #REQUIRED>
+<!ATTLIST       localization type (spatial | temporal | general | unknown) #IMPLIED> <!-- (sp-spatial | te-temporal | ge-general) localization type -->
+
+<!-- # -->
+
+<!ELEMENT       life_stage (#PCDATA)> <!-- life stage -->
+<!ATTLIST       life_stage reference (direct | indirect ) #IMPLIED>
+<!ATTLIST       life_stage grammar (NN | NNS | NNP | NNPS) #REQUIRED>
+
+<!-- # -->
+
+<!ELEMENT	method (#PCDATA)> <!-- method -->
+<!ATTLIST	method grammar (FW | JJ | JJR | JJS | NN | NNS | NNP | NNPS | PDT | PRP | RBR | RBS | VB | VBD | VBG | VBN | VBP | VBZ | WDT | WP | WPS) #REQUIRED>
+
+<!-- # -->
+
+<!ELEMENT       mark (#PCDATA)>
+<!ATTLIST       mark grammar (JJ | RB) #REQUIRED>
+<!ATTLIST       mark type (positive | negative | unknown) #IMPLIED>
+
+<!-- # -->
+
+<!ELEMENT       modality (#PCDATA)>
+<!ATTLIST       modality grammar (VBP | MD) #REQUIRED>
+
+<!-- # -->
+
+<!ELEMENT       mutants (#PCDATA)> <!-- mutant -->
+<!ATTLIST       mutants reference (direct | indirect ) #IMPLIED>
+<!ATTLIST       mutants grammar (NN | NNS | NNP | NNPS) #REQUIRED>
+
+<!-- # -->
+
+<!ELEMENT	negation (#PCDATA)> <!-- negation -->
+<!ATTLIST	negation grammar (RB | RP | VB) #REQUIRED>
+
+<!-- # -->
+
+<!ELEMENT	nmber (#PCDATA)>
+<!ATTLIST	nmber grammar (CD) #REQUIRED>
+
+<!-- # -->
+
+<!ELEMENT	nucleic_acid (#PCDATA)> <!-- nucleic acid -->
+<!ATTLIST       nucleic_acid reference (direct | indirect | unknown) #IMPLIED>
+<!ATTLIST	nucleic_acid grammar (FW | NN | NNS | NNP | NNPS | PDT | PRP | PRS | RBR | RBS | WDT | WP | WPS) #REQUIRED>
+<!ATTLIST       nucleic_acid type (DNA | RNA | other) #IMPLIED> <!-- (DN-DNA | RN-RNA) nucleic acid type -->
+
+<!-- # -->
+
+<!ELEMENT       organism (#PCDATA)> <!-- organism -->
+<!ATTLIST       organism reference (direct | indirect | unknown) #IMPLIED>
+<!ATTLIST       organism grammar (FW | JJ | JJR | JJS | NN | NNS | NNP | NNPS | PDT | PRP | RBR | RBS | WDT | WP | WPS) #REQUIRED>
+
+<!-- # -->
+
+<!ELEMENT       pathway (#PCDATA)> <!-- pathway -->
+<!ATTLIST       pathway grammar (FW | JJ | JJR | JJS | NN | NNS | NNP | NNPS | PDT | PRP | RBR | RBS | WDT | WP | WPS) #REQUIRED>
+<!ATTLIST       pathway type (evolutionary | cellular | molecular | all) #IMPLIED> <!-- (ev-evolutionary | ce-cellular | mo-molecular | ge-general) pathway type -->
+<!ATTLIST       pathway course (downstream | upstream | parallel | bypass | unknown) #IMPLIED> <!-- (do-downstram | up-upstream | pa-parallel | by-bypass) pathway course -->
+
+<!-- # -->
+
+<!ELEMENT       phenotype (#PCDATA)> <!-- phenotype -->
+<!ATTLIST       phenotype reference (direct | indirect | unknown) #IMPLIED>
+<!ATTLIST       phenotype grammar (FW | JJ | NN | NNP | NNS | NNPS | PDT | POS | PRP | PRS | RB | WDT) #REQUIRED>
+
+<!-- # -->
+
+<!ELEMENT       pnoun (#PCDATA)>
+<!ATTLIST       pnoun grammar (PRP | PRS | WDT) #REQUIRED>
+
+<!-- # -->
+
+<!ELEMENT       pposition (#PCDATA)>
+<!ATTLIST       pposition grammar (IN | TO) #REQUIRED>
+<!ATTLIST       pposition type (with | by | between | through | of | in | on | to |because_of) #IMPLIED>
+
+<!-- # -->
+
+<!ELEMENT       process (#PCDATA)> <!-- biological process -->
+<!ATTLIST       process grammar (FW | JJ | JJR | JJS | NN | NNS | NNP | NNPS | PDT | PRP | RBR | RBS | VB | VBD | VBG | VBN | VBP | VBZ | WDT | WP | WPS) #REQUIRED>
+<!ATTLIST       process source (go | janus) #IMPLIED> <!-- (go-go | ja-janus) process source -->
+<!ATTLIST       process type (cellular | molecular | organismal | general) #IMPLIED> <!-- (ce-cellular | mo-molecular | or-organismal | ge-general) process type -->
+<!ATTLIST       process biosynthesis (expression | tlation | tscription | replication | other | no) #IMPLIED> <!-- (ex-expression | tl-translation | ts-transcription | re-replication | ot-other | no-no) process biosynthesis -->  
+
+
+<!-- # -->
+
+<!ELEMENT       punctuation (#PCDATA)>
+<!ATTLIST       punctuation grammar (colonsign | commasign) #REQUIRED>
+<!ATTLIST       punctuation type (comma | semicolon | kolon | hyphen | fslash) #IMPLIED>
+
+<!-- # -->
+
+<!ELEMENT	regulation (#PCDATA)> <!-- regulation -->
+<!ATTLIST	regulation grammar (FW | JJ | JJR | JJS | NN | NNS | NNP | NNPS | PDT | PRP | RBR | RBS | VB | VBD | VBG | VBN | VBP | VBZ | WDT | WP | WPS) #REQUIRED>
+<!ATTLIST       regulation type (positive | negative | unknown) #IMPLIED> <!-- (po-positive | ne-negative) regulation type -->
+
+<!-- # -->
+
+<!ELEMENT       sex (#PCDATA)> <!-- sex -->
+<!ATTLIST       sex reference (direct | indirect | unknown) #IMPLIED>
+<!ATTLIST       sex grammar (JJ | NN | NNS) #REQUIRED>
+<!ATTLIST       sex type (male | female | hermaphrodite) #IMPLIED> <!-- (ma-male | fe-female | he-hermaphrodite) sex type -->
+
+<!-- # -->
+
+<!ELEMENT       spatial_relation (#PCDATA)> <!-- spatial relation -->
+<!ATTLIST       spatial_relation grammar (JJ | NN | NNS | RB) #REQUIRED>
+<!ATTLIST       spatial_relation type (close | distant | unknown) #IMPLIED> <!-- (cl-close | di-distant) spatial relation type -->
+
+<!-- # -->
+
+<!ELEMENT       strain (#PCDATA)> <!-- strain -->
+<!ATTLIST       strain reference (direct | indirect | unknown) #IMPLIED>
+<!ATTLIST       strain grammar	(FW | NN | NNS | NNP | NNPS | PDT | PRP | PRS | RBR | RBS | WDT | WP | WPS) #REQUIRED> 
+
+<!-- # -->
+
+<!ELEMENT       time_relation (#PCDATA)> <!-- time relation -->
+<!ATTLIST       time_relation grammar (JJ | NN | NNS | RB) #REQUIRED>
+<!ATTLIST       time_relation type (earlier | later | simultaneously |unknown) #IMPLIED> <!-- (ea-earlier | la-later | si-simultaneously) time relation type -->
+
+<!-- # -->
+
+<!ELEMENT       transgene (#PCDATA)> <!-- transgene -->
+<!ATTLIST       transgene reference (direct | indirect | unknown) #IMPLIED>
+<!ATTLIST       transgene grammar (FW | NN | NNS | NNP | NNPS | PDT | PRP | PRS | RBR | RBS | WDT | WP | WPS) #REQUIRED>

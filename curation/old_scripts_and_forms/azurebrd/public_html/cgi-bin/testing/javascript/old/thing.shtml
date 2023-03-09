@@ -1,0 +1,16 @@
+<html>
+
+<head>
+<title>thing</title>
+</head>
+
+<body bgcolor="#FFFFFF">
+  <form method="POST">
+    <p><input type="text" name="T1" size="20" value="Disabled text box" disabled></p>
+    <p><select name="D1" size="1" disabled>
+       <option value="Disabled drop down box">Disabled drop down box</option>
+       </select></p>
+  </form>
+</body>
+</html>
+

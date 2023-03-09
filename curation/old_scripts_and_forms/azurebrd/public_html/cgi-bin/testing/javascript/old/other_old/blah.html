@@ -1,0 +1,37 @@
+<html>
+<head>
+<script>
+
+var list2_0=new Array("am cool","am stupid");
+var list2_1=new Array("are cool", "are stupid");
+
+// populate the next level select boxes depending on what
+// the user chose on this level
+function populateLevel(n,index)
+{
+document.forms["myform"]["list"+n].length=0;
+target_list=eval("list"+n+"_"+index);
+
+   for (opt in target_list)
+   {
+     document.forms["myform"]["list"+n].options[document.forms["myform"]["list"+n].length]
+= new Option(target_list[opt],document.forms["myform"]["list"+n].length)
+   }
+   document.forms["myform"]["list"+n].selectedIndex=0
+}
+</script>
+</head>
+<body>
+<form name=myform>
+
+<select size=2 name=list1 onchange=populateLevel(2,this.selectedIndex)>
+<option>I</option>
+<option>You</option>
+</select>
+
+<select size=2 name=list2>
+</select>
+
+</form>
+</body>
+</html>

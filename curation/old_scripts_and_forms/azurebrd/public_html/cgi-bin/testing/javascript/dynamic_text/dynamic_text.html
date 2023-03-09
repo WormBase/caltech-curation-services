@@ -1,0 +1,21 @@
+<!-- http://209.85.173.132/search?q=cache:TIu9BbfI3FcJ:www.dotnetspider.com/forum/ViewForum.aspx%3FForumId%3D26696+javascript+click+create+textbox&hl=en&ct=clnk&cd=1&gl=us-->
+
+<html>
+<head>
+<title>Dynamic Form</title>
+<script type="text/javascript" >
+function CreateTextbox()
+{
+var i = 1;
+createTextbox.innerHTML = createTextbox.innerHTML +"<input type=text name='mytext'+ i/>"
+
+}
+</script>
+</head>
+<body>
+
+<form name="form" action="post" method="">
+<input type="button" value="clickHere" onClick="CreateTextbox()">
+<div id="createTextbox"></div>
+</form>
+</body>

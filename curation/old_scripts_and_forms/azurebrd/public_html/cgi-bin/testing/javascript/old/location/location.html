@@ -1,0 +1,38 @@
+<html>
+<head>
+<script type="text/javascript">
+function linkTo(y)
+{
+  var pathname = "~azurebrd/cgi-bin/testing/javascript/location/anchors.htm";
+// alert(pathname);
+  var newHref = location.protocol + "//" + location.host + "/" + pathname + "#" + y;
+//  alert(newHref);
+  location.assign(newHref);
+
+// this only works with the alert, just build the full href like above
+//  location.pathname = "~azurebrd/cgi-bin/testing/javascript/location/anchors.htm";
+//  alert(location.href);  // it doesn't work without this alert, I don't get it.  2009 03 07
+//  location.hash = y;
+
+
+ var x = window.open(newHref,"","scrollbars=yes,width=650,height=200");
+
+// this only works with the alert, just make a window with a built full href like above
+//  var x = window.open("anchors.htm","","scrollbars=yes,width=650,height=200");
+// alert(location.href);	// it doesn't work without this alert, I don't get it.  2009 03 07
+//  x.location.hash = y;
+
+}
+</script>
+</head>
+
+<body>
+<h3>Links and Anchors</h3>
+<p>Click on a button to display that anchor in a second window!</p>
+<input type="button" value="0" onclick="linkTo(0)">
+<input type="button" value="1" onclick="linkTo(1)">
+<input type="button" value="2" onclick="linkTo(2)">
+<input type="button" value="3" onclick="linkTo(3)">
+</body>
+
+</html>

@@ -1,0 +1,75 @@
+<html><head><title>onchange</title></head><body bgcolor="white">
+<form name ="loandata">
+<table>
+  <tr><td colspan="3"><b>enter loan info :</b></td></tr>
+  <tr>
+    <td>1</td>
+    <td>amount of the loan</td>
+    <td><input type="text" name="principal" size="12" onchange="calculate();"></td>
+  </tr>
+  <tr>
+    <td>2</td>
+    <td>apr of the loan</td>
+    <td><input type="text" name="interest" size="12" onchange="calculate();"></td>
+  </tr>
+  <tr>
+    <td>3</td>
+    <td>repayment period in years</td>
+    <td><input type="text" name="years" size="12" onchange="calculate();"></td>
+  </tr>
+  <tr><td colspan="3">
+    <input type="button" value="Compute" onclick="calculate();"></td>
+  </tr>
+  <tr><td colspan="3">
+    <b>payment info :</b></td>
+  </tr>
+  <tr>
+    <td>4</td>
+    <td>monthly payment :</td>
+    <td><input type="text" name="payment" size="12"></td>
+  </tr>
+  <tr>
+    <td>5</td>
+    <td>total payment will be :</td>
+    <td><input type="text" name="total" size="12"></td>
+  </tr>
+  <tr>
+   <td>6</td>
+   <td>your total interest payments will be :</td>
+   <td><input type="text" name="totalinterest" size="12"></td>
+  </tr>
+</table>
+</form>
+
+<script language="JavaScript">
+
+
+function calculate() {
+  var principal = document.loandata.principal.value;
+  var interest = document.loandata.interest.value / 100 / 12;
+  var payments = document.loandata.years.value * 12;
+
+  var x = Math.pow(1 + interest, payments);
+  var monthly = (principal * x * interest) / (x-1);
+
+  if ( !isNaN(monthly) &&
+      (monthly != Number.POSITIVE_INFINITY) &&
+      (monthly != Number.NEGATIVE_INFINITY) ) {
+        document.loandata.payment.value = round(monthly);
+        document.loandata.total.value = round(monthly * payments);
+        document.loandata.totalinterest.value = round((monthly * payments) - principal);
+  }
+  else {
+    document.loandata.payment.value = "1";
+    document.loandata.total.value = "1";
+    document.loandata.totalinterest.value = "1";
+  }
+}
+
+function round(x) { return Math.round(x*100)/100; }
+</script>
+</body>
+</html>
+
+
+
