@@ -1,0 +1,30 @@
+.yui-dt-liner {				/* to show one line per datatable row */
+    height: 19px;			/* just tall enough for the size of the font */
+    line-height: 121%;			/* vertical spacing for the size of the font */
+    overflow: hidden !important;	/* hide the overflow */
+/*    overflow: auto !important;
+ */
+/*    overflow-x: auto;
+    overflow-y: scroll;
+ */
+}
+
+.hidden-overflow-data {			/* cells that have overflow need a red square on the right */
+/*    background-color : yellow; */
+/*    background:url(red_square_upper_left.gif) repeat; */
+    background:url(red_square.jpg) no-repeat right;
+}
+
+.div-autocomplete {			/* div that gives auto complete results needs some padding */
+    /* width:25em;  set width here or else widget will expand to fit its container */
+    padding-bottom:1.5em;
+}
+
+/* not using overlay after all
+ * .yui-overlay { border:1px dotted black;padding:5px;margin:10px; background-color: white;} 
+ * .yui-overlay .hd { border:1px solid red;padding:5px; } 
+ * .yui-overlay .bd { border:1px solid green;padding:5px; } 
+ * .yui overlay .ft { border:1px solid blue;padding:5px; } 
+ * 
+ * #ctx { background:orange;width:100px;height:25px; } 
+ * /

@@ -1,0 +1,1761 @@
+// // got DataTable to work on arbitrary amount of fields from CGI
+// ajax query off cgi to load postgres values as xml  2009 09 10
+//
+// json query to append values instead of recreating data table.
+// show results queried count on .obo display.
+// extra control frame to allow ScrollingDataTable to be by itself in its own frame
+// and make it easier to resize to fit (headers not included in ScrollingDataTable's
+// height value.)  2009 09 15
+//
+// doing a query loads all id fields into a hash and only adds rows for data with new ids.
+// added reset (table) newRow duplicateRow deleteRow functionality.
+// subscribed rowClickEvent to load values from row to editor inputs.
+// addlistener to editor inputs so on blur, updates values of datatable for selected fields.
+// beware of tabbing too much since it will update values of a field that gets tabbed through.
+// 2009 09 16
+//
+// added http://tazendra.caltech.edu/~azurebrd/stylesheets/ontology_annotator.css to make 
+// .yui-dt-liner height 19px and force overflow to hidden !important (because datatable creation
+// creates css values, so can't make add the stylesheet last, have to make !important) to show
+// only the first line of data.  added .hidden-overflow-data class to have background image 
+// red-square.jpg no-repeat right to show when a cell has overflow (text not being shown).
+// created colorMoreCells(divArray) to loop through cells in array of div elements and compare
+// scrollHeight to clientHeight to determine if a cell has overflow data and should have 
+// redsquare class added or removed.  2009 09 18
+//
+// on editorInputBlurListener, duplicateRowButtonListener, assignQueryButtonListenerAjax 
+// (callbacks), and initializeTable (columnResizeEvent) find appropriate divArray and apply 
+// colorMoreCells(divArray).  figured out how to get column / matching horizontal cell based
+// on column click or column key.  2009 09 19 - 21
+//
+// filterDataButtonListener on all or specific field.  case insensitive only.  substring only.
+// one filter only.  if switch to multiple filters (AND) have to loop each row and track 
+// ``show'' for each filter option, showing the row only if all field types match (``show''
+// === fieldTypes).  possibly in that case break it up into multiple functions.  
+// filter by specific field might be a bit slow, not sure why.  Changed filtering to work off
+// of records and seems fast now.  Would like column resize listener to work off of records 
+// too, but that requires getting divs, so it's fine the way it is.  2009 09 22
+//
+// filterDataButtonListener and new filterDataKeyUpListener call filterData, which does the
+// filtering.  onKeyUp of filterValue, call filterDataKeyUpListener(e).  filter matches show
+// on obo.  2009 09 23
+//
+// added N filter amounts, hardcoding 2.  reset button now does a server reload of the page
+// instead of a table reset (for Ranjana and Jolene).  Jolene's editor input fields are 70
+// while everyone else is 30 ;  Editor background is grey while everyone is blue like the 
+// table rows.  Obo now called Term information (for Ranjana).  Controls height is 40px.
+// Plus / Minus Filter toggle would have to go if using more than 2 filters.  Would need to 
+// change window load style.display code, and CGI code.
+// 2009 09 24
+//
+// set column definitions for type, label, column width in CGI and populate them into 
+// fieldsData[field][property] = value  when running populateMyFields();
+// set up for go, with test colWidth of goontology to 10px for Kimberly.  2009 09 25
+//
+// filters have filtersMaxAmount of filters (hardcoded on CGI), filtering updates based on 
+// filtersAmount of selected filters.  getting field's fieldsData[field] values from a single
+// data_$field input instead of several inputs.  2009 09 26
+//
+// setAutocompleteListeners(); moved to main JS file, and applied to all 
+// fieldsData[field]["ontology"].  added css class for divs to css.  added css file on editor 
+// frame.  2009 09 30
+//
+// changed autocomplete listener to check for fieldsData[field]["type"] === dropdown / 
+// ontology / multiontology.  changed CGI hash accordingly.  
+// added onAutocompleteItemHighlight to autocomplete object's itemArrowToEvent and itemMouseOverEvent
+// if fieldsData[field]["type"] === ontology / multiontology make an asyncRequest to CGI
+// for term info to put into frames['obo'] field 'termInfo'.
+// coded CGI for dropdowns and obos based on postgres, but need to create pg tables (or 
+// flatfile) for other obo values and get them daily off cronjob.  2009 10 01
+//
+// fixed reloading not fully reloading.  2009 10 04
+//
+// bad autocomplete input values were going to the datatable onBlur, then the 
+// selectionEnforceEvent was triggering, wiping out the input value.  added a 
+// checkValueIsValidAndUpdate(field, newValue, selectedRows)  for autocomplete
+// fields.  
+// ontology values now always have the format "name|syn|id ( id )"   2009 10 05
+//
+// query button has the CGI return postgres data converted to display names instead of 
+// stored IDs.  2009 10 06
+//
+// add sisyphusImg element when querying data.  remove when data has loaded into datatable.
+// 2009 10 07
+//
+// move loadingImage div to controls frame from obo frame.
+// check for userValue when doing a postgres query (disable if no value)
+// if postgres query gives no matches show an alert (don't show the alert if there are
+//   matches, but they're already in the datatable.
+// forced value selection doesn't work somhow.  a database queried value followed by a 
+//   row selection loads a value that is a literal match to one from the obo, but when 
+//   blurring the input the onSelectionEnforce event triggers.  if the value is typed in, 
+//   it works.  to get around this, onEditorInputBlur, calling asyncValidValue to check if
+//   an obo value is valid, and only update values based on that.
+// datatable only held names, so when read into the editor the value could correspond to 
+//   multiple IDs, so the forced selection check and the asyncValidValue call wouldn't know
+//   if it's correct.  json call that queries postgres now returns obo fields with the name
+//   followed by a display none span holding the ID.  clicking a row into the editor 
+//   converts the hidden spans into parenthesis.  asyncValidValue expects the "name ( id ) "
+//   format (with trailing space).  updateDataTableValues converts the "name ( id ) " back
+//   into "name<span style='display:none'>id</span>" for comparing against datatable value
+//   and updating datatable.  2009 10 08
+//
+// onAutocompleteItemSelect added, converts any autocompleted values from typed synonym or id
+//   into proper "name ( id ) " format.  2009 10 09
+//
+// checkValueIsValidAndUpdate changed, when a forced value is wrong, load the corresponding
+//   value from the first selected record (row).
+// setAutocompleteListeners now has forcedOAC.minQueryLength = 0 to allow free autocomplete 
+//   on them.  clicking the "type_<field>" span does a forcedOAC.sendQuery('')  on blank to
+//   show all values.  2009 10 12 
+//
+// fixed checkValueIsValidAndUpdate, which was messing up when someone typed to autocomplete, 
+//   then moused over a selection and clicked it, losing editor focus and starting an ajax 
+//   call which would return false ;  but the click would assign a new value to the editor 
+//   that is correct and would start another of this ajax call which would return true.  so 
+//   now it checks the value hasn't change since the first call, and only if the editor value 
+//   is the same as the value being checked does it grab the value from the selected data 
+//   table record or set it to blank if there is no selected table record.
+// onAutocompleteItemSelect for (datatype app) and ( field (term or child_of) ) changes the
+//   location of the obo frame, making it a url that can be navigated with back / forward
+//   buttons (through history.go() on the CGI) and populate the editor (also through JS in 
+//   the CGI).  When picking a value it focuses and blurs the editor field to trigger
+//   editorInputBlurListener.   2009 10 13
+//
+// setAutocompleteListeners() was not giving focus to the input element when someone clicked
+//   to show drowdown values.  that was necessary to keep the widget active, so it could go
+//   away when blurred.  clicking the button now overwrites the dropdown input text with a
+//   blank.  2009 10 19
+//
+// wrote addToSelectField(field, newValue) to add to select element, and get the new value 
+//   string for the datatable 
+// wrote convertSelectToDatatableValue(field) to return datatable-style value based on 
+//   select element option values
+// wrote checkValueInSelect(field, newValue) to check if an editor input value is already in
+//   the corresponding select element option list
+// wrote populateSelectFieldFromDatatable(field, value) to get datatable-style value and 
+//   populate corresponding select element options list
+// still need to add functionality to remove button for select.  2009 10 21
+//
+// broke up updateDataTableValues(field, newValue, selectedRows) into 
+//   processValuesForDataTable(field, newValue, selectedRows) to convert data into 
+//   datatable-format values, and then call updateDataTableValues, which updates the 
+//   datatable to change values
+// wrote removeSelectFieldEntriesListener(e), which gets called on window load, and assigns 
+//   click listener to remove buttons in multiontology fields.  when clicked it calls 
+//   removeSelected(elSel), which removes selected option elements from the passed select 
+//   element, then returns whether anything got removed.  if anything was removed, call 
+//   updateDataTableValues to change datatable (and postgres).
+// updated updateDataTableValues.  if datatype is gop and field is not lastupdate, updateCell
+//   of lastupdate field to have simpledate for that record.
+// added loggedCurator global like datatype, which stores "<standardname> ( <WBPersonID> )"
+// updated newRowButtonListener(e) to check if a field is a curator field, and if so to
+//   assign the loggedCurator instead of blank.  2009 10 22
+//
+// added http://yui.yahooapis.com/2.7.0/build/container/container-min.js to make a waitPanel 
+//   with YAHOO.widget.Panel   I can't get waitPanel.show() nor waitPanel.hide() to work, so
+//   using a  display: none  on the  wait_c  element workaround.  displays sisyphus image on
+//   query on table frame (as well as the previous code for the div in the control frame)
+// wrote removeSelectAllOptions(elSel), which removes all option elements from the elSel 
+//   select element.  
+// changed assignQueryButtonListenerAjax(e) to unselectAllRows() of the datatable (to prevent
+//   changes to it), then blank the editor inputs and selects, except for the field being
+//   queried.
+// changed window load to addListener to multiontology select fields, to populate 
+//   corresponding input element with the selected option element.  for querying of 
+//   multiontology based on input field (unfortunately always picks top element,
+//   which could be worked around by adding listener to option elements, but it's not worth
+//   the hassle because only one option element should be queried at a time)
+// wrote checkDataButtonListener(e) to check constraints for app and gop datatypes if check 
+//   data button was clicked.  purposely duplicating code because only want popup for those 
+//   two datatype, and want bad stuff written on the fly.  window.open a var popupWindow
+//   GOP constraints : paper_evidence wbgene curator_evidence goontology goid goinference dbtype lastupdate
+//   APP constraints : ( nbp ) OR ( type AND name AND term AND curator AND ( person OR paper ) )
+// 2009 10 23
+//
+// changed checkDataButtonListener(e) to have an  objectCountHash for  app  to get jolene's
+//   wanted counts of nbps, objects, and what not.  
+// changed checkDataButtonListener(e) to give focus to the popup window and clear the 
+//   body.innerHTML.
+// app_tempname is not a free field by changing the CGI results in &getAnyOboValueValue(); and 
+//   &getAnyOboIdToValue();  2009 10 26
+//
+// changed window load to check if the type is bigtext, in that case allow toggle between input
+//   and textarea for editing stuff.  changed  editorInputBlurListener(e)  to 
+//   editorFieldBlur(field, newValue), which is called by  editorInputBlueListener(e)  unless 
+//   it's a bigtext field (in which case it just triggers the textarea), and also called by
+//   bigtextElement, "blur" function   which triggers when the bigtext textarea is blurred.
+//   Jolene does not want linebreaks stored, so passing the textarea value to the input and 
+//   viceversa works out without a linebreak placeholder.  2009 10 28
+//
+// added tabs to CGI, they go in fieldsData[field]["tab"].  values can be "all" or "tab1" /
+//   "tab2" / "tab#" / &c.  
+// changed  window load, store all possible number tabs (not all) in a tabs object (hash).  
+//   get the lowest numbered tab into firstTab.  if there is a lowest, show only that tab.
+// wrote showTab(tabClass)  to show TRs with that tab as a className, and hide all TRs with 
+//   a different className.  2009 10 29
+//
+// changed curator obo for phenote and app_curator / app_curator_hst to have WBPerson 
+//   values instead of WBcurator values.
+// changed  window load's  bigtextElement blur to only update if the field is not nbp,
+//   which is the only bigtext value that should not change.
+// changed  editorFieldBlur  to not change when the field is nbp or nbp_date (added to 
+//   the previous list of just not allowing ids to change).
+// added constraint for  heat_degree  and  cold_degree  needing to have a digit if there
+//   is data.  2009 10 30
+//
+// when duplicating rows, unselect original rows and select duplicated rows.  for Kimberly.
+// when making a new row, unselect all rows and select the new one.
+// wrote  rowSelectLoadToEditor(record)  to load values from a selected row into the
+//   editor frame.  2009 11 09
+//
+// changed  window load  to check for  toggle  and  toggle_text  types to notice the
+//   curator clicking the  toggle_<field>  td.  doesn't update datatable yet, since it
+//   looks weird.  2009 11 10
+//
+// added  app_datecreated  for NBP / File Date field.
+// added  app_species  for  Species  field.
+// changed  window load  to call  editorFieldBlur  when clicking a toggle_<field> td
+//   with  toggle  or  toggle_text  to update the datatable to blank or the label of the 
+//   field, and to toggle the background colour between white (off) and red (on)
+// changed  assignQueryButtonListenerAjax  to get the userValue from input_<field> if
+//   it's not a toggle field, and to get the backgroundColor of the toggle_<field> if
+//   it's a toggle field.  when blanking out other fields on a query, set backgroundColor
+//   for toggle fields instead of changing the non-existent input_<field>   2009 11 11
+//
+// changed  updateDataTableValues  to change Last Updated date for the new ptg datatype
+//   2009 11 16
+// changed  removeSelectFieldEntriesListener  to clear input_ field when clicking remove
+//   button.  2009 11 18
+//
+// changed  window load  to only check toggle listener if pgid value is not disabled 
+//   (if it were, the whole table is disabled for updating postgres syncing)
+// changed  setAutocompleteListeners  to only check dropdown listener as above
+// added  disableForm()  and  undisableForm()  to disable/undisable myDataTable, inputs
+//   of editor frame, buttons / selects / input of controls frame.  used when doing a
+//   postgres update call which required disabling for synchronicity.  
+// started  updatePostgresTableField(pgid, field, newValue)  to call
+//   "http://tazendra.caltech.edu/~postgres/cgi-bin/ontology_annotator.cgi?action=updatePostgresTableField&pgid="+pgid+"&field="+field+"&newValue="+escape(newValue)+"&datatype="+datatype;
+//   for updating individual field value changes in postgres.  2009 12 02
+//
+// changed  duplicateRowButtonListener(e)  to send an ajax request to duplicate values
+//   in postgres tables, get back the pgids of the newly duplicated entries, and query 
+//   them with postgresQueryField()
+// broke up  assignQueryButtonListenerAjax(e)  into itself and
+//   postgresQueryField(field, userValue)  which is an ajax call to query postgres by 
+//   field and userValue
+// changed CGI to allow id queries to have multiple comma-separated values.  2009 12 03
+//
+// changed  newRowButtonListener(e)  to sends an ajax call to create a new entry for 
+//   that curator and datatype, get back the pgid of the new entry, and query it back
+//   into the datatable.
+// changed  postgresQueryField(field, userValue)  so that it unselects all rows,
+//   selects topmost row (top row of queried results), and loads those values into
+//   editor.  this is because making a new row or duplicating a row do a query for
+//   the new rows, and one of them should be selected.  
+// changed CGI so that postgres tables are being updated.  2009 12 04
+//
+// changed  postgresQueryField(field, userValue, amountRowsToHighlight)  to have 
+//   amountRowsToHighlight parameter, so it highlights top value or top N values
+//   when doing a query off of  newRowButtonListener(e)  or  
+//   duplicateRowButtonListener(e)
+// changed  postgresQueryField()  to have myDataTable.validateColumnWidths()
+//   because that will run after the callback is done, but the colorMoreCells would 
+//   fail since heights won't be uneven unless it's validated column widths and 
+//   rendered (?) the data into the datatable (before calling colorMoreCells in the
+//   callback)  2009 12 05
+//
+// added  resetButtonListener(e)  and   resetButton()  becase resetButton should clear 
+//   datatable, editor, filters, obo ;  not reload all the frames, because that alters 
+//   the column order / size.  for Ranjana  
+// changed CGI second delay to .20 second delay, happens on postgres update call, not
+//   on each update of a table, which made duplicate / delete superslow.  2009 12 15
+//
+// copy nbp date into new app_file_date table, replace nbp_date field with  app_file_date  
+//   update postgres.  I think this got done at some point, but I don't recall when.
+//   2010 01 21
+//
+// disableForm() and undisableForm() have been removed, and hopefully no one will make
+//   changes while the packets are waiting for them to come back.  At some point will
+//   hopefully make the pointer change form while it's away and not yet back.  At some
+//   point will track rows going out for change, instead of using the highlighter rows
+//   when the packet comes back.  Hopefully this is not an issue since changes happen
+//   really fast and curators look for changes to datatable, and don't change rows 
+//   before checking a row looks good.  For Ranjana and Jolene.  2010 01 21
+
+
+// changed  checkValueIsValidAndUpdate(field, newValue, selectedRows)  and
+//   onAutocompleteItemHighlight(oSelf , elItem)  to convert + in newValue to %2B since 
+//   an escape() will not escape + for some reason
+// changed  updateDataTableValues(field, newValue, selectedRows)  to convert %2B into +
+//   for display in the Cell.  2010 07 28
+// 
+// added  resizeSelectField(elSel)  to resize a select field (multiontology only for now)
+//   to be 1, or the length of the select field (show all values).  added to
+//   addToSelectField(field, newValue)  populateSelectFieldFromDatatable(field, value) 
+//   removeSelected(elSel)  removeSelectAllOptions(elSel)   2010 08 09
+
+// added  multidropdown  option by changing related functions :
+//   editorFieldBlur(field, newValue) 
+//   processValuesForDataTable(field, newValue, selectedRows) 
+//   resetButton()  postgresQueryField(field, userValue, amountRowsToHighlight) 
+//   YAHOO.util.Event.addListener(window, "load", function() 
+//   function setAutocompleteListeners()  function rowSelectLoadToEditor(recordData) 
+// added skip to  postgresQueryField(field, userValue, amountRowsToHighlight) 
+//   when type is  queryonly  but not sure will keep queryonly button since it may
+//   be breaking stuff that loads after it (somewhere, not sure where).  2010 08 18
+//
+// added url escape character for #, found table here   2010 08 19
+//   http://community.contractwebdevelopment.com/url-escape-characters
+//   #  %23	>  %3E	?	%3F	:	%3A 	; 	%3B	= 	%3D
+//   $ 	%24 	%  %25	[	%5B	\	%5C     < 	%3C	~ 	%7E 
+//   & 	%26 	@  %40	]	%5D	^	%5E	} 	%7D 
+//   ' 	%60 	/  %2F	{	%7B	|	%7C	Space  	%20  	
+//
+// changed  editorFieldBlur(field, newValue)  priority from always update blanks, to
+//   update multivalues (multiontology, multidropdown), then always update blanks
+//   because multivalues should only add, and be deleted only if the remove button
+//   is clicked.  normal fields, dropdowns, ontologies, need to delete by deleting
+//   the entry into a blank.
+// changed  updateDataTableValues(field, newValue, selectedRows)  to replace + and #
+//   from displayValue only if there's a displayValue (had javascript error when 
+//   updating blank values).  also to  onAutocompleteItemHighlight(oSelf , elItem)
+//   updatePostgresTableField(pgid, field, newValue)  
+//   checkValueIsValidAndUpdate(field, newValue, selectedRows)  2010 09 02
+//
+// changed  updateDataTableValues(field, newValue, selectedRows)  so that it no longer
+//   updated  <gop|ptg>_lastupdate  whenever something changes.  for Ranjana, who was
+//   finding that stuff was changing when she didn't want it to, and she didn't 
+//   remember what date it used to be to revert it.  2010 09 09
+
+
+
+
+var myFields = new Array();			// the data fields, for some reason the elements get replaced by objects when datatable gets created
+var fieldsData = new Object();
+var myColumnDefs = new Array();			// column definitions for data tables
+var myDataTable;
+var datatype;					// two gop app
+var loggedCurator;				// who is logged on
+var waitPanel;					// panel on top of table frame to show wait image while loading a query
+
+
+Object.size = function(obj) {			// get the size of a hash (amount of keys)
+    var size = 0, key;
+    for (key in obj) {
+        if (obj.hasOwnProperty(key)) size++;
+    }
+    return size;
+};
+
+function editorInputBlurListener(e) {		// editor input blurred, update corresponding values of selected rows
+    var fieldstuff = e.target.id.match(/input_(.*)/);	// this is event (button click)
+    var field = fieldstuff[1];				// get the field name from the event id
+    var newValue = e.target.value;			// the new value from the editor input field
+    if ( fieldsData[field]["type"] !== "bigtext" ) { editorFieldBlur(field, newValue); }
+}
+
+function editorFieldBlur(field, newValue) {
+    var selectedRows = myDataTable.getSelectedRows();
+    var validValue = true;				// if a value is valid (might not be for dropdown / ontology / multiontology
+    if ( (field === "id") || (field === "nbp") || (field === "nbp_date") ) {  	 			// never allow editing of IDs
+    } else if ( ( fieldsData[field]["type"] === "multidropdown" ) || 	// if it's a multi-value dropdown field
+                ( fieldsData[field]["type"] === "multiontology" ) ) {	// or if it's a multi-value ontology field
+// top.frames['obo'].document.getElementById('myObo').innerHTML += "blurring " + field + " end<br/> "; 
+        checkValueIsValidAndUpdate(field, newValue, selectedRows);	// check value before updating it
+    } else if (newValue === "") {					// always update blank values (except for multivalue fields which have a remove button)
+        updateDataTableValues(field, newValue, selectedRows);
+    } else if ( ( fieldsData[field]["type"] === "dropdown" ) || 	// if it's a dropdown field
+                ( fieldsData[field]["type"] === "ontology" ) ) {	// or if it's an ontology field
+// top.frames['obo'].document.getElementById('myObo').innerHTML += "blurring " + field + " end<br/> "; 
+        checkValueIsValidAndUpdate(field, newValue, selectedRows);	// check value before updating it
+    } else {						// text fields always update
+        updateDataTableValues(field, newValue, selectedRows);
+    }
+
+// this would update the datatable before checking if the selectionEnforceEvent was wrong, setting a wrong value in the data table, and only then blanking out the input field.
+//     for (var i = 0; i < selectedRows.length; i++) {	// for each selected row in the data table
+//         var recordData = myDataTable.getRecord(selectedRows[i])._oData;		// get oData from each record
+//         var tableValue = recordData[field];					// get tableValue for that field
+//         if (tableValue !== newValue) {						// if new value is different
+//             var record = myDataTable.getRecord(selectedRows[i]);		// get the record
+// 
+// // no point in updating the whole row when we can just update a cell and keep the same tr id
+// //             var recordIndex = myDataTable.getRecordIndex(record);		// get the index for updating values
+// //             recordData[field] = newValue;					// change the value
+// // //             alert("recordIndex " + recordIndex + " field " + field + " " + newValue);
+// //             myDataTable.updateRow(recordIndex, recordData); 			// update the datatable row, which gives it a new row id that we lose
+// //             var trElement = myDataTable.getFirstTrEl().id;			// this would get the TrElement without the .id (or its id with it)
+// 
+//             myDataTable.updateCell(record, field, newValue);			// update the datatable cell, which leaves the row id the same
+//             var trId = myDataTable.getTrEl(record).id;				// get the table row id
+// //             alert("trId " + trId + " field " + field + " " + newValue);
+// 	    var divArray = document.getElementById(trId).getElementsByTagName("div");	// get all divs in that table row
+//             colorMoreCells(divArray);						// check and set their overflow
+// 
+// //             var colInstance = myDataTable.getColumn(field);
+// //             var colKey = colInstance.getKey(colInstance);
+// //             var colId = colInstance.getId(colInstance);
+// //             var thEl = colInstance.getThEl(colInstance);
+// // //             var belowEl = thEl.getBelowTdEl(thEl);			// this doesn't work, th doesn't have a below element
+// //             top.frames['obo'].document.getElementById('myObo').innerHTML += "colKey " + colKey + " colId " + colId  + "<br/> "; 
+// //             top.frames['obo'].document.getElementById('myObo').innerHTML += "thEl " + thEl.innerHTML + " belowEl " + belowEl.innerHTML  + "<br/> "; 
+// //             myDataTable.hideColumn(colInstance);
+// //             var divData = colInstance.getElementsByTagName("div").innerHTML;
+// //             for (var i = 0; i < divData.length; i++) {	// for each selected row
+// //                  top.frames['obo'].document.getElementById('myObo').innerHTML += divData[i] + "<br/> "; }
+//  
+//         }
+//     }
+} // function editorFieldBlur(field)
+
+function getSimpleDate() {
+    var currentTime = new Date()
+    var month = currentTime.getMonth() + 1
+    var day = currentTime.getDate()
+    var year = currentTime.getFullYear()
+    if (month < 10) { month = '0' + month; }
+    if (day < 10) { day = '0' + day; }
+    return year + '-' + month + '-' + day;
+}
+
+function checkValueIsValidAndUpdate(field, newValue, selectedRows) {              // check if a value is valid for that field
+// when blurring it's ignoring whether the OAC is forced.  it's updating datatable, and THEN updating the cell data to blank.
+// so need to check if a value is valid and only update data table values if it's a valid value.  if checked value is not valid
+// replace editor input field with data from datatable.
+    var callbacks = {
+        success : function (o) {				// Successful XHR response handler 
+            if (o.responseText !== undefined) { 
+//                 top.frames['obo'].document.getElementById('myObo').innerHTML += o.responseText + "<br/> "; 
+                if (o.responseText === "true") { 
+//                     top.frames['obo'].document.getElementById('myObo').innerHTML += "IS TRUE<br/> "; 
+                    processValuesForDataTable(field, newValue, selectedRows); }	// process values to datatable format and call updateDataTable to update datatable
+                else {						// force field to match obo, if it doesn't use first selected record's value
+//                     top.frames['obo'].document.getElementById('myObo').innerHTML += "IS FALSE<br/> "; 
+                    var currentValue = top.frames['editor'].document.getElementById("input_" + field).value;	// the value currently in the editor
+//                     top.frames['obo'].document.getElementById('myObo').innerHTML += "currentValue " + currentValue + " newValue " + newValue +"<br/> "; 
+                    if (currentValue === newValue) {	// if the value in the editor is the one that was being ajax valid checked
+//                         top.frames['obo'].document.getElementById('myObo').innerHTML += "currentValue equals newValue<br/> "; 
+                        if (myDataTable.getRecord(selectedRows[0]) !== null) { 	// get oData from first selected record
+                              // this is necessary because someone could type to autocomplete, then mouse over a selection and click it, losing editor focus
+                              // and starting this ajax call which will return false, but the click will assign a new value to the editor that is correct
+                              // and will start another of this ajax call which will return true.  so check the value hasn't change since the first call
+                              // if the editor value is the same as the value being checked, then grab the value from the selected data table record
+                            var recordData = myDataTable.getRecord(selectedRows[0])._oData;	
+                            recordData[field] = recordData[field].replace(/<span style=\'display: none\'>/g, " ( "); 	
+                            recordData[field] = recordData[field].replace(/<\/span>/g, " ) "); 
+                            top.frames['editor'].document.getElementById("input_" + field).value = recordData[field]; }
+                        else {							// set to blank
+//                             top.frames['obo'].document.getElementById('myObo').innerHTML += "currentValue NOT equals newValue<br/> "; 
+                            top.frames['editor'].document.getElementById("input_" + field).value = ""; } } }
+            }
+        },
+    }; 
+    if (newValue !== undefined) {						// if there is a display value replace stuff
+        if (newValue.match(/\+/)) { newValue = newValue.replace(/\+/g, "%2B"); }	// replace + with escaped +
+        if (newValue.match(/\#/)) { newValue = newValue.replace(/\#/g, "%23"); }	// replace # with escaped #
+    }
+    var sUrl = "http://tazendra.caltech.edu/~postgres/cgi-bin/ontology_annotator.cgi?action=asyncValidValue&field="+field+"&userValue="+newValue+"&datatype="+datatype;
+//     top.frames['obo'].document.getElementById('myObo').innerHTML += "sUrl " + sUrl + " end<br/> ";
+    YAHOO.util.Connect.asyncRequest('GET', sUrl, callbacks); 
+} // function checkValueIsValidAndUpdate(field, newValue, selectedRows)
+
+function processValuesForDataTable(field, newValue, selectedRows) {		// process values to datatable format and call updateDataTable to update datatable
+    if ( ( fieldsData[field]["type"] === "dropdown" ) || 			// if it's a dropdown field
+         ( fieldsData[field]["type"] === "ontology" ) ) {			// or if it's an ontology field
+         newValue = newValue.replace(/ \( /g, "<span style='display: none'>"); 	// ontology values need autocomplete to match value loaded into editor, 
+         newValue = newValue.replace(/ \) /g, "</span>" ); }			// otherwise focus and blur trigger an onSelectionEnforce event
+    else if ( ( fieldsData[field]["type"] === "multiontology" ) || 		// or if it's a multi-value ontology field
+              ( fieldsData[field]["type"] === "multidropdown" ) ) {		// or if it's a multi-value dropdown field
+         newValue = addToSelectField(field, newValue); 				// add to select element, and get the new value string for the datatable 
+//     top.frames['obo'].document.getElementById('myObo').innerHTML += "updating " + field + " with " + newValue + "<br/> ";
+         if (newValue === "noChange") { return; } }				// if it hasn't changed, don't alter datatable / postgres
+//     var idValue = newValue;
+//     if (newValue.match(/\( (.*?) \)/) ) {
+//         var matchStuff = newValue.match(/\( (.*?) \)/); idValue = matchStuff[1]; 
+//         newValue = newValue.replace(/ \( (.*?) \)/, ""); }
+    updateDataTableValues(field, newValue, selectedRows);			// update selected rows for a given field to have newValue
+} // function processValuesForDataTable(field, newValue, selectedRows)
+
+function updatePostgresTableField(pgid, field, newValue) {
+    disableForm();
+//     setTimeout( "undisableForm()", 2000 );
+//     top.frames['obo'].document.getElementById('myObo').innerHTML += "pgid " + pgid + " field " + field + " newValue " + newValue + "<br/> ";
+    var callbacks = { 
+        success : function (o) {				// Successful XHR response handler 
+            if (o.responseText === 'OK') { 			// it's ok, don't say anything
+//               top.frames['obo'].document.getElementById('myObo').innerHTML += "OK pgid " + pgid + " field " + field + " newValue " + newValue + " "; 
+            }
+            else { alert("ERROR not OK response for newValue " + newValue + " did not update for pgid " + pgid + " and " + field + " "); }
+            undisableForm();
+        },
+        failure:function(o) {
+            alert("ERROR newValue " + newValue + " did not update for pgid " + pgid + " and " + field + "<br>" + o.statusText);
+            undisableForm();
+        },
+    }; 
+    // Make the call to the server to update postgres
+    if (newValue !== undefined) {						// if there is a display value replace stuff
+        if (newValue.match(/\+/)) { newValue = newValue.replace(/\+/g, "%2B"); }	// replace + with escaped +
+        if (newValue.match(/\#/)) { newValue = newValue.replace(/\#/g, "%23"); }	// replace # with escaped #
+    }
+    var sUrl = "http://tazendra.caltech.edu/~postgres/cgi-bin/ontology_annotator.cgi?action=updatePostgresTableField&pgid="+pgid+"&field="+field+"&newValue="+escape(newValue)+"&datatype="+datatype;
+//     top.frames['obo'].document.getElementById('myObo').innerHTML += "sUrl " + sUrl + " end<br/> ";
+    YAHOO.util.Connect.asyncRequest('GET', sUrl, callbacks); 
+} // function updatePostgresTableField(pgid, field, newValue)
+
+function disableForm() {							// disable myDataTable, input fields of editor, controls
+// all of this pointer stuff didn't work  2010 01 21
+//   document.body.style.cursor = 'hand';
+//   top.document.body.style.cursor = 'hand';
+//   top.frames['controls'].document.body.style.cursor = 'hand';
+//   top.frames['editor'].document.body.style.cursor = 'hand';
+//   top.frames['table'].document.body.style.cursor = 'hand';
+//   top.frames['obo'].document.body.style.cursor = 'hand';
+// alert("hand");
+
+//     myDataTable.disable();
+//     for (var i = 0; i < myFields.length; i++ ) {				// for all fields
+//         if (top.frames['editor'].document.getElementById('input_' + myFields[i])) {			// if there's an input field
+//             top.frames['editor'].document.getElementById('input_' + myFields[i]).disabled = true; } }	// disable input field
+//   top.frames['controls'].document.getElementById('newRow').disabled = true;
+//   top.frames['controls'].document.getElementById('duplicateRow').disabled = true;
+//   top.frames['controls'].document.getElementById('deleteRow').disabled = true;
+//   top.frames['controls'].document.getElementById('checkData').disabled = true;
+//   top.frames['controls'].document.getElementById("filtersAmount").disabled = true;
+//   var filtersMaxAmount = top.frames['controls'].document.getElementById("filtersMaxAmount").value;
+//   for (var filterCount = 1; filterCount <= filtersMaxAmount; filterCount++) {	// for max amount of filters
+//       top.frames['controls'].document.getElementById("filterValue" + filterCount).disabled = true;
+//       top.frames['controls'].document.getElementById("filterType" + filterCount).disabled = true; }
+} // function disableForm()
+
+function undisableForm() {							// undisable myDataTable, input fields of editor, controls
+//     myDataTable.undisable();
+//     for (var i = 0; i < myFields.length; i++ ) {				// for all fields
+//         if (top.frames['editor'].document.getElementById('input_' + myFields[i])) {			// if there's an input field
+//             top.frames['editor'].document.getElementById('input_' + myFields[i]).disabled = false; } }	// undisable input field
+//   top.frames['controls'].document.getElementById('newRow').disabled = false;
+//   top.frames['controls'].document.getElementById('duplicateRow').disabled = false;
+//   top.frames['controls'].document.getElementById('deleteRow').disabled = false;
+//   top.frames['controls'].document.getElementById('checkData').disabled = false;
+//   top.frames['controls'].document.getElementById("filtersAmount").disabled = false;
+//   var filtersMaxAmount = top.frames['controls'].document.getElementById("filtersMaxAmount").value;
+//   for (var filterCount = 1; filterCount <= filtersMaxAmount; filterCount++) {	// for max amount of filters
+//       top.frames['controls'].document.getElementById("filterValue" + filterCount).disabled = false;
+//       top.frames['controls'].document.getElementById("filterType" + filterCount).disabled = false; }
+} // function undisableForm()
+
+function updateDataTableValues(field, newValue, selectedRows) {			// update selected rows for a given field to have newValue
+    var displayValue = newValue;
+    if (displayValue !== undefined) {						// if there is a display value replace stuff
+        if (displayValue.match(/%2B/)) { displayValue = displayValue.replace(/%2B/g, "+"); }	// replace escaped + with + for display in cell
+        if (displayValue.match(/%23/)) { displayValue = displayValue.replace(/%23/g, "#"); }	// replace escaped + with + for display in cell
+    }
+    for (var i = 0; i < selectedRows.length; i++) {		// for each selected row in the data table
+        var recordData = myDataTable.getRecord(selectedRows[i])._oData;		// get oData from each record
+        var tableValue = recordData[field];					// get tableValue for that field
+        var pgid = recordData.id;
+        if (tableValue !== newValue) {						// if new value is different
+            var record = myDataTable.getRecord(selectedRows[i]);		// get the record
+// no longer update lastupdate.  for Ranjana 2010 09 09
+//             if ( ( (datatype === 'gop') || (datatype === 'ptg') ) && (field !== 'lastupdate') ) {	// if gop or ptg and normal field, update lastupdate to current date
+//                 var simpleDate = getSimpleDate(); var tableDate = recordData.lastupdate;
+//                 if (simpleDate !== tableDate) {
+//                     top.frames['editor'].document.getElementById("input_lastupdate").value = simpleDate;
+//                     updatePostgresTableField(pgid, 'lastupdate', simpleDate);
+//                     myDataTable.updateCell(record, 'lastupdate', simpleDate); } }	// update datatable cell for lastupdate field
+//     top.frames['obo'].document.getElementById('myObo').innerHTML += "pgid " + pgid + " field " + field + " newValue " + newValue + "<br/> ";
+
+            updatePostgresTableField(pgid, field, newValue);
+            myDataTable.updateCell(record, field, displayValue);			// update the datatable cell, which leaves the row id the same
+            var trId = myDataTable.getTrEl(record).id;				// get the table row id
+//             alert("trId " + trId + " field " + field + " " + newValue);
+	    var divArray = document.getElementById(trId).getElementsByTagName("div");	// get all divs in that table row
+            colorMoreCells(divArray);						// check and set their overflow
+        }
+    }
+} // function updateDataTableValues(field, newValue, selectedRows)
+
+function addToSelectField(field, newValue) {					// add to select element, and get the new value string for the datatable 
+    var elSel = top.frames['editor'].document.getElementById("select_" + field);	// elSel is select element for that field
+    var elOptNew = document.createElement('option');
+    elOptNew.text = newValue; elOptNew.value = newValue;			// set value and text to newValue
+//     top.frames['obo'].document.getElementById('myObo').innerHTML += "adding " + newValue + "<br/> ";
+    var isInSelectFlag = checkValueInSelect(field, newValue);			// check if an editor input value is already in the corresponding select element option list
+    if (isInSelectFlag === false) {						// if not in select element list, add it
+//         YAHOO.util.Event.addListener(elOptNew, "click", function() { top.frames['editor'].document.getElementById('input_' + field).value = elOptNew.value; });
+        try { elSel.add(elOptNew, null); }  					// standards compliant; doesn't work in IE
+        catch(ex) { elSel.add(elOptNew); }  					// IE only
+        resizeSelectField(elSel);
+
+        top.frames['editor'].document.getElementById('input_' + field).blur();	// blur to prevent future blur from updating values
+        top.frames['editor'].document.getElementById('input_' + field).value = "";	// clear input element for that field
+        return convertSelectToDatatableValue(field);				// return datatable value based on select element option values
+    }
+    return "noChange";								// nothing has changed, value already existed
+} // function addToSelectField(field, newValue) 
+
+function resizeSelectField(elSel) { if (elSel.length > 0) { elSel.size = elSel.length; } else { elSel.size = 1; } }
+
+function convertSelectToDatatableValue(field) {					// return datatable value based on select element option values
+    var arrString = new Array;							// store strings converted for datatable here
+    var elSel = top.frames['editor'].document.getElementById("select_" + field);	// elSel is select element for that field
+    for (var i = 0; i <= elSel.length - 1; i++) {				// for each option
+        var string = elSel.options[i].value.replace(/ \( /g, "<span style='display: none'>"); 	
+        string = string.replace(/ \) /g, "</span>" );				// ontology values need to convert id to hidden value for datatable
+        arrString.push(string); }						// add string to array
+    if (arrString.length > 0) { return '"' + arrString.join('","') + '"'; }	// return datatable-formated string
+        else { return; }							// if no values left, return blank
+} // function convertSelectToDatatableValue(field) 
+
+function checkValueInSelect(field, newValue) {					// check if an editor input value is already in the corresponding select element option list
+    var elSel = top.frames['editor'].document.getElementById("select_" + field);	// elSel is select element for that field
+    for (var i = elSel.length - 1; i>=0; i--) {					// for each of the elements in reverse since most likely added recently
+        if (elSel.options[i].value === newValue) { return true; } }		// if new value already in select list, return true
+    return false;								// not in select list, return false
+} // function checkValueInSelect(field, newValue) 
+
+function populateSelectFieldFromDatatable(field, value) {			// get datatable-style value and populate corresponding select element options list
+    top.frames['editor'].document.getElementById('input_' + field).value = "";	// clear input element for that field
+    var elSel = top.frames['editor'].document.getElementById("select_" + field);	// elSel is select element for that field
+// if (field === "person") { top.frames['obo'].document.getElementById('myObo').innerHTML += "field " + field + " value " +  value + " end<br/> "; }
+    for (var i = elSel.length - 1; i>=0; i--) { elSel.remove(i); }		// clear select element
+    if (value === "") { return; }			 			// nothing to add if no value
+    value = value.replace(/^\"/, ""); 	value = value.replace(/\"$/, ""); 	// strip surrounding doublequotes
+    var arrData = new Array;							// new array to store values
+    if (value.match(/","/)) { arrData = value.split('","'); }			// split by  doublequote comma doublequote  into array
+    else { arrData.push(value); }						// if just one value, push it
+   
+    for (var i = 0; i < arrData.length; i++) { 					// for each data value from datatable
+        var elOptNew = document.createElement('option');			// new option
+        elOptNew.text = arrData[i]; elOptNew.value = arrData[i];		// set value and text to corresponding value
+        try { elSel.add(elOptNew, null); }  					// standards compliant; doesn't work in IE
+        catch(ex) { elSel.add(elOptNew); }  					// IE only
+    }
+    resizeSelectField(elSel);
+} // function populateSelectFieldFromDatatable(field, value)
+
+function removeSelectFieldEntriesListener(e) {					// remove selected option elements from corresponding select element
+  var fieldstuff = this.id.match(/button_remove_(.*)/);				// this is event (button click)
+  var field = fieldstuff[1];							// get the field name from the event id
+  var haveRemoved = removeSelected( top.frames['editor'].document.getElementById("select_" + field) );	// remove selected option elements from given select element
+  if (haveRemoved === true) {							// if something has been removed
+    top.frames['editor'].document.getElementById("input_" + field).value = '';	// blank out corresponding input_ field
+    var selectedRows = myDataTable.getSelectedRows();				// get the selectedRows from the datatable
+    var newValue = convertSelectToDatatableValue(field)				// get the datatable value based on select element option values
+//     top.frames['obo'].document.getElementById('myObo').innerHTML += "remove " + field + " end<br/> ";
+    updateDataTableValues(field, newValue, selectedRows); }			// update selected rows for a given field to have newValue
+} // function removeSelectFieldEntriesListener(e)
+
+function removeSelected(elSel) {	                        		// remove selected option elements from given select element
+    var haveRemoved = false; 
+    for (var i = elSel.length - 1; i>=0; i--) { if (elSel.options[i].selected) { elSel.remove(i); haveRemoved = true; } }
+    resizeSelectField(elSel);
+    return haveRemoved; }
+
+function removeSelectAllOptions(elSel) {	                        		// remove selected option elements from given select element
+    var haveRemoved = false; 
+    for (var i = elSel.length - 1; i>=0; i--) { elSel.remove(i); haveRemoved = true; } 
+    resizeSelectField(elSel);
+    return haveRemoved; }
+
+
+// function getNewPgid(datatype) {				// this returns the next pgid that's not used, but not helpful for duplicateRow or newRow because it's an async call ;  will have to deal with this when I deal with postgres updating which will also lock the datatable
+//       var something = { 
+//           success : function (o) {				// Successful XHR response handler 
+//               if (o.responseText !== undefined) { top.frames['obo'].document.getElementById('termInfo').innerHTML = "response " + o.responseText + " end<br/> "; 
+//               return o.responseText; }
+//           },
+//       }; 
+// 
+//       // Make the call to the server for JSON data 
+//       var sUrl = "http://tazendra.caltech.edu/~postgres/cgi-bin/ontology_annotator.cgi?action=newPgid&datatype="+datatype;
+// //       top.frames['obo'].document.getElementById('myObo').innerHTML += "sUrl " + sUrl + " end<br/> ";
+//       YAHOO.util.Connect.asyncRequest('GET', sUrl, something); 
+// }
+
+function duplicateRowButtonListener(e) {		// if duplicate row button was clicked 
+    var selectedRows = myDataTable.getSelectedRows();
+    var idsToDuplicateArray = [ ];				// array of ids to duplicate
+    for (var i = 0; i < selectedRows.length; i++) {	// for each selected row
+        var id = myDataTable.getRecord(selectedRows[i])._oData.id;	// get id from each record
+        idsToDuplicateArray.push(id); }			// add id to array to duplicate
+    var idsToDuplicate = idsToDuplicateArray.join(',');
+//     top.frames['obo'].document.getElementById('myObo').innerHTML += "idsToDuplicate " + idsToDuplicate + "<br/> ";
+    disableForm();
+    var callbacks = { 
+        success : function (o) {				// Successful XHR response handler 
+            if (o.responseText !== undefined) {
+                var arrIdsReturned = o.responseText.split(","); 	// split by comma into array
+                postgresQueryField('id', o.responseText, arrIdsReturned.length); 		// ajax call to query postgres by field and userValue
+                myDataTable.selectRow(myDataTable.getTrEl(0)); 		// select new row for Kimberly  2009 11 09
+                top.frames['obo'].document.getElementById('myObo').innerHTML += "OK duplicated " + idsToDuplicate + "</br>"; }
+            else { alert("ERROR undefined response for duplicating " + idsToDuplicate); }
+            undisableForm();
+        },
+        failure:function(o) {
+            alert("ERROR failure from call to duplicate pgids " + idsToDuplicate + " " + o.statusText);
+            undisableForm();
+        },
+    }; 
+    // Make the call to the server to update postgres
+    var sUrl = "http://tazendra.caltech.edu/~postgres/cgi-bin/ontology_annotator.cgi?action=duplicateByPgids&idsToDuplicate="+idsToDuplicate+"&datatype="+datatype;
+//     top.frames['obo'].document.getElementById('myObo').innerHTML += "sUrl " + sUrl + " end<br/> ";
+    YAHOO.util.Connect.asyncRequest('GET', sUrl, callbacks); 
+} // function duplicateRowButtonListener(e)
+
+// function duplicateRowButtonListener(e) {		// if duplicate row button was clicked
+//     var selectedRows = myDataTable.getSelectedRows();
+//     for (var i = 0; i < selectedRows.length; i++) {	// for each selected row
+//         var recordData = myDataTable.getRecord(selectedRows[i])._oData;	// get oData from each record
+//         var record = myDataTable.getRecord(selectedRows[i]);	// get record
+//         recordData.id = "copied";				// need a new ID to prevent duplicate ids (get from postgres)
+//         myDataTable.addRow( recordData, 0 );		// add to datatable (if added to another location, change 0 in addedTr assignment)
+// //         var recordIndex = myDataTable.getTrEl(0).id;	// record id of added row (change 0 to match addRow if changed)
+//         var addedTr = myDataTable.getTrEl(0);		// tr of added row (change 0 to match addRow if changed)
+//         var divArray = addedTr.getElementsByTagName("div");	// get all divs in the new table row
+//         colorMoreCells(divArray);			// check and set their overflow
+//         myDataTable.unselectRow(selectedRows[i]);	// unselect row to duplicate
+//         myDataTable.selectRow(myDataTable.getTrEl(0)); 	// select new row for Kimberly  2009 11 09
+//     }
+// } // function duplicateRowButtonListener(e)
+
+function newRowButtonListener(e) {			// if new row button was clicked
+    disableForm();
+    var callbacks = { 
+        success : function (o) {				// Successful XHR response handler 
+            if (o.responseText !== undefined) {
+                undisableForm();
+                postgresQueryField('id', o.responseText, 1); 		// ajax call to query postgres by field and userValue
+                myDataTable.selectRow(myDataTable.getTrEl(0)); 		// select new row for Kimberly  2009 11 09
+                top.frames['obo'].document.getElementById('myObo').innerHTML += "OK created new row " + o.responseText + "</br>"; }
+            else { alert("ERROR undefined response for duplicating " + idsToDuplicate); undisableForm(); }
+        },
+        failure:function(o) {
+            alert("ERROR failure from call to create new row " + o.statusText);
+            undisableForm();
+        },
+    }; 
+    // Make the call to the server to update postgres
+    var sUrl = "http://tazendra.caltech.edu/~postgres/cgi-bin/ontology_annotator.cgi?action=newRow&curator="+loggedCurator+"&datatype="+datatype;
+//     top.frames['obo'].document.getElementById('myObo').innerHTML += "sUrl " + sUrl + " end<br/> ";
+    YAHOO.util.Connect.asyncRequest('GET', sUrl, callbacks); 
+} // function newRowButtonListener(e) 
+
+// function newRowButtonListener(e) {			// if new row button was clicked
+//     var record = { };
+//     for (var i = 0; i < myFields.length; i++ ) { 	// for each field
+//         if ( ( (datatype === 'gop') && (myFields[i] === 'curator_evidence') ) || ( (datatype === 'app') && (myFields[i] === 'curator') ) ) {
+//             record[myFields[i]] = loggedCurator;	// initialize that field to curator evidence 
+//             record[myFields[i]] = record[myFields[i]].replace(/ \( /g, "<span style='display: none'>"); 	
+//             record[myFields[i]] = record[myFields[i]].replace(/ \) /g, "</span>" ); }	// ontology values need to convert id to hidden value for datatable
+//         else { record[myFields[i]] = ""; }		// initialize that field to blank
+//     }
+// //     var newId = getNewPgid(datatype);		// this doesn't work because it's an async call ;  will have to deal with this when I deal with postgres updating which will also lock the datatable
+//     record.id = "new";					// need a new ID to prevent duplicate ids (get from postgres)
+//     myDataTable.addRow( record, 0 );			// add to datatable
+//     myDataTable.unselectAllRows();			// unselect all rows
+//     myDataTable.selectRow(myDataTable.getTrEl(0)); 	// select new row for Kimberly  2009 11 09
+//     rowSelectLoadToEditor(record);			// change editor
+// }
+
+function deleteRowButtonListener(e) {			// if delete row button was clicked
+    var selectedRows = myDataTable.getSelectedRows();
+    var idsToDeleteArray = [ ];				// array of ids to delete
+    for (var i = 0; i < selectedRows.length; i++) {	// for each selected row
+        var id = myDataTable.getRecord(selectedRows[i])._oData.id;	// get id from each record
+        idsToDeleteArray.push(id); }			// add id to array to delete
+    var idsToDelete = idsToDeleteArray.join(',');
+//     top.frames['obo'].document.getElementById('myObo').innerHTML += "idsToDelete " + idsToDelete + "<br/> ";
+    disableForm();
+    var callbacks = { 
+        success : function (o) {				// Successful XHR response handler 
+            if (o.responseText === 'OK') {
+                var selectedRows = myDataTable.getSelectedRows();
+                for (var i = 0; i < selectedRows.length; i++) {	// for each selected row
+                    myDataTable.deleteRow( selectedRows[i] ); }	// delete it
+                top.frames['obo'].document.getElementById('myObo').innerHTML += "OK deleted " + idsToDelete + "</br>"; }
+            else { alert("ERROR undefined response for deleteng " + idsToDelete); }
+            undisableForm();
+        },
+        failure:function(o) {
+            alert("ERROR failure from call to delete pgids " + idsToDelete + " " + o.statusText);
+            undisableForm();
+        },
+    }; 
+    // Make the call to the server to update postgres
+    var sUrl = "http://tazendra.caltech.edu/~postgres/cgi-bin/ontology_annotator.cgi?action=deleteByPgids&idsToDelete="+idsToDelete+"&datatype="+datatype;
+//     top.frames['obo'].document.getElementById('myObo').innerHTML += "sUrl " + sUrl + " end<br/> ";
+    YAHOO.util.Connect.asyncRequest('GET', sUrl, callbacks); 
+} // function deleteRowButtonListener(e) 
+
+// function deleteRowButtonListener(e) {			// if delete row button was clicked
+//     var selectedRows = myDataTable.getSelectedRows();
+//     for (var i = 0; i < selectedRows.length; i++) {	// for each selected row
+//         myDataTable.deleteRow( selectedRows[i] );	// delete it
+//     }
+// }
+
+function checkDataButtonListener(e) {			// if check data button was clicked check constraints for app and gop datatypes
+							// purposely duplicating code because only want popup for those two datatype, and want bad stuff written on the fly
+    var records = myDataTable.getRecordSet().getRecords();
+    var badStuff = '';
+    if (datatype === 'gop') { 
+        var popupWindow = window.open("", "mywindow", "location=1,status=1,scrollbars=1,width=400,height=80");
+        popupWindow.focus();						// focus on window
+        popupWindow.document.body.innerHTML = "";			// clear window
+        popupWindow.document.write('<p>Checking constraints</p>') 
+        var constraintFields = [ "id", "paper_evidence", "wbgene", "curator_evidence", "goontology", "goid", "goinference", "dbtype", "lastupdate" ];
+        for (var i = 0; i < records.length; i++) {			// for each record (table row)
+            var id = records[i].getData("id");
+            for (var j = 0; j < constraintFields.length; j++) {		// for each constraint field
+                if ( (records[i].getData(constraintFields[j]) === null) || (records[i].getData(constraintFields[j]) === "") ) { 
+                    popupWindow.document.write( id + " missing " + constraintFields[j] + "<br/>\n" );
+                    badStuff += id + " missing " + constraintFields[j] + "<br/>\n"; } } }
+        if (badStuff === '') { popupWindow.document.write('<p>All records have required fields</p>'); }
+            else { popupWindow.document.write('<p>completed checking constraints</p>'); } }
+    else if (datatype === 'app') {
+        var popupWindow = window.open("", "mywindow", "location=1,status=1,scrollbars=1,width=820,height=380");
+        popupWindow.focus();						// focus on window
+        popupWindow.document.body.innerHTML = "";			// clear window
+        popupWindow.document.write('<p>Checking constraints</p>') 
+        var constraintFields = [ "id", "type", "tempname", "term", "curator" ];
+//  foreach paper :
+//     count of unique alleles, count of unique rearrangements, count of unique transgenes.
+//     count of unique object name-phenotype connections, meaning characters (rows) because all characters must have object name and phenotype.
+//  total count of unique object name-phenotype connections, meaning characters (rows)
+//  total count of unique object names that have NBP (even if there's an append retrieve, everything from annotation table)
+        var objectCountHash = new Object();				// hash of object counts
+        objectCountHash["nbp"] = new Object();				// hash of tempnames that have nbp
+        objectCountHash["paper"] = new Object();			// hash of papers in records
+        for (var i = 0; i < records.length; i++) {			// for each record (table row)
+            var id = records[i].getData("id");				// the pgdbid
+            var tempname = records[i].getData("tempname");		// the object name
+            var type = records[i].getData("type");			// the object type
+
+              // get counts
+            if ( (records[i].getData("nbp") !== undefined) && (records[i].getData("nbp") !== null) && (records[i].getData("nbp") !== "") ) {
+                if (! (tempname in objectCountHash["nbp"]) ) { objectCountHash["nbp"][tempname] = true; } }	// make a tempname entry if there isn't already
+            if ( (records[i].getData("paper") !== undefined) && (records[i].getData("paper") !== null) && (records[i].getData("paper") !== "") ) {
+                var paper = records[i].getData("paper"); 
+                if (! (paper in objectCountHash["paper"]) ) { 
+                     objectCountHash["paper"][paper] = new Object();		// make a paper entry if there isn't already
+                     objectCountHash["paper"][paper]["recordCount"] = 1; 	// initialize that paper's record count to 1
+                     objectCountHash["paper"][paper]["type"] = new Object();	// make a paper / type entry if there isn't already
+                     if (! (type in objectCountHash["paper"][paper]["type"] ) ) { objectCountHash["paper"][paper]["type"][type] = new Object(); }	// new type
+                     objectCountHash["paper"][paper]["type"][type][tempname] = true; }			// add tempname to type
+                else { 
+                     objectCountHash["paper"][paper]["recordCount"]++; 		// paper already exists, up the count
+                     if (! (type in objectCountHash["paper"][paper]["type"] ) ) { objectCountHash["paper"][paper]["type"][type] = new Object(); }	// new type
+                     objectCountHash["paper"][paper]["type"][type][tempname] = true; }			// make sure tempname is in type
+            } // if ( (records[i].getData("paper") !== undefined) && (records[i].getData("paper") !== null) && (records[i].getData("paper") !== "") )
+
+              // check constraints
+            if ( (records[i].getData("nbp") !== undefined) && (records[i].getData("nbp") !== null) && (records[i].getData("nbp") !== "") ) { continue; }	// if nbp, it's good
+            for (var j = 0; j < constraintFields.length; j++) {		// for each constraint field
+                if ( (records[i].getData(constraintFields[j]) === undefined) || (records[i].getData(constraintFields[j]) === null) || 
+                     (records[i].getData(constraintFields[j]) === "") ) {
+                    popupWindow.document.write( id + " missing " + constraintFields[j] + "<br/>\n" );
+                    badStuff += id + " missing " + constraintFields[j] + "<br/>\n"; } }
+            if ( (records[i].getData("cold_degree") !== undefined) && (records[i].getData("cold_degree") !== null) && (records[i].getData("cold_degree") !== "") ) {
+                if ( !(records[i].getData("cold_degree").match(/\d+/) ) ) {							// if it matches a number
+                    popupWindow.document.write( id + " has cold degree but no digits<br/>\n" );
+                    badStuff += id + " has cold degree but no digits person<br/>\n"; } }
+            if ( (records[i].getData("heat_degree") !== undefined) && (records[i].getData("heat_degree") !== null) && (records[i].getData("heat_degree") !== "") ) {
+                if ( !(records[i].getData("heat_degree").match(/\d+/) ) ) {							// if it matches a number
+                    popupWindow.document.write( id + " has heat degree but no digits<br/>\n" );
+                    badStuff += id + " has heat degree but no digits person<br/>\n"; } }
+            if ( (records[i].getData("person") !== undefined) && (records[i].getData("person") !== null) && (records[i].getData("person") !== "") &&
+                 (records[i].getData("paper") !== undefined) && (records[i].getData("paper") !== null) && (records[i].getData("paper") !== "") ) { 
+                if ( (records[i].getData("person") === undefined) || (records[i].getData("person") === null) || (records[i].getData("person") === "") ) { 
+                    popupWindow.document.write( id + " missing person<br/>\n" );
+                    badStuff += id + " missing person<br/>\n"; } 
+                if ( (records[i].getData("paper") === undefined) || (records[i].getData("paper") === null) || (records[i].getData("paper") === "") ) { 
+                    popupWindow.document.write( id + " missing paper<br/>\n" );
+                    badStuff += id + " missing paper<br/>\n"; } }
+        }
+        if (badStuff === '') { popupWindow.document.write('<p>All records have required fields</p>'); } 
+            else { popupWindow.document.write('<p>completed checking constraints</p>'); }
+
+//               if (!(jsonData[i].id in idHash)) { goodData.push(jsonData[i]); }	// add only if not already in hash of ids
+        popupWindow.document.write('<p>total count of unique object name-phenotype connections (rows) is ' + records.length + '</p>'); 
+        popupWindow.document.write('<p>total count of unique object names that have nbp is ' + Object.size(objectCountHash["nbp"]) + '</p>'); 
+
+        for (var paper in objectCountHash["paper"]) {
+            for (var type in objectCountHash["paper"][paper]["type"]) {		// for each paper type, show the amount of unique object names
+                popupWindow.document.write('paper ' + paper + ' count of unique object names for ' + type + ' is ' + Object.size(objectCountHash["paper"][paper]["type"][type]) + '</br>'); }
+            popupWindow.document.write('paper ' + paper + ' count of unique object name-phenotype connections (rows) is ' + objectCountHash["paper"][paper]["recordCount"] + '</br>'); }	// for each paper show count of rows 
+   } // else if (datatype === 'app')
+} // function checkDataButtonListener(e)
+
+
+function resetButtonListener(e) { resetButton(); }	// resetButton should clear datatable, editor, filters, obo ;  not reload all the frames, because that alters the column order / size.  for Ranjana  2009 12 15
+function resetButton() {
+  top.frames['obo'].window.location.reload(true);	// true reloads from server, not cache
+//   top.frames['controls'].window.location.reload(true);	// reloading the controls resets the frame, but disables the javascript for it.  should instead set the filtersAmount to 1 when I get a chance to 
+  myDataTable.deleteRows(myDataTable.getRecordSet().getLength() - 1, -1 * myDataTable.getRecordSet().getLength()); 
+  for (var i = 0; i < myFields.length; i++ ) { 		// for each field blank editor 
+      if ( ( fieldsData[myFields[i]]["type"] === "toggle" ) || ( fieldsData[myFields[i]]["type"] === "toggle_text" ) ) {
+          top.frames['editor'].document.getElementById("toggle_" + myFields[i]).style.backgroundColor = "white"; }	// set toggle_<field> tds white (blank)
+      else {
+          top.frames['editor'].document.getElementById("input_" + myFields[i]).value = ''; }	// blank input field
+      if ( ( fieldsData[myFields[i]]["type"] === "multiontology" ) || ( fieldsData[myFields[i]]["type"] === "multidropdown" ) ) { 
+          var haveRemoved = removeSelectAllOptions( top.frames['editor'].document.getElementById("select_" + myFields[i]) ); } }	// if it's a multi-value ontology field remove all option elements from corresponding select element
+}
+
+// turns out Ranjana doesn't want the page reloaded, she wants the editor and datatable wiped, and the obo and controls reloaded.  2009 12 15
+// function reloadPageListener(e) { reloadPage(); }
+// function reloadPage() {
+//   top.window.location.reload(true);			// this doesn't reload each frame, so sometimes the frames reload, other times not
+//   top.frames['obo'].window.location.reload(true);	// true reloads from server, not cache
+//   top.frames['editor'].window.location.reload(true);
+//   top.frames['controls'].window.location.reload(true);
+//   top.frames['table'].window.location.reload(true);
+// }
+
+function updateFiltersAmountListener(e) { updateFiltersAmount(); }	// changed amount of filters on select field
+function updateFiltersAmount() {			// get max filters, get chosen amount of filters, show / hide appropriately
+  var filtersMaxAmount = top.frames['controls'].document.getElementById("filtersMaxAmount").value;
+  var filtersAmount = top.frames['controls'].document.getElementById("filtersAmount").options[top.frames['controls'].document.getElementById("filtersAmount").selectedIndex].value;	// the amount of filters chosen
+//   top.frames['obo'].document.getElementById('myObo').innerHTML += "fAm " + filtersAmount + " fm " + filtersMaxAmount + "<br/> ";
+  for (var filterCount = 1; filterCount <= filtersMaxAmount; filterCount++) {	// for max amount of filters
+    if (filterCount <= filtersAmount) {			// if lower or equal than amount chosen, show it
+      top.frames['controls'].document.getElementById("filterType" + filterCount).style.display = "";
+      top.frames['controls'].document.getElementById("filterValue" + filterCount).style.display = ""; }
+    else {						// if greter than amount chosen, hide it
+      top.frames['controls'].document.getElementById("filterType" + filterCount).style.display = "none";
+      top.frames['controls'].document.getElementById("filterValue" + filterCount).style.display = "none"; } }
+  filterData();
+}
+
+function filterDataKeyUpListener(e) {
+  filterData();
+}
+// function filterDataButtonListener(e) { filterData(); }	// this button is gone
+
+
+function filterData() {
+//   var filterType = top.frames['controls'].document.getElementById("filterType").options[top.frames['controls'].document.getElementById("filterType").selectedIndex].value;	// not necessary ?
+  top.frames['obo'].document.getElementById('myObo').innerHTML = "";
+  var records = myDataTable.getRecordSet().getRecords();
+  var recordsShown = 0;
+
+//   var filtersMaxAmount = top.frames['controls'].document.getElementById("filtersMaxAmount").value;
+  var filtersAmount = top.frames['controls'].document.getElementById("filtersAmount").options[top.frames['controls'].document.getElementById("filtersAmount").selectedIndex].value;	// the amount of filters chosen
+  for (var i = 0; i < records.length; i++) {	// for each record (table row)
+    var recordIndex = myDataTable.getRecordIndex(records[i]);
+    var show = 0;				// show is an integer to compare to amount of filters
+    for (var filterCount = 1; filterCount <= filtersAmount; filterCount++) {	// for each filter
+      var filterTypeId = 'filterType' + filterCount;
+      var filterValueId = 'filterValue' + filterCount;
+      filterType = top.frames['controls'].document.getElementById(filterTypeId).value;
+      filterValue = top.frames['controls'].document.getElementById(filterValueId).value;
+//       top.frames['obo'].document.getElementById('myObo').innerHTML += "Query " + filterType + " for " + filterValue + "<br>"; 	// this doesn't work, it loops per record, showing up too many times
+      queryValue = filterValue.toLowerCase();
+      var filterTypes = [];						// field types to filter for
+      if (filterType !== "all") { filterTypes.push(filterType); }	// just one type
+        else { filterTypes = myFields; }				// all the fields 
+      for (var j in filterTypes) {			// for each filterType (all or a specific one)
+        if (records[i].getData(filterTypes[j]) === null) { top.frames['obo'].document.getElementById('myObo').innerHTML += "ERROR null value in recordIndex : " + recordIndex + " " + i + " " + j + " " + filterTypes[j] + " <br/> "; }	// give error message if a record value is null
+  //       top.frames['obo'].document.getElementById('myObo').innerHTML += recordIndex + " " + filterTypes[j] + " <br/> ";
+        var recordCellData = records[i].getData(filterTypes[j]).toLowerCase();
+        if (recordCellData.indexOf(queryValue) !== -1) { show++; break; }		// found a match, this filter passes and should show, no need to look at all other data in record cells
+      } // for (var j in filterTypes)
+    } // for (var filterCount = 1; filterCount <= filtersAmount; filterCount++)
+    if (show >= filtersAmount) { recordsShown++; myDataTable.getTrEl(recordIndex).style.display = ""; }
+      else { myDataTable.getTrEl(recordIndex).style.display = "none"; }
+  } // for (var i = 0; i < records.length; i++)
+  top.frames['obo'].document.getElementById('myObo').innerHTML += recordsShown + " records match.<br/> ";
+
+// this way of doing it get data from divs instead of the more proper records
+//   var colIndex = 0;
+//   if (filterType !== "all") {
+//     var arrTh = document.getElementById("myContainer").getElementsByTagName("th");
+//     for (colIndex = 0; colIndex < arrTh.length; colIndex++) {		// loop through the ths, tracking the column index
+//       var toMatch = "-" + filterType;
+//       if (arrTh[colIndex].id.indexOf(toMatch) !== -1) { break; } } }	// when the filterType th is the looping th stop
+//   var rows = myDataTable.getTbodyEl().getElementsByTagName('tr')	// rows are the body tr elements
+//   for (var row = 0; row < rows.length; row++) {		// for all rows add the column-matching div
+//     var show = 0;
+//     var trDivs = rows[row].getElementsByTagName('div');
+//     if (queryValue === "") { show = 1; }
+//     else if (filterType === "all") {
+//       for (var div = 0; div < trDivs.length; div++) { 
+//         var data = trDivs[div].innerHTML.toLowerCase();
+// //       top.frames['obo'].document.getElementById('myObo').innerHTML += data + " " + row + " <br/> ";
+//         if (data.indexOf(queryValue) !== -1) { show++; break; } }
+//     }
+//     else {
+//       var data = rows[row].getElementsByTagName('div')[colIndex].innerHTML.toLowerCase(); 
+// //       top.frames['obo'].document.getElementById('myObo').innerHTML += data + " " + queryValue + " " + colIndex + " " + row + " <br/> ";
+//       if (data.indexOf(queryValue) !== -1) { show++; } 
+//     }
+//     if (show > 0) { rows[row].style.display = ""; }
+//       else { rows[row].style.display = "none"; }
+//   } // for (var row = 0; row < rows.length; row++)
+} // function filterDataButtonListener(e)
+
+function colorMoreCellsAllTable() {			// for whole table, cells that have hidden data in overflow 
+  var divArray = document.getElementById("myContainer").getElementsByTagName("div");
+  colorMoreCells(divArray);				// check and set their overflow
+}
+
+function colorMoreCells(divArray) {				// cells that have hidden data in overflow should have different background
+//   top.frames['obo'].document.getElementById('myObo').innerHTML += "colorMoreCells<br/> ";
+  for (var i = 0, len = divArray.length; i < len; ++i) { 
+      if (YAHOO.util.Dom.hasClass(divArray[i], "yui-dt-liner") ) {		// if it has the class has yui-dt-liner
+            // if overflow is overwritten to hidden, comparing scrollHeight and clientHeight checks if there's overflow
+//           top.frames['obo'].document.getElementById('myObo').innerHTML += "scroll " + divArray[i].scrollHeight + " client " + divArray[i].clientHeight + "<br/> ";
+          if (divArray[i].scrollHeight !== divArray[i].clientHeight) {
+//               top.frames['obo'].document.getElementById('myObo').innerHTML += "scroll " + divArray[i].scrollHeight + " client " + divArray[i].clientHeight + "<br/> ";
+//               divArray[i].style.backgroundColor = "yellow"; 
+              if (!( YAHOO.util.Dom.hasClass(divArray[i], 'hidden-overflow-data') )) {
+                  YAHOO.util.Dom.addClass(divArray[i], "hidden-overflow-data"); 
+              }
+          }
+          else {
+//               divArray[i].style.backgroundColor = "white"; 
+              if ( YAHOO.util.Dom.hasClass(divArray[i], 'hidden-overflow-data') ) {
+                  YAHOO.util.Dom.removeClass(divArray[i], 'hidden-overflow-data'); 
+              }
+          }
+  } }
+//                   top.frames['obo'].document.getElementById('myObo').innerHTML += "END<br/> ";
+}
+
+function assignQueryButtonListenerAjax(e) {		// if query button was clicked
+  var fieldstuff = this.id.match(/button_(.*)/);	// this is event (button click)
+  var field = fieldstuff[1];				// get the field name from the event id
+  var userValue = "";					// userValue is what they entered in matching input
+  if ( ( fieldsData[field]["type"] === "toggle" ) || ( fieldsData[field]["type"] === "toggle_text" ) ) {	// toggle fields
+      if (top.frames['editor'].document.getElementById("toggle_" + field).style.backgroundColor === "red") { userValue = fieldsData[field]["label"]; } }	// if checked on the backgroundColor is red, and the value is the field's label
+  else {						// non toggle fields get their value from input_<field>
+      userValue = top.frames['editor'].document.getElementById("input_" + field).value; }	// userValue is what they entered in matching input
+  if (userValue === "") { return; }			// don't query if no input
+  postgresQueryField(field, userValue, 0); 		// ajax call to query postgres by field and userValue
+} // function assignQueryButtonListenerAjax(e) 			// if button was clicked
+
+function postgresQueryField(field, userValue, amountRowsToHighlight) {		// ajax call to query postgres by field and userValue
+  YAHOO.util.Connect.asyncRequest('GET', "http://tazendra.caltech.edu/~postgres/cgi-bin/ontology_annotator.cgi?action=jsonField&field="+field+"&userValue="+userValue+"&datatype="+datatype, callbacks); 
+  myDataTable.unselectAllRows();								// unselect all datatable rows to keep editor reset from chaging values
+  for (var i = 0; i < myFields.length; i++ ) { 							// for each field blank editor unless it's the queried field
+      if (field === myFields[i]) { continue; }							// skip queried field
+      if ( fieldsData[myFields[i]]["type"] === "queryonly" ) { continue; }			// skip queryonly fields
+//               top.frames['obo'].document.getElementById('myObo').innerHTML += 'myField ' + myFields[i] + ' END<br/>';
+      if ( ( fieldsData[myFields[i]]["type"] === "toggle" ) || ( fieldsData[myFields[i]]["type"] === "toggle_text" ) ) {
+          top.frames['editor'].document.getElementById("toggle_" + myFields[i]).style.backgroundColor = "white"; }	// set toggle_<field> tds white (blank)
+      else {
+          top.frames['editor'].document.getElementById("input_" + myFields[i]).value = ''; }	// blank input field
+      if ( ( fieldsData[myFields[i]]["type"] === "multiontology" ) || ( fieldsData[myFields[i]]["type"] === "multidropdown" ) ) { 
+          var haveRemoved = removeSelectAllOptions( top.frames['editor'].document.getElementById("select_" + myFields[i]) ); } }	// if it's a multi-value ontology field remove all option elements from corresponding select element
+
+  var callbacks = {
+      // Successful XHR response handler 
+      success : function (o) { 
+          var jsonData = [];
+          try {			// Use the JSON Utility to parse the data returned from the server 
+              jsonData = YAHOO.lang.JSON.parse(o.responseText); 
+          } 
+          catch (x) { alert("JSON Parse failed!"); return; } 
+          var goodData = [];
+
+//           var rs = myDataTable.getRecordSet().getRecord(myDataTable.getSelectedRows()[0])._oData;
+//           var rs = myDataTable.getRecordSet().getRecord(myDataTable.getSelectedRows()[0]);
+//           alert( rs.getData('standardname') );
+
+          var idHash = new Object();			// hash of pg ids loaded to datatable
+          var records = myDataTable.getRecordSet().getRecords();
+          for (var i = 0; i < records.length; i++) {
+              var recordIndex = myDataTable.getRecordIndex(records[i]);
+              var recordKey = records[i].getData('id');
+              idHash[recordKey] = recordIndex;		// this overwrites the recordIndex, but recordKey shouldn't have duplicates anyway
+          }
+      
+          for (var i = 0, len = jsonData.length; i < len; ++i) { 
+//               top.frames['obo'].document.getElementById('myObo').innerHTML += jsonData[i].standardname;
+//               myDataTable.addRow(jsonData[i], 0);	// adding one row at a time is very slow
+              if (!(jsonData[i].id in idHash)) { goodData.push(jsonData[i]); }	// add only if not already in hash of ids
+          }
+          myDataTable.addRows(goodData, 0);		// this is sooooo much faster than one by one
+
+          top.frames['obo'].document.getElementById('myObo').innerHTML = "query for " +userValue+ " on " + field + " found " + jsonData.length + " entries, added " + goodData.length + " new matches.<br />";
+          if (jsonData.length === 0) { alert("Query for " + userValue+ " on " + field + " found NO MATCHES"); }
+
+//           myDataTable.setColumnWidth(myDataTable.getColumn('phen_remark'), 600); 	// now set at initializeTable() 
+
+          var divArray = [ ];						// array of divs in the newly added rows
+//           top.frames['obo'].document.getElementById('myObo').innerHTML += "row " + divArray + ".<br />";
+          var rows = myDataTable.getTbodyEl().getElementsByTagName('tr')	// rows are the body tr elements
+          for (var row = 0; row < goodData.length; row++) {		// for all newly added rows, (change 0 to match addRow if changed)
+//             var trDivs = Array.prototype.slice.call(rows[row].getElementsByTagName('div'), 0);	// this casts the returned collection of objects into an array, but it's way way way slower
+//             divArray = divArray.concat(trDivs); 
+//             top.frames['obo'].document.getElementById('myObo').innerHTML += "row " + row + ".<br />";
+            var trDivs = rows[row].getElementsByTagName('div');
+            for (var div = 0; div < trDivs.length; div++) { divArray.push( trDivs[div] ); }	// add all divs in the row
+          }
+          myDataTable.validateColumnWidths();		// it will run this after the callback is done, but the colorMoreCells will fail since heights won't be uneven unless it's validated column widths and rendered (?) the data into the datatable
+          colorMoreCells(divArray);			// check and set their overflow
+//           colorMoreCellsAllTable();			// for whole table, possibly should just update the rows added (don't know how)
+          top.frames['controls'].document.getElementById('sisyphusImg').parentNode.removeChild(top.frames['controls'].document.getElementById('sisyphusImg'));	// remove sisyphusImg element since it has loaded		// to show on control panel div, use this code
+          top.frames['table'].document.getElementById('wait_c').style.display = "none";		// waitPanel.hide() doesn't work, so doing this lame thing
+          if (goodData.length > 0) { 					// if there was good data added
+              myDataTable.unselectAllRows();				// unselect all rows
+              if (amountRowsToHighlight > 0) {				// if there are rows to highlight
+                  for (var i = 0; i < amountRowsToHighlight; i++) {	// for the amount of rows to hightlight
+                      myDataTable.selectRow(myDataTable.getTrEl(i)); } 	// select each of those rows for new / duplicate row
+                  var recordData = myDataTable.getRecord(myDataTable.getTrEl(0))._oData;	// get record data of top row
+                  rowSelectLoadToEditor(recordData); }			// load row data to editor
+          } // if (goodData.length > 0)					// if there was good data added
+      },
+  }; 
+   
+  top.frames['obo'].document.getElementById('myObo').innerHTML = "query for " +userValue+ " on " + field + " ." + "http://tazendra.caltech.edu/~postgres/cgi-bin/ontology_annotator.cgi?action=jsonField&field="+field+"&userValue="+userValue+"&datatype="+datatype;
+
+// to show on control panel div, use this code
+  var loadingImgElem = document.createElement("img");		// make img element sisyphusImg for querying data 
+  loadingImgElem.setAttribute("src", "http://tazendra.caltech.edu/~azurebrd/stylesheets/sisyphus.gif");
+  loadingImgElem.setAttribute("id", "sisyphusImg");
+  top.frames['controls'].document.getElementById('loadingImage').appendChild( loadingImgElem );
+
+  top.frames['table'].document.getElementById('wait_c').style.display = "";			// waitPanel.show() doesn't work, so doing this lame thing
+			
+
+  // Make the call to the server for JSON data 
+  YAHOO.util.Connect.asyncRequest('GET', "http://tazendra.caltech.edu/~postgres/cgi-bin/ontology_annotator.cgi?action=jsonField&field="+field+"&userValue="+userValue+"&datatype="+datatype, callbacks); 
+
+// this code is for regenerating the table on each query
+//   this.myDataSource = new YAHOO.util.DataSource("http://tazendra.caltech.edu/~postgres/cgi-bin/ontology_annotator.cgi");
+//   this.myDataSource.connMethodPost = true;		// use post
+//   this.myDataSource.responseType = YAHOO.util.DataSource.TYPE_XML;	// get back xml
+//   this.myDataSource.responseSchema = {
+//     resultNode: "Result",				// Result is tag of each result
+//     fields: myFields					// fields match myFields exactly
+//   };
+// 
+//   var userValue = top.frames['editor'].document.getElementById("input_" + field).value;	// userValue is what they entered in matching input
+// 
+//     // generate datatable.  default height and width.  draggable columns.  initial xml query.
+//   this.myDataTable = new YAHOO.widget.ScrollingDataTable("myContainer", myColumnDefs,
+//           this.myDataSource, { width:"99.5%", height:"100%", draggableColumns:true, initialRequest:"queryField=" + field + "&userValue=" + userValue});			// default height will be resized by resizeDataTable() to include header height;
+//   resizeDataTable();					// resize new table to be as big as possible without frame scrollbars
+// 
+//     // make table rows selectable
+//   this.myDataTable.subscribe("rowMouseoverEvent", this.myDataTable.onEventHighlightRow); 
+//   this.myDataTable.subscribe("rowMouseoutEvent", this.myDataTable.onEventUnhighlightRow); 
+//   this.myDataTable.subscribe("rowClickEvent", this.myDataTable.onEventSelectRow); 
+
+    // add checkbox event if wanted for some reason
+//   this.myDataTable.on('checkboxClickEvent',function (oArgs) {
+//     var target = oArgs.target;
+//     var record = this.getRecord(target);
+//     var column = this.getColumn(target);
+//     if (column.key == 'select') { // to ensure we respond to the right column
+//       var primaryKey = record.getData('id');
+//       if (target.checked) {
+// // alert(primaryKey + " " +record);
+//         YAHOO.example.recordSelection[primaryKey] = true;	// store in globally accessible hash by twoid
+//       } else {
+//         delete YAHOO.example.recordSelection[primaryKey];
+//       }
+//     }
+//   });
+} // function postgresQueryField(field, userValue, amountRowsToHighlight) {	// ajax call to query postgres by field and userValue
+
+function showTab(tabClass) {							// show only TRs in this tab
+  arrTrs = top.frames['editor'].document.getElementsByTagName("tr");		// get all the trs
+  for (var i = 0; i < arrTrs.length; i++) {					// for each of them
+    if (arrTrs[i].className === tabClass) { arrTrs[i].style.display = ""; }	// if it's the class to show, show it
+      else { arrTrs[i].style.display = "none"; } }				// otherwise hide it
+} // function showTab(tabClass)
+
+
+
+YAHOO.util.Event.addListener(window, "load", function() { 	// on load get fields, assign listeners
+
+// can't get body to have a "resize" listener for some reason.  mouseover here only works if mousing over elements in the body, while adding from <body> tag in html works mousing over any part of the window / frame
+// var oElement = top.document.getElementById("frameset1");
+// document.body.addEventListener("mouseover", function() { alert("resized"); }, false);
+// YAHOO.util.Event.addListener(oElement, "click", function() { 	// on load get fields, assign listeners
+//   alert("resized");
+// });
+// oElement.on("resize", function() { alert("resized"); });
+
+  populateMyFields();						// populate myFields array
+  datatype = top.frames['editor'].document.getElementById("datatype").value;		// get datatype
+  loggedCurator = top.frames['editor'].document.getElementById("loggedCurator").value;	// get 3urator that is logged on
+
+  var tabs = new Object(); var firstTab = 0;			// hash of tabs used by config, initialize firstTab to zero 
+  for (var i = 0; i < myFields.length; i++ ) { 			// for each field
+      // get the button element to add the listener to
+    var oElement = top.frames['editor'].document.getElementById("button_" + myFields[i]);
+    YAHOO.util.Event.addListener(oElement, "click", assignQueryButtonListenerAjax ); 	// add the listener function
+    oElement = top.frames['editor'].document.getElementById("input_" + myFields[i]);
+    YAHOO.util.Event.addListener(oElement, "blur", editorInputBlurListener ); 	// add the listener function
+
+//     if ( fieldsData[myFields[i]]["type"] === "bigtext" ) {			// if it's a multi-value ontology field
+
+//       var panel2 = new YAHOO.widget.Panel("panel2", { width:"320px", visible:false, draggable:false, close:false } ); 
+//       panel2.setHeader("Panel #2 from Script"); 
+//       panel2.setBody("This is a dynamically generated Panel."); 
+//       panel2.setFooter("End of Panel #2"); 
+//       panel2.render(top.frames['editor'].document.getElementById("container_bigtext_" + myFields[i])); }
+
+    var tab = fieldsData[myFields[i]]["tab"];						// the tab value
+    if ( (! (tab in tabs) ) && (tab !== "all") ) {					// if not already in tabs object, and it's not "all" (skip all)
+        if (tab.match(/tab\d+/)) {							// if it matches a number
+            var match = tab.match(/tab(\d+)/); var tabNum = parseInt(match[1]);		// get the tab number
+            if ( (tabNum > 0) && ( ( firstTab === 0 ) || ( tabNum < firstTab ) ) ) {	// if tab number > 0 (real tab) AND ( firstTab hasn't changed (no values yet), OR we have a lower tab number )
+	        firstTab = tabNum; } }							// first tab is this new tab number with a lower value than previous ones
+        tabs[tab] = 1; }								// add tab to tabs object hash
+
+    if ( ( fieldsData[myFields[i]]["type"] === "multiontology" ) || ( fieldsData[myFields[i]]["type"] === "multidropdown" ) ) {
+											// if it's a multi-value ontology or dropdown field
+      oElement = top.frames['editor'].document.getElementById("button_remove_" + myFields[i]);
+      YAHOO.util.Event.addListener(oElement, "click", removeSelectFieldEntriesListener ); 	// add the listener function
+      oElement = top.frames['editor'].document.getElementById("select_" + myFields[i]);
+      YAHOO.util.Event.addListener(oElement, "change", function() { 			// when clicking an option element, load the value to the input element
+          var match = this.id.match(/select_(.*)/); var field = match[1];		// get the field from the id
+          top.frames['editor'].document.getElementById('input_' + field).value = this.options[this.selectedIndex].value; }); }	// load option value into input element
+    else if ( ( fieldsData[myFields[i]]["type"] === "toggle" ) || ( fieldsData[myFields[i]]["type"] === "toggle_text" ) ) {	// if it's a toggle field, toggle between red and white, update datatable with editorFieldBlur
+      oElement = top.frames['editor'].document.getElementById("toggle_" + myFields[i]);
+      YAHOO.util.Event.addListener(oElement, "click", function() { 		// when clicking a bigtext input element, hide input, load data into textarea, show textarea
+        if (top.frames['editor'].document.getElementById("input_id").disabled !== true) {	// only change stuff if editor is not disabled (editor being represented by id field)
+            var match = this.id.match(/toggle_(.*)/); var field = match[1];			// get the field from the id
+            if (top.frames['editor'].document.getElementById("toggle_" + field).style.backgroundColor === "red") {
+               editorFieldBlur(field, ""); 
+               top.frames['editor'].document.getElementById("toggle_" + field).style.backgroundColor = "white"; }
+            else {
+               editorFieldBlur(field, fieldsData[field]["label"]); 
+               top.frames['editor'].document.getElementById("toggle_" + field).style.backgroundColor = "red"; } } }); }
+    else if ( fieldsData[myFields[i]]["type"] === "bigtext" ) {			// if it's a bigtext toggle field
+      oElement = top.frames['editor'].document.getElementById("input_" + myFields[i]);
+      YAHOO.util.Event.addListener(oElement, "focus", function() { 		// when clicking a bigtext input element, hide input, load data into textarea, show textarea
+          var match = this.id.match(/input_(.*)/); var field = match[1];	// get the field from the id
+          top.frames['editor'].document.getElementById("input_" + field).style.display = "none"; 
+          top.frames['editor'].document.getElementById("textarea_bigtext_" + field).style.display = ""; 
+//           tValue = top.frames['editor'].document.getElementById("input_" + field).value;			// if wanted to keep linebreaks, but Jo doesn't want them
+//           tValue = tValue.replace(/ LINEBREAK /g, "\n"); 	
+//           top.frames['editor'].document.getElementById("textarea_bigtext_" + field).value = tValue;
+          top.frames['editor'].document.getElementById("textarea_bigtext_" + field).value = top.frames['editor'].document.getElementById("input_" + field).value;
+          top.frames['editor'].document.getElementById("textarea_bigtext_" + field).focus(); }); 
+      var bigtextElement = top.frames['editor'].document.getElementById("textarea_bigtext_" + myFields[i]);
+      YAHOO.util.Event.addListener( bigtextElement, "blur", function() { 	// when blurring a bigtext textarea element, hide textarea, load data into input, show input
+          var match = this.id.match(/textarea_bigtext_(.*)/); var field = match[1];	// get the field from the id
+          top.frames['editor'].document.getElementById("textarea_bigtext_" + field).style.display = "none"; 
+          top.frames['editor'].document.getElementById("input_" + field).style.display = ""; 
+          if (! (field === 'nbp') ) { 							// don't update nbp values
+//           var tValue = top.frames['editor'].document.getElementById("textarea_bigtext_" + field).value;	// if wanted to keep linebreaks, but Jo doesn't want them
+//           tValue = tValue.replace(/\n/g, " LINEBREAK "); 	
+//           top.frames['editor'].document.getElementById("input_" + field).value = tValue;
+              top.frames['editor'].document.getElementById("input_" + field).value = top.frames['editor'].document.getElementById("textarea_bigtext_" + field).value;
+              editorFieldBlur(field, top.frames['editor'].document.getElementById("input_" + field).value); } }); }
+  } // for (var i = 0; i < myFields.length; i++ )
+
+  for (var tab in tabs) {								// for each tab, add a listener to only show only that tab's values
+      var oElement = top.frames['editor'].document.getElementById(tab)
+      YAHOO.util.Event.addListener(oElement, "click", function() { showTab(this.id); }); }
+  if (firstTab) { showTab("tab" + firstTab); }						// by default if there is a first tab (numberic tab) show the lowest tab
+
+
+//   var oElement = top.frames['controls'].document.getElementById("resetTable");
+//   YAHOO.util.Event.addListener(oElement, "click", initializeTable );			// add the listener function. myDataTable._oRecordSet is undefined, so can't use the myDataTable.initializeTable method to reset	// they want a full window reload instead of clicking browser reload button ...  2009 09 24
+  var oElement = top.frames['editor'].document.getElementById("resetPage");
+//   YAHOO.util.Event.addListener(oElement, "click", reloadPageListener );			// add the listener function. myDataTable._oRecordSet is undefined, so can't use the myDataTable.initializeTable method to reset
+  YAHOO.util.Event.addListener(oElement, "click", resetButtonListener );		// add the listener function
+  oElement = top.frames['controls'].document.getElementById("checkData");
+  YAHOO.util.Event.addListener(oElement, "click", checkDataButtonListener );		// add the listener function
+  oElement = top.frames['controls'].document.getElementById("deleteRow");
+  YAHOO.util.Event.addListener(oElement, "click", deleteRowButtonListener );		// add the listener function
+  oElement = top.frames['controls'].document.getElementById("duplicateRow");
+  YAHOO.util.Event.addListener(oElement, "click", duplicateRowButtonListener );		// add the listener function
+  oElement = top.frames['controls'].document.getElementById("newRow");
+  YAHOO.util.Event.addListener(oElement, "click", newRowButtonListener );		// add the listener function
+  oElement = top.frames['controls'].document.getElementById("filtersAmount");
+  YAHOO.util.Event.addListener(oElement, "change", updateFiltersAmountListener );		// add the listener function
+//   oElement = top.frames['controls'].document.getElementById("filterData");		// auto-filter doesn't need filterData button  2009 09 24
+//   YAHOO.util.Event.addListener(oElement, "click", filterDataButtonListener );		// add the listener function
+
+  var filtersMaxAmount = top.frames['controls'].document.getElementById("filtersMaxAmount").value;
+  for (var filterCount = 1; filterCount < filtersMaxAmount; filterCount++) {
+      var filterValueId = 'filterValue' + filterCount;					// generate value id
+      oElement = top.frames['controls'].document.getElementById(filterValueId);
+      YAHOO.util.Event.addListener(oElement, "keyup", filterDataKeyUpListener );	// add the listener function
+  }
+//   for (var filterCount = 0; filterCount < filtersAmount; filterCount++) {		// for each filter
+//       var filterValueId = 'filterValue' + filterCount;					// generate value id
+//       oElement = top.frames['controls'].document.getElementById(filterValueId);
+//       YAHOO.util.Event.addListener(oElement, "keyup", filterDataKeyUpListener );	// add the listener function
+//   }
+
+  for (var i = 0; i < myFields.length; i++ ) {			// for each field
+    var field = myFields[i];
+    var entry = { key:myFields[i], sortable:true, resizeable:true };	// make an entry hash
+    for (var property in fieldsData[field]) {			// set extra properties from fieldsData
+      entry[property] = fieldsData[field][property]; 
+//    top.frames['obo'].document.getElementById('myObo').innerHTML += "field " + field + " prop " + property + " val " + entry[property] + "<br/> ";
+    }
+//     if (myFields[i] === "phen_remark") { entry["minWidth"] = "400"; }
+//     if (myFields[i] === "phen_remark") { entry["label"] = "really long ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- string"; }
+    myColumnDefs.push(entry);  					// add to column definitions array
+  }
+// how to add a column of checkboxes
+//   var entry = {key:'select',label:'Select',formatter:'checkbox'};
+//   myColumnDefs.push(entry);  					// add to column definitions array
+
+  initializeTable();
+  updateFiltersAmount();					// show/hide amount of filters, update datatable based on filters
+
+  setAutocompleteListeners();					// for each ontology field, add autocomplete listener
+
+  waitPanel = new YAHOO.widget.Panel("wait",  { width:"240px", fixedcenter:true, close:false, draggable:false, modal:true,
+  				                visible:false, effect:{effect:YAHOO.widget.ContainerEffect.FADE, duration:0.5} } );
+  waitPanel.setHeader("Loading, please wait...");		// init waitPanel and set header
+//   waitPanel.setBody('<img src="http://us.i1.yimg.com/us.yimg.com/i/us/per/gr/gp/rel_interstitial_loading.gif" />');
+  waitPanel.setBody('<img src="http://tazendra.caltech.edu/~azurebrd/stylesheets/sisyphus.gif" />');		// add sisyphus image
+  waitPanel.render(top.frames['table'].document.body);					// render on document (table panel)
+  top.frames['table'].document.getElementById('wait_c').style.display = "none";		// waitPanel.hide() and waitPanel.show() don't work, so doing this lame thing
+
+//   var overlay3 = new YAHOO.widget.Overlay("overlay3", { xy:[1,1],
+//                                                         visible:true, 
+//                                                         width:"300px" } ); 
+//   overlay3.setHeader("Overlay #3 from Script"); 
+//   overlay3.setBody("This is a dynamically generated Overlay."); 
+//   overlay3.setFooter("End of Overlay #3"); 
+//   overlay3.render(top.frames['editor'].document.body); 
+
+}); // YAHOO.util.Event.addListener(window, "load", function() 
+
+
+function setAutocompleteListeners() {				// for each ontology field, add autocomplete listener
+  for (var i = 0; i < myFields.length; i++ ) { 			// for each field
+    var field = myFields[i];
+    if ( ( fieldsData[field]["type"] === "dropdown" ) || 	// if it's a dropdown field
+         ( fieldsData[field]["type"] === "multidropdown" ) || 	// or if it's a multi-value dropdown field
+         ( fieldsData[field]["type"] === "ontology" ) || 	// or if it's an ontology field
+         ( fieldsData[field]["type"] === "multiontology" ) ) {	// or if it's a multi-value ontology field
+
+  settingAutocompleteListeners = function() {
+//     var url = "http://tazendra.caltech.edu/~azurebrd/cgi-bin/testing/javascript/autocomplete/phenont_autocomplete.cgi";
+    var url = "http://tazendra.caltech.edu/~postgres/cgi-bin/ontology_annotator.cgi?action=autocompleteXHR&field=" + field + "&datatype=" + datatype + "&";
+//     if ( (myFields[i] === "term") || (myFields[i] === "wbgene") ) { // }
+//     if (myFields[i] === "wbgene") { url = "http://tazendra.caltech.edu/~azurebrd/cgi-bin/testing/javascript/autocomplete/gene_autocomplete.cgi"; }
+    var oDS = new YAHOO.util.XHRDataSource(url);                // Use an XHRDataSource
+    oDS.responseType = YAHOO.util.XHRDataSource.TYPE_TEXT;      // Set the responseType
+    oDS.responseSchema = {                                      // Define the schema of the delimited results
+        recordDelim: "\n",
+        fieldDelim: "\t"
+    };
+    oDS.maxCacheEntries = 5;                                    // Enable caching
+
+    var forcedOrFree = "forced";
+    var inputElement = top.frames['editor'].document.getElementById("input_" + field);
+    var containerElement = top.frames['editor'].document.getElementById(forcedOrFree + field + "Container");
+    var forcedOAC = new YAHOO.widget.AutoComplete(inputElement, containerElement, oDS);
+//     var forcedOAC = new YAHOO.widget.AutoComplete("input_term", "forcedtermContainer", oDS);
+    forcedOAC.queryQuestionMark = false;			// don't add a ? to the url query since it's been built with some other values
+    forcedOAC.maxResultsDisplayed = 500;
+//     forcedOAC.forceSelection = true;
+// forced value selection doesn't work somhow.  a database queried value followed by a row selection loads a value that is a literal match to one from the obo, but when blurring the input the onSelectionEnforce event triggers.  if the value is typed in, it works.
+    forcedOAC.forceSelection = false;
+    if ( ( fieldsData[field]["type"] === "multidropdown" ) || ( fieldsData[field]["type"] === "dropdown" ) ) { 		// dropdowns and multidropdowns should allow clicking to show all values
+        var oElement = top.frames['editor'].document.getElementById('type_'+field);
+        YAHOO.util.Event.addListener(oElement, "click", function() { 
+            if (top.frames['editor'].document.getElementById("input_id").disabled !== true) {	// only change stuff if editor is not disabled (editor being represented by id field)
+                forcedOAC.getInputEl().focus();			// put focus on input element to keep widget active
+                forcedOAC.sendQuery(''); } });			// send a blank query to pop the box
+        forcedOAC.minQueryLength = 0; }				// allow free autocomplete on these (allow blank)
+    forcedOAC.itemSelectEvent.subscribe(onAutocompleteItemSelect);
+    forcedOAC.selectionEnforceEvent.subscribe(onAutocompleteSelectionEnforce);	
+    forcedOAC.itemArrowToEvent.subscribe(onAutocompleteItemHighlight);
+    forcedOAC.itemMouseOverEvent.subscribe(onAutocompleteItemHighlight);
+
+    return {
+        oDS: oDS,
+        forcedOAC: forcedOAC
+    }
+  }();
+
+
+    }; // if ( fieldsData[field]["ontology"] )
+  } // for (var i = 0; i < myFields.length; i++ )
+} // function setAutocompleteListeners()
+
+function onAutocompleteSelectionEnforce(oSelf, sClearedValue) { top.frames['obo'].document.getElementById('myObo').innerHTML += "cleared " + sClearedValue + " oSelf " + oSelf + " end<br/> "; }
+
+function onAutocompleteItemSelect(oSelf , elItem, oData) {		// if an autocomplete item is selected 
+  var match = elItem[0]._sName.match(/input_(.*)/);			// get the field
+  var field = match[1];
+  var value = elItem[1].innerHTML;					// get the selected value
+//   top.frames['obo'].document.getElementById('myObo').innerHTML += "acSelect " + field + " value " + value + "<br/> ";
+  if (value.match(/^(.*?) \( (.*?) \) \[(.*?)\]$/) ) { 			// if it's a synonym convert to "name ( id ) " format
+    match = value.match(/^(.*?) \( (.*?) \) \[(.*?)\]$/);
+    value = match[3] + " ( " + match[2] + " ) "; }
+  if ( (datatype === 'app') && ( (field === 'term') || (field === 'child_of') ) ) {			// if picked one of these values, update the obo frame 
+    match = value.match(/\( (.*?) \)/);					// url so that back and forward buttons work
+    top.frames['obo'].location = "http://tazendra.caltech.edu/~postgres/cgi-bin/ontology_annotator.cgi?frame_type=obo&datatype="+datatype+"&field="+field+"&term_id="+match[1]; }
+  top.frames['editor'].document.getElementById('input_' + field).value = value;		// assign to editor
+  top.frames['editor'].document.getElementById('input_' + field).focus();		// focus to trigger editorInputBlurListener
+  top.frames['editor'].document.getElementById('input_' + field).blur();		// blur to trigger editorInputBlurListener
+} // function onAutocompleteItemSelect(oSelf , elItem, oData) 
+
+function onAutocompleteItemHighlight(oSelf , elItem) {              // if an item is highlighted from arrows or mouseover, populate obo
+  var match = elItem[0]._sName.match(/input_(.*)/);	// get the key and value
+  var field = match[1];
+  var value = elItem[1].innerHTML;
+  if ( ( fieldsData[field]["type"] === "ontology" ) || 		// if it's an ontology field 
+       ( fieldsData[field]["type"] === "multiontology" ) ) {	// or if it's a multi-value ontology field
+//       top.frames['obo'].document.getElementById('myObo').innerHTML += field + " VALUE " + value + "<br/> ";
+      var callbacks = { 
+          success : function (o) {				// Successful XHR response handler 
+              if (o.responseText !== undefined) { top.frames['obo'].document.getElementById('termInfo').innerHTML = o.responseText + "<br/> "; }
+          },
+      }; 
+
+      // Make the call to the server for JSON data 
+      if (value !== undefined) {						// if there is a display value replace stuff
+          if (value.match(/\+/)) { value = value.replace(/\+/g, "%2B"); }	// replace + with escaped +
+          if (value.match(/\#/)) { value = value.replace(/\#/g, "%23"); }	// replace # with escaped #
+      }
+      var sUrl = "http://tazendra.caltech.edu/~postgres/cgi-bin/ontology_annotator.cgi?action=asyncTermInfo&field="+field+"&userValue="+value+"&datatype="+datatype;
+//       top.frames['obo'].document.getElementById('myObo').innerHTML += "sUrl " + sUrl + " end<br/> ";
+      YAHOO.util.Connect.asyncRequest('GET', sUrl, callbacks); 
+   }
+} // function onAutocompleteItemHighlight(oSelf , elItem)
+
+function rowSelectLoadToEditor(recordData) {			// load row data to editor
+    for (var i = 0; i < myFields.length; i++ ) {		// for each field set the editor input to the row's cell's value
+//         top.frames['editor'].document.getElementById('input_' + myFields[i]).value = eval("record." + myFields[i]);
+        var value = recordData[myFields[i]];
+        if ( ( fieldsData[myFields[i]]["type"] === "dropdown" ) || 		// if it's a dropdown field
+             ( fieldsData[myFields[i]]["type"] === "multidropdown" ) ||		// or if it's a multi-value dropdown field
+             ( fieldsData[myFields[i]]["type"] === "ontology" ) || 		// or if it's an ontology field
+             ( fieldsData[myFields[i]]["type"] === "multiontology" ) ) {	// or if it's a multi-value ontology field
+             value = value.replace(/<span style=\'display: none\'>/g, " ( "); 	// ontology values need autocomplete to match value loaded into editor, otherwise focus and blur trigger an onSelectionEnforce event
+             value = value.replace(/<\/span>/g, " ) "); 
+// top.frames['obo'].document.getElementById('myObo').innerHTML += "value " + value + "<br/> "; 
+        }
+        if ( ( fieldsData[myFields[i]]["type"] === "multiontology" ) || ( fieldsData[myFields[i]]["type"] === "multidropdown" ) ) {
+										// if it's a multi-value ontology or dropdown field clear input, select, populate based on value
+// top.frames['obo'].document.getElementById('myObo').innerHTML += myFields[i] + " value " + value + "<br/> "; 
+            populateSelectFieldFromDatatable(myFields[i], value); }
+        else if ( ( fieldsData[myFields[i]]["type"] === "toggle" ) || ( fieldsData[myFields[i]]["type"] === "toggle_text" ) ) {		// toggle fields need to change color of value
+           if (value !== "") { 
+               top.frames['editor'].document.getElementById("toggle_" + myFields[i]).style.backgroundColor = "red"; }
+           else {
+               top.frames['editor'].document.getElementById("toggle_" + myFields[i]).style.backgroundColor = "white"; } }
+        else {
+//         top.frames['editor'].document.getElementById('input_' + myFields[i]).value = recordData[myFields[i]];
+            top.frames['editor'].document.getElementById('input_' + myFields[i]).value = value; }
+    }
+} // function rowSelectLoadToEditor(recordData)
+
+function initializeTable() {					// initialize scrolling data table
+//   top.frames['obo'].document.getElementById('myObo').innerHTML += "initialize function<br/> ";
+
+//   var myDataSource = new YAHOO.util.DataSource(YAHOO.example.Data.bookorders); 
+//   var myDataSource = new YAHOO.util.LocalDataSource([ 
+//        { standardname: "ID", lastname:"today", firstname: "3", email: "4" },
+//        { standardname: "pie", lastname:"2009 08 17", firstname: "1", email: "4.22" },
+//        { standardname: "eep", lastname:"Aug 17 2008", firstname: "1", email: "4.22" }
+//   ]); 
+  var myDataSource = new YAHOO.util.LocalDataSource([ ]); 
+//   myDataSource.responseType = YAHOO.util.DataSource.TYPE_JSARRAY; 
+  var dataSourceFields = myFields;
+  myDataSource.responseSchema = { fields: dataSourceFields };		// fields match myFields exactly
+  
+// //   var myDataTable = new YAHOO.widget.DataTable("myContainer", 
+// //           myColumnDefs, myDataSource, {caption:"DataTable Caption"}); 
+  myDataTable = new YAHOO.widget.ScrollingDataTable("myContainer", myColumnDefs,
+          myDataSource, { width:"99.5%", height:"100%", draggableColumns:true});			// default height will be resized by resizeDataTable() to include header height;
+  populateMyFields();						// somehow the new scrollingdatatable line converts the data in myFields into objects, so need to re-populate myFields array
+  resizeDataTable();					// resize new table to be as big as possible without frame scrollbars
+    // make table rows selectable
+
+  myDataTable.subscribe("rowMouseoverEvent", myDataTable.onEventHighlightRow); 
+  myDataTable.subscribe("rowMouseoutEvent", myDataTable.onEventUnhighlightRow); 
+  myDataTable.subscribe("rowClickEvent", myDataTable.onEventSelectRow); 
+  myDataTable.subscribe("rowClickEvent", function(oArgs) {
+    var recordData = myDataTable.getRecord(oArgs.target)._oData;		// get record data
+    rowSelectLoadToEditor(recordData);				// load row data to editor
+  }); 
+// this doesn't work, how to access when user arrows over to another row selection ?
+//   myDataTable.subscribe("rowSelectEvent", function(oArgs) {
+//     var recordData = myDataTable.getRecord(oArgs.target)._oData;		// get record data
+//     for (var i = 0; i < myFields.length; i++ ) {		// for each field set the editor input to the row's cell's value
+// //         top.frames['editor'].document.getElementById('input_' + myFields[i]).value = eval("record." + myFields[i]);
+//         
+//         top.frames['editor'].document.getElementById('input_' + myFields[i]).value = recordData[myFields[i]];
+//     }
+//   }); 
+  myDataTable.subscribe("columnResizeEvent", function(oArgs) {
+    var colThEl = oArgs.target;					// get the table head element that has been resized
+    var colIndex = 0;
+    var arrTh = document.getElementById("myContainer").getElementsByTagName("th");
+    for (colIndex = 0; colIndex < arrTh.length; colIndex++) {	// loop through the ths, tracking the column index
+      if (arrTh[colIndex] === colThEl) { break; } }		// when the resized th is the looping th stop
+//     var colInstance = oArgs.column;
+//     var colKey = colInstance.getKey(colInstance);
+//     var colId = colInstance.getId(colInstance);
+//     top.frames['obo'].document.getElementById('myObo').innerHTML += "colKey " + colKey + " colId " + colId  + " colIndex " + colIndex + "<br/> "; 
+    var divArray = [ ];						// array of divs in the column
+    var rows = myDataTable.getTbodyEl().getElementsByTagName('tr')	// rows are the body tr elements
+    for (var row = 0; row < rows.length; row++) {		// for all rows add the column-matching div
+      divArray.push( rows[row].getElementsByTagName('div')[colIndex] ); }
+    colorMoreCells(divArray);					// check and set their overflow
+//     colorMoreCellsAllTable();                   // for whole table, not sure whether all the looping to find the columns is faster, but it seems to be when looking at 1114 values from id query for two7
+  });
+
+  for (var i = 0; i < myFields.length; i++ ) {			// for each field
+    var field = myFields[i];
+    if (fieldsData[field]["colWidth"]) {
+//       top.frames['obo'].document.getElementById('myObo').innerHTML += field + " " + fieldsData[field]["colWidth"]  + "<br/> "; 
+      myDataTable.setColumnWidth(myDataTable.getColumn(field), parseInt(fieldsData[field]["colWidth"])); 
+  } }
+           
+// I don't know what this does
+//   return { 
+//       oDS: myDataSource, 
+//       oDT: myDataTable 
+//   }; 
+} // function initializeTable() 
+
+function populateMyFields() {					// populate myFields array based on input fields
+  this.myFields = [ ];
+  var inputs = document.getElementsByTagName("input");		// get all input fields
+  for (var i = 0; i < inputs.length; i++ ) {			// loop through them
+    if (inputs[i].className == "fields") { 			// if the class is fields
+      var field = inputs[i].value;
+      this.myFields.push(field); 				// add to myFields array
+      fieldsData[field] = new Object();				// new hash for this field
+      if (document.getElementById("data_" + field) ) {		// get data from html
+        var arrData = document.getElementById("data_" + field).value.split(", "); 	// split by comma into array
+        for (var j in arrData) {				// for each pair
+          var match = arrData[j].match(/'(.*?)' : '(.*?)'/);	// get the key and value
+          fieldsData[field][match[1]] = match[2]; } }		// set into fieldsData[field]
+// this specifies which fields to get 
+//       if (document.getElementById("type_" + field) ) {
+//         fieldsData[field]["type"] = document.getElementById("type_" + field).value; }
+//       if (document.getElementById("label_" + field) ) {
+//         fieldsData[field]["label"] = document.getElementById("label_" + field).value; }
+//       if (document.getElementById("colWidth_" + field) ) {
+//         fieldsData[field]["colWidth"] = document.getElementById("colWidth_" + field).value; }
+  } }
+}
+
+function resizeDataTable() {				// unfortunately height corresponds to height without headers, so always will need to reduce it by 30 pixels
+  var myHeight = document.body.clientHeight - 29; 	// this seems as big as it can be without frame scrollbars
+//   document.getElementById("myContainer").style.height = myHeight + "px";
+  var divs = document.getElementById("myContainer").getElementsByTagName("div");	// get divs under data table
+  for (var i = 0; i < divs.length; i++) {		// if it's the div that holds the main table resize the height based on frame size
+    if (divs[i].className == "yui-dt-bd") { divs[i].style.height = myHeight + "px"; }
+  }
+} // function resizeDataTable() 
+
+
+// // this doesn't really do anything
+// var oElement = top.frames['editor'].document.getElementById('editor');
+// YAHOO.util.Event.addListener(oElement, "click", function() {
+//     YAHOO.example.Basic = function() {
+// //         var myColumnDefs = [ 
+// //             {key:"id", sortable:true, resizeable:true}, 
+// //             {key:"date", formatter:YAHOO.widget.DataTable.formatDate, sortable:true, sortOptions:{defaultDir:YAHOO.widget.DataTable.CLASS_DESC},resizeable:true}, 
+// //             {key:"quantity", formatter:YAHOO.widget.DataTable.formatNumber, sortable:true, resizeable:true}, 
+// //             {key:"amount", formatter:YAHOO.widget.DataTable.formatCurrency, sortable:true, resizeable:true}, 
+// //             {key:"title", sortable:true, resizeable:true} 
+// //         ]; 
+// 
+// //         var myColumnDefs = new Array();
+// //         for (var i = 0; i < myFields.length; i++ ) {
+// //             var entry = {key:myFields[i], sortable:true, resizeable:true };
+// //             myColumnDefs.push(entry);  
+// //         }
+// //         var myColumnDefs = [ 
+// //             {key:"standardname", sortable:true, resizeable:true},
+// //             {key:"lastname", sortable:true, resizeable:true},
+// //             {key:"firstname", sortable:true, resizeable:true},
+// //             {key:"email", sortable:true, resizeable:true}
+// //         ]; 
+//  
+//         var myDataSource = new YAHOO.util.LocalDataSource([ 
+//              { standardname: "ID", lastname:"today", firstname: "3", email: "4" },
+//              { standardname: "pie", lastname:"2009 08 17", firstname: "1", email: "4.22" },
+//              { standardname: "eep", lastname:"Aug 17 2008", firstname: "1", email: "4.22" }
+//         ]); 
+// //         var myDataSource = new YAHOO.util.LocalDataSource(["apples", "broccoli", "cherries"]); 
+// //         var myDataSource = new YAHOO.util.LocalDataSource([ 
+// //              { id: "ID", date:"today", quantity: "3", amount: "4", title: "fancy" },
+// //              { id: "pie", date:"2009 08 17", quantity: "1", amount: "4.22", title: "fancy" },
+// //              { id: "eep", date:"Aug 17 2008", quantity: "1", amount: "4.22", title: "fancy" }
+// //         ]); 
+// //         var myDataSource = new YAHOO.util.DataSource(YAHOO.example.Data.bookorders); 
+// //         myDataSource.responseType = YAHOO.util.DataSource.TYPE_JSARRAY; 
+// //         myDataSource.responseSchema = { 
+// //             fields: ["id","date","quantity","amount","title"] 
+// //         }; 
+//  
+//         var myDataTable = new YAHOO.widget.DataTable("myContainer", 
+//                 myColumnDefs, myDataSource, {caption:"DataTable Caption"}); 
+// 
+// //         myDataTable.subscribe("columnReorderEvent", function(){ 
+// //             newCols = true; 
+// //             YAHOO.util.Event.purgeElement("dt-dlg-picker", true); 
+// //             YAHOO.util.Dom.get("dt-dlg-picker").innerHTML = ""; 
+// //         }, this, true); 
+//                  
+//         return { 
+//             oDS: myDataSource, 
+//             oDT: myDataTable 
+//         }; 
+//     }(); 
+// }); 
+
+
+
+//     YAHOO.util.Event.addListener(oElement, "click", function() {
+// alert(oElement.id);
+//         this.myDataSource = new YAHOO.util.DataSource("http://tazendra.caltech.edu/~postgres/cgi-bin/ontology_annotator.cgi");
+//         this.myDataSource.connMethodPost = true;
+//         this.myDataSource.responseType = YAHOO.util.DataSource.TYPE_XML;
+//         this.myDataSource.responseSchema = {
+//             resultNode: "Result",
+//             fields: ["standardname","lastname","firstname","email"]
+//         };
+// 
+//         var userValue = top.frames['editor'].document.getElementById("input_" + field).value;
+// alert("field:"+field+" input_" + field + " userValue:"+userValue+" end");
+// 
+//         this.myDataTable = new YAHOO.widget.DataTable("xml", myColumnDefs,
+//                 this.myDataSource, {initialRequest:"query=" + field + "&userValue=" + userValue});
+// //         this.myDataTable = new YAHOO.widget.DataTable("xml", myColumnDefs,
+// //                 this.myDataSource, {initialRequest:"query=pizza&zip=94089&results=10"});
+// 
+// //         var myDataTable = new YAHOO.widget.DataTable("myContainer", 
+// //                 myColumnDefs, myDataSource, {caption:"DataTable Caption"}); 
+// // 
+// //         return { 
+// //             oDS: myDataSource, 
+// //             oDT: myDataTable 
+// //         }; 
+//     }); 
+    
+// var myColumnDefs = [ 
+//     {key:"fname", label:"First Name"}, 
+//     {key:"lname", label:"Last Name"}, 
+//     {key:"age", label:"Age"} 
+// ]; 
+// 
+// // DataTable constructor syntax 
+// var myDataTable = new YAHOO.widget.DataTable("myContainer", myColumnDefs, myDataSource); 
+// 
+// // Defer instantiation 
+// YAHOO.util.Event.addListener(window, "load", function() { 
+//     var myDataTableDeferred = new YAHOO.widget.DataTable("myContainer", myColumnDefs, myDataSource); 
+// }); 
+// 
+// // Local DataSource
+// var myDataSource = new YAHOO.util.LocalDataSource({ 
+//        fname: "apples", lname:"fruit", age: "red"
+// }); 
+
+// to add a css 
+//   var fileref = document.createElement("link");
+//   fileref.setAttribute("rel", "stylesheet");
+//   fileref.setAttribute("type", "text/css");;
+//   fileref.setAttribute("href", "http://tazendra.caltech.edu/~azurebrd/stylesheets/ontology_annotator.css");
+//   document.getElementsByTagName("head")[0].appendChild(fileref);
+
+// if !important css style didn't work for yui-dt-liner for some reason (this is slow)
+//           var divArray = myContainer.getElementsByTagName("div");
+//           for (var i = 0, len = divArray.length; i < len; ++i) { 
+//               if (divArray[i].className === "yui-dt-liner") { 			// if the class is fields
+//                   divArray[i].style.height = "23px"; 
+//                   divArray[i].style.overflowY = "auto"; 
+//           } }
+          
+// all this doesn't work to set a string value from hidden input containing hash data 
+//   field = 'paper_evidence';
+//   var string = 'ontology:text';
+// //   var string = "{ ontology:text, libel:Paper }";
+// //   var string = "{ 'ontology' : 'text', 'libel' : 'Paper' }";
+//   var thing = { 'ontology' : 'text', 'libel' : 'Paper' };
+//   top.frames['obo'].document.getElementById('myObo').innerHTML += thing["ontology"] + "<br/> ";
+//   var hash = { eval(string) };
+//   top.frames['obo'].document.getElementById('myObo').innerHTML += string + "<br/> ";
+// //   fieldsData[field] = eval(string);
+// //   if ( fieldsData[field]["label"] ) { 
+// //     top.frames['obo'].document.getElementById('myObo').innerHTML += fieldsData[field]["label"] + "<br/> ";
+// //   }
+// //       fieldsData[field] = { 'ontology' : 'text', 'label' : 'Paper' };
+// same here
+//       var fieldData = document.getElementById("data_" + field).value;
+// // alert(field + " " + fieldData);
+// //       fieldsData[field] = eval(fieldData);
+// //       fieldsData[field] = { 'ontology' : 'text', 'label' : 'Paper' };
+//       top.frames['obo'].document.getElementById('myObo').innerHTML += fieldData  + "<br/> "; 
+// //       fieldsData[field] = YAHOO.lang.JSON.parse(fieldData); 
+// //       var anArray = YAHOO.lang.JSON.parse(fieldData); 
+// //       fieldsData[field] = { eval(fieldData) };
+// //   var fieldsData = new Object();
+
+// no longer want plus / minus filtering
+//   top.frames['controls'].document.getElementById("filterPlus").style.display = "";
+//   top.frames['controls'].document.getElementById("filterMinus").style.display = "none";
+//   top.frames['controls'].document.getElementById("filterType1").style.display = "none";
+//   top.frames['controls'].document.getElementById("filterValue1").style.display = "none";
+//   oElement = top.frames['controls'].document.getElementById("filterPlus");
+//   YAHOO.util.Event.addListener(oElement, "click", toggleFilterPlusMinusListener );		// add the listener function
+//   oElement = top.frames['controls'].document.getElementById("filterMinus");
+//   YAHOO.util.Event.addListener(oElement, "click", toggleFilterPlusMinusListener );		// add the listener function
+//
+// not using toggle button anymore
+// function toggleFilterPlusMinusListener(e) { 
+//   toggleFilterPlusMinusListener();
+// } 
+// 
+// function toggleFilterPlusMinusListener() {
+//   if ( top.frames['controls'].document.getElementById("filterPlus").style.display === "" ) {
+//     top.frames['controls'].document.getElementById("filterPlus").style.display = "none" ;
+//     top.frames['controls'].document.getElementById("filterMinus").style.display = "" ;
+//     top.frames['controls'].document.getElementById("filterType1").style.display = "" ;
+//     top.frames['controls'].document.getElementById("filterValue1").style.display = "" ;
+//   } else {
+//     top.frames['controls'].document.getElementById("filterPlus").style.display = "" ;
+//     top.frames['controls'].document.getElementById("filterMinus").style.display = "none" ;
+//     top.frames['controls'].document.getElementById("filterType1").style.display = "none" ;
+//     top.frames['controls'].document.getElementById("filterValue1").style.display = "none" ;
+//   } 
+// } 
+
+// this might need to be set in the editor's js since it deals with that frame's input fields
+// function setAutocompleteListeners() {
+// YAHOO.example.BasicRemote = function() {
+//     // Use an XHRDataSource
+//     var oDS = new YAHOO.util.XHRDataSource("http://tazendra.caltech.edu/~azurebrd/cgi-bin/testing/javascript/autocomplete/gene_autocomplete.cgi");
+//     // Set the responseType
+//     oDS.responseType = YAHOO.util.XHRDataSource.TYPE_TEXT;
+//     // Define the schema of the delimited results
+//     oDS.responseSchema = {
+//         recordDelim: "\n",
+//         fieldDelim: "\t"
+//     };
+//     // Enable caching
+//     oDS.maxCacheEntries = 5;
+// 
+// //     // Instantiate the AutoComplete
+// //     var freeOAC = new YAHOO.widget.AutoComplete("freeGeneInput", "freeGeneContainer", oDS);
+// //     freeOAC.maxResultsDisplayed = 20;
+// 
+// //     var forcedOAC = new YAHOO.widget.AutoComplete("forcedGeneInput", "forcedGeneContainer", oDS);
+//     var forcedOAC = new YAHOO.widget.AutoComplete("input_wbgene", "forcedwbggeneContainer", oDS);
+//     forcedOAC.maxResultsDisplayed = 20;
+//     forcedOAC.forceSelection = true;
+// 
+//     return {
+//         oDS: oDS,
+//         forcedOAC: forcedOAC
+//     };
+// }();
+// }
+
+// to escape / encode URLs for Perl's uri_unescape
+//   var encodedValue = escape(value);

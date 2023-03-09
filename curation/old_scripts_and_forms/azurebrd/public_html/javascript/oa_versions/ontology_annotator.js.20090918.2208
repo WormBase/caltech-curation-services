@@ -1,0 +1,408 @@
+// // got DataTable to work on arbitrary amount of fields from CGI
+// ajax query off cgi to load postgres values as xml  2009 09 10
+//
+// json query to append values instead of recreating data table.
+// show results queried count on .obo display.
+// extra control frame to allow ScrollingDataTable to be by itself in its own frame
+// and make it easier to resize to fit (headers not included in ScrollingDataTable's
+// height value.)  2009 09 15
+//
+// doing a query loads all id fields into a hash and only adds rows for data with new ids.
+// added reset (table) newRow duplicateRow deleteRow functionality.
+// subscribed rowClickEvent to load values from row to editor inputs.
+// addlistener to editor inputs so on blur, updates values of datatable for selected fields.
+// beware of tabbing too much since it will update values of a field that gets tabbed through.
+// 2009 09 16
+
+
+var myFields = new Array();			// the data fields, for some reason the elements get replaced by objects when datatable gets created
+var myColumnDefs = new Array();			// column definitions for data tables
+var myDataTable;
+var datatype;					// two gop app
+
+function editorInputBlurListener(e) {		// editor input blurred, update corresponding values of selected rows
+    var selectedRows = myDataTable.getSelectedRows();
+    var fieldstuff = e.target.id.match(/input_(.*)/);	// this is event (button click)
+    var field = fieldstuff[1];				// get the field name from the event id
+    var newValue = e.target.value;			// the new value from the editor input field
+    for (var i = 0; i < selectedRows.length; i++) {	// for each selected row in the data table
+        var recordData = myDataTable.getRecord(selectedRows[i])._oData;		// get oData from each record
+        var tableValue = recordData[field];					// get tableValue for that field
+        if (tableValue !== newValue) {						// if new value is different
+            var record = myDataTable.getRecord(selectedRows[i]);		// get the record
+//             var recordIndex = myDataTable.getRecordIndex(record);		// get the index for updating values
+//             recordData[field] = newValue;					// change the value
+//             alert("recordIndex " + recordIndex + " field " + field + " " + newValue);
+//             myDataTable.updateRow(recordIndex, recordData); 			// update the datatable row, which gives it a new row id that we lose
+            myDataTable.updateCell(record, field, newValue);			// update the datatable cell, which leaves the row id the same
+            var trId = myDataTable.getTrEl(record).id;				// get the table row id
+//             alert("trId " + trId + " field " + field + " " + newValue);
+	    var divArray = document.getElementById(trId).getElementsByTagName("div");	// get all divs in that table row
+            colorMoreCells(divArray);						// check and set their overflow
+        }
+    }
+}
+
+function duplicateRowButtonListener(e) {		// if duplicate row button was clicked
+    var selectedRows = myDataTable.getSelectedRows();
+    for (var i = 0; i < selectedRows.length; i++) {	// for each selected row
+        var recordData = myDataTable.getRecord(selectedRows[i])._oData;	// get oData from each record
+        var record = myDataTable.getRecord(selectedRows[i]);	// get record
+        recordData.id = "copied";				// need a new ID to prevent duplicate ids (get from postgres)
+        myDataTable.addRow( recordData, 0 );		// add to datatable (if added to another location, change 0 in addedTr assignment)
+//         var recordIndex = myDataTable.getTrEl(0).id;	// record id of added row (change 0 to match addRow if changed)
+        var addedTr = myDataTable.getTrEl(0);		// tr of added row (change 0 to match addRow if changed)
+        var divArray = addedTr.getElementsByTagName("div");	// get all divs in the new table row
+        colorMoreCells(divArray);			// check and set their overflow
+    }
+}
+
+function newRowButtonListener(e) {			// if new row button was clicked
+    var record = { };
+    for (var i = 0; i < myFields.length; i++ ) { 	// for each field
+        record[myFields[i]] = "";			// initialize that field to blank
+    }
+    record.id = "new";					// need a new ID to prevent duplicate ids (get from postgres)
+    myDataTable.addRow( record, 0 );			// add to datatable
+}
+
+function deleteRowButtonListener(e) {			// if delete row button was clicked
+    var selectedRows = myDataTable.getSelectedRows();
+    for (var i = 0; i < selectedRows.length; i++) {	// for each selected row
+        myDataTable.deleteRow( selectedRows[i] );	// delete it
+    }
+}
+
+function colorMoreCellsAllTable() {			// for whole table, cells that have hidden data in overflow 
+  var divArray = document.getElementById("myContainer").getElementsByTagName("div");
+  colorMoreCells(divArray);				// check and set their overflow
+}
+
+function colorMoreCells(divArray) {				// cells that have hidden data in overflow should have different background
+  for (var i = 0, len = divArray.length; i < len; ++i) { 
+      if (YAHOO.util.Dom.hasClass(divArray[i], "yui-dt-liner") ) {		// if it has the class has yui-dt-liner
+            // if overflow is overwritten to hidden, comparing scrollHeight and clientHeight checks if there's overflow
+          if (divArray[i].scrollHeight !== divArray[i].clientHeight) {
+//                  top.frames['obo'].document.getElementById('myObo').innerHTML += "scroll " + divArray[i].scrollHeight + " client " + divArray[i].clientHeight + "<br/> ";
+//               divArray[i].style.backgroundColor = "yellow"; 
+              if (!( YAHOO.util.Dom.hasClass(divArray[i], 'hidden-overflow-data') )) {
+                  YAHOO.util.Dom.addClass(divArray[i], "hidden-overflow-data"); 
+              }
+          }
+          else {
+//               divArray[i].style.backgroundColor = "white"; 
+              if ( YAHOO.util.Dom.hasClass(divArray[i], 'hidden-overflow-data') ) {
+                  YAHOO.util.Dom.removeClass(divArray[i], 'hidden-overflow-data'); 
+              }
+          }
+  } }
+//                   top.frames['obo'].document.getElementById('myObo').innerHTML += "END<br/> ";
+}
+
+function assignQueryButtonListenerAjax(e) {		// if query button was clicked
+  var fieldstuff = this.id.match(/button_(.*)/);	// this is event (button click)
+  var field = fieldstuff[1];				// get the field name from the event id
+  var userValue = top.frames['editor'].document.getElementById("input_" + field).value;	// userValue is what they entered in matching input
+
+  var callbacks = { 
+      // Successful XHR response handler 
+      success : function (o) { 
+          var jsonData = [];
+          try {			// Use the JSON Utility to parse the data returned from the server 
+              jsonData = YAHOO.lang.JSON.parse(o.responseText); 
+          } 
+          catch (x) { alert("JSON Parse failed!"); return; } 
+          var goodData = [];
+
+//           var rs = myDataTable.getRecordSet().getRecord(myDataTable.getSelectedRows()[0])._oData;
+//           var rs = myDataTable.getRecordSet().getRecord(myDataTable.getSelectedRows()[0]);
+//           alert( rs.getData('standardname') );
+
+          var idHash = new Object();			// hash of pg ids loaded to datatable
+          var records = myDataTable.getRecordSet().getRecords();
+          for (var i = 0; i < records.length; i++) {
+              var recordIndex = myDataTable.getRecordIndex(records[i]);
+              var recordKey = records[i].getData('id');
+              idHash[recordKey] = recordIndex;		// this overwrites the recordIndex, but recordKey shouldn't have duplicates anyway
+          }
+      
+          for (var i = 0, len = jsonData.length; i < len; ++i) { 
+//               top.frames['obo'].document.getElementById('myObo').innerHTML += jsonData[i].standardname;
+//               myDataTable.addRow(jsonData[i], 0);
+              if (!(jsonData[i].id in idHash)) { goodData.push(jsonData[i]); }	// add only if not already in hash of ids
+          }
+          myDataTable.addRows(goodData, 0);		// this is sooooo much faster than one by one
+          top.frames['obo'].document.getElementById('myObo').innerHTML = "query for " +userValue+ " on " + field + " found " + jsonData.length + " entries, added " + goodData.length + " new matches.";
+
+          myDataTable.setColumnWidth(myDataTable.getColumn('phen_remark'), 600); 
+          colorMoreCellsAllTable();			// for whole table, possibly should just update the rows added (don't know how)
+      },
+  }; 
+   
+  top.frames['obo'].document.getElementById('myObo').innerHTML = "query for " +userValue+ " on " + field + " ." + "http://tazendra.caltech.edu/~postgres/cgi-bin/ontology_annotator.cgi?jsonField="+field+"&userValue="+userValue+"&datatype="+datatype;
+
+  // Make the call to the server for JSON data 
+  YAHOO.util.Connect.asyncRequest('GET', "http://tazendra.caltech.edu/~postgres/cgi-bin/ontology_annotator.cgi?jsonField="+field+"&userValue="+userValue+"&datatype="+datatype, callbacks); 
+
+
+// this code is for regenerating the table on each query
+//   this.myDataSource = new YAHOO.util.DataSource("http://tazendra.caltech.edu/~postgres/cgi-bin/ontology_annotator.cgi");
+//   this.myDataSource.connMethodPost = true;		// use post
+//   this.myDataSource.responseType = YAHOO.util.DataSource.TYPE_XML;	// get back xml
+//   this.myDataSource.responseSchema = {
+//     resultNode: "Result",				// Result is tag of each result
+//     fields: myFields					// fields match myFields exactly
+//   };
+// 
+//   var userValue = top.frames['editor'].document.getElementById("input_" + field).value;	// userValue is what they entered in matching input
+// 
+//     // generate datatable.  default height and width.  draggable columns.  initial xml query.
+//   this.myDataTable = new YAHOO.widget.ScrollingDataTable("myContainer", myColumnDefs,
+//           this.myDataSource, { width:"99.5%", height:"100%", draggableColumns:true, initialRequest:"queryField=" + field + "&userValue=" + userValue});			// default height will be resized by resizeDataTable() to include header height;
+//   resizeDataTable();					// resize new table to be as big as possible without frame scrollbars
+// 
+//     // make table rows selectable
+//   this.myDataTable.subscribe("rowMouseoverEvent", this.myDataTable.onEventHighlightRow); 
+//   this.myDataTable.subscribe("rowMouseoutEvent", this.myDataTable.onEventUnhighlightRow); 
+//   this.myDataTable.subscribe("rowClickEvent", this.myDataTable.onEventSelectRow); 
+
+    // add checkbox event if wanted for some reason
+//   this.myDataTable.on('checkboxClickEvent',function (oArgs) {
+//     var target = oArgs.target;
+//     var record = this.getRecord(target);
+//     var column = this.getColumn(target);
+//     if (column.key == 'select') { // to ensure we respond to the right column
+//       var primaryKey = record.getData('id');
+//       if (target.checked) {
+// // alert(primaryKey + " " +record);
+//         YAHOO.example.recordSelection[primaryKey] = true;	// store in globally accessible hash by twoid
+//       } else {
+//         delete YAHOO.example.recordSelection[primaryKey];
+//       }
+//     }
+//   });
+} // function assignQueryButtonListenerAjax(e) 			// if button was clicked
+
+
+YAHOO.util.Event.addListener(window, "load", function() { 	// on load get fields, assign listeners
+
+// can't get body to have a "resize" listener for some reason.  mouseover here only works if mousing over elements in the body, while adding from <body> tag in html works mousing over any part of the window / frame
+// var oElement = top.document.getElementById("frameset1");
+// document.body.addEventListener("mouseover", function() { alert("resized"); }, false);
+// YAHOO.util.Event.addListener(oElement, "click", function() { 	// on load get fields, assign listeners
+//   alert("resized");
+// });
+// oElement.on("resize", function() { alert("resized"); });
+
+  populateMyFields();						// populate myFields array
+  datatype = top.frames['editor'].document.getElementById("datatype").value;		// get datatype
+
+  for (var i = 0; i < myFields.length; i++ ) { 			// for each field
+      // get the button element to add the listener to
+    var oElement = top.frames['editor'].document.getElementById("button_" + myFields[i]);
+    YAHOO.util.Event.addListener(oElement, "click", assignQueryButtonListenerAjax ); 	// add the listener function
+    oElement = top.frames['editor'].document.getElementById("input_" + myFields[i]);
+    YAHOO.util.Event.addListener(oElement, "blur", editorInputBlurListener ); 	// add the listener function
+  }
+
+  var oElement = top.frames['controls'].document.getElementById("resetTable");
+  YAHOO.util.Event.addListener(oElement, "click", initializeTable );		// add the listener function
+  oElement = top.frames['controls'].document.getElementById("deleteRow");
+  YAHOO.util.Event.addListener(oElement, "click", deleteRowButtonListener );		// add the listener function
+  oElement = top.frames['controls'].document.getElementById("duplicateRow");
+  YAHOO.util.Event.addListener(oElement, "click", duplicateRowButtonListener );		// add the listener function
+  oElement = top.frames['controls'].document.getElementById("newRow");
+  YAHOO.util.Event.addListener(oElement, "click", newRowButtonListener );		// add the listener function
+
+  for (var i = 0; i < myFields.length; i++ ) {			// for each field
+    var entry = { key:myFields[i], sortable:true, resizeable:true };	// make an entry hash
+//     if (myFields[i] === "phen_remark") { entry["minWidth"] = "400"; }
+//     if (myFields[i] === "phen_remark") { entry["label"] = "really long ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- string"; }
+    myColumnDefs.push(entry);  					// add to column definitions array
+  }
+// how to add a column of checkboxes
+//   var entry = {key:'select',label:'Select',formatter:'checkbox'};
+//   myColumnDefs.push(entry);  					// add to column definitions array
+
+  initializeTable();
+
+}); // YAHOO.util.Event.addListener(window, "load", function() 
+
+function initializeTable() {					// initialize scrolling data table
+//   var myDataSource = new YAHOO.util.DataSource(YAHOO.example.Data.bookorders); 
+  var myDataSource = new YAHOO.util.LocalDataSource([ 
+       { standardname: "ID", lastname:"today", firstname: "3", email: "4" },
+       { standardname: "pie", lastname:"2009 08 17", firstname: "1", email: "4.22" },
+       { standardname: "eep", lastname:"Aug 17 2008", firstname: "1", email: "4.22" }
+  ]); 
+//   myDataSource.responseType = YAHOO.util.DataSource.TYPE_JSARRAY; 
+  var dataSourceFields = myFields;
+  myDataSource.responseSchema = { fields: dataSourceFields };		// fields match myFields exactly
+  
+// //   var myDataTable = new YAHOO.widget.DataTable("myContainer", 
+// //           myColumnDefs, myDataSource, {caption:"DataTable Caption"}); 
+  myDataTable = new YAHOO.widget.ScrollingDataTable("myContainer", myColumnDefs,
+          myDataSource, { width:"99.5%", height:"100%", draggableColumns:true});			// default height will be resized by resizeDataTable() to include header height;
+  populateMyFields();						// somehow the new scrollingdatatable line converts the data in myFields into objects, so need to re-populate myFields array
+  resizeDataTable();					// resize new table to be as big as possible without frame scrollbars
+    // make table rows selectable
+  myDataTable.subscribe("rowMouseoverEvent", myDataTable.onEventHighlightRow); 
+  myDataTable.subscribe("rowMouseoutEvent", myDataTable.onEventUnhighlightRow); 
+  myDataTable.subscribe("rowClickEvent", myDataTable.onEventSelectRow); 
+  myDataTable.subscribe("rowClickEvent", function(oArgs) {
+    var recordData = myDataTable.getRecord(oArgs.target)._oData;		// get record data
+    for (var i = 0; i < myFields.length; i++ ) {		// for each field set the editor input to the row's cell's value
+//         top.frames['editor'].document.getElementById('input_' + myFields[i]).value = eval("record." + myFields[i]);
+        top.frames['editor'].document.getElementById('input_' + myFields[i]).value = recordData[myFields[i]];
+    }
+  }); 
+  myDataTable.subscribe("columnResizeEvent", function(oArg) {
+    colorMoreCellsAllTable();			// for whole table, possibly should just update column cells (don't know how)
+  });
+
+           
+// I don't know what this does
+//   return { 
+//       oDS: myDataSource, 
+//       oDT: myDataTable 
+//   }; 
+} // function initializeTable() 
+
+function populateMyFields() {					// populate myFields array based on input fields
+  this.myFields = [ ];
+  var inputs = document.getElementsByTagName("input");		// get all input fields
+  for (var i = 0; i < inputs.length; i++ ) {			// loop through them
+    if (inputs[i].className == "fields") { 			// if the class is fields
+      this.myFields.push(inputs[i].value); } }			// add to myFields array
+}
+
+function resizeDataTable() {				// unfortunately height corresponds to height without headers, so always will need to reduce it by 30 pixels
+  var myHeight = document.body.clientHeight - 29; 	// this seems as big as it can be without frame scrollbars
+//   document.getElementById("myContainer").style.height = myHeight + "px";
+  var divs = document.getElementById("myContainer").getElementsByTagName("div");	// get divs under data table
+  for (var i = 0; i < divs.length; i++) {		// if it's the div that holds the main table resize the height based on frame size
+    if (divs[i].className == "yui-dt-bd") { divs[i].style.height = myHeight + "px"; }
+  }
+} // function resizeDataTable() 
+
+
+// // this doesn't really do anything
+// var oElement = top.frames['editor'].document.getElementById('editor');
+// YAHOO.util.Event.addListener(oElement, "click", function() {
+//     YAHOO.example.Basic = function() {
+// //         var myColumnDefs = [ 
+// //             {key:"id", sortable:true, resizeable:true}, 
+// //             {key:"date", formatter:YAHOO.widget.DataTable.formatDate, sortable:true, sortOptions:{defaultDir:YAHOO.widget.DataTable.CLASS_DESC},resizeable:true}, 
+// //             {key:"quantity", formatter:YAHOO.widget.DataTable.formatNumber, sortable:true, resizeable:true}, 
+// //             {key:"amount", formatter:YAHOO.widget.DataTable.formatCurrency, sortable:true, resizeable:true}, 
+// //             {key:"title", sortable:true, resizeable:true} 
+// //         ]; 
+// 
+// //         var myColumnDefs = new Array();
+// //         for (var i = 0; i < myFields.length; i++ ) {
+// //             var entry = {key:myFields[i], sortable:true, resizeable:true };
+// //             myColumnDefs.push(entry);  
+// //         }
+// //         var myColumnDefs = [ 
+// //             {key:"standardname", sortable:true, resizeable:true},
+// //             {key:"lastname", sortable:true, resizeable:true},
+// //             {key:"firstname", sortable:true, resizeable:true},
+// //             {key:"email", sortable:true, resizeable:true}
+// //         ]; 
+//  
+//         var myDataSource = new YAHOO.util.LocalDataSource([ 
+//              { standardname: "ID", lastname:"today", firstname: "3", email: "4" },
+//              { standardname: "pie", lastname:"2009 08 17", firstname: "1", email: "4.22" },
+//              { standardname: "eep", lastname:"Aug 17 2008", firstname: "1", email: "4.22" }
+//         ]); 
+// //         var myDataSource = new YAHOO.util.LocalDataSource(["apples", "broccoli", "cherries"]); 
+// //         var myDataSource = new YAHOO.util.LocalDataSource([ 
+// //              { id: "ID", date:"today", quantity: "3", amount: "4", title: "fancy" },
+// //              { id: "pie", date:"2009 08 17", quantity: "1", amount: "4.22", title: "fancy" },
+// //              { id: "eep", date:"Aug 17 2008", quantity: "1", amount: "4.22", title: "fancy" }
+// //         ]); 
+// //         var myDataSource = new YAHOO.util.DataSource(YAHOO.example.Data.bookorders); 
+// //         myDataSource.responseType = YAHOO.util.DataSource.TYPE_JSARRAY; 
+// //         myDataSource.responseSchema = { 
+// //             fields: ["id","date","quantity","amount","title"] 
+// //         }; 
+//  
+//         var myDataTable = new YAHOO.widget.DataTable("myContainer", 
+//                 myColumnDefs, myDataSource, {caption:"DataTable Caption"}); 
+// 
+// //         myDataTable.subscribe("columnReorderEvent", function(){ 
+// //             newCols = true; 
+// //             YAHOO.util.Event.purgeElement("dt-dlg-picker", true); 
+// //             YAHOO.util.Dom.get("dt-dlg-picker").innerHTML = ""; 
+// //         }, this, true); 
+//                  
+//         return { 
+//             oDS: myDataSource, 
+//             oDT: myDataTable 
+//         }; 
+//     }(); 
+// }); 
+
+
+
+//     YAHOO.util.Event.addListener(oElement, "click", function() {
+// alert(oElement.id);
+//         this.myDataSource = new YAHOO.util.DataSource("http://tazendra.caltech.edu/~postgres/cgi-bin/ontology_annotator.cgi");
+//         this.myDataSource.connMethodPost = true;
+//         this.myDataSource.responseType = YAHOO.util.DataSource.TYPE_XML;
+//         this.myDataSource.responseSchema = {
+//             resultNode: "Result",
+//             fields: ["standardname","lastname","firstname","email"]
+//         };
+// 
+//         var userValue = top.frames['editor'].document.getElementById("input_" + field).value;
+// alert("field:"+field+" input_" + field + " userValue:"+userValue+" end");
+// 
+//         this.myDataTable = new YAHOO.widget.DataTable("xml", myColumnDefs,
+//                 this.myDataSource, {initialRequest:"query=" + field + "&userValue=" + userValue});
+// //         this.myDataTable = new YAHOO.widget.DataTable("xml", myColumnDefs,
+// //                 this.myDataSource, {initialRequest:"query=pizza&zip=94089&results=10"});
+// 
+// //         var myDataTable = new YAHOO.widget.DataTable("myContainer", 
+// //                 myColumnDefs, myDataSource, {caption:"DataTable Caption"}); 
+// // 
+// //         return { 
+// //             oDS: myDataSource, 
+// //             oDT: myDataTable 
+// //         }; 
+//     }); 
+    
+// var myColumnDefs = [ 
+//     {key:"fname", label:"First Name"}, 
+//     {key:"lname", label:"Last Name"}, 
+//     {key:"age", label:"Age"} 
+// ]; 
+// 
+// // DataTable constructor syntax 
+// var myDataTable = new YAHOO.widget.DataTable("myContainer", myColumnDefs, myDataSource); 
+// 
+// // Defer instantiation 
+// YAHOO.util.Event.addListener(window, "load", function() { 
+//     var myDataTableDeferred = new YAHOO.widget.DataTable("myContainer", myColumnDefs, myDataSource); 
+// }); 
+// 
+// // Local DataSource
+// var myDataSource = new YAHOO.util.LocalDataSource({ 
+//        fname: "apples", lname:"fruit", age: "red"
+// }); 
+
+// to add a css 
+//   var fileref = document.createElement("link");
+//   fileref.setAttribute("rel", "stylesheet");
+//   fileref.setAttribute("type", "text/css");;
+//   fileref.setAttribute("href", "http://tazendra.caltech.edu/~azurebrd/stylesheets/ontology_annotator.css");
+//   document.getElementsByTagName("head")[0].appendChild(fileref);
+
+// if !important css style didn't work for yui-dt-liner for some reason (this is slow)
+//           var divArray = myContainer.getElementsByTagName("div");
+//           for (var i = 0, len = divArray.length; i < len; ++i) { 
+//               if (divArray[i].className === "yui-dt-liner") { 			// if the class is fields
+//                   divArray[i].style.height = "23px"; 
+//                   divArray[i].style.overflowY = "auto"; 
+//           } }
+          

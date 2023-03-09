@@ -1,0 +1,26 @@
+
+2013-05-24 : updated link to WS236, commented out  <span class="status-bar"></span>  because it was displaying an error message that doesn't really help.
+
+2012-07-19 17:38 :
+
+http://www.wormbase.org/header
+http://www.wormbase.org/footer
+
+replace href=/
+make footer's position: relative instead of position: absolute
+
+on WB_header_footer, changes se.src to local copy of javascript :
+      se.src = "http://tazendra.caltech.edu/~azurebrd/sanger/wormbaseheader/wormbase_tazendra.js";
+
+on local copy of javascript :
+  make references to URLs include the full URL with domain :
+    lastXhr = $jq.getJSON( "http://www.wormbase.org/search/autocomplete/" + cur_search_type, request, function( data, status, xhr ) {
+    location.href = 'http://www.wormbase.org/search/' + cur_search_type + '/' + f + (cur_search_species_type ? '?species=' + cur_search_species_type : '');
+  also on other location.href like : 
+    location.href="
+    location.href = '
+
+autocomplete still won't work, maybe because of cross-domain JSON, but searches will go to wormbase.org
+
+
+

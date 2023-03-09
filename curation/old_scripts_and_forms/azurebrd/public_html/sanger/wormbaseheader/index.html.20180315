@@ -1,0 +1,547 @@
+   
+                                                                                          <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no"><meta name="theme-color" content="#000000"><link rel="manifest" href="/manifest.json"><link rel="shortcut icon" href="/favicon.ico"><title>  WormBase : Nematode Information Resource</title><link href="/static/css/main.d6675cf9.css" rel="stylesheet"></head><body><noscript>You need to enable JavaScript to run this app.</noscript> <!-- BEGIN boilerplate/banner -->
+
+
+<div id="notifications" class="ui-corner-bottom">
+      <span id="notification-text"></span>
+      <span class="ui-icon ui-icon-close tip-simple br" tip="close"></span>
+</div>
+
+<div id="wrap">   <div id="top-system-message" class="system-message"> Welcome to WormBase - <a target="_blank" href="/tools/support">need help</a>? <span class="system-message-close" data-id="6">
+            <span class=" ui-icon ui-icon-close"></span>
+          </span>
+        </div>
+        <div class="system-message" ></div>              <!-- START: Revised header region -->
+<div id="header" class="clearfix" data-page='{
+    "ref": "",
+    "wbid": "home",
+    "name": "home",
+    "id" : "",
+    "class" : "",
+    "type" : "",
+    "is_obj": "",
+    "save": "reports",
+    "history": "0"  }'>
+
+  <div class="status-bar"></div>
+
+  <div id="title">
+      <a href="/" title="WormBase Home"><img src="/img/logo/logo_wormbase_gradient.svg" /><!-- <h1></h1> --></a>
+    <div class="release_date">
+      <p>Version: <a href="/about/wormbase_release_WS263">WS263</a></p>
+    </div>
+  </div> 
+  <form method="post" class="ui-corner-all" id="searchForm" action="" onsubmit="WB.search(); return false;">  <div id="searchBody">
+      <input class="text" id="Search" name="query" type="text" placeholder="Search directory...">
+      <ul id="searchSelect">
+        <li>
+          <span class="ui-icon ui-icon-triangle-1-s" style="float:right"></span>
+          <span class="current-search" style="float:right">All</span>
+          <ul>  <li value="all" onClick='WB.search_change("all",1);'><a>All</a></li>  <li value="anatomy_term" onClick='WB.search_change("anatomy_term",1);'><a>Anatomy</a></li>  <li value="antibody" onClick='WB.search_change("antibody",1);'><a>Antibody</a></li>  <li value="clone" onClick='WB.search_change("clone",1);'><a>Clone</a></li>  <li value="expr_pattern" onClick='WB.search_change("expr_pattern",1);'><a>Expression pattern</a></li>  <li value="gene" onClick='WB.search_change("gene",1);'><a>Gene</a></li>  <li value="gene_class" onClick='WB.search_change("gene_class",1);'><a>Gene Class</a></li>  <li value="go_term" onClick='WB.search_change("go_term",1);'><a>Gene Ontology</a></li>  <li value="disease" onClick='WB.search_change("disease",1);'><a>Human Disease</a></li>  <li value="laboratory" onClick='WB.search_change("laboratory",1);'><a>Laboratory</a></li>  <li value="life_stage" onClick='WB.search_change("life_stage",1);'><a>Life Stage</a></li>  <li value="molecule" onClick='WB.search_change("molecule",1);'><a>Molecule</a></li>  <li value="paper" onClick='WB.search_change("paper",1);'><a>Paper</a></li>  <li value="person" onClick='WB.search_change("person",1);'><a>Person</a></li>  <li value="phenotype" onClick='WB.search_change("phenotype",1);'><a>Phenotype</a></li>  <li value="protein" onClick='WB.search_change("protein",1);'><a>Protein</a></li>  <li value="rearrangement" onClick='WB.search_change("rearrangement",1);'><a>Rearrangement</a></li>  <li value="feature" onClick='WB.search_change("feature",1);'><a>Sequence Feature</a></li>  <li value="strain" onClick='WB.search_change("strain",1);'><a>Strain</a></li>  <li value="transgene" onClick='WB.search_change("transgene",1);'><a>Transgene</a></li>  <li value="variation" onClick='WB.search_change("variation",1);'><a>Variation</a></li>  </ul>
+        </li>
+      </ul>
+
+    </div>
+
+    <input class="ui-icon ui-icon-search" type="submit" onclick="WB.search(); return false;" value="">
+
+  </form>
+
+   <div id="nav-bar">
+    <!-- START: Revised main menu -->
+    <ul class="nav-bar main-menu">    <li id="section-about"><a href="/about#01--10" class="trigger ">
+          <span class="ui-icon ui-icon-triangle-1-s"></span> About</a>
+
+          <!-- START: New dropdown menu -->
+          <div class="wb-dropdown submenu" style="display: none;">
+            <div class="submenu-main">
+                <div class="submenu-title">
+                    <p><strong><a href="">About</a></strong></p>
+                    <p>WormBase is an international consortium of biologists and computer scientists… <a href="/about#01--10" class="read-more">Find out more</a></p>
+                </div>
+                <div class="submenu-links">     <div class="submenu-menu">     <p><strong>General</strong></p>  <ul>     <li ">       <a href="/about#0--10">Mission Statement</a>     </li>   <li ">      <span>Publications</span>    </li>   <li ">       <a href="/about/Frequently_asked_questions">FAQ</a>     </li>   </ul>  </div>   <div class="submenu-menu">     <p><strong>People</strong></p>  <ul>     <li ">       <a href="/about/advisory_board">Advisory Board</a>     </li>   <li ">       <a href="/about/staff#01--10">WormBase Staff</a>     </li>   </ul>  </div>   <div class="submenu-menu">     <p><strong>What's New</strong></p>  <ul>     <li ">       <a href="http://blog.wormbase.org/" target="_blank" class="wb-ext" title="Link opens in a new window">News (Blog)</a>     </li>   <li ">       <a href="/about/wormbase_release_current">Release notes</a>     </li>   <li ">       <a href="/about/release_schedule">Release Schedule</a>     </li>   <li ">       <a href="/#012-34-5">Gene Name Changes</a>     </li>   </ul>  </div>   </div>
+            </div>
+            <div class="submenu-sub">     <div class="wb-more">     <p><strong>Want to know more about worm research?</strong></p>  <ul>     <li ">       <a href="http://cbs.umn.edu/cgc/home" target="_blank" class="wb-ext" title="Link opens in a new window">Caenorhabditis Genetics Center (CGC)</a>     </li>   <li ">       <a href="http://www.ipm.ucdavis.edu/NEMABASE/" target="_blank" class="wb-ext" title="Link opens in a new window">NEMABASE</a>     </li>   <li ">       <a href="http://nematode.net/NN3_frontpage.cgi" target="_blank" class="wb-ext" title="Link opens in a new window">Nematode.net</a>     </li>   <li ">       <a href="http://www.nematodes.org/" target="_blank" class="wb-ext" title="Link opens in a new window">Nematodes.org</a>     </li>   <li ">       <a href="http://www.wormatlas.org/" target="_blank" class="wb-ext" title="Link opens in a new window">WormAtlas</a>     </li>   <li ">       <a href="http://www.wormbook.org/" target="_blank" class="wb-ext" title="Link opens in a new window">WormBook</a>     </li>   </ul>  </div>   </div>
+
+          </div>
+          <!-- END: New dropdown menu -->
+      </li>    <li id="section-directory"><a href="/search" class="trigger ">
+          <span class="ui-icon ui-icon-triangle-1-s"></span> Directory</a>
+
+          <!-- START: New dropdown menu -->
+          <div class="wb-dropdown submenu" style="display: none;">
+            <div class="submenu-main">
+                <div class="submenu-title">
+                    <p><strong><a href="">Directory</a></strong></p>
+                    <p>Start here to access encyclopedic information about the worm genome and its genes, proteins, and other encoded features… <a href="/search" class="read-more">Find out more</a></p>
+                </div>
+                <div class="submenu-links">     <div class="submenu-menu">     <p><strong>Get Started</strong></p>  <ul>     <li ">       <a href="/species/all#0123--10">About the directory</a>     </li>   </ul>  </div>   <div class="submenu-menu">     <p><strong>Search</strong></p>  <ul>     <li ">       <a href="/search/gene/">Basic Search</a>     </li>   <li ">       <a href="/tools/queries">Advanced Search</a>     </li>   </ul>  </div>   <div class="submenu-menu">     <p><strong>Browse</strong></p>  <ul>     <li ">        <a href="/species/all#0123--10">By Species</a>     <ul>     <li ">       <a href="/species/c_elegans"><i>C. elegans</i></a>
+        <br/>
+        [<span class="wb-detail"><a href="/tools/genome/jbrowse-simple/?loc=&data=data%2Fc_elegans_PRJNA13758"><sup class="new">new</sup>JBrowse</a></span>]
+        [<span class="wb-detail"><a href="/tools/genome/gbrowse/c_elegans_PRJNA13758" class="genomic_location-link" title="">GBrowse</a></span>]    </li>   <li ">       <a href="/species/b_malayi"><i>B. malayi</i></a>
+        <br/>
+        [<span class="wb-detail"><a href="/tools/genome/jbrowse-simple/?loc=&data=data%2Fb_malayi_PRJNA10729"><sup class="new">new</sup>JBrowse</a></span>]
+        [<span class="wb-detail"><a href="/tools/genome/gbrowse/b_malayi_PRJNA10729" class="genomic_location-link" title="">GBrowse</a></span>]    </li>   <li ">       <a href="/species/c_brenneri"><i>C. brenneri</i></a>
+        <br/>
+        [<span class="wb-detail"><a href="/tools/genome/jbrowse-simple/?loc=&data=data%2Fc_brenneri_PRJNA20035"><sup class="new">new</sup>JBrowse</a></span>]
+        [<span class="wb-detail"><a href="/tools/genome/gbrowse/c_brenneri_PRJNA20035" class="genomic_location-link" title="">GBrowse</a></span>]    </li>   <li ">       <a href="/species/c_briggsae"><i>C. briggsae</i></a>
+        <br/>
+        [<span class="wb-detail"><a href="/tools/genome/jbrowse-simple/?loc=&data=data%2Fc_briggsae_PRJNA10731"><sup class="new">new</sup>JBrowse</a></span>]
+        [<span class="wb-detail"><a href="/tools/genome/gbrowse/c_briggsae_PRJNA10731" class="genomic_location-link" title="">GBrowse</a></span>]    </li>   <li ">       <a href="/species/c_japonica"><i>C. japonica</i></a>
+        <br/>
+        [<span class="wb-detail"><a href="/tools/genome/jbrowse-simple/?loc=&data=data%2Fc_japonica_PRJNA12591"><sup class="new">new</sup>JBrowse</a></span>]
+        [<span class="wb-detail"><a href="/tools/genome/gbrowse/c_japonica_PRJNA12591" class="genomic_location-link" title="">GBrowse</a></span>]    </li>   <li ">       <a href="/species/c_remanei"><i>C. remanei</i></a>
+        <br/>
+        [<span class="wb-detail"><a href="/tools/genome/jbrowse-simple/?loc=&data=data%2Fc_remanei_PRJNA53967"><sup class="new">new</sup>JBrowse</a></span>]
+        [<span class="wb-detail"><a href="/tools/genome/gbrowse/c_remanei_PRJNA53967" class="genomic_location-link" title="">GBrowse</a></span>]    </li>   <li ">       <a href="/species/o_volvulus"><i>O. volvulus</i></a>
+        <br/>
+        [<span class="wb-detail"><a href="/tools/genome/jbrowse-simple/?loc=&data=data%2Fo_volvulus_PRJEB513"><sup class="new">new</sup>JBrowse</a></span>]
+        [<span class="wb-detail"><a href="/tools/genome/gbrowse/o_volvulus_PRJEB513" class="genomic_location-link" title="">GBrowse</a></span>]    </li>   <li ">       <a href="/species/p_pacificus"><i>P. pacificus</i></a>
+        <br/>
+        [<span class="wb-detail"><a href="/tools/genome/jbrowse-simple/?loc=&data=data%2Fp_pacificus_PRJNA12644"><sup class="new">new</sup>JBrowse</a></span>]
+        [<span class="wb-detail"><a href="/tools/genome/gbrowse/p_pacificus_PRJNA12644" class="genomic_location-link" title="">GBrowse</a></span>]    </li>   <li ">       <a href="/species/s_ratti"><i>S. ratti</i></a>
+        <br/>
+        [<span class="wb-detail"><a href="/tools/genome/jbrowse-simple/?loc=&data=data%2Fs_ratti_PRJEB125"><sup class="new">new</sup>JBrowse</a></span>]
+        [<span class="wb-detail"><a href="/tools/genome/gbrowse/s_ratti_PRJEB125" class="genomic_location-link" title="">GBrowse</a></span>]    </li>   <li ">       <a href="/species/all#0123--10">More…</a>     </li>   </ul>  </li>   <li ">        <a href="/resources#0123--10">By Resource</a>     <ul>     <li ">       <a href="/resources#3--10">Databases</a>     </li>   <li ">       <a href="/resources/gene_class">Gene class</a>    </li>   <li ">       <a href="/resources/laboratory">Laboratory</a>    </li>   <li ">       <a href="/resources#2--10">Methods</a>     </li>   <li ">       <a href="/resources/motif">Motif</a>    </li>   <li ">       <a href="/resources/paper">Paper</a>    </li>   <li ">       <a href="/resources/person">Person</a>    </li>   <li ">       <a href="/resources/wbprocess">Process&Pathway</a>    </li>   <li ">       <a href="/resources/reagents">Reagent</a>    </li>   <li ">       <a href="/resources/transposon_family">Transposon Family</a>    </li>   </ul>  </li>   </ul>  </div>   <div class="submenu-menu">     <p><strong>Tools</strong></p>  <ul>     <li ">       <a href="/tools/schema">Schema Display</a>     </li>   <li ">       <a href="/tools/tree">Tree Display</a>     </li>   <li ">       <a href="/about/userguide/submit_data">Submit Data</a>     </li>   </ul>  </div>   </div>
+            </div>
+            <div class="submenu-sub">     <div class="wb-more">     <p><strong>Latest updates</strong></p>  <ul>     <li ">       <a href="http://blog.wormbase.org/" target="_blank" class="wb-ext" title="Link opens in a new window">News (Blog)</a>     </li>   <li ">       <a href="/about/release_schedule">Release Schedule</a>     </li>   </ul>  </div>   <div class="wb-more">     <p><strong>Need help?</strong></p>  <ul>     <li ">       <a href="/about/userguide/nomenclature">Nematode Nomenclature</a>     </li>   <li ">       <a href="/about/userguide/for_users">User's Guide</a>     </li>   <li ">       <a href="/about/Frequently_asked_questions">FAQ</a>     </li>   <li ">       <a href="/tools/support">HelpDesk</a>     </li>   </ul>  </div>   </div>
+
+          </div>
+          <!-- END: New dropdown menu -->
+      </li>    <li id="section-tools"><a href="/tools" class="trigger ">
+          <span class="ui-icon ui-icon-triangle-1-s"></span> Tools</a>
+
+          <!-- START: New dropdown menu -->
+          <div class="wb-dropdown submenu" style="display: none;">
+            <div class="submenu-main">
+                <div class="submenu-title">
+                    <p><strong><a href="">Tools</a></strong></p>
+                    <p>Come explore WormBase's complex collection of information with a variety of bioinformatic tools and more… <a href="/tools" class="read-more">Find out more</a></p>
+                </div>
+                <div class="submenu-links">     <div class="submenu-menu">     <p><strong>Get Started</strong></p>  <ul>     <li ">       <a href="/about/userguide/for_users#1--10">About our tools</a>     </li>   </ul>  </div>   <div class="submenu-menu">     <p><strong>General Search</strong></p>  <ul>     <li ">       <a href="/search/gene/">Basic Search</a>     </li>   <li ">       <a href="/species/all#0123--10">Browse by Species</a>     </li>   <li ">       <a href="/resources#0123--10">Browse by Resource</a>     </li>   <li ">       <a href="/tools/queries">Advanced Search</a>     </li>   </ul>  </div>   <div class="submenu-menu">     <p><strong>By Sequence</strong></p>  <ul>     <li ">       <a href="/tools/blast_blat">BLAST/BLAT</a>     </li>   <li ">       <a href="/tools/epcr">e-PCR Search</a>     </li>   <li ">       <a href="/tools/genome/gbrowse/">GBrowse</a>     </li>   <li ">       <a href="/tools/gmap">Genetic Map</a>     </li>   <li ">       <a href="/tools/genome/jbrowse-simple/?data=data/c_elegans_PRJNA13758">JBrowse</a>     </li>   <li ">       <a href="/tools/nucleotide_aligner">Nucleotide Aligner</a>     </li>   <li ">       <a href="/tools/protein_aligner">Protein Aligner</a>     </li>   <li ">       <a href="http://spell.caltech.edu:3000/" target="_blank" class="wb-ext" title="Link opens in a new window">SPELL</a>     </li>   <li ">       <a href="/tools/synteny/mercator/">Synteny Viewer</a>     </li>   </ul>  </div>   <div class="submenu-menu">     <p><strong>By Ontology</strong></p>  <ul>     <li ">       <a href="/tools/ontology_browser">Ontology Browser</a>     </li>   </ul>  </div>   <div class="submenu-menu">     <p><strong>By Literature</strong></p>  <ul>     <li ">       <a href="/resources/paper#1-0-2">Resources: Papers</a>     </li>   <li ">       <a href="http://www.textpresso.org/celegans/" target="_blank" class="wb-ext" title="Link opens in a new window">TextPresso</a>     </li>   </ul>  </div>   <div class="submenu-menu">     <p><strong>By Object</strong></p>  <ul>     <li ">       <a href="/tools/schema">Schema Display</a>     </li>   <li ">       <a href="/tools/tree">Tree Display</a>     </li>   </ul>  </div>   <div class="submenu-menu">     <p><strong>Data Mining and Batch Queries</strong></p>  <ul>     <li ">       <a href="http://parasite.wormbase.org/biomart/martview" target="_blank" class="wb-ext" title="Link opens in a new window">ParaSite BioMart</a>     </li>   <li ">       <a href="/tools/mine/simplemine.cgi">SimpleMine</a>     </li>   <li ">       <a href="/tools/enrichment/tea/tea.cgi">Gene Set Enrichment Analysis</a>     </li>   <li ">       <a href="http://intermine.wormbase.org/tools/wormmine/begin.do" target="_blank" class="wb-ext" title="Link opens in a new window">WormMine</a>     </li>   </ul>  </div>   <div class="submenu-menu">     <p><strong>For Parasites</strong></p>  <ul>     <li ">       <a href="http://parasite.wormbase.org" target="_blank" class="wb-ext" title="Link opens in a new window">ParaSite</a>     </li>   <li ">       <a href="http://parasite.wormbase.org/biomart/martview" target="_blank" class="wb-ext" title="Link opens in a new window">ParaSite BioMart</a>     </li>   </ul>  </div>   <div class="submenu-menu">     <p><strong>For Developers</strong></p>  <ul>     <li ">       <a href="/tools/queries">Query Language</a>     </li>   <li ">       <a href="/about/userguide/for_developers#3--10">WormBase APIs</a>     </li>   <li ">       <a href="/about/userguide/wormbasehubs#0123--10">WormBase Assembly Hubs</a>     </li>   </ul>  </div>   </div>
+            </div>
+            <div class="submenu-sub">     <div class="wb-more">     <p><strong>Top 3 most used tools</strong></p>  <ul>     <li class="more-tool"">       <a href="/tools/genome/gbrowse/c_elegans_PRJNA13758/">GBrowse</a>     </li>   <li class="more-tool"">       <a href="/tools/blast_blat">BLAST/BLAT</a>     </li>   <li class="more-tool"">       <a href="/tools/ontology_browser">Ontology Browser</a>     </li>   </ul>  </div>   <div class="wb-more">     <p><strong>Need help?</strong></p>  <ul>     <li ">       <a href="/about/userguide/for_users">User's Guide</a>     </li>   <li ">       <a href="/about/Frequently_asked_questions">FAQ</a>     </li>   <li ">       <a href="/tools/support">HelpDesk</a>     </li>   </ul>  </div>   </div>
+
+          </div>
+          <!-- END: New dropdown menu -->
+      </li>    <li id="section-downloads"><a href="/about/userguide#3--10" class="trigger ">
+          <span class="ui-icon ui-icon-triangle-1-s"></span> Downloads</a>
+
+          <!-- START: New dropdown menu -->
+          <div class="wb-dropdown submenu" style="display: none;">
+            <div class="submenu-main">
+                <div class="submenu-title">
+                    <p><strong><a href="">Downloads</a></strong></p>
+                    <p>WormBase provides a large number of precomputed files to facilitate downstream analysis… <a href="/about/userguide#3--10" class="read-more">Find out more</a></p>
+                </div>
+                <div class="submenu-links">     <div class="submenu-menu">     <p><strong>Get Started</strong></p>  <ul>     <li ">       <a href="/species/all#0--10">About WormBase Data</a>     </li>   </ul>  </div>   <div class="submenu-menu">     <p><strong>Download</strong></p>  <ul>     <li ">       <a href="ftp://ftp.wormbase.org/pub/wormbase/" target="_blank" class="wb-ext" title="Link opens in a new window">Public FTP Site</a>     </li>   <li ">       <a href="/species/all#1--10">Listed By Species</a>     </li>   </ul>  </div>   <div class="submenu-menu">     <p><strong>Tools</strong></p>  <ul>     <li ">       <a href="/about/userguide/tools/coordinate_converter#0--10">Coordinates Converter</a>     </li>   </ul>  </div>   </div>
+            </div>
+            <div class="submenu-sub">     <div class="wb-more">     <p><strong>Commonly requested data</strong></p>  <ul>     <li class="more-file"">       <a href="ftp://ftp.wormbase.org/pub/wormbase/releases/current-production-release" target="_blank" class="wb-ext" title="Link opens in a new window">Latest production release</a>     </li>   <li class="more-file"">       <a href="ftp://ftp.wormbase.org/pub/wormbase/releases/current-development-release" target="_blank" class="wb-ext" title="Link opens in a new window">Latest development release</a>     </li>   </ul>  </div>   <div class="wb-more">     <p><strong>Need help?</strong></p>  <ul>     <li ">       <a href="/about/citing_wormbase#0123--10">How to cite WormBase</a>     </li>   <li ">       <a href="/tools/support">HelpDesk</a>     </li>   </ul>  </div>   </div>
+
+          </div>
+          <!-- END: New dropdown menu -->
+      </li>    <li id="section-community"><a href="/about/userguide#2--10" class="trigger ">
+          <span class="ui-icon ui-icon-triangle-1-s"></span> Community</a>
+
+          <!-- START: New dropdown menu -->
+          <div class="wb-dropdown submenu" style="display: none;">
+            <div class="submenu-main">
+                <div class="submenu-title">
+                    <p><strong><a href="">Community</a></strong></p>
+                    <p>Come join and connect with worm experts online and beyond… <a href="/about/userguide#2--10" class="read-more">Find out more</a></p>
+                </div>
+                <div class="submenu-links">     <div class="submenu-menu">     <p><strong>Directories</strong></p>  <ul>     <li ">       <a href="/resources/person#1-0-2">Find a Colleague</a>     </li>   <li ">       <a href="/resources/laboratory#012--10">Worm Labs</a>     </li>   </ul>  </div>   <div class="submenu-menu">     <p><strong>Get Involved</strong></p>  <ul>     <li ">       <a href="/#012-43-5">Meetings</a>     </li>   <li ">       <a href="http://forums.wormbase.org" target="_blank" class="wb-ext" title="Link opens in a new window">Worm Community Forum</a>     </li>   <li ">       <a href="http://wiki.wormbase.org" target="_blank" class="wb-ext" title="Link opens in a new window">WormBase Wiki</a>     </li>   <li ">       <a href="/about/userguide/submit_data">Submit Data</a>     </li>   </ul>  </div>   <div class="submenu-menu">     <p><strong>Resources</strong></p>  <ul>     <li ">       <a href="/species/c_elegans#1--10">Key Papers</a>     </li>   <li ">       <a href="http://cbs.umn.edu/cgc/home" target="_blank" class="wb-ext" title="Link opens in a new window">Caenorhabditis Genetics Center (CGC)</a>     </li>   <li ">       <a href="http://www.ipm.ucdavis.edu/NEMABASE/" target="_blank" class="wb-ext" title="Link opens in a new window">NEMABASE</a>     </li>   <li ">       <a href="http://nematode.net/NN3_frontpage.cgi" target="_blank" class="wb-ext" title="Link opens in a new window">Nematode.net</a>     </li>   <li ">       <a href="http://www.nematodes.org/" target="_blank" class="wb-ext" title="Link opens in a new window">Nematodes.org</a>     </li>   <li ">       <a href="http://www.wormatlas.org/" target="_blank" class="wb-ext" title="Link opens in a new window">WormAtlas</a>     </li>   <li ">       <a href="http://www.wormbook.org/" target="_blank" class="wb-ext" title="Link opens in a new window">WormBook</a>     </li>   <li ">       <a href="/about/userguide/for_developers#012345--10">For Developers</a>     </li>   </ul>  </div>   </div>
+            </div>
+            <div class="submenu-sub">     <div class="wb-more">     <p><strong>External links</strong></p>  <ul>     <li ">       <a href="http://blog.wormbase.org/" target="_blank" class="wb-ext" title="Link opens in a new window">WormBase Blog</a>     </li>   <li class="more-twitter"">       <a href="http://www.twitter.com/wormbase" target="_blank" class="wb-ext" title="Link opens in a new window">WormBase@Twitter</a>     </li>   <li class="more-github"">       <a href="http://github.com/wormbase" target="_blank" class="wb-ext" title="Link opens in a new window">WormBase@GitHub</a>     </li>   </ul>  </div>   </div>
+
+          </div>
+          <!-- END: New dropdown menu -->
+      </li>    <li id="section-support"><a href="/about/userguide#0123456--10" class="trigger ">
+          <span class="ui-icon ui-icon-triangle-1-s"></span> Support</a>
+
+          <!-- START: New dropdown menu -->
+          <div class="wb-dropdown submenu" style="display: none;">
+            <div class="submenu-main">
+                <div class="submenu-title">
+                    <p><strong><a href="">Support</a></strong></p>
+                    <p>We've created different user guides for distinct interests and experience levels… <a href="/about/userguide#0123456--10" class="read-more">Find out more</a></p>
+                </div>
+                <div class="submenu-links">     <div class="submenu-menu">     <p><strong>General</strong></p>  <ul>     <li ">       <a href="/about/userguide/nomenclature">Nematode Nomenclature</a>     </li>   <li ">       <a href="/about/userguide/for_users">User's Guide</a>     </li>   <li ">       <a href="https://www.youtube.com/user/WormBaseHD" target="_blank" class="wb-ext" title="Link opens in a new window">How-to Videos</a>     </li>   <li ">       <a href="/about/userguide#15--10">Submit Data</a>     </li>   <li ">       <a href="/about/Frequently_asked_questions">FAQ</a>     </li>   </ul>  </div>   <div class="submenu-menu">     <p><strong>For developers</strong></p>  <ul>     <li ">       <a href="/about/userguide/for_developers#012345--10">Developer's Guide</a>     </li>   <li ">       <a href="/about/userguide/for_developers/api-rest">REST API Documentation</a>     </li>   <li ">       <a href="http://wiki.wormbase.org/index.php/WormBase_Models" target="_blank" class="wb-ext" title="Link opens in a new window">Data Models</a>     </li>   <li ">       <a href="/about/internal_documentation#012--10">Staff Documentation</a>     </li>   <li ">       <a href="/tools/queries">Query Search Language</a>     </li>   </ul>  </div>   </div>
+            </div>
+            <div class="submenu-sub">     <div class="wb-more">     <p><strong>Still have questions?</strong></p>  <ul>     <li ">       <a href="/tools/support">Contact HelpDesk</a>     </li>   </ul>  </div>   </div>
+
+          </div>
+          <!-- END: New dropdown menu -->
+      </li>  </ul>
+    <!-- END: Revised main menu -->
+    <!-- START: New parasite menu -->
+    <ul class="nav-bar parasite-menu">
+      <li><a href="http://parasite.wormbase.org/">ParaSite</a></li>
+    </ul>
+    <!-- END: New parasite menu -->
+    <!-- START: New submit data menu -->
+    <ul class="nav-bar submit-data-menu">
+      <li><a href="/about/userguide/submit_data#01--10">Submit Data</a></li>
+      <li><a href="http://www.micropublicationbiology.org/" target="_blank"><span class="wb-ext">Micropublication</span></a></li>
+    </ul>
+    <!-- END: New submit data menu -->
+  </div>    </div>
+<!-- END: Revised header region -->
+
+<!-- END boilerplate/banner -->
+
+    <div id="content">
+ <span class="message"></span>
+      <span class="error"></span>    <div id="splash-box" class="tutorial">
+    <h1 style="padding-top:0.4em;">Explore Worm Biology</h1>
+      <p>facilitating insights into <br />nematode biology</p>   <a href="/?tutorial_off=1" id="skip-tutorial" style="position:absolute;height: 25px;width: 150px;left:300px;bottom: 10px;"></a>
+    <div class="star-tutorial bench-update" wbid="example" ref="/rest/workbench" name="example" save_to="reports" is_obj="" href="/" onClick='$jq(this).toggleClass("star-selected"); window.location.hash = "01-42-6";'></div>
+    <div id="tutorial-left"></div>
+    <div id="tutorial-right"></div>   </div>                                                             <div id="widgets">
+
+  <div class="navigation navigation-min">
+  <div id="navigation">
+    <div id="title">  <h2 onClick="WB.scrollToTop();return false;" title="scroll to top"><img src="/img/logo/logo_wormbase_gradient_small.png" alt="WormBase" style="height:27px; width:146px; padding-top:3px;"></h2>  </div>
+    <ul>
+      <div>   </div>
+        <li class="title toggle"><span class="ui-icon ui-icon-triangle-1-s pcontent"></span>Page Content</li>
+        <div>    <li id="nav-news"
+            class="module-load home"
+            wname="news"
+            href="/rest/widget/home/news"><span class="ui-icon ui-icon-close module-close" wname="news"></span>News </li>    <li id="nav-discussion"
+            class="module-load home"
+            wname="discussion"
+            href="/rest/widget/home/discussion"><span class="ui-icon ui-icon-close module-close" wname="discussion"></span>Discussion </li>    <li id="nav-activity"
+            class="module-load home"
+            wname="activity"
+            href="/rest/widget/home/activity"><span class="ui-icon ui-icon-close module-close" wname="activity"></span>Activity </li>    <li id="nav-gene_name_changes"
+            class="module-load home"
+            wname="gene_name_changes"
+            href="/rest/widget/home/gene_name_changes"><span class="ui-icon ui-icon-close module-close" wname="gene_name_changes"></span>Gene name changes </li>    <li id="nav-static-widget-45"
+            class="module-load static"
+            wname="static-widget-45"
+            href="/rest/widget/static/45"><span class="ui-icon ui-icon-close module-close" wname="static-widget-45"></span>Meetings </li>    </div>
+        <li class="title toggle"><span class="ui-icon ui-icon-triangle-1-s "></span>My WormBase</li>
+        <div>    <li id="nav-favorites"
+            class="module-load me"
+            wname="favorites"
+            href="/rest/widget/me/favorites"><span class="ui-icon ui-icon-close module-close" wname="favorites"></span>My Favorites </li>    <li id="nav-my_library"
+            class="module-load me"
+            wname="my_library"
+            href="/rest/widget/me/my_library"><span class="ui-icon ui-icon-close module-close" wname="my_library"></span>My Library </li>   </div>
+      <li class="title toggle"><span class="ui-icon ui-icon-triangle-1-s"></span>Recent Activity</li>
+      <div>
+      <div class="user-history small" id="user_history"></div>
+      <div class="small"> </div>
+      </div>  </ul>
+    <div id="nav-more" style="display:none"><div class="ui-icon ui-icon-triangle-1-s"></div></div>
+    <div id="nav-min" title="close sidebar"><div id="nav-min-icon" class="ui-icon ui-icon-triangle-1-w"></div></div>
+  </div>
+  </div>
+  <div id="widget-holder" wclass="home" class="home"  data-layout = '{"hash": "012-34-5"}'  >
+    <div class="sortable left">    <li id="news" class="widget">  <!-- start news widget -->
+          <div id="widget-home" class="widget-container ui-corner-all">
+                <div class="ui-corner-top widget-header">
+                    <div class="module-close ui-icon ui-icon-large ui-icon-close" wname="news" title="close"></div>  <h3><div class="module-min ui-icon-large ui-icon-triangle-1-s" title="minimize" wname="news"></div><span class="widget-title">News</span>  <span class="ui-icon ui-icon-arrow-4 hide ui-helper-hidden" title="move"></span>
+                    </h3>
+                </div>
+
+                <div id="news-content" class="content">  </div>
+
+                <div id="widget-footer" class="ui-helper-hidden">   </div>
+        <div id="widget-feed"></div>
+
+      </div>
+   <!-- end news widget -->           </li>   <li id="discussion" class="widget">  <!-- start discussion widget -->
+          <div id="widget-home" class="widget-container ui-corner-all">
+                <div class="ui-corner-top widget-header">
+                    <div class="module-close ui-icon ui-icon-large ui-icon-close" wname="discussion" title="close"></div>  <h3><div class="module-min ui-icon-large ui-icon-triangle-1-s" title="minimize" wname="discussion"></div><span class="widget-title">Discussion</span>  <span class="ui-icon ui-icon-arrow-4 hide ui-helper-hidden" title="move"></span>
+                    </h3>
+                </div>
+
+                <div id="discussion-content" class="content">  </div>
+
+                <div id="widget-footer" class="ui-helper-hidden">   </div>
+        <div id="widget-feed"></div>
+
+      </div>
+   <!-- end discussion widget -->           </li>   <li id="activity" class="widget">  <!-- start activity widget -->
+          <div id="widget-home" class="widget-container ui-corner-all">
+                <div class="ui-corner-top widget-header">
+                    <div class="module-close ui-icon ui-icon-large ui-icon-close" wname="activity" title="close"></div>  <h3><div class="module-min ui-icon-large ui-icon-triangle-1-s" title="minimize" wname="activity"></div><span class="widget-title">Activity</span>  <span class="ui-icon ui-icon-arrow-4 hide ui-helper-hidden" title="move"></span>
+                    </h3>
+                </div>
+
+                <div id="activity-content" class="content">  </div>
+
+                <div id="widget-footer" class="ui-helper-hidden">   </div>
+        <div id="widget-feed"></div>
+
+      </div>
+   <!-- end activity widget -->           </li>   <li id="gene_name_changes" class="widget">  <!-- start gene_name_changes widget -->
+          <div id="widget-home" class="widget-container ui-corner-all">
+                <div class="ui-corner-top widget-header">
+                    <div class="module-close ui-icon ui-icon-large ui-icon-close" wname="gene_name_changes" title="close"></div>  <h3><div class="module-min ui-icon-large ui-icon-triangle-1-s" title="minimize" wname="gene_name_changes"></div><span class="widget-title">Gene name changes</span>  <span class="ui-icon ui-icon-arrow-4 hide ui-helper-hidden" title="move"></span>
+                    </h3>
+                </div>
+
+                <div id="gene_name_changes-content" class="content">  </div>
+
+                <div id="widget-footer" class="ui-helper-hidden">   </div>
+        <div id="widget-feed"></div>
+
+      </div>
+   <!-- end gene_name_changes widget -->           </li>   <li id="static-widget-45" class="widget">  <!-- start static-widget-45 widget -->
+          <div id="widget-static" class="widget-container ui-corner-all">
+                <div class="ui-corner-top widget-header">
+                    <div class="module-close ui-icon ui-icon-large ui-icon-close" wname="static-widget-45" title="close"></div>  <h3><div class="module-min ui-icon-large ui-icon-triangle-1-s" title="minimize" wname="static-widget-45"></div><span class="widget-title">Meetings</span>  <span class="ui-icon ui-icon-arrow-4 hide ui-helper-hidden" title="move"></span>
+                    </h3>
+                </div>
+
+                <div id="static-widget-45-content" class="content">  </div>
+
+                <div id="widget-footer" class="ui-helper-hidden">  <a   onClick='$jq(this).toggleClass("ui-state-highlight");' class="button feed ui-corner-all"  rel="/rest/feed/download/home//static-widget-45/"><span class="ui-icon ui-icon-arrowthickstop-1-s ui-button"></span><span>download</span></a>    <a  tip="view history" id="history-button" onClick='WB.StaticWidgets.history("static-widget-45");' class="button ui-corner-all"><span class="ui-icon ui-icon-clock ui-button"></span></a>  </div>
+        <div id="widget-feed"></div>
+
+      </div>
+   <!-- end static-widget-45 widget -->           </li>    <li id="favorites" class="widget">  <!-- start favorites widget -->
+          <div id="widget-me" class="widget-container ui-corner-all">
+                <div class="ui-corner-top widget-header">
+                    <div class="module-close ui-icon ui-icon-large ui-icon-close" wname="favorites" title="close"></div>  <h3><div class="module-min ui-icon-large ui-icon-triangle-1-s" title="minimize" wname="favorites"></div><span class="widget-title">My Favorites</span>  <span class="ui-icon ui-icon-arrow-4 hide ui-helper-hidden" title="move"></span>
+                    </h3>
+                </div>
+
+                <div id="favorites-content" class="content">  </div>
+
+                <div id="widget-footer" class="ui-helper-hidden">   </div>
+        <div id="widget-feed"></div>
+
+      </div>
+   <!-- end favorites widget -->           </li>   <li id="my_library" class="widget">  <!-- start my_library widget -->
+          <div id="widget-me" class="widget-container ui-corner-all">
+                <div class="ui-corner-top widget-header">
+                    <div class="module-close ui-icon ui-icon-large ui-icon-close" wname="my_library" title="close"></div>  <h3><div class="module-min ui-icon-large ui-icon-triangle-1-s" title="minimize" wname="my_library"></div><span class="widget-title">My Library</span>  <span class="ui-icon ui-icon-arrow-4 hide ui-helper-hidden" title="move"></span>
+                    </h3>
+                </div>
+
+                <div id="my_library-content" class="content">  </div>
+
+                <div id="widget-footer" class="ui-helper-hidden">   </div>
+        <div id="widget-feed"></div>
+
+      </div>
+   <!-- end my_library widget -->           </li>    </div>
+    <div class="sortable right"></div>
+
+  </div>
+<!--   </div> -->
+</div>
+  <!-- begin boilerplate/footer -->
+</div>
+
+<div id="footer">
+    <div id="footer-nav">
+
+      <div class="footer-column">
+        <div class="footer-title">About</div>
+        <ul>
+          <li><span>Nematodes</span></li>
+          <li><a href="/about/userguide/nomenclature">Nomenclature</a></li>
+        </ul>
+
+        <ul>
+          <li><span>WormBase</span></li>
+          <li><a href="/about#0--10">Mission</a></li>
+          <li><a href="/about/advisory_board#01--10">Advisory Board</a></li>
+          <li><a href="/about/policies#1--10">Privacy</a></li>
+          <li><a href="/about/policies#0--10">Acceptable Use</a></li>
+          <li><a href="/about/policies#2--10">Copyright</a></li>
+          <li><a href="/about/release_schedule#01--10">Release Schedule</a></li>
+          <li><a href="/about/citing_wormbase#012--10">How to Cite</a></li>
+          <li><a href="/about/acknowledgments#0--10">Acknowledgments</a></li>
+          <li><a href="/about/staff#01--10">WormBase Staff</a></li>
+          <li><a href="http://legacy.wormbase.org/"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://legacy.wormbase.org/');"
+            target="_blank"><span class="wb-ext">Legacy Site</span></a></li>
+        </ul>
+      </div>
+
+
+      <div class="footer-column">
+        <div class="footer-title">Support</div>
+        <ul>
+          <li><a href="/about/userguide/submit_data#01--10">Submit Data</a></li>
+          <li><a href="mailto:help@wormbase.org">Email</a></li>
+          <li><a href="/about/Frequently_asked_questions">FAQ</a></li>
+          <li><a href="/about/userguide">User Guide</a></li>
+          <li><a href="/tools/support?url=/">Contact Help</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-column">
+        <div class="footer-title">Community</div>
+        <ul>
+          <li><a href="http://www.wormbook.org/"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://www.wormbook.org/');"
+            target="_blank"><span class="wb-ext">WormBook</span></a></li>
+          <li><a href="http://forums.wormbase.org"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://forums.wormbase.org');"
+            target="_blank"><span class="wb-ext">Forum</span></a></li>
+          <li><a href="http://blog.wormbase.org"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://blog.wormbase.org');"
+            target="_blank"><span class="wb-ext">Blog</span></a></li>
+          <li><a href="http://twitter.com/wormbase"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://twitter.com/wormbase');"
+            target="_blank"><span class="wb-ext">Twitter</span></a></li>
+          <li><a href="/species/c_elegans#1--10">Key Papers</a></li>
+        </ul>
+
+        <ul>
+          <li><span>Friends</span></li>
+          <li><a href="https://cgc.umn.edu/"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'https://cgc.umn.edu/');"
+            target="_blank"><span class="wb-ext">CGC</span></a></li>
+          <li><a href="http://www.wormatlas.org"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://www.wormatlas.org');"
+            target="_blank"><span class="wb-ext">WormAtlas</span></a></li>
+          <li><a href="http://www.nematodes.org/"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://www.nematodes.org/');"
+            target="_blank"><span class="wb-ext">Nematodes.org</span></a></li>
+          <li><a href="http://www.ipm.ucdavis.edu/NEMABASE/"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://www.ipm.ucdavis.edu/NEMABASE/');"
+            target="_blank"><span class="wb-ext">NEMABASE</span></a></li>
+          <li><a href="http://nematode.net/"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://nematode.net/');"
+            target="_blank"><span class="wb-ext">Nematode.net</span></a></li>
+          <li><a href="http://www.smid-db.org/"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://www.smid-db.org/');"
+            target="_blank"><span class="wb-ext">SMID-DB</span></a></li>
+        </ul>
+      </div>
+
+
+      <div class="footer-column">
+        <div class="footer-title">Developer</div>
+        <ul>
+<!--           <li><a href="http://"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://');"
+            target="_blank"><span class="wb-ext">Amazon EC2 AMI</span></a></li> -->
+          <li><a href="/about/userguide/for_developers">Developer Documentation</a></li>
+          <li><a href="/about/userguide/for_developers/api-rest">RESTful API</a></li>
+          <li><a href="http://github.com/WormBase"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://github.com/WormBase');"
+            target="_blank"><span class="wb-ext">Code Repositories (Github)</span></a></li>
+          <li><a href="/about/internal_documentation">Staff Documentation</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-column">
+        <div class="footer-title">Downloads</div>
+        <ul>
+          <li><a href="ftp://ftp.wormbase.org/pub/wormbase/">FTP site</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-column">
+        <div class="footer-title">Data Freezes</div>
+        <ul>
+          <li>
+            <select id="data-freezes" onchange="window.location.href = this.options[this.selectedIndex].value">
+                <option selected="selected" value="--">--</option>
+                <option value="http://legacy.wormbase.org">WS230 (Mar 2012)</option>
+                <option value="http://ws220.wormbase.org">WS220 (16 Dec 2010)</option>
+                <option value="http://ws210.wormbase.org">WS210 (15 Jan 2010)</option>
+                <option value="http://ws205.wormbase.org">WS205 (18 Sep 2009)</option>
+                <option value="http://ws204.wormbase.org">WS204 (13 Aug 2009)</option>
+                <option value="http://ws200.wormbase.org">WS200 (16 Mar 2009)</option>
+                <option value="http://ws190.wormbase.org">WS190 (07 May 2008)</option>
+                <option value="http://ws180.wormbase.org">WS180 (07 Sep 2007)</option>
+                <option value="http://ws170.wormbase.org">WS170 (09 Feb 2007)</option>
+                <option value="http://ws160.wormbase.org">WS160 (31 Jul 2006)</option>
+                <option value="http://ws150.wormbase.org">WS150 (30 Nov 2005)</option>
+                <option value="http://ws140.wormbase.org">WS140 (26 Mar 2005)</option>
+                <option value="http://ws130.wormbase.org">WS130 (16 Aug 2004)</option>
+                <option value="http://ws120.wormbase.org">WS120 (07 Mar 2004)</option>
+                <option value="http://ws110.wormbase.org">WS110 (01 Oct 2003)</option>
+                <option value="http://ws100.wormbase.org">WS100 (10 May 2003)</option>
+            </select>
+          </li>
+        </ul>
+      </div>
+
+    </div>
+
+    <br clear="all" />
+
+
+     <div id="footermeta">
+      <a id="footer-mail" href="mailto:help@wormbase.org"><div class="social-icons"></div></a>
+      <a id="footer-tweet" href="http://twitter.com/wormbase"><div class="social-icons"></div></a>
+      <a id="footer-rss"  href="http://feeds.feedburner.com/wormbase"><div class="social-icons"></div></a>
+    </div>
+    <div id="footercredit">
+    <br style="clear:both" />  <div class="credit-badge-container">
+            <div class="credit-badge"><a href="http://www.alliancegenome.org/"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://www.alliancegenome.org/');"
+            target="_blank"><span class="wb-ext"><img width="200px" src="/img/agr_founding_member_badge.png" alt="Alliance of Genome Resources" /></span></a></div>
+            <div class="credit-badge"><a href="http://www.caltech.edu/"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://www.caltech.edu/');"
+            target="_blank"><span class="wb-ext"><img width="150px" src="/img/caltech_logo.png" alt="Caltech" /></span></a></div>
+            <div class="credit-badge"><a href="https://www.ebi.ac.uk/"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'https://www.ebi.ac.uk/');"
+            target="_blank"><span class="wb-ext"><img width="200px" src="/img/embl_ebi_logo_white.svg" alt="European Bioinformatics Institute" /></span></a></div>
+            <div class="credit-badge"><a href="https://oicr.on.ca/"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'https://oicr.on.ca/');"
+            target="_blank"><span class="wb-ext"><img height="65px" src="/img/oicr_logo_white.png" alt="Ontario Institute for Cancer Research" /></span></a></div>
+        </div>
+        <div class="credit-text-container">
+        <span>
+          WormBase is supported by grant #U41 HG002223 from the <a href="http://www.genome.gov/"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://www.genome.gov/');"
+            target="_blank"><span class="wb-ext">National Human Genome Research Institute</span></a> </span><br />
+        <span>at the <a href="http://www.nih.gov/"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://www.nih.gov/');"
+            target="_blank"><span class="wb-ext">US National Institutes of Health</span></a>,
+          the <a href="http://www.mrc.ac.uk/"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://www.mrc.ac.uk/');"
+            target="_blank"><span class="wb-ext">UK Medical Research Council</span></a> and the <a href="http://www.bbsrc.ac.uk/home/home.aspx"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://www.bbsrc.ac.uk/home/home.aspx');"
+            target="_blank"><span class="wb-ext">UK Biotechnology and Biological Sciences Research Council</span></a>.
+        </span>
+        </div>
+    </div>
+
+
+</div>
+
+
+<!-- end boilerplate/footer -->
+
+</div><!--end wrap-->
+ <div id="root"></div><script src="https://code.jquery.com/jquery-1.9.1.min.js" integrity="sha256-wS9gmOZBqsqWxgIVgA8Y9WcQOa7PgSIX+rPA0VL2rbQ=" crossorigin="anonymous"></script><script src="https://code.jquery.com/ui/1.10.1/jquery-ui.min.js" integrity="sha256-Nnknf1LUP3GHdxjWQgga92LMdaU2+/gkzoIUO+gfy2M=" crossorigin="anonymous"></script><script src="/static/js/main.af663c13.js" type="text/javascript"></script><script type="text/javascript"><!-- Google Analytics -->
+        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+        (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+        m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+        })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+        //ga('create', 'UA-16257183-1', 'auto');  // Replace with your property ID.
+        ga('create', 'UA-16257183-1', {'cookieDomain': 'wormbase.org'});
+        ga('require', 'displayfeatures');
+        ga('send', 'pageview');
+        <!-- End Google Analytics --></script><script data-cfasync="false" type="text/javascript">/*<![CDATA[*/window.olark||(function(c){var f=window,d=document,l=f.location.protocol=="https:"?"https:":"http:",z=c.name,r="load";var nt=function(){
+f[z]=function(){
+(a.s=a.s||[]).push(arguments)};var a=f[z]._={
+},q=c.methods.length;while(q--){(function(n){f[z][n]=function(){
+f[z]("call",n,arguments)}})(c.methods[q])}a.l=c.loader;a.i=nt;a.p={
+0:+new Date};a.P=function(u){
+a.p[u]=new Date-a.p[0]};function s(){
+a.P(r);f[z](r)}f.addEventListener?f.addEventListener(r,s,false):f.attachEvent("on"+r,s);var ld=function(){function p(hd){
+hd="head";return["<",hd,"></",hd,"><",i,' onl' + 'oad="var d=',g,";d.getElementsByTagName('head')[0].",j,"(d.",h,"('script')).",k,"='",l,"//",a.l,"'",'"',"></",i,">"].join("")}var i="body",m=d[i];if(!m){
+return setTimeout(ld,100)}a.P(1);var j="appendChild",h="createElement",k="src",n=d[h]("div"),v=n[j](d[h](z)),b=d[h]("iframe"),g="document",e="domain",o;n.style.display="none";m.insertBefore(n,m.firstChild).id=z;b.frameBorder="0";b.id=z+"-loader";if(/MSIE[ ]+6/.test(navigator.userAgent)){
+b.src="javascript:false"}b.allowTransparency="true";v[j](b);try{
+b.contentWindow[g].open()}catch(w){
+c[e]=d[e];o="javascript:var d="+g+".open();d.domain='"+d.domain+"';";b[k]=o+"void(0);"}try{
+var t=b.contentWindow[g];t.write(p());t.close()}catch(x){
+b[k]=o+'d.write("'+p().replace(/"/g,String.fromCharCode(92)+'"')+'");d.close();'}a.P(2)};ld()};nt()})({
+loader: "static.olark.com/jsclient/loader0.js",name:"olark",methods:["configure","extend","declare","identify"]});
+/* custom configuration goes here (www.olark.com/documentation) */
+olark.identify('6652-820-10-1192');/*]]>*/</script><noscript><a href="https://www.olark.com/site/6652-820-10-1192/contact" title="Contact us" target="_blank">Questions? Feedback?</a> powered by <a href="http://www.olark.com?welcome" title="Olark live chat software">Olark live chat software</a></noscript></body></html>

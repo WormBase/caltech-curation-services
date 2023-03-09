@@ -1,0 +1,447 @@
+<html><head><link href="https://www.wormbase.org/static/css/main.min.css" rel="stylesheet">
+<script src="https://code.jquery.com/jquery-1.9.1.min.js" integrity="sha256-wS9gmOZBqsqWxgIVgA8Y9WcQOa7PgSIX+rPA0VL2rbQ=" crossorigin="anonymous"></script>
+<script src="https://code.jquery.com/ui/1.10.1/jquery-ui.min.js" integrity="sha256-Nnknf1LUP3GHdxjWQgga92LMdaU2+/gkzoIUO+gfy2M=" crossorigin="anonymous"></script>
+<script src="https://www.wormbase.org/static/js/wormbase.min.js" type="text/javascript"></script>
+<script>
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){ (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o), m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m) })
+(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+ga('create', 'UA-16257183-1', {'cookieDomain': 'wormbase.org'});
+ga('require', 'displayfeatures');
+ga('send', 'pageview');
+</script>
+
+   
+                                                                                               <!-- BEGIN boilerplate/banner -->
+
+
+<div id="notifications" class="ui-corner-bottom">
+      <span id="notification-text"></span>
+      <span class="ui-icon ui-icon-close tip-simple br" tip="close"></span>
+</div>
+
+<div id="wrap">   <div id="top-system-message" class="system-message"> Welcome to WormBase - <a target="_blank" href="https://www.wormbase.org/tools/support">need help</a>? <span class="system-message-close" data-id="6">
+            <span class=" ui-icon ui-icon-close"></span>
+          </span>
+        </div>
+        <div class="system-message" ></div>    
+            <div id="operator-box-wrap">
+
+  <div id="issue-box" class="minimize">
+    <div id="issue-box-tab" class="ui-corner-top">
+      <span>
+         Questions, Feedback & Help
+         <span aria-hidden="true" id="issue-icon"></span>
+       </span>
+    </div>
+    <div id="issue-box-content" class="ui-corner-tl">  <div id="issues-new">   <div>
+        Send us an email and we'll get back to you ASAP. Or you can read our <a href="https://wormbase.org/about/Frequently_asked_questions">Frequently Asked Questions</a>.
+    </div>    <input id="name" type="text" size="48" placeholder="Name (optional)"/>
+        <input id="email" type="text"  size="48" placeholder="Email (so we can get back to you)"/>
+        <!-- <div class="anon"><label><input id="anon" type="checkbox" value="0"> report anonymously</label></div> -->   <div> <select name="email[subject]" id="issue-title" class="valid">
+      <option value="" style="display:none">Type of Question / Comment</option>
+      <option value="Bug Report" >Bug Report</option>
+      <option value="How Do I ...?">How Do I ...?</option>
+      <option value="Content Correction">Content Correction</option>
+      <option value="Feature Request">Feature Request</option>
+      <option value="My Account">My Account</option>
+      <option value="Everything's broken!">Everything is broken!</option>
+    </select> </div>
+        <div> <textarea  class="issue-text" id="issue-content" rows="6" name="content" placeholder="Question?"></textarea> </div>  <div id="issue-submit-box">
+          <input onClick="WB.issue.submit($jq(this));" type='submit' value='Send' class="issue-submit" page="Tools" url="/header" rel="/rest/feed/issue"/>
+        </div>  <div id="issue-message"></div>
+    </div>  <!-- closing #issues-new -->  <div id="add-new-issue" style="display:none">
+            <a onClick="WB.issue.addNewIssue($jq(this));">New form</a>
+        </div>
+    </div>
+  </div>
+</div>               <!-- START: Revised header region -->
+<div id="header" class="clearfix" data-page='{
+    "ref": "/header",
+    "wbid": "header",
+    "name": "",
+    "id" : "",
+    "other_names" : [  ],
+    "class" : "",
+    "type" : "tools",
+    "is_obj": "",
+    "save": "reports",
+    "history": "0"
+}'>
+
+  <div class="status-bar"></div>
+
+  <div id="title">
+    <a href="https://www.wormbase.org/" title="WormBase Home"><img src="https://www.wormbase.org/img/logo/logo_wormbase_gradient.svg" /><!-- <h1></h1> --></a>
+    <div class="release_date">
+      Version: <a href="https://www.wormbase.org/about/wormbase_release_WS283">WS283</a>
+    </div>
+    |
+    <div class="founding-member">
+      <span>Founding member of </span> <a href="https://www.alliancegenome.org/" target="_blank" title="Alliance of Genome Resouces"><img width="200px" src="https://www.wormbase.org/img/agr_logo_light.png" alt="Alliance of Genome Resources"></a>
+    </div>
+  </div> 
+  <form method="post" class="ui-corner-all" id="searchForm" action="" onsubmit="WB.search(); return false;">  <div id="searchBody">
+      <input class="text" id="Search" name="query" type="text" placeholder="Search directory...">
+      <ul id="searchSelect">
+        <li>
+          <span class="ui-icon ui-icon-triangle-1-s" style="float:right"></span>
+          <span class="current-search" style="float:right">All</span>
+          <ul>  <li value="all" onClick='WB.search_change("all",1);'><a>All</a></li>  <li value="anatomy_term" onClick='WB.search_change("anatomy_term",1);'><a>Anatomy</a></li>  <li value="antibody" onClick='WB.search_change("antibody",1);'><a>Antibody</a></li>  <li value="clone" onClick='WB.search_change("clone",1);'><a>Clone</a></li>  <li value="expr_pattern" onClick='WB.search_change("expr_pattern",1);'><a>Expression pattern</a></li>  <li value="gene" onClick='WB.search_change("gene",1);'><a>Gene</a></li>  <li value="gene_class" onClick='WB.search_change("gene_class",1);'><a>Gene Class</a></li>  <li value="go_term" onClick='WB.search_change("go_term",1);'><a>Gene Ontology</a></li>  <li value="disease" onClick='WB.search_change("disease",1);'><a>Human Disease</a></li>  <li value="laboratory" onClick='WB.search_change("laboratory",1);'><a>Laboratory</a></li>  <li value="life_stage" onClick='WB.search_change("life_stage",1);'><a>Life Stage</a></li>  <li value="molecule" onClick='WB.search_change("molecule",1);'><a>Molecule</a></li>  <li value="paper" onClick='WB.search_change("paper",1);'><a>Paper</a></li>  <li value="person" onClick='WB.search_change("person",1);'><a>Person</a></li>  <li value="phenotype" onClick='WB.search_change("phenotype",1);'><a>Phenotype</a></li>  <li value="protein" onClick='WB.search_change("protein",1);'><a>Protein</a></li>  <li value="rearrangement" onClick='WB.search_change("rearrangement",1);'><a>Rearrangement</a></li>  <li value="feature" onClick='WB.search_change("feature",1);'><a>Sequence Feature</a></li>  <li value="strain" onClick='WB.search_change("strain",1);'><a>Strain</a></li>  <li value="transgene" onClick='WB.search_change("transgene",1);'><a>Transgene</a></li>  <li value="variation" onClick='WB.search_change("variation",1);'><a>Variation</a></li>  </ul>
+        </li>
+      </ul>
+
+    </div>
+
+    <input class="ui-icon ui-icon-search" type="submit" onclick="WB.search(); return false;" value="">
+
+  </form>
+
+   <div id="nav-bar">
+    <!-- START: Revised main menu -->
+    <ul class="nav-bar main-menu">    <li id="section-about"><a href="https://www.wormbase.org/about#01--10" class="trigger ">
+          <span class="ui-icon ui-icon-triangle-1-s"></span> About</a>
+
+          <!-- START: New dropdown menu -->
+          <div class="wb-dropdown submenu" style="display: none;">
+            <div class="submenu-main">
+                <div class="submenu-title">
+                    <p><strong><a href="">About</a></strong></p>
+                    <p>WormBase is an international consortium of biologists and computer scientists… <a href="https://www.wormbase.org/about#01--10" class="read-more">Find out more</a></p>
+                </div>
+                <div class="submenu-links">     <div class="submenu-menu">     <p><strong>General</strong></p>  <ul>     <li ">       <a href="https://www.wormbase.org/about#0--10">Mission Statement</a>     </li>   <li ">      <span>Publications</span>    </li>   <li ">       <a href="https://www.wormbase.org/about/Frequently_asked_questions">FAQ</a>     </li>   </ul>  </div>   <div class="submenu-menu">     <p><strong>People</strong></p>  <ul>     <li ">       <a href="https://www.wormbase.org/about/advisory_board">Advisory Board</a>     </li>   <li ">       <a href="https://www.wormbase.org/about/staff#01--10">WormBase Staff</a>     </li>   </ul>  </div>   <div class="submenu-menu">     <p><strong>What's New</strong></p>  <ul>     <li ">       <a href="http://blog.wormbase.org/" target="_blank" class="wb-ext" title="Link opens in a new window">News (Blog)</a>     </li>   <li ">       <a href="https://www.wormbase.org/about/wormbase_release_current">Release notes</a>     </li>   <li ">       <a href="https://www.wormbase.org/about/release_schedule">Release Schedule</a>     </li>   <li ">       <a href="https://www.wormbase.org/#012-34-5">Gene Name Changes</a>     </li>   </ul>  </div>   </div>
+            </div>
+            <div class="submenu-sub">     <div class="wb-more">     <p><strong>Want to know more about worm research?</strong></p>  <ul>     <li ">       <a href="http://cbs.umn.edu/cgc/home" target="_blank" class="wb-ext" title="Link opens in a new window">Caenorhabditis Genetics Center (CGC)</a>     </li>   <li ">       <a href="http://www.ipm.ucdavis.edu/NEMABASE/" target="_blank" class="wb-ext" title="Link opens in a new window">NEMABASE</a>     </li>   <li ">       <a href="http://nematode.net/NN3_frontpage.cgi" target="_blank" class="wb-ext" title="Link opens in a new window">Nematode.net</a>     </li>   <li ">       <a href="http://www.nematodes.org/" target="_blank" class="wb-ext" title="Link opens in a new window">Nematodes.org</a>     </li>   <li ">       <a href="http://www.wormatlas.org/" target="_blank" class="wb-ext" title="Link opens in a new window">WormAtlas</a>     </li>   <li ">       <a href="http://www.wormbook.org/" target="_blank" class="wb-ext" title="Link opens in a new window">WormBook</a>     </li>   </ul>  </div>   </div>
+
+          </div>
+          <!-- END: New dropdown menu -->
+      </li>    <li id="section-directory"><a href="https://www.wormbase.org/search" class="trigger ">
+          <span class="ui-icon ui-icon-triangle-1-s"></span> Directory</a>
+
+          <!-- START: New dropdown menu -->
+          <div class="wb-dropdown submenu" style="display: none;">
+            <div class="submenu-main">
+                <div class="submenu-title">
+                    <p><strong><a href="">Directory</a></strong></p>
+                    <p>Start here to access encyclopedic information about the worm genome and its genes, proteins, and other encoded features… <a href="https://www.wormbase.org/search" class="read-more">Find out more</a></p>
+                </div>
+                <div class="submenu-links">     <div class="submenu-menu">     <p><strong>Get Started</strong></p>  <ul>     <li ">       <a href="https://www.wormbase.org/species/all#0123--10">About the directory</a>     </li>   </ul>  </div>   <div class="submenu-menu">     <p><strong>Search</strong></p>  <ul>     <li ">       <a href="https://www.wormbase.org/search/gene/">Basic Search</a>     </li>   <li ">       <a href="https://www.wormbase.org/tools/queries">Advanced Search</a>     </li>   </ul>  </div>   <div class="submenu-menu">     <p><strong>Browse</strong></p>  <ul>     <li ">        <a href="https://www.wormbase.org/species/all#0123--10"><strong>By Species</strong></a>     <ul>     <li ">       <a href="https://www.wormbase.org/species/c_elegans"><i>C. elegans</i></a>
+        <br/>
+        [<span class="wb-detail"><a href="https://www.wormbase.org/tools/genome/jbrowse-simple/?data=data%2Fc_elegans_PRJNA13758&tracks=&loc=">JBrowse</a></span>]
+        [<span class="wb-detail"><a href="https://www.wormbase.org/tools/genome/gbrowse/c_elegans_PRJNA13758" class="genomic_location-link" title="">Legacy&nbsp;GBrowse</a></span>]    </li>   <li ">       <a href="https://www.wormbase.org/species/b_malayi"><i>B. malayi</i></a>
+        <br/>
+        [<span class="wb-detail"><a href="https://www.wormbase.org/tools/genome/jbrowse-simple/?loc=&tracks=&data=data%2Fb_malayi_PRJNA10729">JBrowse</a></span>]
+        [<span class="wb-detail"><a href="https://www.wormbase.org/tools/genome/gbrowse/b_malayi_PRJNA10729" class="genomic_location-link" title="">Legacy&nbsp;GBrowse</a></span>]    </li>   <li ">       <a href="https://www.wormbase.org/species/c_brenneri"><i>C. brenneri</i></a>
+        <br/>
+        [<span class="wb-detail"><a href="https://www.wormbase.org/tools/genome/jbrowse-simple/?loc=&data=data%2Fc_brenneri_PRJNA20035&tracks=">JBrowse</a></span>]
+        [<span class="wb-detail"><a href="https://www.wormbase.org/tools/genome/gbrowse/c_brenneri_PRJNA20035" class="genomic_location-link" title="">Legacy&nbsp;GBrowse</a></span>]    </li>   <li ">       <a href="https://www.wormbase.org/species/c_briggsae"><i>C. briggsae</i></a>
+        <br/>
+        [<span class="wb-detail"><a href="https://www.wormbase.org/tools/genome/jbrowse-simple/?loc=&tracks=&data=data%2Fc_briggsae_PRJNA10731">JBrowse</a></span>]
+        [<span class="wb-detail"><a href="https://www.wormbase.org/tools/genome/gbrowse/c_briggsae_PRJNA10731" class="genomic_location-link" title="">Legacy&nbsp;GBrowse</a></span>]    </li>   <li ">       <a href="https://www.wormbase.org/species/c_japonica"><i>C. japonica</i></a>
+        <br/>
+        [<span class="wb-detail"><a href="https://www.wormbase.org/tools/genome/jbrowse-simple/?loc=&tracks=&data=data%2Fc_japonica_PRJNA12591">JBrowse</a></span>]
+        [<span class="wb-detail"><a href="https://www.wormbase.org/tools/genome/gbrowse/c_japonica_PRJNA12591" class="genomic_location-link" title="">Legacy&nbsp;GBrowse</a></span>]    </li>   <li ">       <a href="https://www.wormbase.org/species/c_remanei"><i>C. remanei</i></a>
+        <br/>
+        [<span class="wb-detail"><a href="https://www.wormbase.org/tools/genome/jbrowse-simple/?data=data%2Fc_remanei_PRJNA577507&tracks=&loc=">JBrowse</a></span>]
+        [<span class="wb-detail"><a href="https://www.wormbase.org/tools/genome/gbrowse/c_remanei_PRJNA577507" class="genomic_location-link" title="">Legacy&nbsp;GBrowse</a></span>]    </li>   <li ">       <a href="https://www.wormbase.org/species/o_volvulus"><i>O. volvulus</i></a>
+        <br/>
+        [<span class="wb-detail"><a href="https://www.wormbase.org/tools/genome/jbrowse-simple/?loc=&data=data%2Fo_volvulus_PRJEB513&tracks=">JBrowse</a></span>]
+        [<span class="wb-detail"><a href="https://www.wormbase.org/tools/genome/gbrowse/o_volvulus_PRJEB513" class="genomic_location-link" title="">Legacy&nbsp;GBrowse</a></span>]    </li>   <li ">       <a href="https://www.wormbase.org/species/p_pacificus"><i>P. pacificus</i></a>
+        <br/>
+        [<span class="wb-detail"><a href="https://www.wormbase.org/tools/genome/jbrowse-simple/?loc=&data=data%2Fp_pacificus_PRJNA12644&tracks=">JBrowse</a></span>]
+        [<span class="wb-detail"><a href="https://www.wormbase.org/tools/genome/gbrowse/p_pacificus_PRJNA12644" class="genomic_location-link" title="">Legacy&nbsp;GBrowse</a></span>]    </li>   <li ">       <a href="https://www.wormbase.org/species/s_ratti"><i>S. ratti</i></a>
+        <br/>
+        [<span class="wb-detail"><a href="https://www.wormbase.org/tools/genome/jbrowse-simple/?loc=&data=data%2Fs_ratti_PRJEB125&tracks=">JBrowse</a></span>]
+        [<span class="wb-detail"><a href="https://www.wormbase.org/tools/genome/gbrowse/s_ratti_PRJEB125" class="genomic_location-link" title="">Legacy&nbsp;GBrowse</a></span>]    </li>   <li ">       <a href="https://www.wormbase.org/species/t_muris"><i>T. muris</i></a>
+        <br/>
+        [<span class="wb-detail"><a href="https://www.wormbase.org/tools/genome/jbrowse-simple/?data=data%2Ft_muris_PRJEB126&tracks=&loc=">JBrowse</a></span>]
+        [<span class="wb-detail"><a href="https://www.wormbase.org/tools/genome/gbrowse/t_muris_PRJEB126" class="genomic_location-link" title="">Legacy&nbsp;GBrowse</a></span>]    </li>   <li ">       <a href="https://www.wormbase.org/species/all#0123--10">More…</a>     </li>   </ul>  </li>   <li ">        <a href="https://www.wormbase.org/resources#01234--10"><strong>By Resource</strong></a>     <ul>     <li ">       <a href="https://www.wormbase.org/resources#3--10">Databases</a>     </li>   <li ">       <a href="https://www.wormbase.org/resources/gene_class">Gene class</a>    </li>   <li ">       <a href="https://www.wormbase.org/resources/laboratory">Laboratory</a>    </li>   <li ">       <a href="https://www.wormbase.org/resources#2--10">Methods</a>     </li>   <li ">       <a href="https://www.wormbase.org/resources/motif">Motif</a>    </li>   <li ">       <a href="https://www.wormbase.org/resources/paper">Paper</a>    </li>   <li ">       <a href="https://www.wormbase.org/resources/person">Person</a>    </li>   <li ">       <a href="https://www.wormbase.org/resources#4--10">Protocols</a>     </li>   <li ">       <a href="https://www.wormbase.org/resources/wbprocess">Process&Pathway</a>    </li>   <li ">       <a href="https://www.wormbase.org/resources/reagents">Reagent</a>    </li>   <li ">       <a href="https://www.wormbase.org/resources/transposon_family">Transposon Family</a>    </li>   </ul>  </li>   </ul>  </div>   <div class="submenu-menu">     <p><strong>Tools</strong></p>  <ul>     <li ">       <a href="https://www.wormbase.org/tools/schema">Schema Display</a>     </li>   <li ">       <a href="https://www.wormbase.org/tools/tree">Tree Display</a>     </li>   <li ">       <a href="https://www.wormbase.org/about/userguide/submit_data">Submit Data</a>     </li>   </ul>  </div>   </div>
+            </div>
+            <div class="submenu-sub">     <div class="wb-more">     <p><strong>Latest updates</strong></p>  <ul>     <li ">       <a href="http://blog.wormbase.org/" target="_blank" class="wb-ext" title="Link opens in a new window">News (Blog)</a>     </li>   <li ">       <a href="https://www.wormbase.org/about/release_schedule">Release Schedule</a>     </li>   </ul>  </div>   <div class="wb-more">     <p><strong>Need help?</strong></p>  <ul>     <li ">       <a href="https://www.wormbase.org/about/userguide/nomenclature">Nematode Nomenclature</a>     </li>   <li ">       <a href="https://www.wormbase.org/about/userguide/for_users">User's Guide</a>     </li>   <li ">       <a href="https://www.wormbase.org/about/Frequently_asked_questions">FAQ</a>     </li>   <li ">       <a href="https://www.wormbase.org/tools/support">HelpDesk</a>     </li>   </ul>  </div>   </div>
+
+          </div>
+          <!-- END: New dropdown menu -->
+      </li>    <li id="section-tools"><a href="https://www.wormbase.org/tools" class="trigger selected">
+          <span class="ui-icon ui-icon-triangle-1-s"></span> Tools</a>
+
+          <!-- START: New dropdown menu -->
+          <div class="wb-dropdown submenu" style="display: none;">
+            <div class="submenu-main">
+                <div class="submenu-title">
+                    <p><strong><a href="">Tools</a></strong></p>
+                    <p>Come explore WormBase's complex collection of information with a variety of bioinformatic tools and more… <a href="https://www.wormbase.org/tools" class="read-more">Find out more</a></p>
+                </div>
+                <div class="submenu-links">     <div class="submenu-menu">     <p><strong>Get Started</strong></p>  <ul>     <li ">       <a href="https://www.wormbase.org/about/userguide/for_users#1--10">About our tools</a>     </li>   </ul>  </div>   <div class="submenu-menu">     <p><strong>General Search</strong></p>  <ul>     <li ">       <a href="https://www.wormbase.org/search/gene/">Basic Search</a>     </li>   <li ">       <a href="https://www.wormbase.org/species/all#0123--10">Browse by Species</a>     </li>   <li ">       <a href="https://www.wormbase.org/resources#0123--10">Browse by Resource</a>     </li>   <li ">       <a href="https://www.wormbase.org/tools/queries">Advanced Search</a>     </li>   </ul>  </div>   <div class="submenu-menu">     <p><strong>By Sequence</strong></p>  <ul>     <li ">       <a href="https://www.wormbase.org/tools/blast_blat">BLAST/BLAT</a>     </li>   <li ">       <a href="https://www.wormbase.org/tools/epcr">e-PCR Search</a>     </li>   <li ">       <a href="https://www.wormbase.org/tools/genome/gbrowse/">GBrowse</a>     </li>   <li ">       <a href="https://www.wormbase.org/tools/gmap">Genetic Map</a>     </li>   <li ">       <a href="https://www.wormbase.org/tools/genome/jbrowse-simple/?data=data/c_elegans_PRJNA13758">JBrowse</a>     </li>   <li ">       <a href="https://www.wormbase.org/tools/nucleotide_aligner">Nucleotide Aligner</a>     </li>   <li ">       <a href="https://www.wormbase.org/tools/protein_aligner">Protein Aligner</a>     </li>   <li ">       <a href="https://www.wormbase.org/tools/synteny/mercator/">Synteny Viewer</a>     </li>   </ul>  </div>   <div class="submenu-menu">     <p><strong>By Expression</strong></p>  <ul>     <li ">       <a href="https://spell.wormbase.org/" target="_blank" class="wb-ext" title="Link opens in a new window">SPELL</a>     </li>   <li ">       <a href="https://www.wormbase.org/tools/rnaseq/expression_dataset_locator.cgi">Expression Dataset Locator</a>     </li>   <li ">       <a href="https://www.wormbase.org/tools/rnaseq/fpkmmine.cgi">RNA-Seq FPKM Gene Search</a>     </li>   </ul>  </div>   <div class="submenu-menu">     <p><strong>By Literature</strong></p>  <ul>     <li ">       <a href="https://www.wormbase.org/resources/paper#1-0-2">Resources: Papers</a>     </li>   <li ">       <a href="https://www.textpressocentral.org" target="_blank" class="wb-ext" title="Link opens in a new window">TextPresso</a>     </li>   <li ">       <a href="https://wormicloud.textpressolab.com" target="_blank" class="wb-ext" title="Link opens in a new window">Wormicloud (Word Cloud)</a>     </li>   </ul>  </div>   <div class="submenu-menu">     <p><strong>By Object</strong></p>  <ul>     <li ">       <a href="https://www.wormbase.org/tools/schema">Schema Display</a>     </li>   <li ">       <a href="https://www.wormbase.org/tools/tree">Tree Display</a>     </li>   </ul>  </div>   <div class="submenu-menu">     <p><strong>Data Mining and Batch Queries</strong></p>  <ul>     <li ">       <a href="http://parasite.wormbase.org/biomart/martview" target="_blank" class="wb-ext" title="Link opens in a new window">ParaSite BioMart</a>     </li>   <li ">       <a href="https://www.wormbase.org/tools/mine/simplemine.cgi">SimpleMine</a>     </li>   <li ">       <a href="https://www.wormbase.org/tools/enrichment/tea/tea.cgi">Gene Set Enrichment Analysis</a>     </li>   <li ">       <a href="http://intermine.wormbase.org/tools/wormmine/begin.do" target="_blank" class="wb-ext" title="Link opens in a new window">WormMine</a>     </li>   <li ">       <a href="https://www.wormbase.org/tools/mine/gene_sanitizer.cgi">Gene Name Sanitizer</a>     </li>   </ul>  </div>   <div class="submenu-menu">     <p><strong>For Parasites</strong></p>  <ul>     <li ">       <a href="http://parasite.wormbase.org" target="_blank" class="wb-ext" title="Link opens in a new window">ParaSite</a>     </li>   <li ">       <a href="http://parasite.wormbase.org/biomart/martview" target="_blank" class="wb-ext" title="Link opens in a new window">ParaSite BioMart</a>     </li>   </ul>  </div>   <div class="submenu-menu">     <p><strong>For Developers</strong></p>  <ul>     <li ">       <a href="https://www.wormbase.org/tools/queries">Query Language</a>     </li>   <li ">       <a href="https://www.wormbase.org/about/userguide/for_developers#3--10">WormBase APIs</a>     </li>   <li ">       <a href="https://www.wormbase.org/about/userguide/wormbasehubs#0123--10">WormBase Assembly Hubs</a>     </li>   </ul>  </div>   <div class="submenu-menu">     <p><strong>By Ontology</strong></p>  <ul>     <li ">       <a href="https://www.wormbase.org/tools/ontology_browser">Ontology Browser</a>     </li>   <li ">       <a href="https://www.wormbase.org/tools/soba/soba.cgi?action=Gene+Pair+to+SObA+Graph">Gene-pair Ontology Graph</a>     </li>   <li ">       <a href="https://www.wormbase.org/tools/soba/soba.cgi?action=Terms+to+SObA+Graph">Terms Ontology Graph</a>     </li>   </ul>  </div>   </div>
+            </div>
+            <div class="submenu-sub">     <div class="wb-more">     <p><strong>Top 3 most used tools</strong></p>  <ul>     <li class="more-tool"">       <a href="https://www.wormbase.org/tools/genome/jbrowse-simple/?data=data/c_elegans_PRJNA13758">JBrowse</a>     </li>   <li class="more-tool"">       <a href="https://www.wormbase.org/tools/blast_blat">BLAST/BLAT</a>     </li>   <li class="more-tool"">       <a href="https://www.wormbase.org/tools/ontology_browser">Ontology Browser</a>     </li>   </ul>  </div>   <div class="wb-more">     <p><strong>Need help?</strong></p>  <ul>     <li ">       <a href="https://www.wormbase.org/about/userguide/for_users">User's Guide</a>     </li>   <li ">       <a href="https://www.wormbase.org/about/Frequently_asked_questions">FAQ</a>     </li>   <li ">       <a href="https://www.wormbase.org/tools/support">HelpDesk</a>     </li>   </ul>  </div>   </div>
+
+          </div>
+          <!-- END: New dropdown menu -->
+      </li>    <li id="section-downloads"><a href="https://www.wormbase.org/about/userguide#3--10" class="trigger ">
+          <span class="ui-icon ui-icon-triangle-1-s"></span> Downloads</a>
+
+          <!-- START: New dropdown menu -->
+          <div class="wb-dropdown submenu" style="display: none;">
+            <div class="submenu-main">
+                <div class="submenu-title">
+                    <p><strong><a href="">Downloads</a></strong></p>
+                    <p>WormBase provides a large number of precomputed files to facilitate downstream analysis… <a href="https://www.wormbase.org/about/userguide#3--10" class="read-more">Find out more</a></p>
+                </div>
+                <div class="submenu-links">     <div class="submenu-menu">     <p><strong>Get Started</strong></p>  <ul>     <li ">       <a href="https://www.wormbase.org/species/all#0--10">About WormBase Data</a>     </li>   </ul>  </div>   <div class="submenu-menu">     <p><strong>Download</strong></p>  <ul>     <li ">       <a href="ftp://ftp.wormbase.org/pub/wormbase/" target="_blank" class="wb-ext" title="Link opens in a new window">Public FTP Site</a>     </li>   <li ">       <a href="https://www.wormbase.org/species/all#1--10">Listed By Species</a>     </li>   </ul>  </div>   <div class="submenu-menu">     <p><strong>Tools</strong></p>  <ul>     <li ">       <a href="https://www.wormbase.org/about/userguide/tools/coordinate_converter#0--10">Coordinates Converter</a>     </li>   </ul>  </div>   </div>
+            </div>
+            <div class="submenu-sub">     <div class="wb-more">     <p><strong>Commonly requested data</strong></p>  <ul>     <li class="more-file"">       <a href="ftp://ftp.wormbase.org/pub/wormbase/releases/current-production-release" target="_blank" class="wb-ext" title="Link opens in a new window">Latest production release</a>     </li>   <li class="more-file"">       <a href="ftp://ftp.wormbase.org/pub/wormbase/releases/current-development-release" target="_blank" class="wb-ext" title="Link opens in a new window">Latest development release</a>     </li>   </ul>  </div>   <div class="wb-more">     <p><strong>Need help?</strong></p>  <ul>     <li ">       <a href="https://www.wormbase.org/about/citing_wormbase#0123--10">How to cite WormBase</a>     </li>   <li ">       <a href="https://www.wormbase.org/tools/support">HelpDesk</a>     </li>   </ul>  </div>   </div>
+
+          </div>
+          <!-- END: New dropdown menu -->
+      </li>    <li id="section-community"><a href="https://www.wormbase.org/about/userguide#2--10" class="trigger ">
+          <span class="ui-icon ui-icon-triangle-1-s"></span> Community</a>
+
+          <!-- START: New dropdown menu -->
+          <div class="wb-dropdown submenu" style="display: none;">
+            <div class="submenu-main">
+                <div class="submenu-title">
+                    <p><strong><a href="">Community</a></strong></p>
+                    <p>Come join and connect with worm experts online and beyond… <a href="https://www.wormbase.org/about/userguide#2--10" class="read-more">Find out more</a></p>
+                </div>
+                <div class="submenu-links">     <div class="submenu-menu">     <p><strong>Directories</strong></p>  <ul>     <li ">       <a href="https://www.wormbase.org/resources/person#1-0-2">Find a Colleague</a>     </li>   <li ">       <a href="https://www.wormbase.org/resources/laboratory#012--10">Worm Labs</a>     </li>   </ul>  </div>   <div class="submenu-menu">     <p><strong>Get Involved</strong></p>  <ul>     <li ">       <a href="https://www.wormbase.org/#012-43-5">Meetings</a>     </li>   <li ">       <a href="https://community.alliancegenome.org/c/model-organism-worms/7" target="_blank" class="wb-ext" title="Link opens in a new window">Worm Community Forum</a>     </li>   <li ">       <a href="http://wiki.wormbase.org" target="_blank" class="wb-ext" title="Link opens in a new window">WormBase Wiki</a>     </li>   <li ">       <a href="https://www.wormbase.org/about/userguide/submit_data">Submit Data</a>     </li>   </ul>  </div>   <div class="submenu-menu">     <p><strong>Resources</strong></p>  <ul>     <li ">       <a href="https://www.wormbase.org/species/c_elegans#1--10">Key Papers</a>     </li>   <li ">       <a href="http://cbs.umn.edu/cgc/home" target="_blank" class="wb-ext" title="Link opens in a new window">Caenorhabditis Genetics Center (CGC)</a>     </li>   <li ">       <a href="http://www.ipm.ucdavis.edu/NEMABASE/" target="_blank" class="wb-ext" title="Link opens in a new window">NEMABASE</a>     </li>   <li ">       <a href="http://nematode.net/NN3_frontpage.cgi" target="_blank" class="wb-ext" title="Link opens in a new window">Nematode.net</a>     </li>   <li ">       <a href="http://www.nematodes.org/" target="_blank" class="wb-ext" title="Link opens in a new window">Nematodes.org</a>     </li>   <li ">       <a href="http://www.wormatlas.org/" target="_blank" class="wb-ext" title="Link opens in a new window">WormAtlas</a>     </li>   <li ">       <a href="http://www.wormbook.org/" target="_blank" class="wb-ext" title="Link opens in a new window">WormBook</a>     </li>   <li ">       <a href="https://www.wormbase.org/about/userguide/for_developers#012345--10">For Developers</a>     </li>   </ul>  </div>   </div>
+            </div>
+            <div class="submenu-sub">     <div class="wb-more">     <p><strong>External links</strong></p>  <ul>     <li ">       <a href="http://blog.wormbase.org/" target="_blank" class="wb-ext" title="Link opens in a new window">WormBase Blog</a>     </li>   <li class="more-twitter"">       <a href="http://www.twitter.com/wormbase" target="_blank" class="wb-ext" title="Link opens in a new window">WormBase@Twitter</a>     </li>   <li class="more-github"">       <a href="http://github.com/wormbase" target="_blank" class="wb-ext" title="Link opens in a new window">WormBase@GitHub</a>     </li>   </ul>  </div>   </div>
+
+          </div>
+          <!-- END: New dropdown menu -->
+      </li>    <li id="section-support"><a href="https://www.wormbase.org/about/userguide#0123456--10" class="trigger ">
+          <span class="ui-icon ui-icon-triangle-1-s"></span> Support</a>
+
+          <!-- START: New dropdown menu -->
+          <div class="wb-dropdown submenu" style="display: none;">
+            <div class="submenu-main">
+                <div class="submenu-title">
+                    <p><strong><a href="">Support</a></strong></p>
+                    <p>We've created different user guides for distinct interests and experience levels… <a href="https://www.wormbase.org/about/userguide#0123456--10" class="read-more">Find out more</a></p>
+                </div>
+                <div class="submenu-links">     <div class="submenu-menu">     <p><strong>General</strong></p>  <ul>     <li ">       <a href="https://www.wormbase.org/about/userguide/nomenclature">Nematode Nomenclature</a>     </li>   <li ">       <a href="https://www.wormbase.org/about/userguide/for_users">User's Guide</a>     </li>   <li ">       <a href="https://www.youtube.com/user/WormBaseHD" target="_blank" class="wb-ext" title="Link opens in a new window">WormBaseHD YouTube</a>     </li>   <li ">       <a href="https://www.wormbase.org/about/userguide#15--10">Submit Data</a>     </li>   <li ">       <a href="https://www.wormbase.org/about/Frequently_asked_questions">FAQ</a>     </li>   </ul>  </div>   <div class="submenu-menu">     <p><strong>For developers</strong></p>  <ul>     <li ">       <a href="https://www.wormbase.org/about/userguide/for_developers#012345--10">Developer's Guide</a>     </li>   <li ">       <a href="https://www.wormbase.org/about/userguide/for_developers/api-rest">REST API Documentation</a>     </li>   <li ">       <a href="http://wiki.wormbase.org/index.php/WormBase_Models" target="_blank" class="wb-ext" title="Link opens in a new window">Data Models</a>     </li>   <li ">       <a href="https://www.wormbase.org/about/internal_documentation#012--10">Staff Documentation</a>     </li>   <li ">       <a href="https://www.wormbase.org/tools/queries">Query Search Language</a>     </li>   </ul>  </div>   </div>
+            </div>
+            <div class="submenu-sub">     <div class="wb-more">     <p><strong>Still have questions?</strong></p>  <ul>     <li ">       <a href="https://www.wormbase.org/tools/support">Contact HelpDesk</a>     </li>   </ul>  </div>   </div>
+
+          </div>
+          <!-- END: New dropdown menu -->
+      </li>  </ul>
+    <!-- END: Revised main menu -->
+    <!-- START: New parasite menu -->
+    <ul class="nav-bar parasite-menu">
+      <li><a href="http://parasite.wormbase.org/">ParaSite</a></li>
+    </ul>
+    <!-- END: New parasite menu -->
+    <!-- START: New submit data menu -->
+    <ul class="nav-bar submit-data-menu">
+      <li><a href="https://www.wormbase.org/about/userguide/submit_data#01--10">Submit Data</a></li>
+      <li><a href="http://www.micropublicationbiology.org/" target="_blank"><span class="wb-ext">Micropublication</span></a></li>
+    </ul>
+    <!-- END: New submit data menu -->
+  </div>    </div>
+<!-- END: Revised header region -->
+
+<!-- END boilerplate/banner -->
+
+    <div id="content">
+
+</head>
+
+<body><div id="content" style="padding: 2em !important;">
+
+DIVIDER
+
+</div>
+<br/><br/>
+   
+                                                                                               <!-- begin boilerplate/footer -->
+</div>
+
+<div id="footer">
+    <div id="footer-nav">
+
+      <div class="footer-column">
+        <div class="footer-title">About</div>
+        <ul>
+          <li><span>Nematodes</span></li>
+          <li><a href="https://www.wormbase.org/about/userguide/nomenclature">Nomenclature</a></li>
+        </ul>
+
+        <ul>
+          <li><span>WormBase</span></li>
+          <li><a href="https://www.wormbase.org/about#0--10">Mission</a></li>
+          <li><a href="https://www.wormbase.org/about/advisory_board#01--10">Advisory Board</a></li>
+          <li><a href="https://www.wormbase.org/about/policies#1--10">Privacy</a></li>
+          <li><a href="https://www.wormbase.org/about/policies#0--10">Acceptable Use</a></li>
+          <li><a href="https://www.wormbase.org/about/policies#2--10">Copyright</a></li>
+          <li><a href="https://www.wormbase.org/about/release_schedule#01--10">Release Schedule</a></li>
+          <li><a href="https://www.wormbase.org/about/citing_wormbase#012--10">How to Cite</a></li>
+          <li><a href="https://www.wormbase.org/about/acknowledgments#0--10">Acknowledgments</a></li>
+          <li><a href="https://www.wormbase.org/about/staff#01--10">WormBase Staff</a></li>
+          <li><a href="http://legacy.wormbase.org/"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://legacy.wormbase.org/');"
+            target="_blank"><span class="wb-ext">Legacy Site</span></a></li>
+        </ul>
+      </div>
+
+
+      <div class="footer-column">
+        <div class="footer-title">Support</div>
+        <ul>
+          <li><a href="https://www.wormbase.org/about/userguide/submit_data#01--10">Submit Data</a></li>
+          <li><a href="mailto:help@wormbase.org">Email</a></li>
+          <li><a href="https://www.wormbase.org/about/Frequently_asked_questions">FAQ</a></li>
+          <li><a href="https://www.wormbase.org/about/userguide">User Guide</a></li>
+	  <li><a href="https://www.wormbase.org/tools/webinar.cgi">Webinar</a></li>
+	  <li><a href="https://www.youtube.com/user/WormBaseHD"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'https://www.youtube.com/user/WormBaseHD');"
+            target="_blank"><span class="wb-ext">WormBaseHD YouTube</span></a></li>
+          <li><a href="https://www.wormbase.org/tools/support?url=/footer">Contact Help</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-column">
+        <div class="footer-title">Community</div>
+        <ul>
+          <li><a href="https://wiki.wormbase.org/index.php/WormBoard"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'https://wiki.wormbase.org/index.php/WormBoard');"
+            target="_blank"><span class="wb-ext">WormBoard</span></a></li>
+          <li><a href="http://www.wormbook.org/"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://www.wormbook.org/');"
+            target="_blank"><span class="wb-ext">WormBook</span></a></li>
+          <li><a href="https://community.alliancegenome.org/c/model-organism-worms/7"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'https://community.alliancegenome.org/c/model-organism-worms/7');"
+            target="_blank"><span class="wb-ext">Forum</span></a></li>
+          <li><a href="https://www.wormbase.org/resources/laboratory#012--10">Worm Labs</a></li>
+          <li><a href="http://blog.wormbase.org"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://blog.wormbase.org');"
+            target="_blank"><span class="wb-ext">Blog</span></a></li>
+          <li><a href="http://twitter.com/wormbase"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://twitter.com/wormbase');"
+            target="_blank"><span class="wb-ext">Twitter</span></a></li>
+          <li><a href="https://www.wormbase.org/species/c_elegans#1--10">Key Papers</a></li>
+        </ul>
+
+        <ul>
+          <li><span>Friends</span></li>
+          <li><a href="https://cgc.umn.edu/"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'https://cgc.umn.edu/');"
+            target="_blank"><span class="wb-ext">CGC</span></a></li>
+          <li><a href="http://www.wormatlas.org"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://www.wormatlas.org');"
+            target="_blank"><span class="wb-ext">WormAtlas</span></a></li>
+          <li><a href="http://www.nematodes.org/"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://www.nematodes.org/');"
+            target="_blank"><span class="wb-ext">Nematodes.org</span></a></li>
+          <li><a href="http://www.ipm.ucdavis.edu/NEMABASE/"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://www.ipm.ucdavis.edu/NEMABASE/');"
+            target="_blank"><span class="wb-ext">NEMABASE</span></a></li>
+          <li><a href="http://nematode.net/"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://nematode.net/');"
+            target="_blank"><span class="wb-ext">Nematode.net</span></a></li>
+          <li><a href="http://www.smid-db.org/"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://www.smid-db.org/');"
+            target="_blank"><span class="wb-ext">SMID-DB</span></a></li>
+        </ul>
+      </div>
+
+
+      <div class="footer-column">
+        <div class="footer-title">Developer</div>
+        <ul>
+<!--           <li><a href="http://"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://');"
+            target="_blank"><span class="wb-ext">Amazon EC2 AMI</span></a></li> -->
+          <li><a href="https://www.wormbase.org/about/userguide/for_developers">Developer Documentation</a></li>
+          <li><a href="https://www.wormbase.org/about/userguide/for_developers/api-rest">RESTful API</a></li>
+          <li><a href="http://github.com/WormBase"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://github.com/WormBase');"
+            target="_blank"><span class="wb-ext">Code Repositories (Github)</span></a></li>
+          <li><a href="https://www.wormbase.org/about/internal_documentation">Staff Documentation</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-column">
+        <div class="footer-title">Downloads</div>
+        <ul>
+          <li><a href="ftp://ftp.wormbase.org/pub/wormbase/">FTP site</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-column">
+        <div class="footer-title">Data Freezes</div>
+        <ul>
+          <li>
+            <select id="data-freezes" onchange="window.location.href = this.options[this.selectedIndex].value">
+                <option selected="selected" value="--">--</option>
+                <option value="http://legacy.wormbase.org">WS230 (Mar 2012)</option>
+                <option value="http://ws220.wormbase.org">WS220 (16 Dec 2010)</option>
+                <option value="http://ws210.wormbase.org">WS210 (15 Jan 2010)</option>
+                <option value="http://ws205.wormbase.org">WS205 (18 Sep 2009)</option>
+                <option value="http://ws204.wormbase.org">WS204 (13 Aug 2009)</option>
+                <option value="http://ws200.wormbase.org">WS200 (16 Mar 2009)</option>
+                <option value="http://ws190.wormbase.org">WS190 (07 May 2008)</option>
+                <option value="http://ws180.wormbase.org">WS180 (07 Sep 2007)</option>
+                <option value="http://ws170.wormbase.org">WS170 (09 Feb 2007)</option>
+                <option value="http://ws160.wormbase.org">WS160 (31 Jul 2006)</option>
+                <option value="http://ws150.wormbase.org">WS150 (30 Nov 2005)</option>
+                <option value="http://ws140.wormbase.org">WS140 (26 Mar 2005)</option>
+                <option value="http://ws130.wormbase.org">WS130 (16 Aug 2004)</option>
+                <option value="http://ws120.wormbase.org">WS120 (07 Mar 2004)</option>
+                <option value="http://ws110.wormbase.org">WS110 (01 Oct 2003)</option>
+                <option value="http://ws100.wormbase.org">WS100 (10 May 2003)</option>
+            </select>
+          </li>
+        </ul>
+      </div>
+
+    </div>
+
+    <br clear="all" />
+
+
+     <div id="footermeta">
+      <a id="footer-mail" href="mailto:help@wormbase.org"><div class="social-icons"></div></a>
+      <a id="footer-tweet" href="http://twitter.com/wormbase"><div class="social-icons"></div></a>
+      <a id="footer-rss"  href="http://feeds.feedburner.com/wormbase"><div class="social-icons"></div></a>
+    </div>
+    <div id="footercredit">
+    <br style="clear:both" />  <div class="credit-badge-container">
+            <div class="credit-badge"><a href="http://www.alliancegenome.org/"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://www.alliancegenome.org/');"
+            target="_blank"><span class="wb-ext"><img width="200px" src="https://www.wormbase.org/img/agr_founding_member_badge.png" alt="Alliance of Genome Resources" /></span></a></div>
+            <div class="credit-badge"><a href="http://www.caltech.edu/"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://www.caltech.edu/');"
+            target="_blank"><span class="wb-ext"><img width="150px" src="https://www.wormbase.org/img/caltech_logo.png" alt="Caltech" /></span></a></div>
+            <div class="credit-badge"><a href="https://www.ebi.ac.uk/"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'https://www.ebi.ac.uk/');"
+            target="_blank"><span class="wb-ext"><img width="200px" src="https://www.wormbase.org/img/embl_ebi_logo_white.svg" alt="European Bioinformatics Institute" /></span></a></div>
+            <div class="credit-badge"><a href="https://oicr.on.ca/"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'https://oicr.on.ca/');"
+            target="_blank"><span class="wb-ext"><img height="65px" src="https://www.wormbase.org/img/oicr_logo_white.png" alt="Ontario Institute for Cancer Research" /></span></a></div>
+        </div>
+        <div class="credit-text-container">
+        <span>
+          WormBase is supported by grant #U24 HG002223 from the <a href="http://www.genome.gov/"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://www.genome.gov/');"
+            target="_blank"><span class="wb-ext">National Human Genome Research Institute</span></a> </span><br />
+        <span>at the <a href="http://www.nih.gov/"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://www.nih.gov/');"
+            target="_blank"><span class="wb-ext">US National Institutes of Health</span></a>,
+          the <a href="http://www.mrc.ac.uk/"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://www.mrc.ac.uk/');"
+            target="_blank"><span class="wb-ext">UK Medical Research Council</span></a> and the <a href="http://www.bbsrc.ac.uk/home/home.aspx"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://www.bbsrc.ac.uk/home/home.aspx');"
+            target="_blank"><span class="wb-ext">UK Biotechnology and Biological Sciences Research Council</span></a>.
+        </span>
+        </div>
+    </div>
+
+
+</div>
+
+
+<!-- end boilerplate/footer -->
+
+</div><!--end wrap-->
+
+</body></html>

@@ -1,0 +1,10 @@
+td.normal         { border-style: dotted; 
+                    border-color: #3366FF; 
+                    background-color: #FFFFFF; 
+                  }
+td.header         { color: #3366FF; 
+                    font-family: sans-serif; 
+                    font-size: 150%; 
+                    border-style: dotted; 
+                    border-color: #3366FF; 
+                  }

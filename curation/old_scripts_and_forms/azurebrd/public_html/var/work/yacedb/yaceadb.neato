@@ -1,0 +1,72 @@
+digraph g {
+node [ fontsize = "10", shape = record ];
+edge [];
+
+"evi_curator_confirmed" [shape = record, label = "{<col0> \N| joinkey:  integer\lsort:  integer\ldata:  text\levidence:  integer\l}" ];
+
+"evi_date_last_updated" [shape = record, label = "{<col0> \N| joinkey:  integer\lsort:  integer\ldata:  text\levidence:  integer\l}" ];
+
+"evi_inferred_automatically" [shape = record, label = "{<col0> \N| joinkey:  integer\lsort:  integer\ldata:  text\levidence:  integer\l}" ];
+
+"evi_paper_evidence" [shape = record, label = "{<col0> \N| joinkey:  integer\lsort:  integer\ldata:  text\levidence:  integer\l}" ];
+
+"evi_person_evidence" [shape = record, label = "{<col0> \N| joinkey:  integer\lsort:  integer\ldata:  text\levidence:  integer\l}" ];
+
+"evi_rnai_evidence" [shape = record, label = "{<col0> \N| joinkey:  integer\lsort:  integer\ldata:  text\levidence:  integer\l}" ];
+
+"gin_cgc_name" [shape = record, label = "{<col0> \N| joinkey:  text\lsort:  integer\ldata:  text\levidence:  integer\l}" ];
+
+"gin_concise_description" [shape = record, label = "{<col0> \N| joinkey:  text\lsort:  integer\ldata:  text\levidence:  integer\l}" ];
+
+"gin_public_name" [shape = record, label = "{<col0> \N| joinkey:  text\lsort:  integer\ldata:  text\levidence:  integer\l}" ];
+
+"gin_reference" [shape = record, label = "{<col0> \N| joinkey:  text\lsort:  integer\ldata:  text\levidence:  integer\l}" ];
+
+"gin_rnai_result" [shape = record, label = "{<col0> \N| joinkey:  text\lsort:  integer\ldata:  text\levidence:  integer\l}" ];
+
+"gin_sequence_name" [shape = record, label = "{<col0> \N| joinkey:  text\lsort:  integer\ldata:  text\levidence:  integer\l}" ];
+
+"pap_abstract" [shape = record, label = "{<col0> \N| joinkey:  text\lsort:  integer\ldata:  text\levidence:  integer\l}" ];
+
+"pap_author" [shape = record, label = "{<col0> \N| joinkey:  text\lsort:  integer\ldata:  text\levidence:  integer\l}" ];
+
+"pap_brief_citation" [shape = record, label = "{<col0> \N| joinkey:  text\lsort:  integer\ldata:  text\levidence:  integer\l}" ];
+
+"pap_gene" [shape = record, label = "{<col0> \N| joinkey:  text\lsort:  integer\ldata:  text\levidence:  integer\l}" ];
+
+"pap_journal" [shape = record, label = "{<col0> \N| joinkey:  text\lsort:  integer\ldata:  text\levidence:  integer\l}" ];
+
+"pap_page" [shape = record, label = "{<col0> \N| joinkey:  text\lsort:  integer\ldata:  text\levidence:  integer\l}" ];
+
+"pap_rnai" [shape = record, label = "{<col0> \N| joinkey:  text\lsort:  integer\ldata:  text\levidence:  integer\l}" ];
+
+"pap_title" [shape = record, label = "{<col0> \N| joinkey:  text\lsort:  integer\ldata:  text\levidence:  integer\l}" ];
+
+"pap_volume" [shape = record, label = "{<col0> \N| joinkey:  text\lsort:  integer\ldata:  text\levidence:  integer\l}" ];
+
+"phe_description" [shape = record, label = "{<col0> \N| joinkey:  text\lsort:  integer\ldata:  text\levidence:  integer\l}" ];
+
+"phe_not_in_rnai" [shape = record, label = "{<col0> \N| joinkey:  text\lsort:  integer\ldata:  text\levidence:  integer\l}" ];
+
+"phe_primary_name" [shape = record, label = "{<col0> \N| joinkey:  text\lsort:  integer\ldata:  text\levidence:  integer\l}" ];
+
+"phe_rnai" [shape = record, label = "{<col0> \N| joinkey:  text\lsort:  integer\ldata:  text\levidence:  integer\l}" ];
+
+"rna_delivered_by" [shape = record, label = "{<col0> \N| joinkey:  text\lsort:  integer\ldata:  text\levidence:  integer\l}" ];
+
+"rna_evidence" [shape = record, label = "{<col0> \N| joinkey:  text\lsort:  integer\ldata:  text\levidence:  integer\l}" ];
+
+"rna_gene" [shape = record, label = "{<col0> \N| joinkey:  text\lsort:  integer\ldata:  text\levidence:  integer\l}" ];
+
+"rna_phenotype" [shape = record, label = "{<col0> \N| joinkey:  text\lsort:  integer\ldata:  text\levidence:  integer\l}" ];
+
+"rna_phenotype_not_observed" [shape = record, label = "{<col0> \N| joinkey:  text\lsort:  integer\ldata:  text\levidence:  integer\l}" ];
+
+"rna_reference" [shape = record, label = "{<col0> \N| joinkey:  text\lsort:  integer\ldata:  text\levidence:  integer\l}" ];
+
+"rna_strain" [shape = record, label = "{<col0> \N| joinkey:  text\lsort:  integer\ldata:  text\levidence:  integer\l}" ];
+
+
+}
+
+

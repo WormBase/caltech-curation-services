@@ -1,0 +1,112 @@
+function updatePostgresTableField(field, joinkey, order, curator, newValue) {
+	// proper YUI way to make a GET ajax call
+    var callbacks = {
+        success : function (o) {                                // Successful XHR response handler
+            if (o.responseText === 'OK') {                      // it's ok, don't say anything
+            }
+            else { alert("ERROR not OK response for newValue " + newValue + " did not update for joinkey " + joinkey + " and " + field + " "); }
+        },
+        failure:function(o) {
+            alert("ERROR newValue " + newValue + " did not update for joinkey " + joinkey + " and " + field + "<br>" + o.statusText);
+        },
+    };
+    // Make the call to the server to update postgres
+    var url="http://tazendra.caltech.edu/~postgres/cgi-bin/paper_editor.cgi";
+//     newValue = newValue.replace(/\n/g, ' ');			// newlines break the get call
+    url=url+"?action=updatePostgresTableField";			// the action
+    url=url+"&field=" + field;				// the field name
+    url=url+"&joinkey="+joinkey;			// the joinkey
+    url=url+"&order="+order;				// the order
+    url=url+"&curator="+curator;			// the curator
+    url=url+"&newValue="+newValue;			// the text to send in
+    YAHOO.util.Connect.asyncRequest('GET', url, callbacks);
+} // function updatePostgresTableField(pgid, field, newValue)
+
+
+function toggleDivToTextarea(table, order) {
+  document.getElementById('div_' + table + '_' + order).style.display='none'; 
+  document.getElementById('textarea_' + table + '_' + order).style.display=''; 
+  document.getElementById('textarea_' + table + '_' + order).focus();
+}
+
+function toggleTextareaToDiv(table, order, joinkey, curator_id) {
+    var divElement = document.getElementById('div_' + table + '_' + order);
+    var textareaElement = document.getElementById('textarea_' + table + '_' + order);
+    divElement.style.display = '';
+    textareaElement.style.display = 'none';
+    if (divElement.innerHTML !== textareaElement.value) {
+        divElement.innerHTML = textareaElement.value;
+        updatePostgresTableField(table, joinkey, order, curator_id, textareaElement.value); }
+}
+
+function toggleDivToInput(table, order) {
+  document.getElementById('div_' + table + '_' + order).style.display='none'; 
+  document.getElementById('input_' + table + '_' + order).style.display=''; 
+  document.getElementById('input_' + table + '_' + order).focus();
+}
+
+function toggleInputToDiv(table, order, joinkey, curator_id) {
+    var divElement = document.getElementById('div_' + table + '_' + order);
+    var inputElement = document.getElementById('input_' + table + '_' + order);
+    divElement.style.display = '';
+    inputElement.style.display = 'none';
+    if (divElement.innerHTML !== inputElement.value) {
+        divElement.innerHTML = inputElement.value;
+        updatePostgresTableField(table, joinkey, order, curator_id, inputElement.value); }
+}
+
+function changeSelect(table, order, joinkey, curator_id) {
+    var elSel = document.getElementById('select_' + table + '_' + order);
+    for (var i = elSel.length - 1; i>=0; i--) { 
+      if (elSel.options[i].selected) { 
+        updatePostgresTableField(table, joinkey, order, curator_id, elSel.options[i].value); } }
+}
+
+
+
+// OBSOLETE
+//
+// self-coded ajax GET call
+// function updatePostgresTableField(field, joinkey, order, curator, newValue) {
+// //     alert(field + " " + joinkey + " " + order + " " + newValue);
+//     xmlHttp=GetXmlHttpObject();				// make a new ajax xmlHttp object
+//     if (xmlHttp==null) {
+//         alert ("Your browser does not support AJAX!");
+//         return;
+//     }
+// //     var words = text.split(/\s/);			// get the words
+//     var url="http://tazendra.caltech.edu/~postgres/cgi-bin/paper_editor.cgi";
+//     newValue = newValue.replace(/\n/g, ' ');			// newlines break the get call
+//     url=url+"?action=updatePostgresTableField";			// the action
+//     url=url+"&field=" + field;				// the field name
+//     url=url+"&joinkey="+joinkey;			// the joinkey
+//     url=url+"&order="+order;				// the order
+//     url=url+"&curator="+curator;			// the curator
+//     url=url+"&sid="+Math.random();                      // random to prevent browser using a cached page
+//     url=url+"&newValue="+newValue;			// the text to send in
+// //     xmlHttp.onreadystatechange = function() { stateChanged(field); }
+//       // need an anonymous function to pass a variable, otherwise it will get the return value of the function call (undefined)
+//     xmlHttp.open("GET",url,true);
+//     xmlHttp.send(null);
+// }
+// 
+// 
+// function GetXmlHttpObject() {           // create Ajax xmlHttp object
+//     var xmlHttp=null;
+//     try {               // Firefox, Opera 8.0+, Safari
+//        xmlHttp=new XMLHttpRequest();
+//     }
+//     catch (e) {         // Internet Explorer
+//         try { xmlHttp=new ActiveXObject("Msxml2.XMLHTTP"); }
+//         catch (e) { xmlHttp=new ActiveXObject("Microsoft.XMLHTTP"); }
+//     }
+//     return xmlHttp;
+// }
+// 
+// function stateChanged(field) {
+//     if (xmlHttp.readyState==4) {        // if state changed to 4 (complete)
+// //         document.getElementById("div_" + field).innerHTML=xmlHttp.responseText; // set the div to the return value
+//     }
+// }
+
+

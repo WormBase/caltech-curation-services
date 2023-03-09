@@ -1,0 +1,73 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!-- $Id: index.html,v 1.15 2010-11-15 22:32:41 tharris Exp $-->
+<html>
+<head>
+    <title>WormBase - Home Page</title>
+    <!-- Load dependent stylesheets and scripts via wormbase.js -->
+       
+        
+       <link rel="alternate" type="application/rss+xml" title="Atom" href="http://feeds.feedburner.com/wormbase" />
+<link rel="stylesheet" href="http://tazendra.caltech.edu/~azurebrd/sanger/wormbaseheader/wormbase.css">
+</head>
+
+
+<body>
+
+<!-- Begin WormBase Header -->
+
+<div id="top-system-message" class="system-message">Try <a href="http://beta.wormbase.org">WormBase 2 (beta)</a>!</div><div class="system-message" ></div><table border="0" cellpadding="4" cellspacing="1" width="100%">
+<tr>
+<td bgcolor="#b4cbdb" align="center" style="cursor:pointer" nowrap onClick="c('/')">
+			  <a href="http://www.wormbase.org/" class="bactive" ><font color="#FFFF99"><b>Home</b></font></a></td>
+<td bgcolor="#5870a3" align="center" style="cursor:pointer" nowrap onClick="c('/db/gb2/gbrowse/c_elegans/')">
+			  <a href="http://www.wormbase.org/db/gb2/gbrowse/c_elegans/" class="binactive" onMouseOver="balloon.showTooltip(event,'Genome')"><font color="#FFFFFF">Genome</font></a></td>
+<td bgcolor="#5870a3" align="center" style="cursor:pointer" nowrap onClick="c('http://www.wormbase.org/db/gb2/gbrowse_syn/compara/')">
+			  <a href="http://www.wormbase.org/db/gb2/gbrowse_syn/compara/" class="binactive" onMouseOver="balloon.showTooltip(event,'Synteny')"><font color="#FFFFFF">Synteny</font></a></td>
+<td bgcolor="#5870a3" align="center" style="cursor:pointer" nowrap onClick="c('/db/searches/blast_blat')">
+			  <a href="http://www.wormbase.org/db/searches/blast_blat" class="binactive" onMouseOver="balloon.showTooltip(event,'Blast / Blat')"><font color="#FFFFFF">Blast / Blat</font></a></td>
+<td bgcolor="#5870a3" align="center" style="cursor:pointer" nowrap onClick="c('http://www.wormbase.org/biomart/martview')">
+			  <a href="http://www.wormbase.org/biomart/martview" class="binactive" onMouseOver="balloon.showTooltip(event,'WormMart')"><font color="#FFFFFF">WormMart</font></a></td>
+<td bgcolor="#5870a3" align="center" style="cursor:pointer" nowrap onClick="c('/db/searches/strains')">
+			  <a href="http://www.wormbase.org/db/searches/strains" class="binactive" onMouseOver="balloon.showTooltip(event,'Markers')"><font color="#FFFFFF">Markers</font></a></td>
+<td bgcolor="#5870a3" align="center" style="cursor:pointer" nowrap onClick="c('/db/gene/gmap')">
+			  <a href="http://www.wormbase.org/db/gene/gmap" class="binactive" onMouseOver="balloon.showTooltip(event,'Genetic Maps')"><font color="#FFFFFF">Genetic Maps</font></a></td>
+<td bgcolor="#5870a3" align="center" style="cursor:pointer" nowrap onClick="c('/db/curate/submit')">
+			  <a href="http://www.wormbase.org/db/curate/submit" class="binactive" onMouseOver="balloon.showTooltip(event,'Submit')"><font color="#FFFFFF">Submit</font></a></td>
+<td bgcolor="#5870a3" align="center" style="cursor:pointer" nowrap onClick="c('/db/misc/site_map?format=searches')">
+			  <a href="http://www.wormbase.org/db/misc/site_map?format=searches" class="binactive" onMouseOver="balloon.showTooltip(event,'Searches')"><font color="#FFFFFF"><b>Searches</b></font></a></td>
+<td bgcolor="#5870a3" align="center" style="cursor:pointer" nowrap onClick="c('/db/misc/site_map')">
+			  <a href="http://www.wormbase.org/db/misc/site_map" class="binactive" ><font color="#FFFFFF"><b>Site Map</b></font></a></td>
+</tr>
+</table><!-- End WormBase Header --><img align="right" border="0" src="http://www.wormbase.org/images/image_new_colour.jpg" alt="WormBase Banner" />
+<a href="http://www.wormbase.org/"><h3>
+	WormBase Release WS230
+</h3></a>
+<br clear="all" />
+
+<!-- $MTInclude module="wormbase_alert"$ -->
+
+
+DIVIDER
+
+<hr>
+<!-- served from ip-10-114-113-44 -->
+
+<!-- begin footer -->
+<div id="footer">
+    <div id="footercredit">
+          Questions? Comments? <a href="mailto:help@wormbase.org">help@wormbase.org</a> or
+          <a href="http://www.wormbase.org/db/misc/feedback">web form</a>
+          <p>
+           WormBase is supported by a grant from the National Human Genome Research Institute
+           at the US National Institutes of Health # P41 HG02223 and the British Medical Research Council.
+          </p>
+
+     </div>
+    <div id="footermeta">
+          <a href="http://wiki.wormbase.org/index.php/WormBaseWiki:Copyrights">Copyright </a> |
+          <a href="http://wiki.wormbase.org/index.php/Acceptable_use_policy#Privacy_statement">Privacy</a>
+    </div>
+</div>
+
+</body>
+</html>

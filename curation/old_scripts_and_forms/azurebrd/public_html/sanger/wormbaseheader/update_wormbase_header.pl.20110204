@@ -1,0 +1,78 @@
+#!/usr/bin/perl
+
+# 2007 09 22 get and update the css as well
+
+# add an invisible class to the .css  2009 02 26
+# moved to jex.css  2009 02 27
+# changed $user and $email  2011 02 04
+
+# Set to cronjob to update everyday.  2007 11 20
+# 0 4 * * * /home/azurebrd/public_html/sanger/wormbaseheader/update_wormbase_header.pl
+
+
+use strict;
+use diagnostics;
+use LWP::Simple;
+use Jex;
+use LWP::UserAgent;
+
+
+my $date = &getSimpleSecDate();
+my $ua = LWP::UserAgent->new;
+
+my $directory = '/home/azurebrd/public_html/sanger/wormbaseheader';
+chdir($directory) or die "Cannot go to $directory ($!)";
+
+my $page = get "http://www.wormbase.org/stylesheets/wormbase.css";
+if ($page) { 
+    my $outfile = $directory . '/wormbase.css';
+    if ($page =~ m/\@import.*?\n/) { $page =~ s/\@import.*?\n//g; }	# can't import stuff I'm not accounting for 2010 08 20
+#     my $edited_page = $page;
+#     $edited_page =~ s/\n\.mism/\n.inv              \{ display : none; \}\n.mism/;	# add an invisible style
+
+    open (OUT, ">$outfile") or die "Cannot open $outfile : $!";
+    print OUT "$page";
+    close (OUT) or die "Cannot close $outfile : $!"; }
+
+$page = get "http://www.wormbase.org";
+$page =~ s/href="\//href="http:\/\/www.wormbase.org\//g;
+$page =~ s/src="/src="http:\/\/www.wormbase.org/g;
+$page =~ s/http:\/\/www.wormbase.org\/stylesheets\/wormbase.css/http:\/\/tazendra.caltech.edu\/~azurebrd\/sanger\/wormbaseheader\/wormbase.css/g;				# 2007 09 22 get and update the css as well
+# my ($header) = $page =~ m/^(.*?)<!-- \$MTInclude module/s;       # 2006 11 20 # Todd keeps changing stuff
+# my ($header) = $page =~ m/^(.*?)<!-- required components for balloon tooltips/s;       # 2007 03 05 # Todd keeps changing stuff
+# my ($header) = $page =~ m/^(.*?)<!-- \$MTInclude module/s;       # 2007 03 27 # Todd keeps changing stuff
+my ($header) = $page =~ m/^(.*?)<div class="news" id="mainSearch">/s; # 2007 06 15  2007 User Survey
+$header =~ s/<body.*?>/<body>/;					# 2009 04 16  get rid of javascript on body
+$header =~ s/<script.*?<\/script>//smg;				# 2009 04 16  get rid of javascript on body
+my ($footer) = $page =~ m/.*(\<hr\>.*?)$/s;			# 2002 05 14
+$footer =~ s/<script.*?<\/script>//smg;				# 2009 04 16  get rid of javascript on body
+
+
+if ($header && $footer) {
+  my $response = $ua->get("http://tazendra.caltech.edu/~azurebrd/sanger/wormbaseheader/WB_header_footer.html");
+  my $local = $response->content;
+  my $new_page = "$header\n\nDIVIDER\n\n$footer";
+  
+  if ($new_page eq $local) { 1; }	# nothing to be done
+  else { 
+    my $outfile = $directory . '/WB_header_footer.html';
+    open (OUT, ">$outfile") or die "Cannot open $outfile : $!";
+    print OUT "$new_page";
+    close (OUT) or die "Cannot close $outfile : $!";
+    
+    $outfile = $directory . '/old/WB_header_footer.html.' . $date;
+    open (OUT, ">$outfile") or die "Cannot open $outfile : $!";
+    print OUT "$new_page";
+    close (OUT) or die "Cannot close $outfile : $!"; } }
+else { &sendErrorMessage('no header and footer'); }
+
+
+sub sendErrorMessage {
+  my $subject = shift;
+  my $user = 'update_wormbase_header.pl';
+  my $email = 'azurebrd@caltech.edu';
+  my $body = "1";
+  &mailer($user, $email, $subject, $body); 
+} # sub sendErrorMessage
+
+

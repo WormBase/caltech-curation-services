@@ -1,0 +1,17 @@
+.displayNone              { display : none; }
+td.normal_odd             { border-style: dotted;
+                            border-color: #3366FF;
+                          }
+td.normal_odd:hover	  { background-color: yellow; }
+td.normal_even            { border-style: dotted;
+                            border-color: #3366FF;
+                            background-color: #E8F8FF;
+                          }
+td.padded                 { padding: 0em 0.5em 0em 0.5em; 
+                            background-color: #FFFFFF;
+                          }
+A:link {text-decoration: none; color: blue}
+A:visited {text-decoration: none; color: blue}
+A:active {text-decoration: none; color: blue}
+A:hover {text-decoration: none; color: red;}
+

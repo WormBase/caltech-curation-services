@@ -1,0 +1,475 @@
+   
+                                                                             <!DOCTYPE HTML>
+<html>
+  <head>
+    <meta charset="UTF-8">
+
+    <title>  WormBase : Nematode Information Resource </title>
+    <link rel="icon" href="http://www.wormbase.org/img/favicon.ico" type="image/x-icon" />
+    <link type="text/css" href="http://www.wormbase.org/css/jquery-ui.min.css" rel="stylesheet" />
+    <link type="text/css" href="http://www.wormbase.org/css/main.min.css?vee40a954cd8c6f4a95c824a461a235c7646a1369" rel="stylesheet" />
+  </head>
+
+  <body>
+   <!--[if lt IE 7]><p>Your browser is <em>ancient!</em> <a href="http://browsehappy.com/">Upgrade to a different browser</a> or <a href="http://www.google.com/chromeframe/?redirect=true">install Google Chrome Frame</a> to experience this site.</p><![endif]-->
+ <!-- BEGIN boilerplate/banner -->
+
+
+<div id="notifications" class="ui-corner-bottom">
+      <span id="notification-text"></span>
+      <span class="ui-icon ui-icon-close tip-simple br" tip="close"></span>
+</div>
+
+<div id="wrap">   <div id="operator-box-wrap">
+
+  <div id="issue-box" class="minimize">
+    <div id="issue-box-tab" class="ui-corner-top">
+      <span>
+         Questions, Feedback & Help
+         <span aria-hidden="true" id="issue-icon"></span>
+       </span>
+    </div>
+    <div id="issue-box-content" class="ui-corner-tl">  <div id="issues-new">   <div>
+        Send us an email and we'll get back to you ASAP. Or you can read our <a href="http://www.wormbase.org/about/Frequently_asked_questions">Frequently Asked Questions</a>.
+    </div>    <input id="name" type="text" size="48" placeholder="Name (optional)"/>
+        <input id="email" type="text"  size="48" placeholder="Email (so we can get back to you)"/>
+        <!-- <div class="anon"><label><input id="anon" type="checkbox" value="0"> report anonymously</label></div> -->   <div> <select name="email[subject]" id="issue-title" class="valid">
+      <option value="" style="display:none">Type of Question / Comment</option>
+      <option value="Bug Report" >Bug Report</option>
+      <option value="How Do I ...?">How Do I ...?</option>
+      <option value="Content Correction">Content Correction</option>
+      <option value="Feature Request">Feature Request</option>
+      <option value="My Account">My Account</option>
+      <option value="Everything's broken!">Everything is broken!</option>
+    </select> </div>
+        <div> <textarea  class="issue-text" id="issue-content" rows="6" name="content" placeholder="Question?"></textarea> </div>  <div id="issue-submit-box">
+          <input onClick="WB.issue.submit($jq(this));" type='submit' value='Send' class="issue-submit" page="" url="/" rel="/rest/feed/issue"/>
+        </div>  <div id="issue-message"></div>
+    </div>  <!-- closing #issues-new -->  <div id="add-new-issue" style="display:none">
+            <a onClick="WB.issue.addNewIssue($jq(this));">New form</a>
+        </div>
+    </div>
+  </div>
+</div>              <div id="header" data-page='{
+    "ref": "",
+    "wbid": "home",
+    "name": "home",
+    "id" : "",
+    "class" : "",
+    "type" : "",
+    "is_obj": "",
+    "save": "reports",
+    "history": "0"  }'> 
+   <form method="post" class="ui-corner-all" id="searchForm" action="" onsubmit="WB.search(); return false;">  <div id="searchBody">
+      <input class="text" id="Search" name="query" type="text" placeholder="Search...">
+      <ul id="searchSelect">
+        <li>
+          <span class="ui-icon ui-icon-triangle-1-s" style="float:right"></span>
+          <span class="current-search" style="float:right">All</span>
+          <ul>  <li value="all" onClick='WB.search_change("all",1);'><a>All</a></li>  <li value="antibody" onClick='WB.search_change("antibody",1);'><a>Antibody</a></li>  <li value="anatomy_term" onClick='WB.search_change("anatomy_term",1);'><a>Anatomy</a></li>  <li value="clone" onClick='WB.search_change("clone",1);'><a>Clone</a></li>  <li value="expr_pattern" onClick='WB.search_change("expr_pattern",1);'><a>Expression pattern</a></li>  <li value="gene" onClick='WB.search_change("gene",1);'><a>Gene</a></li>  <li value="gene_class" onClick='WB.search_change("gene_class",1);'><a>Gene Class</a></li>  <li value="go_term" onClick='WB.search_change("go_term",1);'><a>Gene Ontology</a></li>  <li value="disease" onClick='WB.search_change("disease",1);'><a>Human Disease</a></li>  <li value="laboratory" onClick='WB.search_change("laboratory",1);'><a>Laboratory</a></li>  <li value="life_stage" onClick='WB.search_change("life_stage",1);'><a>Life Stage</a></li>  <li value="phenotype" onClick='WB.search_change("phenotype",1);'><a>Phenotype</a></li>  <li value="person" onClick='WB.search_change("person",1);'><a>Person</a></li>  <li value="paper" onClick='WB.search_change("paper",1);'><a>Paper</a></li>  <li value="protein" onClick='WB.search_change("protein",1);'><a>Protein</a></li>  <li value="feature" onClick='WB.search_change("feature",1);'><a>Sequence Feature</a></li>  <li value="strain" onClick='WB.search_change("strain",1);'><a>Strain</a></li>  <li value="transgene" onClick='WB.search_change("transgene",1);'><a>Transgene</a></li>  <li value="variation" onClick='WB.search_change("variation",1);'><a>Variation</a></li>  </ul>
+        </li>
+      </ul>
+
+    </div>
+    <input class="ui-icon ui-icon-search" type="submit" onclick="WB.search(); return false;" value="">
+
+  </form>
+
+ <div id="title">
+      <a href="http://www.wormbase.org/" title="WormBase Home">
+          <img src="http://www.wormbase.org/img/logo/logo_wormbase_gradient_small.png" />
+          <!-- <h1></h1> -->
+      </a>
+    <div class="release_date">
+      <p>
+         Version: <a href="http://www.wormbase.org/about/wormbase_release_WS247">WS247</a>
+      </p>
+    </div>
+  </div>  <div id="nav-bar">
+    <ul class="nav-bar">  <li><a href="http://www.wormbase.org/species" id="section-species" class="">
+          <span class="ui-icon ui-icon-triangle-1-s"></span> Species</a>
+          <ul class="wb-dropdown">          <li><a href="http://www.wormbase.org/tools/genome/gbrowse/?name=all" class="genomic_location-link" title=""><span class="ui-icon ui-icon-triangle-1-e"></span><b>Browse Genomes</b></a> <ul class="wb-dropdown">
+                  <li class="species"> <a href="http://www.wormbase.org/tools/genome/gbrowse/c_elegans_PRJNA13758" class="genomic_location-link" title="">C. elegans</a></li>   <li class="species"> <a href="http://www.wormbase.org/tools/genome/gbrowse/a_ceylanicum_PRJNA231479" class="genomic_location-link" title="">A. ceylanicum</a></li>   <li class="species"> <a href="http://www.wormbase.org/tools/genome/gbrowse/a_suum_PRJNA80881" class="genomic_location-link" title="">A. suum</a></li>    <li class="species"> <a href="http://www.wormbase.org/tools/genome/gbrowse/b_malayi_PRJNA10729" class="genomic_location-link" title="">B. malayi</a></li>   <li class="species"> <a href="http://www.wormbase.org/tools/genome/gbrowse/b_xylophilus_PRJEA64437" class="genomic_location-link" title="">B. xylophilus</a></li>   <li class="species"> <a href="http://www.wormbase.org/tools/genome/gbrowse/c_angaria_PRJNA51225" class="genomic_location-link" title="">C. angaria</a></li>   <li class="species"> <a href="http://www.wormbase.org/tools/genome/gbrowse/c_brenneri_PRJNA20035" class="genomic_location-link" title="">C. brenneri</a></li>   <li class="species"> <a href="http://www.wormbase.org/tools/genome/gbrowse/c_briggsae_PRJNA10731" class="genomic_location-link" title="">C. briggsae</a></li>    <li class="species"> <a href="http://www.wormbase.org/tools/genome/gbrowse/c_japonica_PRJNA12591" class="genomic_location-link" title="">C. japonica</a></li>   <li class="species"> <a href="http://www.wormbase.org/tools/genome/gbrowse/c_remanei_PRJNA53967" class="genomic_location-link" title="">C. remanei</a></li>   <li class="species"> <a href="http://www.wormbase.org/tools/genome/gbrowse/c_sp11_PRJNA53597" class="genomic_location-link" title="">C. tropicalis</a></li>   <li class="species"> <a href="http://www.wormbase.org/tools/genome/gbrowse/c_sp5_PRJNA194557" class="genomic_location-link" title="">C. sp5</a></li>   <li class="species"> <a href="http://www.wormbase.org/tools/genome/gbrowse/d_immitis_PRJEB1797" class="genomic_location-link" title="">D. immitis</a></li>   <li class="species"> <a href="http://www.wormbase.org/tools/genome/gbrowse/h_bacteriophora_PRJNA13977" class="genomic_location-link" title="">H. bacteriophora</a></li>   <li class="species"> <a href="http://www.wormbase.org/tools/genome/gbrowse/h_contortus_PRJNA205202" class="genomic_location-link" title="">H. contortus</a></li>   <li class="species"> <a href="http://www.wormbase.org/tools/genome/gbrowse/l_loa_PRJNA60051" class="genomic_location-link" title="">L. loa</a></li>   <li class="species"> <a href="http://www.wormbase.org/tools/genome/gbrowse/m_hapla_PRJNA29083" class="genomic_location-link" title="">M. hapla</a></li>   <li class="species"> <a href="http://www.wormbase.org/tools/genome/gbrowse/m_incognita_PRJEA28837" class="genomic_location-link" title="">M. incognita</a></li>   <li class="species"> <a href="http://www.wormbase.org/tools/genome/gbrowse/n_americanus_PRJNA72135" class="genomic_location-link" title="">N. americanus</a></li>   <li class="species"> <a href="http://www.wormbase.org/tools/genome/gbrowse/o_volvulus_PRJEB513" class="genomic_location-link" title="">O. volvulus</a></li>    <li class="species"> <a href="http://www.wormbase.org/tools/genome/gbrowse/p_exspectatus_PRJEB6009" class="genomic_location-link" title="">P. exspectatus</a></li>   <li class="species"> <a href="http://www.wormbase.org/tools/genome/gbrowse/p_pacificus_PRJNA12644" class="genomic_location-link" title="">P. pacificus</a></li>   <li class="species"> <a href="http://www.wormbase.org/tools/genome/gbrowse/p_redivivus_PRJNA186477" class="genomic_location-link" title="">P. redivivus</a></li>   <li class="species"> <a href="http://www.wormbase.org/tools/genome/gbrowse/s_ratti_PRJEB125" class="genomic_location-link" title="">S. ratti</a></li>   <li class="species"> <a href="http://www.wormbase.org/tools/genome/gbrowse/t_spiralis_PRJNA12603" class="genomic_location-link" title="">T. spiralis</a></li>   <li class="species"> <a href="http://www.wormbase.org/tools/genome/gbrowse/t_suis_PRJNA208416" class="genomic_location-link" title="">T. suis</a></li>  </ul>
+              </li>    <li>
+    <a href="http://www.wormbase.org/species/all" >         <span class="ui-icon ui-icon-triangle-1-e"></span> All Species </a>
+              <ul class="wb-dropdown">   <li><a href="http://www.wormbase.org/species/all/antibody">Antibody</a></li>  <li><a href="http://www.wormbase.org/species/all/expression_cluster">Expression cluster</a></li>  <li><a href="http://www.wormbase.org/species/all/life_stage">Life stage</a></li>  <li><a href="http://www.wormbase.org/species/all/gene">Gene</a></li>  <li><a href="http://www.wormbase.org/species/all/gene_class">Gene class</a></li>  <li><a href="http://www.wormbase.org/species/all/phenotype">Phenotype</a></li>  <li><a href="http://www.wormbase.org/species/all/protein">Protein</a></li>  <li><a href="http://www.wormbase.org/species/all/sequence">Sequence</a></li>  <li><a href="http://www.wormbase.org/species/all/strain">Strain</a></li>  <li><a href="http://www.wormbase.org/species/all/transgene">Transgene</a></li>  <li><a href="http://www.wormbase.org/species/all/variation">Variation</a></li>  </ul>
+            </li>      <li>
+    <a href="http://www.wormbase.org/species/c_elegans"  class="species" >         <span class="ui-icon ui-icon-triangle-1-e"></span> C. elegans </a>
+              <ul class="wb-dropdown">  <li><a href="http://www.wormbase.org/tools/genome/gbrowse/c_elegans_PRJNA13758" class="genomic_location-link" title="BioProject PRJNA13758">Browse Genome: BioProject PRJNA13758</a></li>   <li><a href="http://www.wormbase.org/species/c_elegans/cds">CDS</a></li>  <li><a href="http://www.wormbase.org/species/c_elegans/clone">Clone</a></li>  <li><a href="http://www.wormbase.org/species/c_elegans/expression_cluster">Expression cluster</a></li>  <li><a href="http://www.wormbase.org/species/c_elegans/feature">Sequence feature</a></li>  <li><a href="http://www.wormbase.org/species/c_elegans/gene">Gene</a></li>  <li><a href="http://www.wormbase.org/species/c_elegans/microarray_results">Microarray results</a></li>  <li><a href="http://www.wormbase.org/species/c_elegans/operon">Operon</a></li>  <li><a href="http://www.wormbase.org/species/c_elegans/pcr_oligo">PCR Product/Oligo</a></li>  <li><a href="http://www.wormbase.org/species/c_elegans/protein">Protein</a></li>  <li><a href="http://www.wormbase.org/species/c_elegans/rearrangement">Rearrangement</a></li>  <li><a href="http://www.wormbase.org/species/c_elegans/rnai">RNAi</a></li>  <li><a href="http://www.wormbase.org/species/c_elegans/sequence">Sequence</a></li>  <li><a href="http://www.wormbase.org/species/c_elegans/strain">Strain</a></li>  <li><a href="http://www.wormbase.org/species/c_elegans/transcript">Transcript</a></li>  <li><a href="http://www.wormbase.org/species/c_elegans/transgene">Transgene</a></li>  <li><a href="http://www.wormbase.org/species/c_elegans/transposon">Transposon</a></li>  <li><a href="http://www.wormbase.org/species/c_elegans/variation">Variation</a></li>  </ul>
+            </li>     <li>
+                  <a class="species">
+                    <span class="ui-icon ui-icon-triangle-1-e"></span>Caenorhabditis </a>
+                  <ul class="wb-dropdown">   <li>
+    <a href="http://www.wormbase.org/species/c_angaria"  class="species" >         <span class="ui-icon ui-icon-triangle-1-e"></span> C. angaria </a>
+              <ul class="wb-dropdown">  <li><a href="http://www.wormbase.org/tools/genome/gbrowse/c_angaria_PRJNA51225" class="genomic_location-link" title="BioProject PRJNA51225">Browse Genome: BioProject PRJNA51225</a></li>   <li><a href="http://www.wormbase.org/species/c_angaria/gene">Gene</a></li>  <li><a href="http://www.wormbase.org/species/c_angaria/protein">Protein</a></li>  <li><a href="http://www.wormbase.org/species/c_angaria/sequence">Sequence</a></li>  <li><a href="http://www.wormbase.org/species/c_angaria/strain">Strain</a></li>  </ul>
+            </li>    <li>
+    <a href="http://www.wormbase.org/species/c_brenneri"  class="species" >         <span class="ui-icon ui-icon-triangle-1-e"></span> C. brenneri </a>
+              <ul class="wb-dropdown">  <li><a href="http://www.wormbase.org/tools/genome/gbrowse/c_brenneri_PRJNA20035" class="genomic_location-link" title="BioProject PRJNA20035">Browse Genome: BioProject PRJNA20035</a></li>   <li><a href="http://www.wormbase.org/species/c_brenneri/cds">CDS</a></li>  <li><a href="http://www.wormbase.org/species/c_brenneri/gene">Gene</a></li>  <li><a href="http://www.wormbase.org/species/c_brenneri/microarray_results">Microarray results</a></li>  <li><a href="http://www.wormbase.org/species/c_brenneri/pcr_oligo">PCR Product/Oligo</a></li>  <li><a href="http://www.wormbase.org/species/c_brenneri/protein">Protein</a></li>  <li><a href="http://www.wormbase.org/species/c_brenneri/sequence">Sequence</a></li>  <li><a href="http://www.wormbase.org/species/c_brenneri/strain">Strain</a></li>  <li><a href="http://www.wormbase.org/species/c_brenneri/transcript">Transcript</a></li>  </ul>
+            </li>    <li>
+    <a href="http://www.wormbase.org/species/c_briggsae"  class="species" >         <span class="ui-icon ui-icon-triangle-1-e"></span> C. briggsae </a>
+              <ul class="wb-dropdown">  <li><a href="http://www.wormbase.org/tools/genome/gbrowse/c_briggsae_PRJNA10731" class="genomic_location-link" title="BioProject PRJNA10731">Browse Genome: BioProject PRJNA10731</a></li>   <li><a href="http://www.wormbase.org/species/c_briggsae/cds">CDS</a></li>  <li><a href="http://www.wormbase.org/species/c_briggsae/feature">Sequence feature</a></li>  <li><a href="http://www.wormbase.org/species/c_briggsae/gene">Gene</a></li>  <li><a href="http://www.wormbase.org/species/c_briggsae/microarray_results">Microarray results</a></li>  <li><a href="http://www.wormbase.org/species/c_briggsae/pcr_oligo">PCR Product/Oligo</a></li>  <li><a href="http://www.wormbase.org/species/c_briggsae/protein">Protein</a></li>  <li><a href="http://www.wormbase.org/species/c_briggsae/sequence">Sequence</a></li>  <li><a href="http://www.wormbase.org/species/c_briggsae/strain">Strain</a></li>  <li><a href="http://www.wormbase.org/species/c_briggsae/transcript">Transcript</a></li>  <li><a href="http://www.wormbase.org/species/c_briggsae/transgene">Transgene</a></li>  <li><a href="http://www.wormbase.org/species/c_briggsae/variation">Variation</a></li>  </ul>
+            </li>    <li>
+    <a href="http://www.wormbase.org/species/c_elegans"  class="species" >         <span class="ui-icon ui-icon-triangle-1-e"></span> C. elegans </a>
+              <ul class="wb-dropdown">  <li><a href="http://www.wormbase.org/tools/genome/gbrowse/c_elegans_PRJNA13758" class="genomic_location-link" title="BioProject PRJNA13758">Browse Genome: BioProject PRJNA13758</a></li>   <li><a href="http://www.wormbase.org/species/c_elegans/cds">CDS</a></li>  <li><a href="http://www.wormbase.org/species/c_elegans/clone">Clone</a></li>  <li><a href="http://www.wormbase.org/species/c_elegans/expression_cluster">Expression cluster</a></li>  <li><a href="http://www.wormbase.org/species/c_elegans/feature">Sequence feature</a></li>  <li><a href="http://www.wormbase.org/species/c_elegans/gene">Gene</a></li>  <li><a href="http://www.wormbase.org/species/c_elegans/microarray_results">Microarray results</a></li>  <li><a href="http://www.wormbase.org/species/c_elegans/operon">Operon</a></li>  <li><a href="http://www.wormbase.org/species/c_elegans/pcr_oligo">PCR Product/Oligo</a></li>  <li><a href="http://www.wormbase.org/species/c_elegans/protein">Protein</a></li>  <li><a href="http://www.wormbase.org/species/c_elegans/rearrangement">Rearrangement</a></li>  <li><a href="http://www.wormbase.org/species/c_elegans/rnai">RNAi</a></li>  <li><a href="http://www.wormbase.org/species/c_elegans/sequence">Sequence</a></li>  <li><a href="http://www.wormbase.org/species/c_elegans/strain">Strain</a></li>  <li><a href="http://www.wormbase.org/species/c_elegans/transcript">Transcript</a></li>  <li><a href="http://www.wormbase.org/species/c_elegans/transgene">Transgene</a></li>  <li><a href="http://www.wormbase.org/species/c_elegans/transposon">Transposon</a></li>  <li><a href="http://www.wormbase.org/species/c_elegans/variation">Variation</a></li>  </ul>
+            </li>    <li>
+    <a href="http://www.wormbase.org/species/c_japonica"  class="species" >         <span class="ui-icon ui-icon-triangle-1-e"></span> C. japonica </a>
+              <ul class="wb-dropdown">  <li><a href="http://www.wormbase.org/tools/genome/gbrowse/c_japonica_PRJNA12591" class="genomic_location-link" title="BioProject PRJNA12591">Browse Genome: BioProject PRJNA12591</a></li>   <li><a href="http://www.wormbase.org/species/c_japonica/cds">CDS</a></li>  <li><a href="http://www.wormbase.org/species/c_japonica/gene">Gene</a></li>  <li><a href="http://www.wormbase.org/species/c_japonica/microarray_results">Microarray results</a></li>  <li><a href="http://www.wormbase.org/species/c_japonica/pcr_oligo">PCR Product/Oligo</a></li>  <li><a href="http://www.wormbase.org/species/c_japonica/protein">Protein</a></li>  <li><a href="http://www.wormbase.org/species/c_japonica/sequence">Sequence</a></li>  <li><a href="http://www.wormbase.org/species/c_japonica/strain">Strain</a></li>  <li><a href="http://www.wormbase.org/species/c_japonica/transcript">Transcript</a></li>  <li><a href="http://www.wormbase.org/species/c_japonica/variation">Variation</a></li>  </ul>
+            </li>    <li>
+    <a href="http://www.wormbase.org/species/c_remanei"  class="species" >         <span class="ui-icon ui-icon-triangle-1-e"></span> C. remanei </a>
+              <ul class="wb-dropdown">  <li><a href="http://www.wormbase.org/tools/genome/gbrowse/c_remanei_PRJNA53967" class="genomic_location-link" title="BioProject PRJNA53967">Browse Genome: BioProject PRJNA53967</a></li>   <li><a href="http://www.wormbase.org/species/c_remanei/cds">CDS</a></li>  <li><a href="http://www.wormbase.org/species/c_remanei/gene">Gene</a></li>  <li><a href="http://www.wormbase.org/species/c_remanei/microarray_results">Microarray results</a></li>  <li><a href="http://www.wormbase.org/species/c_remanei/pcr_oligo">PCR Product/Oligo</a></li>  <li><a href="http://www.wormbase.org/species/c_remanei/protein">Protein</a></li>  <li><a href="http://www.wormbase.org/species/c_remanei/sequence">Sequence</a></li>  <li><a href="http://www.wormbase.org/species/c_remanei/strain">Strain</a></li>  <li><a href="http://www.wormbase.org/species/c_remanei/transcript">Transcript</a></li>  </ul>
+            </li>    <li>
+    <a href="http://www.wormbase.org/species/c_sp11"  class="species" >         <span class="ui-icon ui-icon-triangle-1-e"></span> C. tropicalis </a>
+              <ul class="wb-dropdown">  <li><a href="http://www.wormbase.org/tools/genome/gbrowse/c_sp11_PRJNA53597" class="genomic_location-link" title="BioProject PRJNA53597">Browse Genome: BioProject PRJNA53597</a></li>   <li><a href="http://www.wormbase.org/species/c_sp11/gene">Gene</a></li>  </ul>
+            </li>    <li>
+    <a href="http://www.wormbase.org/species/c_sp5"  class="species" >         <span class="ui-icon ui-icon-triangle-1-e"></span> C. sp5 </a>
+              <ul class="wb-dropdown">  <li><a href="http://www.wormbase.org/tools/genome/gbrowse/c_sp5_PRJNA194557" class="genomic_location-link" title="BioProject PRJNA194557">Browse Genome: BioProject PRJNA194557</a></li>   <li><a href="http://www.wormbase.org/species/c_sp5/gene">Gene</a></li>  </ul>
+            </li>   </ul>
+                </li>    <li>
+                  <a class="species">
+                    <span class="ui-icon ui-icon-triangle-1-e"></span>Ancylostoma </a>
+                  <ul class="wb-dropdown">   <li>
+    <a href="http://www.wormbase.org/species/a_ceylanicum"  class="species" >         <span class="ui-icon ui-icon-triangle-1-e"></span> A. ceylanicum </a>
+              <ul class="wb-dropdown">  <li><a href="http://www.wormbase.org/tools/genome/gbrowse/a_ceylanicum_PRJNA231479" class="genomic_location-link" title="BioProject PRJNA231479">Browse Genome: BioProject PRJNA231479</a></li>   </ul>
+            </li>   </ul>
+                </li>    <li>
+                  <a class="species">
+                    <span class="ui-icon ui-icon-triangle-1-e"></span>Ascaris </a>
+                  <ul class="wb-dropdown">   <li>
+    <a href="http://www.wormbase.org/species/a_suum"  class="species" >         <span class="ui-icon ui-icon-triangle-1-e"></span> A. suum </a>
+              <ul class="wb-dropdown">  <li><a href="http://www.wormbase.org/tools/genome/gbrowse/a_suum_PRJNA80881" class="genomic_location-link" title="BioProject PRJNA80881">Browse Genome: BioProject PRJNA80881</a></li>  <li><a href="http://www.wormbase.org/tools/genome/gbrowse/a_suum_PRJNA62057" class="genomic_location-link" title="BioProject PRJNA62057 (Davis assembly)">Browse Genome: BioProject PRJNA62057 (Davis assembly)</a></li>   </ul>
+            </li>   </ul>
+                </li>    <li>
+                  <a class="species">
+                    <span class="ui-icon ui-icon-triangle-1-e"></span>Brugia </a>
+                  <ul class="wb-dropdown">   <li>
+    <a href="http://www.wormbase.org/species/b_malayi"  class="species" >         <span class="ui-icon ui-icon-triangle-1-e"></span> B. malayi </a>
+              <ul class="wb-dropdown">  <li><a href="http://www.wormbase.org/tools/genome/gbrowse/b_malayi_PRJNA10729" class="genomic_location-link" title="BioProject PRJNA10729">Browse Genome: BioProject PRJNA10729</a></li>   <li><a href="http://www.wormbase.org/species/b_malayi/cds">CDS</a></li>  <li><a href="http://www.wormbase.org/species/b_malayi/feature">Sequence feature</a></li>  <li><a href="http://www.wormbase.org/species/b_malayi/gene">Gene</a></li>  <li><a href="http://www.wormbase.org/species/b_malayi/operon">Operon</a></li>  <li><a href="http://www.wormbase.org/species/b_malayi/protein">Protein</a></li>  <li><a href="http://www.wormbase.org/species/b_malayi/sequence">Sequence</a></li>  <li><a href="http://www.wormbase.org/species/b_malayi/strain">Strain</a></li>  <li><a href="http://www.wormbase.org/species/b_malayi/transcript">Transcript</a></li>  </ul>
+            </li>   </ul>
+                </li>    <li>
+                  <a class="species">
+                    <span class="ui-icon ui-icon-triangle-1-e"></span>Bursaphelenchus </a>
+                  <ul class="wb-dropdown">   <li>
+    <a href="http://www.wormbase.org/species/b_xylophilus"  class="species" >         <span class="ui-icon ui-icon-triangle-1-e"></span> B. xylophilus </a>
+              <ul class="wb-dropdown">  <li><a href="http://www.wormbase.org/tools/genome/gbrowse/b_xylophilus_PRJEA64437" class="genomic_location-link" title="BioProject PRJEA64437">Browse Genome: BioProject PRJEA64437</a></li>   <li><a href="http://www.wormbase.org/species/b_xylophilus/gene">Gene</a></li>  <li><a href="http://www.wormbase.org/species/b_xylophilus/protein">Protein</a></li>  <li><a href="http://www.wormbase.org/species/b_xylophilus/sequence">Sequence</a></li>  <li><a href="http://www.wormbase.org/species/b_xylophilus/strain">Strain</a></li>  </ul>
+            </li>   </ul>
+                </li>    <li>
+                  <a class="species">
+                    <span class="ui-icon ui-icon-triangle-1-e"></span>Dirofilaria </a>
+                  <ul class="wb-dropdown">   <li>
+    <a href="http://www.wormbase.org/species/d_immitis"  class="species" >         <span class="ui-icon ui-icon-triangle-1-e"></span> D. immitis </a>
+              <ul class="wb-dropdown">  <li><a href="http://www.wormbase.org/tools/genome/gbrowse/d_immitis_PRJEB1797" class="genomic_location-link" title="BioProject PRJEB1797">Browse Genome: BioProject PRJEB1797</a></li>   </ul>
+            </li>   </ul>
+                </li>    <li>
+                  <a class="species">
+                    <span class="ui-icon ui-icon-triangle-1-e"></span>Haemonchus </a>
+                  <ul class="wb-dropdown">   <li>
+    <a href="http://www.wormbase.org/species/h_contortus"  class="species" >         <span class="ui-icon ui-icon-triangle-1-e"></span> H. contortus </a>
+              <ul class="wb-dropdown">  <li><a href="http://www.wormbase.org/tools/genome/gbrowse/h_contortus_PRJNA205202" class="genomic_location-link" title="BioProject PRJNA205202">Browse Genome: BioProject PRJNA205202</a></li>  <li><a href="http://www.wormbase.org/tools/genome/gbrowse/h_contortus_PRJEB506" class="genomic_location-link" title="BioProject PRJEB506">Browse Genome: BioProject PRJEB506</a></li>   <li><a href="http://www.wormbase.org/species/h_contortus/gene">Gene</a></li>  <li><a href="http://www.wormbase.org/species/h_contortus/protein">Protein</a></li>  <li><a href="http://www.wormbase.org/species/h_contortus/sequence">Sequence</a></li>  <li><a href="http://www.wormbase.org/species/h_contortus/strain">Strain</a></li>  </ul>
+            </li>   </ul>
+                </li>    <li>
+                  <a class="species">
+                    <span class="ui-icon ui-icon-triangle-1-e"></span>Heterorhabditis </a>
+                  <ul class="wb-dropdown">   <li>
+    <a href="http://www.wormbase.org/species/h_bacteriophora"  class="species" >         <span class="ui-icon ui-icon-triangle-1-e"></span> H. bacteriophora </a>
+              <ul class="wb-dropdown">  <li><a href="http://www.wormbase.org/tools/genome/gbrowse/h_bacteriophora_PRJNA13977" class="genomic_location-link" title="BioProject PRJNA13977">Browse Genome: BioProject PRJNA13977</a></li>   <li><a href="http://www.wormbase.org/species/h_bacteriophora/gene">Gene</a></li>  <li><a href="http://www.wormbase.org/species/h_bacteriophora/protein">Protein</a></li>  <li><a href="http://www.wormbase.org/species/h_bacteriophora/sequence">Sequence</a></li>  <li><a href="http://www.wormbase.org/species/h_bacteriophora/strain">Strain</a></li>  </ul>
+            </li>   </ul>
+                </li>    <li>
+                  <a class="species">
+                    <span class="ui-icon ui-icon-triangle-1-e"></span>Loa </a>
+                  <ul class="wb-dropdown">   <li>
+    <a href="http://www.wormbase.org/species/l_loa"  class="species" >         <span class="ui-icon ui-icon-triangle-1-e"></span> L. loa </a>
+              <ul class="wb-dropdown">  <li><a href="http://www.wormbase.org/tools/genome/gbrowse/l_loa_PRJNA60051" class="genomic_location-link" title="BioProject PRJNA60051">Browse Genome: BioProject PRJNA60051</a></li>   </ul>
+            </li>   </ul>
+                </li>    <li>
+                  <a class="species">
+                    <span class="ui-icon ui-icon-triangle-1-e"></span>Meloidogyne </a>
+                  <ul class="wb-dropdown">   <li>
+    <a href="http://www.wormbase.org/species/m_hapla"  class="species" >         <span class="ui-icon ui-icon-triangle-1-e"></span> M. hapla </a>
+              <ul class="wb-dropdown">  <li><a href="http://www.wormbase.org/tools/genome/gbrowse/m_hapla_PRJNA29083" class="genomic_location-link" title="BioProject PRJNA29083">Browse Genome: BioProject PRJNA29083</a></li>   <li><a href="http://www.wormbase.org/species/m_hapla/protein">Protein</a></li>  <li><a href="http://www.wormbase.org/species/m_hapla/sequence">Sequence</a></li>  <li><a href="http://www.wormbase.org/species/m_hapla/strain">Strain</a></li>  </ul>
+            </li>    <li>
+    <a href="http://www.wormbase.org/species/m_incognita"  class="species" >         <span class="ui-icon ui-icon-triangle-1-e"></span> M. incognita </a>
+              <ul class="wb-dropdown">  <li><a href="http://www.wormbase.org/tools/genome/gbrowse/m_incognita_PRJEA28837" class="genomic_location-link" title="BioProject PRJEA28837">Browse Genome: BioProject PRJEA28837</a></li>   <li><a href="http://www.wormbase.org/species/m_incognita/protein">Protein</a></li>  <li><a href="http://www.wormbase.org/species/m_incognita/sequence">Sequence</a></li>  <li><a href="http://www.wormbase.org/species/m_incognita/strain">Strain</a></li>  </ul>
+            </li>   </ul>
+                </li>    <li>
+                  <a class="species">
+                    <span class="ui-icon ui-icon-triangle-1-e"></span>Necator </a>
+                  <ul class="wb-dropdown">   <li>
+    <a href="http://www.wormbase.org/species/n_americanus"  class="species" >         <span class="ui-icon ui-icon-triangle-1-e"></span> N. americanus </a>
+              <ul class="wb-dropdown">  <li><a href="http://www.wormbase.org/tools/genome/gbrowse/n_americanus_PRJNA72135" class="genomic_location-link" title="BioProject PRJNA72135">Browse Genome: BioProject PRJNA72135</a></li>   </ul>
+            </li>   </ul>
+                </li>    <li>
+                  <a class="species">
+                    <span class="ui-icon ui-icon-triangle-1-e"></span>Onchocerca </a>
+                  <ul class="wb-dropdown">   <li>
+    <a href="http://www.wormbase.org/species/o_volvulus"  class="species" >         <span class="ui-icon ui-icon-triangle-1-e"></span> O. volvulus </a>
+              <ul class="wb-dropdown">  <li><a href="http://www.wormbase.org/tools/genome/gbrowse/o_volvulus_PRJEB513" class="genomic_location-link" title="BioProject PRJEB513">Browse Genome: BioProject PRJEB513</a></li>   <li><a href="http://www.wormbase.org/species/o_volvulus/cds">CDS</a></li>  <li><a href="http://www.wormbase.org/species/o_volvulus/gene">Gene</a></li>  <li><a href="http://www.wormbase.org/species/o_volvulus/protein">Protein</a></li>  <li><a href="http://www.wormbase.org/species/o_volvulus/sequence">Sequence</a></li>  <li><a href="http://www.wormbase.org/species/o_volvulus/transcript">Transcript</a></li>  <li><a href="http://www.wormbase.org/species/o_volvulus/feature">Sequence feature</a></li>  </ul>
+            </li>   </ul>
+                </li>    <li>
+                  <a class="species">
+                    <span class="ui-icon ui-icon-triangle-1-e"></span>Panagrellus </a>
+                  <ul class="wb-dropdown">   <li>
+    <a href="http://www.wormbase.org/species/p_redivivus"  class="species" >         <span class="ui-icon ui-icon-triangle-1-e"></span> P. redivivus </a>
+              <ul class="wb-dropdown">  <li><a href="http://www.wormbase.org/tools/genome/gbrowse/p_redivivus_PRJNA186477" class="genomic_location-link" title="BioProject PRJNA186477">Browse Genome: BioProject PRJNA186477</a></li>   </ul>
+            </li>   </ul>
+                </li>    <li>
+                  <a class="species">
+                    <span class="ui-icon ui-icon-triangle-1-e"></span>Pristionchus </a>
+                  <ul class="wb-dropdown">   <li>
+    <a href="http://www.wormbase.org/species/p_exspectatus"  class="species" >         <span class="ui-icon ui-icon-triangle-1-e"></span> P. exspectatus </a>
+              <ul class="wb-dropdown">  <li><a href="http://www.wormbase.org/tools/genome/gbrowse/p_exspectatus_PRJEB6009" class="genomic_location-link" title="BioProject PRJEB6009">Browse Genome: BioProject PRJEB6009</a></li>   </ul>
+            </li>    <li>
+    <a href="http://www.wormbase.org/species/p_pacificus"  class="species" >         <span class="ui-icon ui-icon-triangle-1-e"></span> P. pacificus </a>
+              <ul class="wb-dropdown">  <li><a href="http://www.wormbase.org/tools/genome/gbrowse/p_pacificus_PRJNA12644" class="genomic_location-link" title="BioProject PRJNA12644">Browse Genome: BioProject PRJNA12644</a></li>   <li><a href="http://www.wormbase.org/species/p_pacificus/cds">CDS</a></li>  <li><a href="http://www.wormbase.org/species/p_pacificus/expression_cluster">Expression cluster</a></li>  <li><a href="http://www.wormbase.org/species/p_pacificus/gene">Gene</a></li>  <li><a href="http://www.wormbase.org/species/p_pacificus/microarray_results">Microarray results</a></li>  <li><a href="http://www.wormbase.org/species/p_pacificus/pcr_oligo">PCR Product/Oligo</a></li>  <li><a href="http://www.wormbase.org/species/p_pacificus/protein">Protein</a></li>  <li><a href="http://www.wormbase.org/species/p_pacificus/sequence">Sequence</a></li>  <li><a href="http://www.wormbase.org/species/p_pacificus/strain">Strain</a></li>  <li><a href="http://www.wormbase.org/species/p_pacificus/transcript">Transcript</a></li>  </ul>
+            </li>   </ul>
+                </li>    <li>
+                  <a class="species">
+                    <span class="ui-icon ui-icon-triangle-1-e"></span>Strongyloides </a>
+                  <ul class="wb-dropdown">   <li>
+    <a href="http://www.wormbase.org/species/s_ratti"  class="species" >         <span class="ui-icon ui-icon-triangle-1-e"></span> S. ratti </a>
+              <ul class="wb-dropdown">  <li><a href="http://www.wormbase.org/tools/genome/gbrowse/s_ratti_PRJEB125" class="genomic_location-link" title="BioProject PRJEB125">Browse Genome: BioProject PRJEB125</a></li>   <li><a href="http://www.wormbase.org/species/s_ratti/gene">Gene</a></li>  <li><a href="http://www.wormbase.org/species/s_ratti/protein">Protein</a></li>  <li><a href="http://www.wormbase.org/species/s_ratti/sequence">Sequence</a></li>  <li><a href="http://www.wormbase.org/species/s_ratti/strain">Strain</a></li>  </ul>
+            </li>   </ul>
+                </li>    <li>
+                  <a class="species">
+                    <span class="ui-icon ui-icon-triangle-1-e"></span>Trichinella </a>
+                  <ul class="wb-dropdown">   <li>
+    <a href="http://www.wormbase.org/species/t_spiralis"  class="species" >         <span class="ui-icon ui-icon-triangle-1-e"></span> T. spiralis </a>
+              <ul class="wb-dropdown">  <li><a href="http://www.wormbase.org/tools/genome/gbrowse/t_spiralis_PRJNA12603" class="genomic_location-link" title="BioProject PRJNA12603">Browse Genome: BioProject PRJNA12603</a></li>   <li><a href="http://www.wormbase.org/species/t_spiralis/gene">Gene</a></li>  <li><a href="http://www.wormbase.org/species/t_spiralis/protein">Protein</a></li>  <li><a href="http://www.wormbase.org/species/t_spiralis/sequence">Sequence</a></li>  <li><a href="http://www.wormbase.org/species/t_spiralis/strain">Strain</a></li>  </ul>
+            </li>   </ul>
+                </li>    <li>
+                  <a class="species">
+                    <span class="ui-icon ui-icon-triangle-1-e"></span>Trichuris </a>
+                  <ul class="wb-dropdown">   <li>
+    <a href="http://www.wormbase.org/species/t_suis"  class="species" >         <span class="ui-icon ui-icon-triangle-1-e"></span> T. suis </a>
+              <ul class="wb-dropdown">  <li><a href="http://www.wormbase.org/tools/genome/gbrowse/t_suis_PRJNA208416" class="genomic_location-link" title="BioProject PRJNA208416">Browse Genome: BioProject PRJNA208416</a></li>  <li><a href="http://www.wormbase.org/tools/genome/gbrowse/t_suis_PRJNA208415" class="genomic_location-link" title="BioProject PRJNA208415">Browse Genome: BioProject PRJNA208415</a></li>   </ul>
+            </li>   </ul>
+                </li>     <li>
+    <a href="http://www.wormbase.org/species/others" > Others... </a>
+              <ul class="wb-dropdown">   </ul>
+            </li>     </ul>
+      </li>  <li><a href="http://www.wormbase.org/resources" id="section-resources" class="">
+          <span class="ui-icon ui-icon-triangle-1-s"></span> Resources</a>
+          <ul class="wb-dropdown">       <li>
+              <a href="http://www.wormbase.org/resources/disease"> Disease Ontology</a></li>    <li>
+              <a href="http://www.wormbase.org/resources/gene_class"> Gene class</a></li>    <li>
+              <a href="http://www.wormbase.org/resources/laboratory"> Laboratory</a></li>      <li>
+              <a href="http://www.wormbase.org/resources/motif"> Motif</a></li>    <li>
+              <a href="http://www.wormbase.org/resources/paper"> Paper</a></li>    <li>
+              <a href="http://www.wormbase.org/resources/person"> Person</a></li>      <li>
+              <a href="http://www.wormbase.org/resources/reagents"> Reagent</a></li>     <li>
+              <a href="http://www.wormbase.org/resources/transposon_family"> Transposon Family</a></li>    <li>
+              <a href="http://www.wormbase.org/resources/wbprocess"> Topic</a></li>    </ul>
+      </li>  <li><a href="http://www.wormbase.org/tools" id="section-tools" class="">
+          <span class="ui-icon ui-icon-triangle-1-s"></span> Tools</a>
+          <ul class="wb-dropdown">     <li>
+              <a href="http://www.wormbase.org/tools/blast_blat"> Blast/Blat</a></li>            <li>
+              <a href="http://www.wormbase.org/tools/genome/gbrowse/c_elegans"> GBrowse</a></li>          <li>
+              <a href="http://www.wormbase.org/tools/ontology_browser"> Ontologies</a></li>                     <li>
+              <a href="http://www.wormbase.org/tools/wormmine"> WormMine</a></li>   <li>
+           <a>
+              <span class="ui-icon ui-icon-triangle-1-e"></span>More tools
+            </a>
+           <ul class="wb-dropdown">        <li>
+                <a href="http://www.wormbase.org/tools/comments"> Comments</a></li>      <li>
+                <a href="ftp://ftp.wormbase.org/pub/wormbase/"> Downloads</a></li>      <li>
+                <a href="http://www.wormbase.org/tools/epcr"> e-PCR</a></li>            <li>
+                <a href="http://www.wormbase.org/tools/gmap"> Genetic Map</a></li>      <li>
+                <a href="http://www.wormbase.org/tools/support"> Contact Help</a></li>      <li>
+                <a href="http://www.wormbase.org/tools/nucleotide_aligner"> Nucl. Aligner</a></li>        <li>
+                <a href="http://www.wormbase.org/tools/protein_aligner"> Protein Aligner</a></li>      <li>
+                <a href="http://www.wormbase.org/tools/queries"> Queries</a></li>      <li>
+                <a href="http://www.wormbase.org/tools/schema"> Schema</a></li>      <li>
+                <a href="http://50.18.180.228:3000"> SPELL</a></li>      <li>
+                <a href="http://www.wormbase.org/tools/synteny/mercator"> Synteny</a></li>      <li>
+                <a href="http://www.textpresso.org/celegans/"> Textpresso</a></li>       <li>
+                <a href="http://www.wormbase.org/tools/tree"> Tree Display</a></li>      <li>
+                <a href="http://caprica.caltech.edu:9002/biomart/martview/"> WormMart</a></li>    </ul>
+            </li>   </ul>
+      </li>  <li><a href="http://parasite.wormbase.org">ParaSite</a></li>
+  <span class="status-bar"></span>
+    </ul>
+  </div>    </div>
+
+
+
+
+
+
+
+DIVIDER
+
+
+
+<div id="footer">
+    <div id="footer-nav">
+
+      <div class="footer-column">
+        <div class="footer-title">About</div>
+        <ul>
+          <li><span>Nematodes</span></li>
+          <li><a href="http://www.wormbase.org/about/userguide/nomenclature">Nomenclature</a></li>
+        </ul>
+
+        <ul>
+          <li><span>WormBase</span></li>
+          <li><a href="http://www.wormbase.org/about#0--10">Mission</a></li>
+          <li><a href="http://www.wormbase.org/about/advisory_board#01--10">Advisory Board</a></li>
+          <li><a href="http://www.wormbase.org/about/policies#1--10">Privacy</a></li>
+          <li><a href="http://www.wormbase.org/about/policies#0--10">Acceptable Use</a></li>
+          <li><a href="http://www.wormbase.org/about/policies#2--10">Copyright</a></li>
+          <li><a href="http://www.wormbase.org/about/release_schedule#01--10">Release Schedule</a></li>
+          <li><a href="http://www.wormbase.org/about/citing_wormbase#012--10">How to Cite</a></li>
+          <li><a href="http://www.wormbase.org/about/staff#01--10">WormBase Staff</a></li>
+          <li><a href="http://legacy.wormbase.org/"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://legacy.wormbase.org/');"
+            target="_blank">Legacy Site</a></li>
+        </ul>
+      </div>
+
+
+      <div class="footer-column">
+        <div class="footer-title">Support</div>
+        <ul>
+          <li><a href="http://www.wormbase.org/about/userguide#023-1-5">Submit Data</a></li>
+          <li><a href="mailto:help@wormbase.org">Email</a></li>
+          <li><a href="http://www.wormbase.org/about/Frequently_asked_questions">FAQ</a></li>
+          <li><a href="http://www.wormbase.org/about/userguide">User Guide</a></li>
+          <li><a href="http://www.wormbase.org/tools/support?url=/">Contact Help</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-column">
+        <div class="footer-title">Community</div>
+        <ul>
+          <li><a href="http://www.wormbook.org/"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://www.wormbook.org/');"
+            target="_blank">WormBook</a></li>
+          <li><a href="http://forums.wormbase.org"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://forums.wormbase.org');"
+            target="_blank">Forum</a></li>
+          <li><a href="http://blog.wormbase.org"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://blog.wormbase.org');"
+            target="_blank">Blog</a></li>
+          <li><a href="http://twitter.com/wormbase"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://twitter.com/wormbase');"
+            target="_blank">Twitter</a></li>
+          <li><a href="http://www.wormbase.org/species/c_elegans#1--10">Key Papers</a></li>
+        </ul>
+
+        <ul>
+          <li><span>Friends</span></li>
+          <li><a href="http://www.cbs.umn.edu/research/resources/cgc"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://www.cbs.umn.edu/research/resources/cgc');"
+            target="_blank">CGC</a></li>
+          <li><a href="http://www.wormatlas.org"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://www.wormatlas.org');"
+            target="_blank">WormAtlas</a></li>
+          <li><a href="http://www.nematodes.org/"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://www.nematodes.org/');"
+            target="_blank">Nematodes.org</a></li>
+          <li><a href="http://www.ipm.ucdavis.edu/NEMABASE/"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://www.ipm.ucdavis.edu/NEMABASE/');"
+            target="_blank">NEMABASE</a></li>
+          <li><a href="http://nematode.net/"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://nematode.net/');"
+            target="_blank">Nematode.net</a></li>
+          <li><a href="http://www.smid-db.org/"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://www.smid-db.org/');"
+            target="_blank">SMID-DB</a></li>
+        </ul>
+      </div>
+
+
+      <div class="footer-column">
+        <div class="footer-title">Developer</div>
+        <ul>
+<!--           <li><a href=""
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', '');"
+            target="_blank">Amazon EC2 AMI</a></li> -->
+          <li><a href="http://www.wormbase.org/about/userguide/for_developers">Developer Documentation</a></li>
+          <li><a href="http://www.wormbase.org/about/userguide/for_developers/api-rest">RESTful API</a></li>
+          <li><a href="http://github.com/WormBase"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://github.com/WormBase');"
+            target="_blank">Code Repositories (Github)</a></li>
+          <li><a href="http://www.wormbase.org/about/internal_documentation">Staff Documentation</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-column">
+        <div class="footer-title">Downloads</div>
+        <ul>
+          <li><a href="ftp://ftp.wormbase.org/pub/wormbase/">FTP site</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-column">
+        <div class="footer-title">Data Freezes</div>
+        <ul>
+          <li>
+            <select id="data-freezes" onchange="window.location.href = this.options[this.selectedIndex].value">
+                <option selected="selected" value="--">--</option>
+                <option value="http://legacy.wormbase.org">WS230 (Mar 2012)</option>
+                <option value="http://ws220.wormbase.org">WS220 (16 Dec 2010)</option>
+                <option value="http://ws210.wormbase.org">WS210 (15 Jan 2010)</option>
+                <option value="http://ws205.wormbase.org">WS205 (18 Sep 2009)</option>
+                <option value="http://ws204.wormbase.org">WS204 (13 Aug 2009)</option>
+                <option value="http://ws200.wormbase.org">WS200 (16 Mar 2009)</option>
+                <option value="http://ws190.wormbase.org">WS190 (07 May 2008)</option>
+                <option value="http://ws180.wormbase.org">WS180 (07 Sep 2007)</option>
+                <option value="http://ws170.wormbase.org">WS170 (09 Feb 2007)</option>
+                <option value="http://ws160.wormbase.org">WS160 (31 Jul 2006)</option>
+                <option value="http://ws150.wormbase.org">WS150 (30 Nov 2005)</option>
+                <option value="http://ws140.wormbase.org">WS140 (26 Mar 2005)</option>
+                <option value="http://ws130.wormbase.org">WS130 (16 Aug 2004)</option>
+                <option value="http://ws120.wormbase.org">WS120 (07 Mar 2004)</option>
+                <option value="http://ws110.wormbase.org">WS110 (01 Oct 2003)</option>
+                <option value="http://ws100.wormbase.org">WS100 (10 May 2003)</option>
+            </select>
+          </li>
+        </ul>
+      </div>
+
+    </div>
+
+    <br clear="all" />
+
+
+
+    <div id="footercredit">
+
+     <div id="footermeta">
+      <a id="footer-mail" href="mailto:help@wormbase.org"><div class="social-icons"></div></a>
+      <a id="footer-tweet" href="http://twitter.com/wormbase"><div class="social-icons"></div></a>
+      <a id="footer-rss"  href="http://feeds.feedburner.com/wormbase"><div class="social-icons"></div></a>
+    </div>
+    <br />
+    <br style="clear:both" />  <span>
+          WormBase is supported by grant #U41 HG002223 from the <a href="http://www.genome.gov/"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://www.genome.gov/');"
+            target="_blank">National Human Genome Research Institute</a> </span><br />
+        <span>at the <a href="http://www.nih.gov/"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://www.nih.gov/');"
+            target="_blank">US National Institutes of Health</a>,
+          the <a href="http://www.mrc.ac.uk/"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://www.mrc.ac.uk/');"
+            target="_blank">UK Medical Research Council</a> and the <a href="http://www.bbsrc.ac.uk/home/home.aspx"
+            onClick="WB.recordOutboundLink(this, 'Outbound Links', 'http://www.bbsrc.ac.uk/home/home.aspx');"
+            target="_blank">UK Biotechnology and Biological Sciences Research Council</a>.
+        </span>
+    </div>
+
+
+</div>
+
+
+<!-- end boilerplate/footer -->
+
+</div><!--end wrap-->
+  
+    <!-- Grab jQuery from local -->
+    
+    
+
+    
+    
+  </body>
+</html>
