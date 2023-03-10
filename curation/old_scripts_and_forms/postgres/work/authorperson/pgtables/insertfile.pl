@@ -1,0 +1,63 @@
+#!/usr/bin/perl5.6.0
+
+use lib qw( /usr/lib/perl5/site_perl/5.6.1/i686-linux/ );
+use Pg;
+
+$conn = Pg::connectdb("dbname=testdb");
+die $conn->errorMessage unless PGRES_CONNECTION_OK eq $conn->status;
+
+$result = $conn->exec( "CREATE TABLE one ( joinkey TEXT, one INTEGER, one_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP )");
+$result = $conn->exec( "CREATE TABLE one_groups ( joinkey TEXT, one_groups TEXT, one_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP )");
+$result = $conn->exec( "CREATE TABLE one_firstname ( joinkey TEXT, one_firstname TEXT, old_timestamp TIMESTAMP, one_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP )");
+$result = $conn->exec( "CREATE TABLE one_middlename ( joinkey TEXT, one_middlename TEXT, old_timestamp TIMESTAMP, one_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP )");
+$result = $conn->exec( "CREATE TABLE one_lastname ( joinkey TEXT, one_lastname TEXT, old_timestamp TIMESTAMP, one_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP )");
+$result = $conn->exec( "CREATE TABLE one_lab ( joinkey TEXT, one_lab TEXT, old_timestamp TIMESTAMP, one_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP )");
+$result = $conn->exec( "CREATE TABLE one_oldlab ( joinkey TEXT, one_oldlab TEXT, old_timestamp TIMESTAMP, one_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP )");
+$result = $conn->exec( "CREATE TABLE one_street ( joinkey TEXT, one_street TEXT, old_timestamp TIMESTAMP, one_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP )");
+$result = $conn->exec( "CREATE TABLE one_city ( joinkey TEXT, one_city TEXT, old_timestamp TIMESTAMP, one_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP )");
+$result = $conn->exec( "CREATE TABLE one_state ( joinkey TEXT, one_state TEXT, old_timestamp TIMESTAMP, one_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP )");
+$result = $conn->exec( "CREATE TABLE one_post ( joinkey TEXT, one_post TEXT, old_timestamp TIMESTAMP, one_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP )");
+$result = $conn->exec( "CREATE TABLE one_country ( joinkey TEXT, one_country TEXT, old_timestamp TIMESTAMP, one_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP )");
+$result = $conn->exec( "CREATE TABLE one_email ( joinkey TEXT, one_email TEXT, old_timestamp TIMESTAMP, one_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP )");
+$result = $conn->exec( "CREATE TABLE one_mainphone ( joinkey TEXT, one_mainphone TEXT, old_timestamp TIMESTAMP, one_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP )");
+$result = $conn->exec( "CREATE TABLE one_labphone ( joinkey TEXT, one_labphone TEXT, old_timestamp TIMESTAMP, one_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP )");
+$result = $conn->exec( "CREATE TABLE one_officephone ( joinkey TEXT, one_officephone TEXT, old_timestamp TIMESTAMP, one_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP )");
+$result = $conn->exec( "CREATE TABLE one_otherphone ( joinkey TEXT, one_otherphone TEXT, old_timestamp TIMESTAMP, one_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP )");
+$result = $conn->exec( "CREATE TABLE one_fax ( joinkey TEXT, one_fax TEXT, old_timestamp TIMESTAMP, one_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP )");
+$result = $conn->exec( "CREATE INDEX one_idx ON one ( joinkey )");
+$result = $conn->exec( "CREATE INDEX one_groups_idx ON one_groups ( joinkey )");
+$result = $conn->exec( "CREATE INDEX one_firstname_idx ON one_firstname ( joinkey )");
+$result = $conn->exec( "CREATE INDEX one_middlename_idx ON one_middlename ( joinkey )");
+$result = $conn->exec( "CREATE INDEX one_lastname_idx ON one_lastname ( joinkey )");
+$result = $conn->exec( "CREATE INDEX one_lab_idx ON one_lab ( joinkey )");
+$result = $conn->exec( "CREATE INDEX one_oldlab_idx ON one_oldlab ( joinkey )");
+$result = $conn->exec( "CREATE INDEX one_street_idx ON one_street ( joinkey )");
+$result = $conn->exec( "CREATE INDEX one_city_idx ON one_city ( joinkey )");
+$result = $conn->exec( "CREATE INDEX one_state_idx ON one_state ( joinkey )");
+$result = $conn->exec( "CREATE INDEX one_post_idx ON one_post ( joinkey )");
+$result = $conn->exec( "CREATE INDEX one_country_idx ON one_country ( joinkey )");
+$result = $conn->exec( "CREATE INDEX one_email_idx ON one_email ( joinkey )");
+$result = $conn->exec( "CREATE INDEX one_mainphone_idx ON one_mainphone ( joinkey )");
+$result = $conn->exec( "CREATE INDEX one_labphone_idx ON one_labphone ( joinkey )");
+$result = $conn->exec( "CREATE INDEX one_officephone_idx ON one_officephone ( joinkey )");
+$result = $conn->exec( "CREATE INDEX one_otherphone_idx ON one_otherphone ( joinkey )");
+$result = $conn->exec( "CREATE INDEX one_fax_idx ON one_fax ( joinkey )");
+$result = $conn->exec( "GRANT ALL ON one TO nobody");
+$result = $conn->exec( "GRANT ALL ON one_groups TO nobody");
+$result = $conn->exec( "GRANT ALL ON one_firstname TO nobody");
+$result = $conn->exec( "GRANT ALL ON one_middlename TO nobody");
+$result = $conn->exec( "GRANT ALL ON one_lastname TO nobody");
+$result = $conn->exec( "GRANT ALL ON one_lab TO nobody");
+$result = $conn->exec( "GRANT ALL ON one_oldlab TO nobody");
+$result = $conn->exec( "GRANT ALL ON one_street TO nobody");
+$result = $conn->exec( "GRANT ALL ON one_city TO nobody");
+$result = $conn->exec( "GRANT ALL ON one_state TO nobody");
+$result = $conn->exec( "GRANT ALL ON one_post TO nobody");
+$result = $conn->exec( "GRANT ALL ON one_country TO nobody");
+$result = $conn->exec( "GRANT ALL ON one_email TO nobody");
+$result = $conn->exec( "GRANT ALL ON one_mainphone TO nobody");
+$result = $conn->exec( "GRANT ALL ON one_labphone TO nobody");
+$result = $conn->exec( "GRANT ALL ON one_officephone TO nobody");
+$result = $conn->exec( "GRANT ALL ON one_otherphone TO nobody");
+$result = $conn->exec( "GRANT ALL ON one_fax TO nobody");
+

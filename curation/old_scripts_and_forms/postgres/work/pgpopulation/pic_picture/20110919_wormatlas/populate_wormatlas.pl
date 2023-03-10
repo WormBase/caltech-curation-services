@@ -1,0 +1,374 @@
+#!/usr/bin/perl -w
+
+# populate wormatlas picture set
+# get pgid from daniela, use same for pic_name from daniela.  2011 09 20
+
+
+use strict;
+use diagnostics;
+use DBI;
+use Encode qw( from_to is_utf8 );
+
+my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n"; 
+
+# my %anat;
+# my $result = $dbh->prepare( "SELECT * FROM obo_name_anatomy" );
+# $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+# while (my @row = $result->fetchrow) { $anat{$row[1]} = $row[0]; }
+# $result = $dbh->prepare( "SELECT * FROM obo_syn_anatomy" );
+# $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+# while (my @row = $result->fetchrow) { $anat{$row[1]} = $row[0]; }
+
+my $picid = '9115';				# set by daniela
+my $joinkey = '';
+# $result = $dbh->prepare( "SELECT * FROM pic_name ORDER BY joinkey::INTEGER DESC" );
+# $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+# my @row = $result->fetchrow(); $joinkey = $row[0];
+$joinkey = $picid;
+
+my $infile = 'mappings';
+open (IN, "<$infile") or die "Cannot open $infile : $!";
+# my $junk = <IN>;
+while (my $line = <IN>) {
+  chomp $line;
+  my (@stuff) = split/\t/, $line;
+  foreach (@stuff) { ($_) = &stripJunk($_); }
+  my ($pic_source, $gene, $pic_expr) = @stuff;
+  $pic_expr = '"'. $pic_expr . '"';
+  my $pic_contact = '"WBPerson427"';
+  my $pic_remark  = 'Hunt-Newbury R et al. (2007) PLoS Biol. High-throughput in vivo analysis of gene expression in Caenorhabditis ...';
+  my $pic_person  = '"WBPerson427"';
+  my $pic_curator = 'WBPerson12028';
+  $joinkey++;
+  $picid = &pad10Zeros($joinkey);
+#   $picid++;
+  &addToPg($joinkey, "WBPicture$picid", 'pic_name');
+  if ($pic_contact) { &addToPg($joinkey, $pic_contact, 'pic_contact'); }
+  if ($pic_source) { &addToPg($joinkey, $pic_source, 'pic_source'); }
+  if ($pic_expr) { &addToPg($joinkey, $pic_expr, 'pic_exprpattern'); }
+  if ($pic_remark) { &addToPg($joinkey, $pic_remark, 'pic_remark'); }
+  if ($pic_person) { &addToPg($joinkey, $pic_person, 'pic_person'); }
+  if ($pic_curator) { &addToPg($joinkey, $pic_curator, 'pic_curator'); }
+#   print "\n";
+} # while (my $line = <IN>)
+close (IN) or die "Cannot open $infile : $!";
+
+sub addToPg {
+  my ($joinkey, $data, $table) = @_;
+  my @pgcommands;
+  push @pgcommands, "INSERT INTO $table VALUES ('$joinkey', '$data')";
+  push @pgcommands, "INSERT INTO ${table}_hst VALUES ('$joinkey', '$data')";
+  foreach my $pgcommand (@pgcommands) {
+    print "$pgcommand\n";
+#     $dbh->do( $pgcommand );		# uncomment to populate
+  } # foreach my $pgcommand (@pgcommands)
+} # sub addToPg
+
+sub stripJunk {
+  my ($stuff) = @_;
+  if ($stuff =~ m/^\"/) { $stuff =~ s/^\"//; } 
+  if ($stuff =~ m/\"$/) { $stuff =~ s/\"$//; } 
+  if ($stuff =~ m/^\s+/) { $stuff =~ s/^\s+// } 
+  if ($stuff =~ m/\s+$/) { $stuff =~ s/\s+$//; } 
+  return $stuff;
+}
+
+sub pad10Zeros {                # take a number and pad to 10 digits
+  my $number = shift;
+  if ($number =~ m/^0+/) { $number =~ s/^0+//g; }               # strip leading zeros
+  if ($number < 10) { $number = '000000000' . $number; }
+  elsif ($number < 100) { $number = '00000000' . $number; }
+  elsif ($number < 1000) { $number = '0000000' . $number; }
+  elsif ($number < 10000) { $number = '000000' . $number; }
+  elsif ($number < 100000) { $number = '00000' . $number; }
+  elsif ($number < 1000000) { $number = '0000' . $number; }
+  elsif ($number < 10000000) { $number = '000' . $number; }
+  elsif ($number < 100000000) { $number = '00' . $number; }
+  elsif ($number < 1000000000) { $number = '0' . $number; }
+  return $number;
+} # sub pad10Zeros
+
+
+__END__
+
+DELETE FROM pic_name_hst WHERE pic_timestamp > '2011-09-20 15:00';
+DELETE FROM pic_contact_hst WHERE pic_timestamp > '2011-09-20 15:00'; 
+DELETE FROM pic_source_hst WHERE pic_timestamp > '2011-09-20 15:00'; 
+DELETE FROM pic_exprpattern_hst WHERE  pic_timestamp > '2011-09-20 15:00';
+DELETE FROM pic_remark_hst WHERE  pic_timestamp > '2011-09-20 15:00';
+DELETE FROM pic_person_hst WHERE pic_timestamp > '2011-09-20 15:00'; 
+DELETE FROM pic_curator_hst WHERE pic_timestamp > '2011-09-20 15:00';
+
+DELETE FROM pic_name WHERE pic_timestamp > '2011-09-20 15:00';
+DELETE FROM pic_contact WHERE pic_timestamp > '2011-09-20 15:00'; 
+DELETE FROM pic_source WHERE pic_timestamp > '2011-09-20 15:00'; 
+DELETE FROM pic_exprpattern WHERE  pic_timestamp > '2011-09-20 15:00';
+DELETE FROM pic_remark WHERE  pic_timestamp > '2011-09-20 15:00';
+DELETE FROM pic_person WHERE pic_timestamp > '2011-09-20 15:00'; 
+DELETE FROM pic_curator WHERE pic_timestamp > '2011-09-20 15:00';
+
+
+B0024.14b_BC13961_GFP_a-1_1.jpg	WBGene00007103	Expr5012
+B0024.14b_BC13961_GFP_a-1_2.jpg	WBGene00007103	Expr5012
+01E11.7_BC10244_GFPV_a-1_1bi.jpg	WBGene00006508	Expr6402
+01E11.7_BC10244_GFPV_l-1_1bi.jpg	WBGene00006508	Expr6402
+01E11.7_BC10244_GFPV_l-4_1bi.jpg	WBGene00006508	Expr6402
+01E11.7_BC10244_GFPV_l-8_1bi.jpg	WBGene00006508	Expr6402
+01F4.2_BC14488_GFP_XIII_a-1_1pr.jpg	WBGene00015303	Expr5093
+01F4.2_BC14488_GFP_XIII_l-3_1pr.jpg	WBGene00015303	Expr5093
+01G12.5a_BC13252_GFP_a-2.jpg	WBGene00002280	Expr5657
+01G12.5a_BC13252_GFP_a-head.jpg	WBGene00002280	Expr5657
+01G12.5a_BC13252_GFP_a-tail.jpg	WBGene00002280	Expr5657
+01G4.1_BC11211_GFPI_a-4_prj1.jpg	WBGene00004204	Expr5659
+01G4.1_BC11211_GFPI_a-8_1bi.jpg	WBGene00004204	Expr5659
+01G4.1_BC11211_GFPI_l-1_2Ch1.jpg	WBGene00004204	Expr5659
+0218.8_BC10350_GFP_a-1_1bi.jpg	WBGene00015052	Expr5021
+0228.4_BC10652_GFPI_e-4_1bi.jpg	WBGene00015061	Expr5024
+0252.2_BC10183_GFP_a-3_2prj21.jpg	WBGene00000211	Expr5031
+0280.7_BC12917_GFP_l-2_2prj20.jpg	WBGene00015103	Expr5036
+C02C6.1a_BC13292_GFP_a-1_1.jpg	WBGene00001130	Expr5106
+C02C6.1a_BC13292_GFP_a-1_2.jpg	WBGene00001130	Expr5106
+C02C6.1a_BC13292_GFP_a-2_1.jpg	WBGene00001130	Expr5106
+C02C6.1a_BC13292_GFP_a-3_1.jpg	WBGene00001130	Expr5106
+02E11.1_BC12279_GFPryIII_l-1_1.jpg	WBGene00015344	Expr5108
+C02E11.1a_BC12752_GFPry111_a-2_1bi.jpg	WBGene00015344	Expr5110
+C02E11.1a_BC12752_GFPryIII_a-1_1bi.jpg	WBGene00015344	Expr5110
+C02E11.1a_BC12752_GFPryIII_l-1_1.jpg	WBGene00015344	Expr5110
+02F2.6_BC11545_GFP_a-1_1bi.jpg	WBGene00004778	Expr6308
+02H7.1_BC13585_GFP_a-1_1.jpg	WBGene00001127	Expr5115
+02H7.1_BC13585_GFP_a-2_1.jpg	WBGene00001127	Expr5115
+B0304.1a_BC13583_GFP_a-1_1.jpg	WBGene00001948	Expr5047
+B0304.1a_DM13583_GFPIX_a-1_2bi.jpg	WBGene00001948	Expr5048
+B0304.1a_DM13583_GFPIX_a-1_4bi.jpg	WBGene00001948	Expr5048
+0361.6_BC10417_GFP_a-1_1bi.jpg	WBGene00015160	Expr5059
+0361.6_BC10417_GFP_a-2_1.jpg	WBGene00015160	Expr5059
+0361.6_BC10417_GFP_l-2_1bi.jpg	WBGene00015160	Expr5059
+0361.6_BC10417_GFP_l-3_1.jpg	WBGene00015160	Expr5059
+03A11.3_BC12998_GFP_a_.jpg	WBGene00000450	Expr6310
+03C10.1_BC10439_GFPI_a-2_1.jpg	WBGene00002202	Expr5122
+03D6.3_BC13996_GFP_l-1_1.jpg	WBGene00000466	Expr5126
+03F4.3_BC10671_GFPI_l-2_1Ch1.jpg	WBGene00006475	Expr6415
+03F4.7_BC12762_GFP_a-1_1.jpg	WBGene00019760	Expr6416
+03F4.7_BC12762_GFP_l-1_1bi.jpg	WBGene00019760	Expr6416
+03F4.7_BC12762_GFP_l-4_1bi.jpg	WBGene00019760	Expr6416
+03F4.7_BC12836_GFP_ryIII_a-1_1bi.jpg	WBGene00019760	Expr6417
+03F4.7_BC12836_GFPryIII_l-1-1bi.jpg	WBGene00019760	Expr6417
+03F8.3_BC10297_GFPIV_a-1_1.jpg	WBGene00019762	Expr6418
+03F8.3_BC10297_GFPIV_a-1_3to4.jpg	WBGene00019762	Expr6418
+03F8.3_BC10297_GFPIV_a-2_1.jpg	WBGene00019762	Expr6418
+03F8.3_BC10297_GFPIV_a-2_2.jpg	WBGene00019762	Expr6418
+03F8.3_BC10297_GFPIV_a-3_2bi.jpg	WBGene00019762	Expr6418
+03G2.3_BC11600_GFPIV_l-1_1and2.jpg	WBGene00003169	Expr5646
+03G2.3_BC11600_GFPV_a-2_2.jpg	WBGene00003169	Expr5646
+03G2.3_BC11600_GFPV_l-1_2bi.jpg	WBGene00003169	Expr5646
+03G2.3_BC11600_GFPV_l-1_5bi.jpg	WBGene00003169	Expr5646
+03G2.3_BC11600_GFPV_l-2_2pr.jpg	WBGene00003169	Expr5646
+03G5.1_DM12851_GFP_a.jpg	WBGene00015391	Expr5132
+03G5.1_DM12851_GFP_a_tail.jpg	WBGene00015391	Expr5132
+0457.1_BC11510_GFPIX_e-2_2.jpg	WBGene00002251	Expr5075
+04E12.7_BC13266_GFP_a-1_1.jpg	WBGene00015437	Expr5142
+04E12.7_BC13266_GFP_a-2_1.jpg	WBGene00015437	Expr5142
+04E12.7_BC13266_GFP_l-1_1.jpg	WBGene00015437	Expr5142
+04E6.10_BC15142_GFPstein_a-1_1.jpg	WBGene00005093	Expr5143
+04E6.10_BC15142_GFPstein_a-1_2bi.jpg	WBGene00005093	Expr5143
+04E6.10_BC15142_GFPstein_l-1_2bi.jpg	WBGene00005093	Expr5143
+04G6.3_BC11513_GFPIV_a-1_3.jpg	WBGene00004040	Expr5154
+04G6.3_BC13956_GFPDIC_a-2_1.jpg	WBGene00004040	Expr5153
+04G6.3_BC13956_GFP_a-3_2.jpg	WBGene00004040 Expr5153
+04G6.3_BC13956_GFP_a-3_3.jpg	WBGene00004040	Expr5153
+04G6.3_BC13956_GFP_l-1_1.jpg	WBGene00004040	Expr5153
+0511.6_BC10162_GFPII_a-2_3bi.jpg	WBGene00015232	Expr5081
+05D10.3_BC10002_GFP_a-1_1.jpg	WBGene00015479	Expr5165
+05D4.8_BC14760_GFPstein_a-2_2.jpg	WBGene00010590	Expr6331
+05D4.8_BC14760_GFPstein_a-2_2bi.jpg	WBGene00010590	Expr6331
+C06E7.1a_BC10396_GFP_a-1_1.jpg	WBGene00015538	Expr5187
+C06E7.1a_BC10396_GFP_l-1_1.jpg	WBGene00015538	Expr5187
+C06E7.1a_BC10396_GFP_l-1_1bi.jpg	WBGene00015538	Expr5187
+C06E7.1a_BC10396_GFP_l-3_1bi.jpg	WBGene00015538	Expr5187
+C06E7.1a_BC10396_GFP_l-4_1.jpg	WBGene00015538	Expr5187
+07H6.3_BC12754_GFPX_a-1_3bi.jpg	WBGene00015580	Expr5203
+08B6.8_BC11364_GFPV_a-1_1bi.jpg	WBGene00007429	Expr5206
+08B6.8_BC11364_GFPV_l-4_1bi.jpg	WBGene00007429	Expr5206
+08B6.8_BC11364_GFPV_l-8_2bi.jpg	WBGene00007429	Expr5206
+08B6.8_BC11364_GFP_V_l-4_1bi.jpg	WBGene00007429	Expr5206
+08E3.5b_BC11584_GFPV_a-1_2bi.jpg	WBGene00010665	Expr6361
+08E3.5b_BC11584_GFPV_l-4_1bi.jpg	WBGene00010665	Expr6361
+09G4.1_BC10421_GFPI_a-1b_1Ch1.jpg	WBGene00002043	Expr5225
+09H6.2a_BC11925_GFPI_a-6_1bi.jpg	WBGene00002999	Expr5228
+09H6.2a_BC11925_GFPI_a-6_2bi.jpg	WBGene00002999	Expr5228
+09H6.2a_BC11925_GFPI_a-7_6.jpg	WBGene00002999	Expr5228
+1046.1_BC14205_GFP_a-2_1and2.jpg	WBGene00008362	Expr5611
+106.3_BC11659_GFPIV_a-6_1bi.jpg	WBGene00010911	Expr6424
+10B5.1_BC11044_GFPII_a-1_3bi.jpg	WBGene00004421	Expr5711
+10B5.1_BC11044_GFPII_a-1_5bi.jpg	WBGene00004421	Expr5711
+10B5.1_BC11044_GFPII_a-1_6bi.jpg	WBGene00004421	Expr5711
+10B5.1_BC11044_GFPII_a-2_2bi.jpg	WBGene00004421	Expr5711
+10B5.1_BC11044_GFPII_a-2_3bi.jpg	WBGene00004421	Expr5711
+10B5.1_BC11044_GFP_a-2_2.jpg	WBGene00004421	Expr5711
+10B5.7_BC11409_GFPV_l-3_2bi.jpg	WBGene00004510	Expr5712
+10B5.7_BC11409_GFPV_l-3_3bi.jpg	WBGene00004510	Expr5712
+10B5.7_BC11409_GFPV_l-6_1pr.jpg	WBGene00004510	Expr5712
+10B5.7_BC11409_GFPV_l-7_4bi.jpg	WBGene00004510	Expr5712
+10C6.5_BC11858_GFPII_a-3_2bi.jpg	WBGene00007513	Expr5231
+10C6.5_BC11858_GFPII_a-6_1bi.jpg	WBGene00007513	Expr5231
+10C6.5_BC11858_GFPII_a-7_1bi.jpg	WBGene00007513	Expr5231
+10G7.2_BC10537_GFPXVI_a-2_3stbi.jpg	WBGene00006626	Expr5726
+10G7.2_BC10537_GFPXVI_l-1_1bi.jpg	WBGene00006626	Expr5726
+10G7.2_BC10537_GFPXVI_l-1_2bi.jpg	WBGene00006626	Expr5726
+10G7.2_BC10537_GFPXVI_l-3_1bi.jpg	WBGene00006626	Expr5726
+10H11.1_BC12473_GFP_a-1_1.jpg	WBGene00015691	Expr5236
+11D2.2_BC12784_GFPX_l-1_1bi.jpg	WBGene00010769	Expr6387
+11D2.2_BC12784_GFPX_l-4_1bi.jpg	WBGene00010769	Expr6387
+11D2.2_BC12784_GFP_l-1_1Ch1.jpg	WBGene00010769	Expr6387
+11D2.3_BC11582_GFPIV_a-1_1pr.jpg	WBGene00006829	Expr6388
+F11D5.3a_BC10719_GFPI_l-1_2bi.jpg	WBGene00017381	Expr5739
+13C4.5_BC10460_GFPIV_a-2_1.jpg	WBGene00007549	Expr5253
+13C4.5_BC10460_GFPIV_a-4_1pr.jpg	WBGene00007549	Expr5253
+13C4.5_BC10460_GFPIV_l-4_1.jpg	WBGene00007549	Expr5253
+13C4.5_BC10460_GFP_IV_l-4_3bi.jpg	WBGene00007549	Expr5253
+13D9.1_BC15141_GFPstein_l-1_2bi.jpg	WBGene00005657	Expr5256
+13D9.1_BC15141_GFPstein_l-1_3.jpg	WBGene00005657	Expr5256
+13D9.1_BC15141_GFPstein_l-2_1bi.jpg	WBGene00005657	Expr5256
+13F10.7_BC15499_GFP_l-3_1bi.jpg	WBGene00015746	Expr5259
+13G5.1_BC12234_GFPII_l-11_1.jpg	WBGene00000439	Expr5263
+13G5.1_BC12234_GFPXIV_l-10_1.jpg	WBGene00000439	Expr5263
+13N06.6_BC12162_GFP_a-10_1bi.jpg	WBGene00006541	Expr6276
+14A4.11_BC13892_GFP_a-1_1bi.jpg	WBGene00007561	Expr5265
+14A4.11_BC13892_GFP_l-1_1bi.jpg	WBGene00007561	Expr5265
+14A4.11_BC13892_GFP_l-2_1bi.jpg	WBGene00007561	Expr5265
+14A4.11_BC13892_GFP_l-3_1bi.jpg	WBGene00007561	Expr5265
+14A4.11_BC13892_GFP_l-4_1.jpg	WBGene00007561	Expr5265
+15C7.1_BC10468_GFPXV_a-1_1.jpg	WBGene00015789	Expr5268
+15C7.1_BC10468_GFPXV_e-1_1.jpg	WBGene00015789	Expr5268
+15C7.1_BC10468_GFPXV_l-1_2bi.jpg	WBGene00015789	Expr5268
+15C7.1_BC10468_GFPXV_l-3_3bi.jpg	WBGene00015789	Expr5268
+15C7.1_BC10468_GFPXV_l-4_1stbi.jpg	WBGene00015789	Expr5268
+15C7.1_BC10468_GFPXV_l-5_1bi.jpg	WBGene00015789	Expr5268
+15C7.2_BC11857_GFP_XV_a-1_1bi.jpg	WBGene00002220	Expr5269
+15C7.2_BC11857_GFP_XV_a-1_2bi.jpg	WBGene00002220	Expr5269
+15C7.2_BC11857_GFP_XV_l-1_3bi.jpg	WBGene00002220	Expr5269
+15C7.2_BC11857_GFP_XV_l-1_5bi.jpg	WBGene00002220	Expr5269
+15G9.4a_BC13149_GFPX_a-1_2bi.jpg	WBGene00001863	Expr5771
+17C8.5_BC13303_GFP_a-1_1.jpg	WBGene00006661	Expr5785
+17C8.5_BC13303_GFP_l-3_1bi.jpg	WBGene00006661	Expr5785
+C18F10.7a_BC15500_GFP_l-1_1bi.jpg	WBGene00015978	Expr5308
+D2089.4a_BC11352_GFPryIV_a-1_1bi.jpg	WBGene00004207	Expr5633
+2089.4a_BC11352_GFPryIV_l-1_1bi.jpg	WBGene00004207	Expr5633
+22E10.1_BC10089_GFP_a-1_1bi.jpg	WBGene00004006	Expr5825
+22F4.3_BC11796_GFP_l-1_1.jpg	WBGene00002224	Expr5829
+24A1.3_BC10723_GFPIV_a-1_2.jpg	WBGene00016030	Expr5319
+25B5.6a_BC14211_GFP_l-1_1.jpg	WBGene00017777	Expr5850
+25H2.5_BC12774_GFPDIC_a-2_1.jpg	WBGene00009119	Expr5862
+25H2.5_BC12774_GFP_a-3_1.jpg	WBGene00009119	Expr5862
+26A1.8_BC12751_GFP_a-2_1prj23.jpg	WBGene00017806	Expr5872
+26F1.5_BC13003_GFPryIII_l-1_1bi.jpg	WBGene00001719	Expr5345
+26F1.5_BC13003_GFPryIII_l-2_1bi.jpg	WBGene00001719	Expr5345
+26F4.3_BC12833_GFP_l-2_1.jpg	WBGene00004400	Expr5877
+26F4.8_BC12504_GFP_e-1_1bi.jpg	WBGene00005011	Expr5881
+27D6.6_BC12285_GFPstein_a-1_1bi.jpg	WBGene00005070	Expr5357
+27D6.6_BC12285_GFPstein_l-3_1bi.jpg	WBGene00005070	Expr5357
+27D9.5_BC11206_GFPI_a-1_1bi.jpg	WBGene00017864	Expr5890
+27D9.5_BC11206_GFPI_l-2_1Ch1.jpg	WBGene00017864	Expr5890
+28C12.4_BC13709_GFP_a-1_1.jpg	WBGene00005046	Expr5895
+28C12.7_BC14817_GFPstein_a-2_1and2bi.jpg	WBGene00005048	Expr5899
+28H8.11_BC10770_GFPI_l-2_3Ch1.jpg	WBGene00016201	Expr5369
+29E6.1_BC10642_GFPI_a-3_1bi.jpg	WBGene00002827	Expr5376
+29G9.5_BC11053_GFP_l-1_1bi.jpg	WBGene00004502	Expr5917
+29G9.5_BC11053_GFP_l-2_1.jpg	WBGene00004502	Expr5917
+29G9.5_BC11053_GFP_l-4_1bi.jpg	WBGene00004502	Expr5917
+30H6.2_BC12847_GFPryIII_a-1_1.jpg	WBGene00006487	Expr5393
+30H6.2_BC12847_GFPryIII_l-1_1.jpg	WBGene00006487	Expr5393
+C30f12.1_BC12665_GFP_a-1_3bi.jpg	WBGene00016260	Expr5385
+31A11.6_BC14770_GFPstein_a-1_1prj.jpg	WBGene00007834	Expr5395
+31A11.6_BC14770_GFPstein_a-1_2bi.jpg	WBGene00007834	Expr5395
+31A11.6_BC14770_GFPstein_a-1_3prj.jpg	WBGene00007834	Expr5395
+33H2.1_BC11495_GFP_l-1_1.jpg	WBGene00001049	Expr5942
+33H2.1_BC11495_GFP_l-2_1bi.jpg	WBGene00001049	Expr5942
+33H2.1_BC11495_GFP_l-2_2bi.jpg	WBGene00001049	Expr5942
+C33H5.18a_BC12993_GFP_a-1_1bi.jpg	WBGene00016384	Expr5412
+C33H5.18a_BC12993_GFP_a-2_1.jpg	WBGene00016384	Expr5412
+C33H5.18a_BC12993_GFP_a-3_1.jpg	WBGene00016384	Expr5412
+C33H5.18a_BC12993_GFP_a-4_1bi.jpg	WBGene00016384	Expr5412
+35B1.1_BC12736_GFP_l-1_1.jpg	WBGene00006701	Expr5430,Expr5431
+35B1.1_BC12994_GFPVIII_l-1_2bi.jpg	WBGene00006701	Expr5430
+35B1.1_BC12994_GFPVIII_l-2_2bi.jpg	WBGene00006701	Expr5430
+35D10.9_BC11960_GFPXV_L-1and2_1bi.jpg	WBGene00000418	Expr5438
+35D10.9_BC11960_GFPXV_l-1_3bi.jpg	WBGene00000418	Expr5438
+36A4.9_BC10604_GFPRI_a-1_1bi.jpg	WBGene00007969	Expr5439
+36A4.9_BC10604_GFPRI_a-1_3bi.jpg	WBGene00007969	Expr5439
+36A4.9_BC10604_GFPRI_l-1_2bi.jpg	WBGene00007969	Expr5439
+36A4.9_BC10604_GFPryII_a-1_3bi.jpg	WBGene00007969	Expr5439
+36A4.9_BC10604_GFPryII_a-1_4pr.jpg	WBGene00007969	Expr5439
+36A4.9_BC10604_GFPryII_e-1_1bi.jpg	WBGene00007969	Expr5439
+36A4.9_BC10604_GFPryII_l-1_2bi.jpg	WBGene00007969	Expr5439
+36E8.3_BC12526_GFPXI_a-1_1pr.jpg	WBGene00007982	Expr5450
+36E8.5_BC11439_GFP_a-1_1bi.jpg	WBGene00006537	Expr5453
+36E8.5_BC11439_GFP_a-2_1bi.jpg	WBGene00006537	Expr5453
+36E8.5_BC11439_GFP_a-3_1.jpg	WBGene00006537	Expr5453
+36E8.5_BC11439_GFP_l-1_1bi.jpg	WBGene00006537	Expr5453
+36E8.5_BC11439_GFP_l-2_1bi.jpg	WBGene00006537	Expr5453
+36E8.5_BC11439_GFP_l-3_1bi.jpg	WBGene00006537	Expr5453
+37A4.8_BC10101_GFP_e-1_1crop.jpg	WBGene00002169	Expr5976
+37H5.9b_BC13411_GFP_l-1_1.jpg	WBGene00003528	Expr5468
+39F7.1_BC13972_GFP_a-1_1and2.jpg	WBGene00016538	Expr5474
+40C9.5_BC13535_GFPryIV_l-1_1prbi.jpg	WBGene00006412	Expr5479
+41D11.2_BC10855_GFPI_l-1_3Ch1.jpg	WBGene00001231	Expr5482
+42C1.14_BC15358_GFP_a-3_2bi.jpg	WBGene00004448	Expr5485
+42E11.2a_DM13516_4D_X0398L03.jpg	WBGene00009632	Expr6045
+42E11.2a_DM13516_4D_X0483L13.jpg	WBGene00009632	Expr6045
+42E11.2a_DM13516_4D_X0505L16.jpg	WBGene00009632	Expr6045
+42E11.2a_DM13516_4D_X0576L16.jpg	WBGene00009632	Expr6045
+42E11.2a_DM13516_4D_X0647L15.jpg	WBGene00009632	Expr6045
+42E11.2a_DM13516_4D_X0718L12.jpg	WBGene00009632	Expr6045
+43C3.3_BC15137_GFPDIC_l-2_1.jpg	WBGene00001123	Expr5491
+45E1.6_BC12400_GFP_l-1_2bi.jpg	WBGene00001945	Expr6076
+45E1.6_BC12400_GFP_l-2_1bi.jpg	WBGene00001945	Expr6076
+45G2.1_BC13689_GFP_a-1_1.jpg	WBGene00003520	Expr6081
+46F3.1_BC12270_GFPXIV_e-1_1bi.jpg	WBGene00000449	Expr6090
+46F3.1_BC12270_GFPXIV_l-3_1bi.jpg	WBGene00000449	Expr6090
+46H5.4_BC13484_GFP_l-1_1.jpg	WBGene00018520	Expr6094
+47A10.6_BC12012_GFPXIV_l-3_1prj.jpg	WBGene00008128	Expr5521
+47A10.6_BC12012_GFPXIV_l-4_1bi.jpg	WBGene00008128	Expr5521
+47A10.6_BC12597_GFPstein_l-1_1prj.jpg	WBGene00008128	Expr5523
+47A10.6_BC12597_GFPstein_l-2_1.jpg	WBGene00008128	Expr5523
+47A10.6_BC12597_GFPstein_l-2_3prj.jpg	WBGene00008128	Expr5523
+47D2.7_BC14755_GFPstein_l-1_2bi.jpg	WBGene00018558	Expr6106
+47D2.7_BC14755_GFPstein_l-1_3bi.jpg	WBGene00018558	Expr6106
+47D2.7_BC14755_GFPstein_l-3_2bi.jpg	WBGene00018558	Expr6106
+47D2.7_BC14755_GFPstein_l-3_4bi.jpg	WBGene00018558	Expr6106
+47D2.7_BC14755_GFPstein_l-4_1prj17.jpg	WBGene00018558	Expr6106
+48E3.1a_BC13884_GFP_e-1_1.jpg	WBGene00001637	Expr6110
+48E3.3_BC13291_GFP_a-head.jpg	WBGene00018604	Expr6111
+48E3.3_BC13291_GFP_a2.jpg	WBGene00018604	Expr6111
+53E2.1_BC10231_GFP_a--_12and13.jpg	WBGene00018757	Expr6154
+54A5.3a_BC10733_GFPI_l-1-1bi.jpg	WBGene00018788	Expr6166
+54A5.3a_BC10733_GFPI_l-2_1bi.jpg	WBGene00018788	Expr6166
+54A5.3a_BC10733_GFPI_l-2_2.jpg	WBGene00018788	Expr6166
+54A5.3a_BC10733_GFPI_l-3_1.jpg	WBGene00018788	Expr6166
+54A5.3a_BC10853_GFPI_a-3_1bi.jpg	WBGene00018788	Expr6165
+54A5.3a_BC10853_GFPI_l-1_1.jpg	WBGene00018788	Expr6165
+54A5.3a_BC10853_GFP_a-1_1Ch1.jpg	WBGene00018788	Expr6165
+54D10.10_BC13365_GFP_a_head.jpg	WBGene00008304	Expr5585
+54D10.10_BC13365_GFP_a_tail.jpg	WBGene00008304	Expr5585
+54D8.3_BC11202_GFPI_l-2_1bi.jpg	WBGene00000107	Expr6177
+54G8.2_BC11552_GFPI_a-2_2Ch1.jpg	WBGene00000960	Expr6186
+55A12.7_BC11760_GFPIV_l-1_2.jpg	WBGene00000150	Expr6190
+55A12.7_BC11760_GFPIV_l-2_1.jpg	WBGene00000150	Expr6190
+55A12.7_BC11760_GFPIV_l-4_2.jpg	WBGene00000150	Expr6190
+55A12.7_BC11760_GFPIV_l-4_5bi.jpg	WBGene00000150	Expr6190
+56F10.3_BC13073_GFP_a-1_1.jpg	WBGene00018986	Expr6228
+56F10.3_BC13073_GFP_a-2_1.jpg	WBGene00018986	Expr6228
+57G9.4_BC12200_GFPstein_l-3_1and2bi.jpg	WBGene00010220	Expr6244
+57G9.4_BC12200_GFPstein_l-3_3bi.jpg	WBGene00010220	Expr6244
+58A6.11_BC14700_GFPstein_a-1_1bi.jpg	WBGene00019028	Expr6246
+58F6.4_BC14248_GFP_l-1_1bi.jpg	WBGene00004338	Expr6253
+88.5_BC13172_GFP_a-1_1.jpg	WBGene00010908	Expr6438
+88.5_BC13172_GFP_a-1_2bi.jpg	WBGene00010908	Expr6438
+88.5_BC13172_GFP_l-1_1.jpg	WBGene00010908	Expr6438
+C7.1_BC11537_GFPIV_l-1_1bi.jpg	WBGene00006428	Expr5001
+C7.1_BC11537_GFPIV_l-1_2bi.jpg	WBGene00006428	Expr5001
+C7.1_BC11537_GFPIV_l-1_2pr.jpg	WBGene00006428	Expr5001
+H6.10_BC13729_GFP_a-1_1.jpg	WBGene00005032	Expr5005
+H6.10_BC13729_GFP_a-2_1.jpg	WBGene00005032	Expr5005
+H6.11_BC12595_GFP_a-1_1.jpg	WBGene00005033	Expr5006
+H6.11_BC12595_GFP_a-2_1.jpg	WBGene00005033	Expr5006

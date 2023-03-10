@@ -1,0 +1,372 @@
+#!/usr/bin/perl
+
+# check go curation tables for IDs that have been deprecated in /home/acedb/ranjana/GO/ontology/gene_ontology_edit.obo
+# which is updated when ranjana runs the wrapper.pl to create go curation data
+# for uploading to go.  2007 08 21
+#
+# also check for alt_id.  for Ranjana.  2007 10 25
+#
+# changed for gop_ phenote tables.  2009 04 13
+#
+# 0 2 * * sun /home/postgres/work/pgpopulation/go/go_curation/check_obsoletes.pl
+#
+# Removed from cronjob, Ranjana is looking into it and will run manually.  Moved to 
+# /home/acedb/ranjana/Variation_Phenotype2GO/check_obsoletes.pl 
+# 2011 06 03
+
+
+
+
+use strict;
+use diagnostics;
+use Jex; # &getDate(); &mailer();
+use DBI;
+
+my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n";
+
+
+chdir('/home/postgres/work/pgpopulation/go/go_curation') or die "Cannot go to /home/postgres/work/pgpopulation/go/go_curation ($!)";
+
+my %terms;
+my %obsolete;
+my %altid;
+my %curated_terms;
+
+my $date = &getDate();
+
+&getObsoleteTerms(); 
+&getCuratedTerms();
+
+
+sub getCuratedTerms {			# get data from gop_ tables  2009 04 13
+  my $result = $dbh->prepare( "SELECT gop_goid.joinkey, gop_goid.gop_goid, gop_wbgene.gop_wbgene, gop_curator_evidence.gop_curator_evidence FROM gop_goid, gop_wbgene, gop_curator_evidence WHERE gop_goid.joinkey = gop_wbgene.joinkey AND gop_goid.joinkey = gop_curator_evidence.joinkey ;");		# changed for phenote tables
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  my %results;
+  while (my @row = $result->fetchrow) { 
+    if ($obsolete{$row[1]}){ $results{$row[3]}{"obsolete"}{$row[2]}{$row[1]}++; }
+    elsif ($altid{$row[1]}){ $results{$row[3]}{"altid"}{$row[2]}{$row[1]}++; }
+  } # while (my @row = $result->fetchrow) 
+
+  my $mail_body = '';
+  foreach my $curator (sort keys %results) {
+    foreach my $type (sort keys %{ $results{$curator} }) {
+      foreach my $wbgene (sort keys %{ $results{$curator}{$type} }) {
+        my @goids = sort keys %{ $results{$curator}{$type}{$wbgene} };
+        my $goids = join", ", @goids;
+        my $printCurator = $curator;
+        if ($printCurator eq 'WBPerson1843') { $printCurator = 'Kimberly'; }
+        elsif ($printCurator eq 'WBPerson324') { $printCurator = 'Ranjana '; }
+        $mail_body .= "$printCurator\t$type\t$wbgene\t$goids\n";
+  } } }
+
+  my $flatfile = 'go_deprecated.txt';
+  open (OUT, ">>$flatfile") or die "Cannot open $flatfile : $!";
+  unless ($mail_body) { $mail_body = "Checked Obsolete Terms, there are no obsolete terms curated\n"; }
+  if ($mail_body) { 
+#     my $user = 'automatic_script@minerva.caltech.edu';
+    my $user = 'check_obsoletes.pl';
+    my $email = 'ranjana@its.caltech.edu, vanauken@its.caltech.edu';
+#     my $email = 'azurebrd';
+    my $subject = 'Deprecated Go Term';
+    &mailer($user, $email, $subject, $mail_body);
+    print OUT "$mail_body\n\n";
+  } # if ($mail_body)
+  close (OUT) or die "Cannot close $flatfile : $!";
+} # sub getCuratedTerms
+
+sub getObsoleteTerms {
+  my $obs_file = '/home/acedb/ranjana/GO/ontology/gene_ontology_edit.obo';
+  $/ = "";
+  open (OBS, "<$obs_file") or die "Cannot open $obs_file : $!";
+  while (my $entry = <OBS>) {
+    if ($entry =~ m/alt_id: true/) { 
+      my ($name) = $entry =~ m/name: (.+)\n/;
+      my ($id) = $entry =~ m/id: (GO:\d+)\n/;
+      $altid{$id} = $name; }
+    if ($entry =~ m/is_obsolete: true/) { 
+      my ($name) = $entry =~ m/name: (.+)\n/;
+      my ($id) = $entry =~ m/id: (GO:\d+)\n/;
+      $obsolete{$id} = $name; }
+  } # while (my $entry = <OBS>)
+  close (OBS) or die "Cannot close $obs_file : $!";
+  $/ = "\n";
+} # sub getObsoleteTerms
+
+
+__END__
+
+sub OLDgetCuratedTerms {			# get from got_order type tables  2005 03 31
+  my @tables = qw( got_bio_goid got_cell_goid got_mol_goid ); 
+  foreach my $table (@tables) {
+    my $result = $conn->exec( "SELECT * FROM $table WHERE joinkey ~ '[A-Za-z]' AND joinkey != 'cgc3' AND joinkey != 'abcd' AND joinkey != 'test-1' AND joinkey != 'asdf' AND joinkey != 'zk512.1' AND joinkey != 'WBGene00000000' ORDER BY got_timestamp ;");	# changed this so terms are there only if they have changed, so can't look down the order at the latest timestamp data.  2006 12 06
+    my %filter = ();
+    while (my @row = $result->fetchrow) { 
+#       if ($ignore{$row[0]}) { next; }			# stuff that got to got_order 1 can be ignored
+      $filter{$row[0]}{$row[1]} = $row[2];
+#       if ($row[1] == 1) { $ignore{$row[0]}++; }		# stuff that got to got_order 1 can be ignored
+    } # while (my @row = $result->fetchrow) 
+    foreach my $joinkey (sort keys %filter) {
+      foreach my $order (sort keys %{ $filter{$joinkey}}) {
+        next unless $filter{$joinkey}{$order};
+        my $goid = $filter{$joinkey}{$order};
+        if ($goid) {
+          my @ids = $goid =~ m/(\d+)/g;
+          foreach my $id (@ids) { $id = 'GO:' . $id; push @{ $curated_terms{$id} }, $joinkey; } } } }
+  } # foreach my $table (@tables)
+} # sub OLDgetCuratedTerms
+
+
+sub OLDdealWithDeprecatedTerms {
+  &getObsoleteTerms(); 
+  &getCuratedTerms();
+#   my $flatfile = '/home/postgres/public_html/go_deprecated.txt';
+  my $flatfile = 'go_deprecated.txt';
+  open (OUT, ">>$flatfile") or die "Cannot open $flatfile : $!";
+
+  my $mail_body = '';				# stuff to email Ranjana
+  my $carol_body = ''; my $ranjana_body = ''; my $kimberly_body = '';	# separate parts by curator
+
+  my %curators;					# hash of curators by loci (joinkey) in postgres
+  my $result = $conn->exec( "SELECT * FROM got_curator;" );
+  while (my @row = $result->fetchrow) { $curators{$row[0]} = $row[1]; } 
+
+  foreach my $ids (sort keys %obsolete) {
+    if ($curated_terms{$ids}) { 
+      foreach my $loci (@{ $curated_terms{$ids}}) { 
+        if ($curators{$loci} =~ m/Carol/) { $carol_body .= "OBSOLETE\tCarol    \t$loci\t$ids $obsolete{$ids}\n"; }
+        elsif ($curators{$loci} =~ m/Ranjana/) { $ranjana_body .= "OBSOLETE\tRanjana \t$loci\t$ids $obsolete{$ids}\n"; }
+        elsif ($curators{$loci} =~ m/Kimberly/) { $kimberly_body .= "OBSOLETE\tKimberly\t$loci\t$ids $obsolete{$ids}\n"; }
+        else { $mail_body .= "OBSOLETE\tUnknown\t$loci\t$ids $obsolete{$ids}\n" }	# not the suppossed three
+    } }
+  } # foreach my $ids (sort keys %obsolete)
+
+  foreach my $ids (sort keys %altid) {
+    if ($curated_terms{$ids}) { 
+      foreach my $loci (@{ $curated_terms{$ids}}) { 
+        if ($curators{$loci} =~ m/Carol/) { $carol_body .= "Secondary ID\tCarol \t$loci\t$ids $altid{$ids}\n"; }
+        elsif ($curators{$loci} =~ m/Ranjana/) { $ranjana_body .= "Secondary ID\tRanjana \t$loci\t$ids $altid{$ids}\n"; }
+        elsif ($curators{$loci} =~ m/Kimberly/) { $kimberly_body .= "Secondary ID\tKimberly\t$loci\t$ids $altid{$ids}\n"; }
+        else { $mail_body .= "Secondary ID\tUnknown\t$loci\t$ids $altid{$ids}\n" }	# not the suppossed three
+    } }
+  } # foreach my $ids (sort keys %altid)
+
+  $mail_body .= $kimberly_body; $mail_body .= $carol_body; $mail_body .= $ranjana_body;
+
+  unless ($mail_body) { $mail_body = "Checked Obsolete Terms, there are no obsolete terms curated\n"; }
+  if ($mail_body) { 
+    my $user = 'automatic_script@minerva.caltech.edu';
+    my $email = 'ranjana@its.caltech.edu, vanauken@its.caltech.edu';
+#     my $email = 'azurebrd';
+    my $subject = 'Deprecated Go Term';
+    &mailer($user, $email, $subject, $mail_body);
+    print OUT "$mail_body\n\n";
+  } # if ($mail_body)
+  
+  close (OUT) or die "Cannot close $flatfile : $!";
+} # sub OLDdealWithDeprecatedTerms
+
+
+sub getNewOntologies {
+  system(`wget http://www.geneontology.org/ontology/function.ontology`);
+  system(`wget http://www.geneontology.org/ontology/component.ontology`);
+  system(`wget http://www.geneontology.org/ontology/process.ontology`);
+  system(`wget ftp://ftp.geneontology.org/pub/go/ontology/GO.defs`);	# for Erich's stuff 2005 09 15
+} # sub getNewOntologies
+
+sub erichStuff {
+  my $date = &getSimpleSecDate();
+  my $directory = '/home/postgres/work/pgpopulation/go/go_curation';
+  my $go_file = $directory . '/old_ace/go_terms_' . $date . '.ace';
+  my $location_of_latest = '/home/postgres/public_html/cgi-bin/data/go_terms_latest.ace';
+  unlink ("$location_of_latest") or die "Cannot unlink $location_of_latest : $!";	# unlink symlink to latest
+  `${directory}/erichGo2ace.pl $directory > $go_file`;
+  symlink("$go_file", "$location_of_latest") or warn "cannot symlink $location_of_latest : $!";  
+  my @old_files = </home2/postgres/work/pgpopulation/go/go_curation/old_ace/go_terms_*>;	# get a list of old files to delete 2007 08 16
+  `rm $old_files[0]`;		# delete the oldest file so there's always the same number of copies 2007 08 16
+} # sub erichStuff
+
+sub moveOntologyFiles {
+  rename ("/home/postgres/work/pgpopulation/go/go_curation/function.ontology", "/home/postgres/work/pgpopulation/go/go_curation/old_ontology/function.ontology");
+  rename ("/home/postgres/work/pgpopulation/go/go_curation/component.ontology", "/home/postgres/work/pgpopulation/go/go_curation/old_ontology/component.ontology");
+  rename ("/home/postgres/work/pgpopulation/go/go_curation/process.ontology", "/home/postgres/work/pgpopulation/go/go_curation/old_ontology/process.ontology");
+  rename ("/home/postgres/work/pgpopulation/go/go_curation/GO.defs", "/home/postgres/work/pgpopulation/go/go_curation/old_ontology/GO.defs");
+} # sub moveOntologyFiles
+
+sub populatePostgres {
+  my $insertfile = '/home/postgres/work/pgpopulation/go/go_curation/insertfile.pl';
+  open (INS, ">$insertfile") or die "Cannot create $insertfile : $!";
+  print INS "#!\/usr\/bin\/perl -w\n";
+  print INS "\n";
+  print INS "use lib qw( \/usr\/lib/perl5\/site_perl\/5.6.1\/i686-linux\/ );\n";
+  print INS "use Pg;\n";
+  print INS "\n";
+  print INS "\$conn = Pg::connectdb(\"dbname=testdb\");\n";
+  print INS "die \$conn->errorMessage unless PGRES_CONNECTION_OK eq \$conn->status;\n\n";
+  print INS "my \$result = \$conn\->exec( \"DELETE FROM got_goterm;\");\n";
+  print INS "\$result = \$conn\->exec( \"DELETE FROM got_obsoleteterm;\");\n";
+  
+  foreach my $ids (sort keys %obsolete) {
+    my $filtered_id = &filterForPostgres($ids);
+    my $filtered_obsolete = &filterForPostgres($obsolete{$ids});
+    print INS "\$result = \$conn\->exec( \"INSERT INTO got_obsoleteterm VALUES (\'$filtered_id\', \'$filtered_obsolete\')\");\n";
+  } # foreach my $ids (sort keys %obsolete)
+  
+  foreach my $ids (sort keys %terms) {
+    my $filtered_id = &filterForPostgres($ids);
+    my $filtered_term = &filterForPostgres($terms{$ids});
+    print INS "\$result = \$conn\->exec( \"INSERT INTO got_goterm VALUES (\'$filtered_id\', \'$filtered_term\')\");\n";
+  } # foreach my $ids (sort keys %terms)
+  
+  close (INS) or die "Cannot close $insertfile : $!";
+  chmod 0755, $insertfile;
+  system("$insertfile");
+} # sub populatePostgres
+
+sub readOntologies {
+  my @ontologies = </home/postgres/work/pgpopulation/go/go_curation/*.ontology>; 
+  foreach my $ontology (@ontologies) {
+    open (IN, "<$ontology") or die "Cannot open $ontology : $!";
+    while ($line = <IN>) {
+      if ($line =~ m/GO:/) { &getGoTerm($line); } 	# if it has a go term, put in hash
+  
+      if ($line =~ m/^  %obsolete/) {	# start reading obsolete terms
+        $line = <IN>;			# read first obsolete term
+        while ($line !~ m/^  %/) {	# until it matches the next set
+            # if it has an obsolete term, put in obsolete hash
+          if ($line =~ m/GO:/) { &getObsoleteTerm($line); } 
+          $line = <IN>;			# read more terms until no longer obsolete
+        } # while ($line !~ m/^  %/)
+  
+          # no longer obsolete, process good term then exit loop and process other terms
+        if ($line =~ m/GO:/) { &getGoTerm($line); } 	# if it has a go term, put in hash
+      } # if ($line =~ m/^  %obsolete/)
+    } # while (my $line = <IN>)
+    close (IN) or die "Cannot close $ontology : $!";
+  } # foreach my $ontology (@ontologies)
+} # sub readOntologies
+
+sub readOldOntologies {
+  my @old_ontologies = </home/postgres/work/pgpopulation/go/go_curation/old_ontology/*.ontology>; 
+  foreach my $ontology (@old_ontologies) {
+    open (IN, "<$ontology") or die "Cannot open $ontology : $!";
+    while ($line = <IN>) {
+      if ($line =~ m/GO:/) { &getOldGoTerm($line); } 	# if it has a go term, put in hash
+  
+      if ($line =~ m/^  %obsolete/) {	# start reading obsolete terms
+        $line = <IN>;			# read first obsolete term
+        while ($line !~ m/^  %/) {	# until it matches the next set
+            # if it has an obsolete term, put in obsolete hash
+          if ($line =~ m/GO:/) { &getOldObsoleteTerm($line); } 
+          $line = <IN>;			# read more terms until no longer obsolete
+        } # while ($line !~ m/^  %/)
+  
+          # no longer obsolete, process good term then exit loop and process other terms
+        if ($line =~ m/GO:/) { &getOldGoTerm($line); } 	# if it has a go term, put in hash
+      } # if ($line =~ m/^  %obsolete/)
+    } # while (my $line = <IN>)
+    close (IN) or die "Cannot close $ontology : $!";
+  } # foreach my $ontology (@ontologies)
+} # sub readOldOntologies
+
+
+sub getGoTerm {
+  my $line = shift;
+  my @terms = split /[<%]/, $line;
+  foreach my $term (@terms) {
+    if ($term =~ m/^ ?(.*) ; (GO:\d+) ?/) { $terms{$2} = $1; }
+  } # foreach my $term (@terms)
+} # sub getGoTerm
+
+sub getObsoleteTerm {
+  my $line = shift;
+  my @terms = split /[<%]/, $line;
+  foreach my $term (@terms) {
+    if ($term =~ m/^ ?(.*) ; (GO:\d+) ?/) { $obsolete{$2} = $1; }
+  } # foreach my $term (@terms)
+} # sub getObsoleteTerm
+
+sub filterForPostgres { # filter values for postgres
+  my $value = shift;
+  $value =~ s/\'/''/g;
+  $value =~ s/\$/\\\$/g;
+  return $value;
+} # sub filterForPostgres
+
+__END__
+
+sub getCuratedTermsOldStaticTables {
+  my @tables = qw(got_bio_goid1 got_bio_goid2 got_bio_goid3 got_bio_goid4 
+                  got_cell_goid1 got_cell_goid2 got_cell_goid3 got_cell_goid4 
+                  got_mol_goid1 got_mol_goid2 got_mol_goid3 got_mol_goid4 ); 
+  foreach my $table (@tables) {
+    my $result = $conn->exec( "SELECT * FROM $table;" );
+    while (my @row = $result->fetchrow) { 
+      if ($row[1]) {
+        my @ids = $row[1] =~ m/(\d+)/g;
+#         foreach my $id (@ids) { $id = 'GO:' . $id; $curated_terms{$id}++; }
+        foreach my $id (@ids) { $id = 'GO:' . $id; push @{ $curated_terms{$id} }, $row[0]; }
+      } # if ($row[1])
+    } # while (my @row = $result->fetchrow) 
+  } # foreach my $table (@tables)
+} # sub getCuratedTerms
+
+sub dealWithDeprecatedTerms2002way {
+  &getCuratedTerms();
+#   foreach my $curated_term (sort keys %curated_terms) { print "-=${curated_term}=-\n"; }
+  my $flatfile = '/home/postgres/public_html/go_deprecated.txt';
+  open (OUT, ">>$flatfile") or die "Cannot open $flatfile : $!";
+
+  my $mail_body = '';				# stuff to email Ranjana
+  
+  foreach my $ids (sort keys %obsolete) {
+    unless ($old_obsolete{$ids}) { 
+      print OUT "$date\tNEW OBSOLETE\t$ids $obsolete{$ids}\n"; 
+      if ($curated_terms{$ids}) { foreach my $loci (@{ $curated_terms{$ids}}) { $mail_body .= "NEW OBSOLETE\t$loci\t$ids $obsolete{$ids}\n"; } }
+    } # unless ($old_obsolete{$ids}) 
+  } # foreach my $ids (sort keys %obsolete)
+  
+  foreach my $ids (sort keys %terms) {
+  #   unless ($old_terms{$ids}) { print "NEW TERM $ids $terms{$ids}\n"; }
+  } # foreach my $ids (sort keys %terms)
+  
+  foreach my $ids (sort keys %old_obsolete) {
+    unless ($obsolete{$ids}) { 
+      print OUT "$date\tDELETED OBSOLETE\t$ids $old_obsolete{$ids}\n"; 
+      if ($curated_terms{$ids}) { foreach my $loci (@{ $curated_terms{$ids}}) { $mail_body .= "DELETED OBSOLETE\t$loci\t$ids $old_obsolete{$ids}\n"; } }
+    } # unless ($obsolete{$ids}) 
+  } # foreach my $ids (sort keys %old_obsolete)
+  
+  foreach my $ids (sort keys %old_terms) {
+    unless ($terms{$ids}) { 
+      print OUT "$date\tDELETED TERM\t$ids $old_terms{$ids}\n"; 
+      if ($curated_terms{$ids}) { foreach my $loci (@{ $curated_terms{$ids}}) { $mail_body .= "DELETED TERM\t$loci\t$ids $old_terms{$ids}\n"; } }
+    } # unless ($terms{$ids}) 
+  } # foreach my $ids (sort keys %old_terms)
+  
+  print OUT "\n\n";
+  if ($mail_body) { 
+    my $user = 'automatic_script@minerva.caltech.edu';
+    my $email = 'ranjana@its.caltech.edu, vanauken@its.caltech.edu';
+    my $subject = 'Deprecated Go Term';
+    &mailer($user, $email, $subject, $mail_body);
+  } # if ($mail_body)
+  
+  close (OUT) or die "Cannot close $flatfile : $!";
+} # sub sub dealWithDeprecatedTerms2002way
+
+sub getOldGoTerm {
+  my $line = shift;
+  my @terms = split /[<%]/, $line;
+  foreach my $term (@terms) {
+    if ($term =~ m/^ ?(.*) ; (GO:\d+) ?/) { $old_terms{$2} = $1; }
+  } # foreach my $term (@terms)
+} # sub getOldGoTerm
+
+sub getOldObsoleteTerm {
+  my $line = shift;
+  my @terms = split /[<%]/, $line;
+  foreach my $term (@terms) {
+    if ($term =~ m/^ ?(.*) ; (GO:\d+) ?/) { $old_obsolete{$2} = $1; }
+  } # foreach my $term (@terms)
+} # sub getOldObsoleteTerm
+
