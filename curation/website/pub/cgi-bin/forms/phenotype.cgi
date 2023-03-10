@@ -2430,7 +2430,8 @@ sub writePgOaAndEmail {		# tacking on email here since need pgids from pg before
 #   }
 #   print qq(</table>);
 # UNCOMMENT FOR HISTORY
-  my $outfile = '/home/azurebrd/public_html/cgi-bin/data/phenotype_history.html';
+  my $outfile = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/pub/cgi-bin/data/phenotype_history.html';
+  # my $outfile = '/home/azurebrd/public_html/cgi-bin/data/phenotype_history.html';
   open (IN, "<$outfile") or die "Cannot open $outfile : $!";
   my $toOutput = <IN>;					# stuff to beginning of data at top of file
   foreach my $line (@historyAppend) {

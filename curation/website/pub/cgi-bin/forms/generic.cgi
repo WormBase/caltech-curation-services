@@ -98,7 +98,7 @@ my $ua = new LWP::UserAgent;
 my $query = new CGI;
 my $host = $query->remote_host();		# get ip address
 
-my $filesPath = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/pub/cgi-bin/generic_cgi/';
+my $filesPath = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/pub/cgi-bin/data/';
 
 &process();                     # see if anything clicked
 

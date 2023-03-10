@@ -1,0 +1,518 @@
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!-- $Id: index.html,v 1.104 2003/01/26 21:17:25 lstein Exp $-->
+<html>  
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">  
+    <meta name="GENERATOR" content="Mozilla/4.7 [en] (Win98; U) [Netscape]">  
+    <link rel="stylesheet" href="http://minerva.caltech.edu/~azurebrd/stylesheets/wormbase.css"> 
+    <title>WormBase - Home Page</title>  
+<link rel="stylesheet" href="http://www.wormbase.org/stylesheets/wormbase.css">
+</head>  
+
+<body>
+  <script type="text/javascript">
+<!--
+function c(p){location.href=p;return false;}
+// -->
+</script>
+<table border="0" cellpadding="4" cellspacing="1" width="100%">
+<tr>
+<td bgcolor="#b4cbdb" align="center" nowrap style="cursor:hand;" onClick="c('/')">
+			  <a href="http://www.wormbase.org" class="bactive"><font color="#FFFF99"><b>Home</b></font></a></td>
+<td bgcolor="#5870a3" align="center" nowrap style="cursor:hand;" onClick="c('/db/seq/gbrowse?source=wormbase')">
+			  <a href="http://www.wormbase.org/db/seq/gbrowse?source=wormbase" class="binactive"><font color="#FFFFFF">Browse Genome</font></a></td>
+<td bgcolor="#5870a3" align="center" nowrap style="cursor:hand;" onClick="c('/db/searches/blat')">
+			  <a href="http://www.wormbase.org/db/searches/blat" class="binactive"><font color="#FFFFFF">Blast / Blat</font></a></td>
+<td bgcolor="#5870a3" align="center" nowrap style="cursor:hand;" onClick="c('/db/searches/info_dump')">
+			  <a href="http://www.wormbase.org/db/searches/info_dump" class="binactive"><font color="#FFFFFF">Batch Downloads</font></a></td>
+<td bgcolor="#5870a3" align="center" nowrap style="cursor:hand;" onClick="c('/db/searches/strains')">
+			  <a href="http://www.wormbase.org/db/searches/strains" class="binactive"><font color="#FFFFFF">Markers &amp; Strains</font></a></td>
+<td bgcolor="#5870a3" align="center" nowrap style="cursor:hand;" onClick="c('/db/gene/gmap')">
+			  <a href="http://www.wormbase.org/db/gene/gmap" class="binactive"><font color="#FFFFFF">Genetic Maps</font></a></td>
+<td bgcolor="#5870a3" align="center" nowrap style="cursor:hand;" onClick="c('/db/searches/search_index')">
+			  <a href="http://www.wormbase.org/db/searches/search_index" class="binactive"><font color="#FFFFFF"><b>More Searches</b></font></a></td>
+</tr>
+</table><table cellpadding="0" width="100%" nowrap="1" cellspacing="1"
+border="0"><tr valign="top" class="white" nowrap="1"><td valign="MIDDLE"
+align="CENTER" width="50%"><h3></h3></td> <td
+align="right" cellspacing="1"><a href="/"><img alt border="0"
+src="http://www.wormbase.org/images/image_new_colour.jpg" /></a></td></tr></table><p>
+
+<!--#include virtual="header.shtml" -->
+<table width="100%" cellspacing="0" cellpadding="0" border="0">
+  <tr class="h2bg">
+    <td width="100%">
+      <br>
+  <h2 align="center">2-point mapping data examples</h2>
+    </td>
+  </tr>
+</table>
+<br>
+
+You need only give the names of the mapped genes if more than two
+genes are mentioned in the genotype.
+<br><br>
+
+The calculation line is designed to help us combine data correctly.
+It replicates some information from the Results line together with an
+initial keyword describing how the map distance calculation should be
+performed.  After the keyword should follow the numbers to be used in
+the calculation, by themselves without phenotypes.  Three commonly
+used types are given below, and a more extensive listing is also
+available.  In some cases the same calculation keyword may be
+appropriate even when a cross is done slightly differently, e.g.  when
+using a dominant gene in cis to a recessive one. <font color="blue">Almost all 2 point
+data reported for C. elegans thus far can be classified into a total
+of 10 categories or 19 different types</font>:<br><br>
+
+(1) A.  Recessive markers x and y, segregation from xy/++ hermaphrodites: 
+Types <font color="blue">1-5</font><br>
+(2) A'   Recessive markers x and y, segregation from xy+/++z, where z is 
+        tightly linked and z/z is lethal or otherwise not scored:
+Type <font color="blue">6</font><br>
+(3) B    Recessive markers, segregation from x+/+y hermaphrodites:
+Types <font color="blue">7-8</font><br>
+(4) C    Recessive markers, scored by backcross: xy/++ males crossed with
+        xy/xy hermaphrodites.  Usually only males scored:
+Types <font color="blue">9-10</font><br>
+(5) D    Recessive sex-linked markers, x+/+y hermaphrodites crossed with wild
+        males, male progeny scored:
+Types <font color="blue">11-12</font><br>
+(6) D'   Recessive sex-linked markers, xy/++ hermaphrodites crossed with wild
+        males, male progeny scored:
+Type <font color="blue">13</font><br>
+
+(7) E    One marker (d) is dominant or semidominant.  Segregation from x+/+d
+        hermaphrodites.  For Type 16 (Dom_semi), D = d/+, not d/d (as in sqt):
+Types <font color="blue">14-16</font><br> 
+
+(8) E'  One marker (d) is dominant, and either d or x is recessive lethal:
+Type <font color="blue">17</font><br>
+(9) F   Direct: single progeny picked and tested for genotype 
+        on both chromosomes:
+Type <font color="blue">18</font><br>
+(10) G   Complex:
+Type <font color="blue">19</font><br><br>
+Click to see the description of these 19 types.<br> 
+If desired, specific examples from the existing database, will be supplied by e-mail.
+<br><br>
+
+<hr>
+<A Href="http://minerva.caltech.edu/~azurebrd/cgi-bin/forms/2_pt_help.html#(1)"><Font>1.Full</Font></A>&nbsp;&nbsp;|&nbsp;&nbsp;
+<A Href="http://minerva.caltech.edu/~azurebrd/cgi-bin/forms/2_pt_help.html#(2)"><Font>2.One recombinant</Font></A>&nbsp;&nbsp;|&nbsp;&nbsp;
+<A Href="http://minerva.caltech.edu/~azurebrd/cgi-bin/forms/2_pt_help.html#(3)"><Font>3.Selected</Font></A>&nbsp;&nbsp;|&nbsp;&nbsp;
+<A Href="http://minerva.caltech.edu/~azurebrd/cgi-bin/forms/2_pt_help.html#(4)"><Font>4.One all</Font></A>&nbsp;&nbsp;|&nbsp;&nbsp;
+<A Href="http://minerva.caltech.edu/~azurebrd/cgi-bin/forms/2_pt_help.html#(5)"><Font>5.Recs all</Font></A>&nbsp;&nbsp;|&nbsp;&nbsp;
+<A Href="http://minerva.caltech.edu/~azurebrd/cgi-bin/forms/2_pt_help.html#(6)"><Font>6.One let</Font></A>&nbsp;&nbsp;|&nbsp;&nbsp;
+<A Href="http://minerva.caltech.edu/~azurebrd/cgi-bin/forms/2_pt_help.html#(7)"><Font>7.Tested</Font></A>&nbsp;&nbsp;|&nbsp;&nbsp;
+<A Href="http://minerva.caltech.edu/~azurebrd/cgi-bin/forms/2_pt_help.html#(8)"><Font>8.Selected trans</Font></A>&nbsp;&nbsp;|&nbsp;&nbsp;
+<A Href="http://minerva.caltech.edu/~azurebrd/cgi-bin/forms/2_pt_help.html#(9)"><Font>9.Backcross</Font></A>&nbsp;&nbsp;|&nbsp;&nbsp;
+<A Href="http://minerva.caltech.edu/~azurebrd/cgi-bin/forms/2_pt_help.html#(10)"><Font>10.Back one</Font></A>&nbsp;&nbsp;|&nbsp;&nbsp;
+<A Href="http://minerva.caltech.edu/~azurebrd/cgi-bin/forms/2_pt_help.html#(11)"><Font>11.Sex all</Font></A>&nbsp;&nbsp;|&nbsp;&nbsp;
+<A Href="http://minerva.caltech.edu/~azurebrd/cgi-bin/forms/2_pt_help.html#(12)"><Font>12.Sex one</Font></A>&nbsp;&nbsp;|&nbsp;&nbsp;
+<A Href="http://minerva.caltech.edu/~azurebrd/cgi-bin/forms/2_pt_help.html#(13)"><Font>13.Sex cis</Font></A>&nbsp;&nbsp;|&nbsp;&nbsp;
+<A Href="http://minerva.caltech.edu/~azurebrd/cgi-bin/forms/2_pt_help.html#(14)"><Font>14.Dom one</Font></A>&nbsp;&nbsp;|&nbsp;&nbsp;
+<A Href="http://minerva.caltech.edu/~azurebrd/cgi-bin/forms/2_pt_help.html#(15)"><Font>15.Dom selected</Font></A>&nbsp;&nbsp;|&nbsp;&nbsp;
+<A Href="http://minerva.caltech.edu/~azurebrd/cgi-bin/forms/2_pt_help.html#(16)"><Font>16.Dom semi</Font></A>&nbsp;&nbsp;|&nbsp;&nbsp;
+<A Href="http://minerva.caltech.edu/~azurebrd/cgi-bin/forms/2_pt_help.html#(17)"><Font>17.Dom let</Font></A>&nbsp;&nbsp;|&nbsp;&nbsp;
+<A Href="http://minerva.caltech.edu/~azurebrd/cgi-bin/forms/2_pt_help.html#(18)"><Font>18.Direct</Font></A>&nbsp;&nbsp;|&nbsp;&nbsp;
+<A Href="http://minerva.caltech.edu/~azurebrd/cgi-bin/forms/2_pt_help.html#(19)"><Font>19.Complex mixed</Font></A>&nbsp;&nbsp;|&nbsp;&nbsp;
+<hr> 
+
+<pre>
+Calculation     Data used       How calc is done
+-----------     ---------       ----------------
+Full            WT X Y XY       (2p-p^2)/2 = (X+Y)/(WT+X+Y+XY)
+One_recombinant WT X            (2p-p^2)/3 = X/(X+WT)
+Selected        X XY            (2p-p^2) = X/(X+XY)
+</pre>
+<br><br>
+Note that this is a guide for us on how to do the calculation; you do
+not need to submit a calculated distance.
+<br><br>
+
+<pre>
+--2 point data
+Mapper: Brenner S                       ! surname initials
+Date: 01/72                             ! just month and year
+Temp: 20
+Genotype: sma-4(e729) unc-32(e189)/+ +
+Mapped_genes: sma-4, unc-32
+Results: 928 WT, 9 Dpy, 8 Unc, 326 DpyUnc
+Calculation: Full 928 9 8 326
+
+--2 point data
+Mapper: Brenner S
+Date: 4/70
+Temp: 20
+Genotype: sma-2(e297) unc-36(e251) / + + 
+Mapped_genes: sma-2, unc-36
+Results: 482 WT, 2 Unc, 1 Sma, 117 SmaUnc      ! numbers with phenotypes
+Calculation: One_recombinant 482 2             ! see explanation above
+Comment: used One_recombinant not Full because
+    of deviation from Mendelian ratios         ! any text you want
+
+	
+--2 point data
+Mapper: Hodgkin JA
+Date: 01/98 
+Temp: 20 
+Mapped_genes: unc-42, let-560 
+Genotype: unc-42(e270) let-560(e2658) / + +
+Calculation: One_recombinant 700 10 
+Results: 700 WT, 10 Unc 
+Comment: 
+EMAIL : jah@mrc-lmb.cam.ac.uk 
+</pre>
+
+<h3>Notes for 2-point data</h3>
+
+Most measurements of linkage between pairs of
+loci in C. elegans have been made by scoring segregation in the
+progeny of a hermaphrodite which is a cis-heterozygote for two
+recessive mutations: for example, sma-4 unc-32 / + +, as in the case
+given below (Type 1).  This will produce four kinds of phenotypically
+distinguishable progeny: WT (Wild type), SmaUnc, Sma and Unc.
+<br><br>
+
+If all four progeny types are scored, linkage can be measured
+by the ratio of recombinant phenotypes (Sma and Unc) to total progeny,
+which is given by (2p - p^2)/2.
+<br>This is Type 1	(Full) , in the classification below.
+<br><br>
+
+If two of the phenotypic classes are hard to distinguish,
+or subviable, then linkage is determined by scoring just WT and one 
+recombinant phenotype.  For example, if Unc and SmaUnc were hard to
+distinguish, only WT and Sma would be counted.  The ratio of Sma to 
+(WT + Sma) is given by (2p - p^2)/3.
+<br>This is Type 2	(One_recombinant), in the classification below.
+<br><br>
+
+Initial measurements of linkage are often made by picking 
+individual animals in the progeny of a trans-heterozygous hermaphrodite,
+and determining their full genotype by progeny testing.  For example,
+Sma animals could be picked from the progeny of a hermaphrodite of
+genotype sma-4 + / + unc-32.   Those that produced only Sma progeny
+are sma-4 + / sma-4 + , whereas those that produce Sma and SmaUnc
+progeny are sma-4 unc-32 / sma-4 +.   The proportion of Sma animals
+that segregate SmaUnc is given by 2p/(1 + p).
+<br>This is Type 7	(Tested), in the classification below.
+<br><br>
+
+These three Types account for most of the 2_point_data listed
+in ACeDB.  In addition, a variety of alternative crosses and
+calculations have been used, to deal with special cases.  A total of
+19 different calculations have been used so far.  These are listed
+below, together with a specific example for each type.
+<br><br>
+
+<h3>Complete classification of two-factor data</h3> 
+
+<pre>
+   Phenotypic abbreviations used:  
+		WT = wild type
+		nonWT = viable non-wild-type, 
+		ALL = total viable progeny
+		X = x/x and xy/x+ (for recessive marker x)
+		Y = y/y and xy/+y (for recessive marker y)
+		XY = xy/xy
+		D = d/+ and d/d, dx/+ etc (for dominant marker d)
+		H = xy/x+ 
+--------------------------------------------------------------------
+
+	Type 		   Phenotypes		Calculation
+
+<B>A.  Recessive markers x and y, segregation from xy/++ hermaphrodites</B><p>
+<h2></h2>
+<a href="http://minerva.caltech.edu/~azurebrd/cgi-bin/forms/2_pt_data.cgi"><img alt border="0" src="new_left.gif"></a><Font color="blue"><A NAME="(1)">1. Full</A></Font>         WT X Y XY	    (2p-p^2)/2 = (X+Y)/(WT+X+Y+XY)<Br>
+   
+Example (Full):
+--2 point data
+Mapper: Brenner S
+Date: 01/72
+Temp: 20
+Genotype: sma-4(e729) unc-32(e189)/+ +
+Results: 928 WT, 9 Sma, 8 Unc, 326 SmaUnc
+Calculation: Full 928 9 8 326
+Comment: 
+
+<a href="http://minerva.caltech.edu/~azurebrd/cgi-bin/forms/2_pt_data.cgi"><img alt border="0" src="new_left.gif"></a><Font color="blue"><A NAME="(2)">2. One_recombinant</A></Font>          WT X     (2p-p^2)/3 = X/(WT+X)<Br>
+   
+Example (One_recombinant):
+--2 point data
+Mapper: Brenner S
+Date: 11/68
+Temp: 20
+Genotype: dpy-10(e128) rol-1(e91)/+ +
+Results: 1121 WT, 53 Rol, 377 Dpy & RolDpy
+Calculation: One_recombinant 1121 53
+Comment: Dpy and RolDpy not distinguishable
+
+<a href="http://minerva.caltech.edu/~azurebrd/cgi-bin/forms/2_pt_data.cgi"><img alt border="0" src="new_left.gif"></a><Font color="blue"><A NAME="(3)">3. Selected</A></Font>           X   XY     (2p-p^2) = X/(X+XY)<Br>
+  
+Example (Selected):
+--2 point data
+Mapper: Hartman PS
+Date: 02/81
+Temp: 20
+Genotype: dpy-5(e61) rad-1(mn155)/+ +					
+Results: 1 Dpy, 11 DpyRad
+Calculation: Selected 1 11
+Comment: non-Dpy were not scored
+
+<a href="http://minerva.caltech.edu/~azurebrd/cgi-bin/forms/2_pt_data.cgi"><img alt border="0" src="new_left.gif"></a><Font color="blue"><A NAME="(4)">4. One_all</A></Font>           X     ALL     (2p-p^2)/4 = X/ALL>
+
+Example (One_all):
+--2 point data
+Mapper: Meneely PM
+Date: 05/83
+Temp: 20
+Genotype: dpy-7(e88) unc-3(151)/+ +
+Results: 209 Dpy, 1954 total
+Calculation: One_all 209 1954
+Comment:
+
+<a href="http://minerva.caltech.edu/~azurebrd/cgi-bin/forms/2_pt_data.cgi"><img alt border="0" src="new_left.gif"></a><Font color="blue"><A NAME="(5)">5. Recs_all</A></Font>           X Y     ALL     (2p-p^2)/2 = (X+Y)/ALL<Br>
+				
+Example (Recs_all):
+--2 point data
+Mapper: Kusch M
+Date: 12/79
+Temp: 20
+Genotype: dpy-13(e184) unc-24(e138)/+ +
+Results: 44 Dpy, 40 Unc, 2085 WT & DpyUnc
+Calculation: Recs_all 44 40 2169
+Comment: WT and DpyUnc scored together, therefore appropriate 
+ calculation is Recs_all.  
+
+
+<B>A'   Recessive markers x and y, segregation from xy+/++z, where z is</B> 
+	<B>tightly linked and z/z is lethal or otherwise not scored.</B>
+
+<a href="http://minerva.caltech.edu/~azurebrd/cgi-bin/forms/2_pt_data.cgi"><img alt border="0" src="new_left.gif"></a><Font color="blue"><A NAME="(6)">6. One_let</A></Font>           X     ALL     (2p-p^2)/2 = X/ALL<Br>
+   
+Example (One_let):
+--2 point data
+Mapper: Rosenbluth RE
+Date: 05/89
+Temp: 20
+Genotype: let-344(s376) unc-46(e177)/unv-42(e270) ama-2(m323)
+Results: 1293 WT, 49 Unc-46, 26 Unc-42
+Calculation: One_let 49 1368
+Comment: ama-2(m323) is recessive lethal, linked in trans,
+ therefore One_let is appropriate calculation.
+
+
+
+<B>B    Recessive markers, segregation from x+/+y hermaphrodites</B>
+
+<a href="http://minerva.caltech.edu/~azurebrd/cgi-bin/forms/2_pt_data.cgi"><img alt border="0" src="new_left.gif"></a><Font color="blue"><A NAME="(7)">7. Tested</A></Font>           H     X     2p/(1+p) = H/X<Br>
+   
+Example (Tested):
+--2 point data
+Mapper: Rand JB
+Date: 11/88
+Temp: 20
+Genotype: unc-10(e102) +/+ dpy-6(e14)
+Results: 15 of 276 Unc-10 carried dpy-6
+Calculation: Tested 15 276
+Comment:
+
+<a href="http://minerva.caltech.edu/~azurebrd/cgi-bin/forms/2_pt_data.cgi"><img alt border="0" src="new_left.gif"></a><Font color="blue"><A NAME="(8)">8. Selected_trans</A></Font>           X     XY     p^2 = XY/(X+XY)<Br>
+   
+Example (Selected_trans):
+--2 point data
+Mapper: Sulston JE
+Date: 02/74
+Temp: 20
+Genotype: cat-2(e1112)/dpy-10(e128)
+Results: 327 Dpy, 19 CatDpy
+Calculation: Selected_trans 327 19
+Comment:
+
+   
+
+<B>C    Recessive markers, scored by backcross: xy/++ males crossed with</B>
+	<B>xy/xy hermaphrodites.  Usually only males scored.</B>
+
+<a href="http://minerva.caltech.edu/~azurebrd/cgi-bin/forms/2_pt_data.cgi"><img alt border="0" src="new_left.gif"></a><Font color="blue"><A NAME="(9)">9. Backcross</A></Font>           WT X Y XY     p = (X+Y)/(WT+X+Y+XY)<Br>
+   
+Example (Backcross):
+--2 point data
+Mapper: Hodgkin JA
+Date: 05/87
+Temp: 20
+Genotype: smg-2(e2008) unc-13(e51) x smg-2 unc-13/+ + males
+Results: (Males scored) 67 WT, 19 Smg, 14 Unc, 65 SmgUnc
+Calculation: Backcross 67 19 14 65
+Comment:  The Smg phenotype is scored easily only in males
+
+
+<a href="http://minerva.caltech.edu/~azurebrd/cgi-bin/forms/2_pt_data.cgi"><img alt border="0" src="new_left.gif"></a><Font color="blue"><A NAME="(10)">10. Back_one</A></Font>           WT X      p = X/(WT+X)<Br>
+  
+Example (Back_one):
+--2 point data
+Mapper: Hodgkin JA
+Date: 05/88
+Temp: 20
+Genotype: mab-12(e2166) unc-17(e113)/+ + males x mab-12 unc-17
+Results: 42 WT males, 8 Mab males, 6 Unc males, 21 MabUnc males
+Calculation: Back_one 42 8
+Comment: MabUnc and possibly Unc males underscored, therefore 
+ these are omitted from calculation.
+
+   
+
+<B>D    Recessive sex-linked markers, x+/+y hermaphrodites crossed with wild</B>
+	<B>males, male progeny scored.</B>
+
+<a href="http://minerva.caltech.edu/~azurebrd/cgi-bin/forms/2_pt_data.cgi"><img alt border="0" src="new_left.gif"></a><Font color="blue"><A NAME="(11)">11. Sex_all</A></Font>           WT X Y XY      p = (WT+XY)/(WT+X+Y+XY)<Br>
+  
+Example (Sex_all ):
+--2 point data
+Mapper: Baird SE
+Date: 11/89
+Temp: ?
+Genotype: him-5/+; ram-5(bx30) +/+ unc-3 x him-5(e1490) males
+Results: 149 Ram males, 207 Unc males, 1 WT male, 1 RamUnc male
+Calculation: Sex_all 1 149 207 1
+Comment:
+
+<a href="http://minerva.caltech.edu/~azurebrd/cgi-bin/forms/2_pt_data.cgi"><img alt border="0" src="new_left.gif"></a><Font color="blue"><A NAME="(12)">12. Sex_one</A></Font>           WT X      p = WT/(WT+X)<Br>
+  
+Example (Sex_one):
+--2 point data
+Mapper: Thierry-Mieg D
+Date: 05/88
+Temp: 20
+Genotype: unc-27(e155)/dpy-7(e155) unc-115 x wildtype males
+Results: 446 Unc-27 males, 256 Dpy-7Unc-115 males, 4 WT males,
+ 2 Unc-27Unc-115 males
+Calculation: Sex_one 4 446
+Comment: Unc-115 class is under-represented, therefore
+ calculation is based on Unc-27 and WT males only
+
+
+
+<B>D'   Recessive sex-linked markers, xy/++ hermaphrodites crossed with wild</B>
+ 	<B>males, male progeny scored.</B>
+
+<a href="http://minerva.caltech.edu/~azurebrd/cgi-bin/forms/2_pt_data.cgi"><img alt border="0" src="new_left.gif"></a><Font color="blue"><A NAME="(13)">13. Sex_cis</A></Font>           X		ALL	 p/2 = X/ALL<Br>
+
+Example (Sex_cis):
+--2 point data
+Mapper: Meneely PM
+Date: 03/78
+Temp: 20
+Genotype: lon-2(e678) dpy-6/+ +  x wildtype males
+Results: 163 Lon males, 6316 total males
+Calculation: Sex_cis 163 6316
+Comment:
+
+
+
+<B>E    One marker (d) is dominant or semidominant.  Segregation from x+/+d</B>
+	<B>hermaphrodites.  For Type 16 (Dom_semi), D = d/+, not d/d (as in sqt)</B>
+
+<a href="http://minerva.caltech.edu/~azurebrd/cgi-bin/forms/2_pt_data.cgi"><img alt border="0" src="new_left.gif"></a><Font color="blue"><A NAME="(14)">14. Dom_one</A></Font>           WT	nonWT		(2p-p^2)/4 = WT/(WT+nonWT)<Br>
+
+Example (Dom_one):
+--2 point data
+Mapper: Kusch M
+Date: 12/79
+Temp: 20
+Genotype: bli-6(mn4)/unc-24(e138)
+Results: 19 WT, 2467 Bli & Unc & BliUnc
+Calculation: Dom_one 19 2467
+Comment: mn4 is dominant
+
+<a href="http://minerva.caltech.edu/~azurebrd/cgi-bin/forms/2_pt_data.cgi"><img alt border="0" src="new_left.gif"></a><Font color="blue"><A NAME="(15)">15. Dom_selected</A></Font>           WT X			(2p-p^2) = WT/(WT+X)<Br>
+
+Example (Dom_selected):
+--2 point data
+Mapper: Golden JW
+Date: 08/82
+Temp: 20
+Genotype: sqt-1(e1350)/daf-22(m130)
+Results: 161 Daf, 31 daf-22/+
+Calculation: Dom_selected 31 161
+Comment:
+
+<a href="http://minerva.caltech.edu/~azurebrd/cgi-bin/forms/2_pt_data.cgi"><img alt border="0" src="new_left.gif"></a><Font color="blue"><A NAME="(16)">16. Dom_semi</A></Font>           XD   ALL	(p-p^2)/2 = XD/ALL<Br>
+  
+Example (Dom_semi):
+--2 point data
+Mapper: Laufer JS
+Date: 03/79
+Temp: 
+Genotype: sqt-2(sc3)/unc-4(e120)
+Results: 45 RolUnc, 472 total
+Calculation: Dom_semi 45 472
+Comment: Only animals of genotype sc3 e120/+ e120 are scored as
+ RolUnc. Double homozygotes (sc3 e120/sc3 e120) will be SqtUnc, which 
+ cannot be distinguished from Unc.  
+
+
+<B>E'  One marker (d) is dominant, and either d or x is recessive lethal</B>
+
+
+<a href="http://minerva.caltech.edu/~azurebrd/cgi-bin/forms/2_pt_data.cgi"><img alt border="0" src="new_left.gif"></a><Font color="blue"><A NAME="(17)">17. Dom_let</A></Font>           WT		ALL	(2p-p^2)/3 = WT/ALL<Br>
+  
+Example (Dom_let):
+--2 point data
+Mapper: Hodgkin JA
+Date: 12/92
+Temp: 20
+Genotype: dpy-25(e817)/let-552(e2542)
+Results: 3 WT, 615 Dpy
+Calculation: Dom_let 3 618
+Comment:
+
+<B>F   Direct: single progeny picked and tested for genotype</B> 
+	<B>on both chromosomes</B>
+
+<a href="http://minerva.caltech.edu/~azurebrd/cgi-bin/forms/2_pt_data.cgi"><img alt border="0" src="new_left.gif"></a><Font color="blue"><A NAME="(18)">18. Direct</A></Font><br>
+                   R = # recombinant chromosomes	p = R/T<br>
+                   T = # total chromosomes
+  
+Example (Direct):
+--2 point data
+Mapper: Jacobson LA
+Date: 05/83
+Temp: 16
+Genotype: dpy-10(e128)/cad-1(j1)
+Results: Of Dpy F2, scored for cad, 23 +/+, 15 +/-, 2 -/-
+Calculation: Direct 19 80
+Comment: 
+
+
+<B>G   Complex:</B>
+
+<a href="http://minerva.caltech.edu/~azurebrd/cgi-bin/forms/2_pt_data.cgi"><img alt border="0" src="new_left.gif"></a><Font color="blue"><A NAME="(19)">19. Complex_mixed</A></Font>           X	ALL	(2p-p^2)/5 = X/ALL<Br>
+
+Example (Complex_mixed):
+--2 point data
+Mapper: Meneely PM
+Date: 04/77
+Temp: 20
+Genotype: mnDp1/+; let-3(mn104) unc-3(e151)/ + +
+Results: 92 Unc, 6057 total
+Calculation: Complex_mixed 92 6057
+Comment: For explanation of this calculation, see
+ Meneely & Herman (1979)
+
+</pre>
+<br><br>
+<center>
+<a href="http://minerva.caltech.edu/~azurebrd/cgi-bin/forms/2_pt_data.cgi"><strong>Back to the CGC 2 point mapping data submission page </strong></a>.
+</center>
+<br><br>
+
+
+<hr>
+<table width="100%"><tr><td class="small" align="left"><a href="mailto:webmaster@www.wormbase.org">webmaster@www.wormbase.org</a></td> <td class="small" align="right"><a href="/copyright.html">Copyright Statement</a></td></tr> <tr><td class="small" align="left"><a href="/db/misc/feedback">Send comments or questions to WormBase</a></td> <td class="small" align="right"><a href="/privacy.html">Privacy Statement</a></td></tr></table></body></html>
+
+
+

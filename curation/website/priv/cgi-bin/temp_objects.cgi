@@ -30,7 +30,7 @@ use Dotenv -load => '/usr/lib/.env';
 use Sys::Hostname;
 my $host = hostname();
 
-my $filesPath = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/pub/cgi-bin/generic_cgi/';
+my $filesPath = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/pub/cgi-bin/data/';
 
 my $query = new CGI;	# new CGI form
 # my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n";
