@@ -1,0 +1,26 @@
+.sectionTitle {
+    color: #FFFFFF;
+    font-size: 10pt;
+    line-height: 15pt;
+    font-weight: bold;
+    padding-left: 10px;
+    background-color: #000000;
+}
+
+.listContent {
+    font-size: 10pt;
+    padding-left: 10px;
+    padding-right: 10px;
+    vertical-align: top;
+    background-color: #EEEEEE;
+}
+
+.listContentBold {
+    font-size: 10pt;
+    padding-left: 10px;
+    padding-right: 10px;
+    font-weight: bold;
+    vertical-align: top;
+    background-color: #EEEEEE;
+}
+

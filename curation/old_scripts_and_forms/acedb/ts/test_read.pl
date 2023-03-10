@@ -1,0 +1,26 @@
+#!/usr/bin/perl
+
+# THIS DOESN'T WORK, database directory not found
+
+`cd /home/acedb/ts`;
+`export ACEDB=/home/acedb/ts`;
+`export DBDIR=/home/acedb/ts/database`;
+
+my $var = `echo $ACEDB`;
+print "VAR $var\n";
+#Start reading files
+`/home/acedb/bin/tace -tsuser 'cecilia' <<END_TACE`;
+# `Read-models`;
+# `y`;
+# `Parse /home/acedb/ts/persons_20090731.ace`;
+# `quit`;
+# `n`;
+`END_TACE`;
+#End reading files.
+
+
+# if want to wipe out db after saving do :
+# rm /home/acedb/ts/database/ACEDB.wrm
+# delete acedb.wrm to reset db
+#
+# if had wiped out db, need to reinitialize the system with a leading ``y'' before Read-models
