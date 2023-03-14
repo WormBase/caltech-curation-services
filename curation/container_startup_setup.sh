@@ -29,6 +29,8 @@ echo "$(ip -4 -br address | awk '{if (NR!=1) print $3}' | cut -d '/' -f1) ${HOST
 yes | sendmailconfig
 
 declare -p | grep -Ev 'BASHOPTS|BASH_VERSINFO|EUID|PPID|SHELLOPTS|UID' > /container.env
+chmod 0644 /etc/cron.d/curation_crontab
+crontab /etc/cron.d/curation_crontab
 cron
 
 tail -f /dev/null
