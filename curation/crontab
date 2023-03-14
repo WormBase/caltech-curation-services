@@ -8,3 +8,10 @@ BASH_ENV=/container.env
 
 # postgres section
 # 0 3 * * tue,wed,thu,fri,sat /usr/lib/scripts/pgpopulation/two_people/two_lineage/update_twos_in_two_lineage.pl
+
+
+# acedb section
+
+# cecilia
+# 0 2 * * thu /usr/caltech_curation_files/cecilia/citace_upload/wrapper.pl
+
