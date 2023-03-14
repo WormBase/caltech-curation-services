@@ -2,4 +2,9 @@ SHELL=/bin/bash
 BASH_ENV=/container.env
 
 
-# 0 2 * * * python3 /script.pl > /var/log/script.log 2>&1
+# # 0 2 * * * python3 /script.pl > /var/log/script.log 2>&1
+
+# Uncomment these when live
+
+# postgres section
+# 0 3 * * tue,wed,thu,fri,sat /usr/lib/scripts/pgpopulation/two_people/two_lineage/update_twos_in_two_lineage.pl
