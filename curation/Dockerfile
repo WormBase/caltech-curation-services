@@ -15,10 +15,6 @@ RUN a2enmod ssl
 
 RUN git clone https://github.com/WormBase/acedb.git acedb && cd acedb && ln -s wmake/makefile Makefile && export ACEDB_MACHINE=LINUX_64 && make
 
-ADD curation/crontab /etc/cron.d/curation_crontab
-RUN chmod 0644 /etc/cron.d/curation_crontab
-RUN crontab /etc/cron.d/curation_crontab
-
 COPY curation/website/apache_conf/apache2.conf /etc/apache2/apache2.conf
 COPY curation/website/apache_conf/000-default.conf /etc/apache2/sites-enabled/000-default.conf
 COPY curation/website/apache_conf/000-default-le-ssl.conf /etc/apache2/sites-enabled/000-default-le-ssl.conf
