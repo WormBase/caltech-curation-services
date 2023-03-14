@@ -10,6 +10,8 @@
 #
 # added pgid output to screen.  2014 08 25
 #
+# dockerized, but can only post to its own server, not tazendra/mangolassi.  2023 03 13
+#
 # usage
 # ./populate_oa_tab_file.pl mangolassi 2987 file
 
@@ -18,15 +20,19 @@ use strict;
 use Jex;
 use LWP::Simple;
 use URI::Escape;
+use Dotenv -load => '/usr/lib/.env';
 
 my $domain = 'caltech.edu';
 my $path = '~postgres/cgi-bin/oa/ontology_annotator.cgi';
+my $thishost = $ENV{THIS_HOST};
 
 my $action = '';
 my $curator = '';
 my $datatype = '';
 my $subdomain = '';
-my $baseUrl = '';
+
+# my $baseUrl = '';
+my $baseUrl = $thishost . "priv/cgi-bin/oa/ontology_annotator.cgi";
 
 my %allowedSubdomains;
 my @allowedSubdomains = qw( mangolassi tazendra );
@@ -46,8 +52,9 @@ my $printUsage = '';
 
 if ($ARGV[0]) { 
     if ($allowedSubdomains{$ARGV[0]}) {
-        $subdomain = $ARGV[0]; 
-        $baseUrl = 'http://' . $subdomain . '.' . $domain . '/' . $path; }
+#         $subdomain = $ARGV[0]; 
+#         $baseUrl = 'http://' . $subdomain . '.' . $domain . '/' . $path;
+      }
       else { $printUsage .= qq($ARGV[0] not a valid server, need : $subDomains\n); } }
   else { $printUsage .= qq(Need a server : $subDomains\n); }
 if ($ARGV[1]) { 
