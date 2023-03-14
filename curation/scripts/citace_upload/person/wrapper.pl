@@ -13,6 +13,8 @@
 # Dockerized, but maybe it didn't need to be.  Added to crontab in docker.
 # Generates file directly into public web directory instead of tracking file by date
 # and symlinking.  2023 03 14
+#
+# 0 2 * * thu /usr/caltech_curation_files/cecilia/citace_upload/wrapper.pl
 
 
 use strict;
