@@ -28,3 +28,4 @@ BASH_ENV=/container.env
 # 0 4 * * sun /usr/lib/scripts/citace_upload/allele_phenotype/use_package.pl
 # 0 4 * * sun /usr/lib/scripts/citace_upload/process/use_process_package.pl
 # 0 4 * * sun /usr/lib/scripts/citace_upload/process/use_process_curation_package.pl
+# 0 4 * * sun /usr/lib/scripts/citace_upload/paper_object/get_paper_object.pl

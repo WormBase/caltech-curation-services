@@ -12,6 +12,12 @@
 #
 # changed to use  obo_data_variation  instead of  ws_current.obo  2014 01 23
 # changed out path to /home/acedb/karen/WS_upload_scripts/paper_object 2014 01 23
+#
+# Dockerized cronjob. Output to /usr/caltech_curation_files/pub/citace_upload/karen/  2023 03 14
+#
+# cronjob
+# 0 4 * * sun /usr/lib/scripts/citace_upload/paper_object/get_paper_object.pl
+
 
 use strict;
 use diagnostics;
@@ -64,8 +70,9 @@ $result = $dbh->prepare( "SELECT * FROM app_paper;" );
 $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
 while (my @row = $result->fetchrow) { $hash{paper}{$row[1]}{$row[0]}++; }
 
+my $outDir = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . "/pub/citace_upload/karen/";
 # my $outfile = '/home/acedb/karen/WS_upload_scripts/paper_object/alle_paper.ace';
-my $outfile = 'alle_paper.ace';
+my $outfile = $outDir . 'alle_paper.ace';
 open (OUT, ">$outfile") or die "Cannot create $outfile : $!";
 
 my $error_messages = '';
