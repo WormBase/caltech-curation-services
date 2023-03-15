@@ -16,7 +16,7 @@
 # Dockerized cronjob. Output to /usr/caltech_curation_files/pub/citace_upload/karen/  2023 03 14
 #
 # cronjob
-# 0 4 * * sun /usr/lib/scripts/citace_upload/paper_object/get_paper_object.pl
+# 0 4 * * sun /usr/lib/scripts/citace_upload/alle_paper_object/get_paper_object.pl
 
 
 use strict;
