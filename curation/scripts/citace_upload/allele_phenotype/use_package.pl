@@ -5,6 +5,11 @@
 # them.  2005 07 13
 #
 # Change to default get all papers, not just valid ones.  2005 11 10
+#
+# Dockerized cronjob. Output to /usr/caltech_curation_files/pub/citace_upload/karen/  2023 03 14
+#
+# cronjob
+# 0 4 * * sun /usr/lib/scripts/citace_upload/allele_phenotype/use_package.pl
 
 use strict;
 use Jex;
@@ -23,9 +28,10 @@ use lib qw( /usr/lib/scripts/citace_upload/allele_phenotype/ );
 # use get_allele_phenotype_ace;
 use get_allele_phenotype_phenote_ace;
 
-my $outfile = 'allele_phenotype.ace.' . $date;
-my $molfile = 'mol_phene.ace.' . $date;
-# my $outlong = 'abstracts.ace.' . $date;
+my $outDir = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . "/pub/citace_upload/karen/";
+my $outfile = $outDir . 'allele_phenotype.ace.' . $date;
+my $molfile = $outDir . 'mol_phene.ace.' . $date;
+# my $outlong = $outDir . 'abstracts.ace.' . $date;
 my $errfile = 'err.out.' . $date;
 open (OUT, ">$outfile") or die "Cannot create $outfile : $!\n";
 open (MOL, ">$molfile") or die "Cannot create $molfile : $!\n";

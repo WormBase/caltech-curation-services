@@ -2,6 +2,11 @@
 
 # use the get_process_ace.pm module from /home/postgres/work/citace_upload/process/ 
 # to dump the process terms.  2012 07 17
+#
+# Dockerized cronjob. Output to /usr/caltech_curation_files/pub/citace_upload/karen/  2023 03 14
+#
+# cronjob
+# 0 4 * * sun /usr/lib/scripts/citace_upload/process/use_process_package.pl
 
 
 use strict;
@@ -21,10 +26,11 @@ use lib qw( /usr/lib/scripts/citace_upload/process/ );
 # use get_allele_phenotype_ace;
 use get_process_ace;
 
-my $outfile = 'process.ace.' . $date;
+my $outDir = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . "/pub/citace_upload/karen/";
+my $outfile = $outDir . 'process.ace.' . $date;
 # my $molfile = 'mol_phene.ace.' . $date;
 # my $outlong = 'abstracts.ace.' . $date;
-my $errfile = 'err_process.out.' . $date;
+my $errfile = $outDir . 'err_process.out.' . $date;
 open (OUT, ">$outfile") or die "Cannot create $outfile : $!\n";
 # open (MOL, ">$molfile") or die "Cannot create $molfile : $!\n";
 # open (LON, ">$outlong") or die "Cannot create $outlong : $!\n";
