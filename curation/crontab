@@ -20,3 +20,6 @@ BASH_ENV=/container.env
 #
 # daniela
 # 0 2 * * * /usr/lib/scripts/pgpopulation/pic_picture/picture_source/populate_obo_data_pic_picturesource.pl
+#
+# karen
+# 0 4 * * * /usr/lib/scripts/pgpopulation/transgene/20121004_assign_transgene_IDs/assign_transgene_IDs.pl
