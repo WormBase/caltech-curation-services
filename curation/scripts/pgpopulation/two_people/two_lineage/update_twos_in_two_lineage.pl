@@ -123,7 +123,8 @@ sub process {
   if ($cecilia_mail) {			# if there's data to mail, mail to Cecilia
     if ($too_many_matches) { $cecilia_mail .= "\n\n$too_many_matches"; }
     my $user = 'updating_lineage_missing_people';
-    my $email = 'cecilia@tazendra.caltech.edu';
+    my $email = 'cecnak@gmail.com';
+#     my $email = 'cecilia@tazendra.caltech.edu';
 #     my $email = 'azurebrd@minerva.caltech.edu';
     my $subject = 'Update Lineage.  List of missing people';
     &mailer($user, $email, $subject, $cecilia_mail);
