@@ -48,7 +48,8 @@ my $result;
 # my $directory = '/home/acedb/karen/WS_upload_scripts/Molecule';
 # chdir ($directory) or die "Cannot chdir to $directory : $!";
 
-my $outfile = 'Molecule.ace';
+my $outfile = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH}. "/pub/citace_upload/karen/Molecule.ace";
+# my $outfile = 'Molecule.ace';
 open (OUT, ">$outfile") or die "Cannot create $outfile : $!";
 
 foreach my $table (@other_tables) {
