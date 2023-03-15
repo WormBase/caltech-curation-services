@@ -5,6 +5,12 @@
 # them.  2005 07 13
 #
 # Changed for transgenes  2012 06 22
+#
+# Dockerized cronjob. Output to /usr/caltech_curation_files/pub/citace_upload/karen/  2023 03 14
+#
+# cronjob
+# 0 4 * * sun /usr/lib/scripts/citace_upload/transgene/use_package.pl
+
 
 use strict;
 use Jex;
@@ -22,12 +28,13 @@ use lib qw( /usr/lib/scripts/citace_upload/transgene/ );
 # use lib qw( /home/postgres/work/citace_upload/transgene );
 use get_transgene_ace;
 
-my $outfile = 'transgene.ace.' . $date;
-my $outfile2 = 'transgene.ace';
-my $errfile = 'err.out.' . $date;
+my $outDir = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . "/pub/citace_upload/karen/";
+my $outfile = $outDir . 'transgene.ace.' . $date;
+# my $outfile2 = 'transgene.ace';
+my $errfile = $outDir . 'err.out.' . $date;
 
 open (OUT, ">$outfile") or die "Cannot create $outfile : $!\n";
-open (OU2, ">$outfile2") or die "Cannot create $outfile2 : $!\n";
+# open (OU2, ">$outfile2") or die "Cannot create $outfile2 : $!\n";
 open (ERR, ">$errfile") or die "Cannot create $errfile : $!\n";
 
 
@@ -38,11 +45,11 @@ my ($all_entry, $err_text) = &getTransgene('all');
 # my ($all_entry, $err_text) = &getTransgene('Expr1087');
 
 print OUT "$all_entry\n";
-print OU2 "$all_entry\n";
+# print OU2 "$all_entry\n";
 if ($err_text) { print ERR "$err_text\n"; }
 
 close (OUT) or die "Cannot close $outfile : $!";
-close (OU2) or die "Cannot close $outfile2 : $!";
+# close (OU2) or die "Cannot close $outfile2 : $!";
 close (ERR) or die "Cannot close $errfile : $!";
 
 $date = &getSimpleSecDate();

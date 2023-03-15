@@ -24,3 +24,4 @@ BASH_ENV=/container.env
 # karen
 # 0 4 * * * /usr/lib/scripts/pgpopulation/transgene/20121004_assign_transgene_IDs/assign_transgene_IDs.pl
 # 0 4 * * sun /usr/lib/scripts/citace_upload/mop_molecule/dump_molecule_ace.pl
+# 0 4 * * sun /usr/lib/scripts/citace_upload/transgene/use_package.pl

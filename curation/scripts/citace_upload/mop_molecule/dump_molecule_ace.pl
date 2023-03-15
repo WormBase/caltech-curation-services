@@ -19,6 +19,11 @@
 # Dumping bioroletext as a Remark in #Evidence.  2019 11 14
 #
 # Changed for utf8 changes in postgres.  2021 05 27
+#
+# Dockerized cronjob. Output to /usr/caltech_curation_files/pub/citace_upload/karen/  2023 03 14
+#
+# cronjob
+# 0 4 * * sun /usr/lib/scripts/citace_upload/mop_molecule/dump_molecule_ace.pl
 
 
 use strict;
