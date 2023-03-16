@@ -9,6 +9,7 @@ BASH_ENV=/container.env
 # postgres section
 # 0 3 * * tue,wed,thu,fri,sat /usr/lib/scripts/pgpopulation/two_people/two_lineage/update_twos_in_two_lineage.pl
 # 0 4 * * * /usr/lib/scripts/pgpopulation/cur_curation/cur_nncdata/populate_nnc_result.pl
+# 0 4 * * * /usr/lib/scripts/pgpopulation/cur_curation/cur_strdata/populate_str_result.pl
 
 
 # acedb section
@@ -21,6 +22,7 @@ BASH_ENV=/container.env
 #
 # daniela
 # 0 2 * * * /usr/lib/scripts/pgpopulation/pic_picture/picture_source/populate_obo_data_pic_picturesource.pl
+# 0 4 * * * /usr/lib/scripts/pgpopulation/exp_exprpattern/cronjobs/transfer_exp_cns_trp/wrapper.pl
 #
 # karen
 # 0 4 * * * /usr/lib/scripts/pgpopulation/transgene/20121004_assign_transgene_IDs/assign_transgene_IDs.pl
