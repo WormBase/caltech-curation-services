@@ -14,6 +14,7 @@
 #
 # Valerio said to remove getting antibody data  &processAntibody();  2021 06 08  
 #
+# textpresso-dev went away at some point, remove from cronjob.  2023 03 16
 #
 # every day at 4am.  2014 11 06
 # 0 4 * * * /home/postgres/work/pgpopulation/cur_curation/cur_strdata/populate_str_result.pl
