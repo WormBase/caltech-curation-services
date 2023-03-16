@@ -35,3 +35,4 @@ BASH_ENV=/container.env
 #
 # kimberly
 # 0 2 * * thu /usr/lib/scripts/citace_upload/papers/wrapper.pl
+# 0 5 * * sun /usr/lib/scripts/agr_upload/pap_papers/dump_agr_literature.pl
