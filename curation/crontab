@@ -10,6 +10,7 @@ BASH_ENV=/container.env
 # 0 3 * * tue,wed,thu,fri,sat /usr/lib/scripts/pgpopulation/two_people/two_lineage/update_twos_in_two_lineage.pl
 # 0 4 * * * /usr/lib/scripts/pgpopulation/cur_curation/cur_nncdata/populate_nnc_result.pl
 # 0 4 * * * /usr/lib/scripts/pgpopulation/cur_curation/cur_strdata/populate_str_result.pl
+# 0 20 * * * /usr/lib/scripts/pgpopulation/obo_oa_ontologies/update_obo_oa_ontologies.pl
 
 # azurebrd section
 # 0 4 * * * /usr/lib/scripts/cronjobs/update_wormbase_header.pl
