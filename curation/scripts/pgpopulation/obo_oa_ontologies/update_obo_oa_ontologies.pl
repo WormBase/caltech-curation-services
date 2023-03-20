@@ -177,6 +177,7 @@ $/ = "\n";
 # 
 # # get nightly gin_ data from geneace and nightly nameserver json dump  2013 10 25
 # `/home/postgres/work/pgpopulation/obo_oa_ontologies/geneace/populate_gin_nightly.pl`;
+# This needs java / aws / and geneace/get_nameserver_genes.sh to get the gin files.
 # 
 # # get new sequence features data and email Daniela and Xiaodong about new objects or added/changed papers.  2014 10 01
 # `/home/postgres/work/pgpopulation/sqf_sequencefeature/populate_from_geneace/parse_seqfeat.pl`;
