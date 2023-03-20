@@ -79,7 +79,9 @@
 # pdf_email created in postgres to stop using obsolete
 # http://tazendra.caltech.edu/~postgres/out/email_pdf_afp
 # which is not going to be supported by textpresso-dev data anymore.  2021 02 04
-
+#
+# Password file set at $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/insecure/outreachwormbase';
+# 2023 03 19
 
 
 use strict;
@@ -846,7 +848,8 @@ sub sendEmail {
     body => "$body",
   );
 
-  my $passfile = '/home/postgres/insecure/outreachwormbase';
+  my $passfile = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/insecure/outreachwormbase';
+  # my $passfile = '/home/postgres/insecure/outreachwormbase';
   open (IN, "<$passfile") or die "Cannot open $passfile : $!";
   my $password = <IN>; chomp $password;
   close (IN) or die "Cannot close $passfile : $!";
