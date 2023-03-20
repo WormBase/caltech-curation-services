@@ -15,6 +15,9 @@
 # Also needs password from   /home/postgres/insecure/outreachwormbase
 # It's been dockerized and symlinked from inside docker, but almost certainly doesn't do 
 # what it needs.  2023 03 13
+#
+# Password file set at $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/insecure/outreachwormbase';
+# 2023 03 19
 
 
 use strict;
@@ -187,7 +190,8 @@ sub sendIndividualMassEmail {
   $body =~ s/\n/ /g;
   $toprint .= qq(send email to $emailaddress\nfrom $sender\nreplyto $replyto\nsubject $subject\nbody $body\n);
 
-  my $passfile = '/home/postgres/insecure/outreachwormbase';
+  my $passfile = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/insecure/outreachwormbase';
+  # my $passfile = '/home/postgres/insecure/outreachwormbase';
   open (IN, "<$passfile") or die "Cannot open $passfile : $!";
   my $password = <IN>; chomp $password;
   close (IN) or die "Cannot close $passfile : $!";

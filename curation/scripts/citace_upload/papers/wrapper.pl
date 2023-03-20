@@ -20,8 +20,12 @@
 # 0 2 * * thu /home/postgres/work/citace_upload/papers/wrapper.pl
 #
 # dockerized cronjob.  only dump one file instead of with .ace.<date>  2023 03 15
+#
+# Michael and Kimberly agree this can be run every week, but setting it to
+# after workdays (like Michael's schedule), because there's not real reason not 
+# to.  2023 03 17
 
-# 0 2 * * thu /usr/lib/scripts/citace_upload/papers/wrapper.pl
+# 0 2 * * tue,wed,thu,fri,sat /usr/lib/scripts/citace_upload/papers/wrapper.pl
 
 
 use strict;
@@ -46,7 +50,7 @@ chdir ($directory) or die "Cannot chdir to $directory : $!";
 # use lib qw( /home/postgres/work/citace_upload/papers/ );
 # use get_paper_ace;
 
-if ($mday =~ m/^[23]\d/) {			# only do stuff on 20/30 something for uploads
+# if ($mday =~ m/^[23]\d/) {			# only do stuff on 20/30 something for uploads
   my $outfile = $outDir . 'papers.ace';
   # my $outfile = $directory . '/out/papers.ace.' . $date;
 
@@ -61,4 +65,4 @@ if ($mday =~ m/^[23]\d/) {			# only do stuff on 20/30 something for uploads
 #   my $location_of_latest = '/home/postgres/public_html/cgi-bin/data/papers.ace';
 #   unlink ("$location_of_latest") or warn "Cannot unlink $location_of_latest : $!";       # unlink symlink to latest
 #   symlink("$outfile", "$location_of_latest") or warn "cannot symlink $location_of_latest : $!";
-}
+# }

@@ -11,6 +11,9 @@
 # 2020 11 03
 #
 # Change attendance maximum to 400 from 300.  2020 11 16
+#
+# Password file set at $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/insecure/outreachwormbase';
+# 2023 03 19
 
 # http://mangolassi.caltech.edu/~azurebrd/cgi-bin/forms/webinar.cgi
 # http://mangolassi.caltech.edu/~azurebrd/cgi-bin/forms/webinar.cgi?action=registeredCount
@@ -997,7 +1000,8 @@ sub mailSendmail {
     body => "$body",
   );
 
-  my $passfile = '/home/postgres/insecure/outreachwormbase';
+  my $passfile = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/insecure/outreachwormbase';
+  # my $passfile = '/home/postgres/insecure/outreachwormbase';
   open (IN, "<$passfile") or die "Cannot open $passfile : $!";
   my $password = <IN>; chomp $password;
   close (IN) or die "Cannot close $passfile : $!";

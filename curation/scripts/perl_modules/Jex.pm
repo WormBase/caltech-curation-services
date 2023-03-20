@@ -4,6 +4,8 @@ require Exporter;
 use LWP::Simple;
 use Mail::Mailer;
 
+use Dotenv -load => '/usr/lib/.env';
+
 our @ISA	= qw(Exporter);
 our @EXPORT	= qw(untaint filterForPg getDate getHeader printHeader printFooter getPgDate cshlNew caltechOld getHtmlSelectVars getHtmlVar getHtmlVarFree mailer getSimpleSecDate getSimpleDate filterToPrintHtml getOboDate );
 our $VERSION	= 1.00;
@@ -117,7 +119,7 @@ sub getHeader {
 Content-type: text/html\n\n
 
 <HTML>
-<LINK rel="stylesheet" type="text/css" href="http://tazendra.caltech.edu/~azurebrd/stylesheets/wormbase.css">
+<LINK rel="stylesheet" type="text/css" href="$ENV{THIS_HOST}pub/stylesheets/wormbase.css">
 
 <HEAD>
 EndOfText
@@ -137,7 +139,8 @@ sub printHeader {
 Content-type: text/html\n\n
 
 <HTML>
-<LINK rel="stylesheet" type="text/css" href="http://tazendra.caltech.edu/~azurebrd/stylesheets/wormbase.css">
+<LINK rel="stylesheet" type="text/css" href="$ENV{THIS_HOST}pub/stylesheets/wormbase.css">
+<!--<LINK rel="stylesheet" type="text/css" href="http://tazendra.caltech.edu/~azurebrd/stylesheets/wormbase.css">-->
 <!--<LINK rel="stylesheet" type="text/css" href="http://www.wormbase.org/stylesheets/wormbase.css">-->
 
 <HEAD>
@@ -159,7 +162,9 @@ sub printFooter {
 sub cshlNew {
   my $title = shift;
   unless ($title) { $title = ''; }	# init title in case blank
-  my $page = get "http://tazendra.caltech.edu/~azurebrd/sanger/wormbaseheader/WB_header_footer.html";
+  my $page = get "$ENV{THIS_HOST}files/pub/wormbaseheader/WB_header_footer.html";
+#   my $page = get "https://caltech-curation.textpressolab.com:4432/files/pub/wormbaseheader/WB_header_footer.html";
+#   my $page = get "http://tazendra.caltech.edu/~azurebrd/sanger/wormbaseheader/WB_header_footer.html";
 #  $page =~ s/href="\//href="http:\/\/www.wormbase.org\//g;
 #  $page =~ s/src="/src="http:\/\/www.wormbase.org/g;
   ($header, $footer) = $page =~ m/^(.*?)\s+DIVIDER\s+(.*?)$/s;	# 2006 11 20	# get this from tazendra's script result.
