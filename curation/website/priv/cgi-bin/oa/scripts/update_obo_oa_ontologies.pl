@@ -1,6 +1,10 @@
 #!/usr/bin/env perl -w
 
-# Populate obo_{name|syn|data}_<obotable> tables in postgres based off webpages where the obos are stored.  
+# Populate obo_{name|syn|data}_<obotable> tables in postgres based off webpages where the obos are stored.  2011 04 30
+
+# Probably became obsolete by the 2021 05 22 version that was at 
+# /home/postgres/work/pgpopulation/obo_oa_ontologies/update_obo_oa_ontologies.pl
+# 2023 03 19
 
 
 use strict;
@@ -16,7 +20,8 @@ my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST}
 my $result;
 
 # need a directory to store previous results so a cronjob only updates tables when the data is new
-my $directory = '/home/postgres/public_html/cgi-bin/oa/scripts/obo_oa_ontologies/';
+my $directory = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/cronjobs/obo_oa_ontologies/';
+# my $directory = '/home/postgres/public_html/cgi-bin/oa/scripts/obo_oa_ontologies/';
 chdir ($directory) or die "Cannot chdir to $directory : $!";
 
 
