@@ -2,7 +2,9 @@ FROM perl:5.18.4-buster
 ARG SSH_ACEDB_PASSWORD=""
 ARG CALTECH_CURATION_FILES_INTERNAL_PATH=/usr/caltech_curation_files
 ARG DEBIAN_FRONTEND=noninteractive
-RUN export DEBIAN_FRONTEND=noninteractive && apt-get update && apt-get install -q -y apache2 vim openssh-server makepasswd zsh sendmail cron git libglib2.0-dev libgtk2.0-dev libreadline-dev build-essential flex-old bison libxmu-dev libcurl4-openssl-dev xauth
+ARG AWS_ACCESS_KEY_ID=""
+ARG AWS_SECRET_ACCESS_KEY=""
+RUN export DEBIAN_FRONTEND=noninteractive && apt-get update && apt-get install -q -y apache2 vim openssh-server makepasswd zsh sendmail cron git libglib2.0-dev libgtk2.0-dev libreadline-dev build-essential flex-old bison libxmu-dev libcurl4-openssl-dev xauth default-jdk
 ENV TZ="America/Los_Angeles"
 RUN mkdir -p ${CALTECH_CURATION_FILES_INTERNAL_PATH}
 RUN chmod -R 777 ${CALTECH_CURATION_FILES_INTERNAL_PATH}
@@ -29,6 +31,10 @@ RUN chown -R www-data:www-data /usr/lib/cgi-bin/
 RUN find /usr/lib/cgi-bin/ \( -name "*.cgi" -o -name "*.pl" \) -exec chmod +x {} \;
 RUN chmod -R a+r /usr/lib/cgi-bin/
 RUN mkdir -p /etc/user_files
+
+RUN mkdir /root/.aws
+RUN echo "[default]\n" > /root/.aws/config
+RUN echo "[default]\naws_access_key_id = ${AWS_ACCESS_KEY_ID}\naws_secret_access_key = ${AWS_SECRET_ACCESS_KEY}\n" > /root/.aws/credentials
 
 ENV APACHE_RUN_USER www-data
 ENV APACHE_RUN_GROUP www-data
