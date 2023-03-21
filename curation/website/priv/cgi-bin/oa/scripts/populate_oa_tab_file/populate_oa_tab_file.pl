@@ -10,10 +10,14 @@
 #
 # added pgid output to screen.  2014 08 25
 #
+# ./populate_oa_tab_file.pl mangolassi 2987 file
+#
 # dockerized, but can only post to its own server, not tazendra/mangolassi.  2023 03 13
 #
+# take mangolassi, tazendra, dev, or prod as subdomain parameters, use .env DEV_HOST_NAME or PROD_HOST_NAME as appropriate.  2023 03 20
+
 # usage
-# ./populate_oa_tab_file.pl mangolassi 2987 file
+# /usr/lib/priv/cgi-bin/oa/scripts/populate_oa_tab_file/populate_oa_tab_file.pl mangolassi 2987 file
 
 
 use strict;
@@ -31,13 +35,15 @@ my $curator = '';
 my $datatype = '';
 my $subdomain = '';
 
-# my $baseUrl = '';
-my $baseUrl = $thishost . "priv/cgi-bin/oa/ontology_annotator.cgi";
-
 my %allowedSubdomains;
-my @allowedSubdomains = qw( mangolassi tazendra );
-foreach (@allowedSubdomains) { $allowedSubdomains{$_}++; }
-my $subDomains = join" | ", @allowedSubdomains;
+$allowedSubdomains{'mangolassi'} = $ENV{DEV_HOST_NAME};
+$allowedSubdomains{'tazendra'} = $ENV{PROD_HOST_NAME};
+$allowedSubdomains{'dev'} = $ENV{DEV_HOST_NAME};
+$allowedSubdomains{'prod'} = $ENV{PROD_HOST_NAME};
+my $subDomains = join" | ", sort keys %allowedSubdomains;
+# my @allowedSubdomains = qw( mangolassi tazendra );
+# foreach (@allowedSubdomains) { $allowedSubdomains{$_}++; }
+# my $subDomains = join" | ", @allowedSubdomains;
 
 my %allowedDatatypes;
 my @allowedDatatypes = qw( app cns grg int mop pro prt rna trp );
@@ -52,11 +58,17 @@ my $printUsage = '';
 
 if ($ARGV[0]) { 
     if ($allowedSubdomains{$ARGV[0]}) {
+        $thishost = $allowedSubdomains{$ARGV[0]};
 #         $subdomain = $ARGV[0]; 
 #         $baseUrl = 'http://' . $subdomain . '.' . $domain . '/' . $path;
       }
       else { $printUsage .= qq($ARGV[0] not a valid server, need : $subDomains\n); } }
   else { $printUsage .= qq(Need a server : $subDomains\n); }
+
+# my $baseUrl = '';
+my $baseUrl = $thishost . "/priv/cgi-bin/oa/ontology_annotator.cgi";
+
+
 if ($ARGV[1]) { 
     my ($num) = $ARGV[1] =~ m/(\d+)/;
     if ($allowedCurators{$num}) { $curator = "two$num"; }

@@ -24,6 +24,7 @@ BASH_ENV=/container.env
 #
 # chris
 # 0 4 * * * /usr/lib/scripts/pgpopulation/pro_process/cronjobs/populate_pro_paperprimarystatus.pl
+# 0 4 * * * /usr/lib/scripts/pgpopulation/interaction/assigning_interaction_ids/assign_interaction_ids.pl
 #
 # daniela
 # 0 2 * * * /usr/lib/scripts/pgpopulation/pic_picture/picture_source/populate_obo_data_pic_picturesource.pl
