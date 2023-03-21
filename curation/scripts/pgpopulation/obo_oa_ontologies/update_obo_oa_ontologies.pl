@@ -171,15 +171,17 @@ foreach my $obotable (sort keys %obos) {
 } # foreach my $obotable (sort keys %obos) 
 $/ = "\n";
 
-# TODO
-# # get the nightly data from geneace  2013 10 24
+# get the nightly data from geneace  2013 10 24
+`/usr/lib/scripts/pgpopulation/obo_oa_ontologies/nightly_geneace.pl`;
 # `/home/postgres/work/pgpopulation/obo_oa_ontologies/geneace/nightly_geneace.pl`;
-# 
+
+# TODO
 # # get nightly gin_ data from geneace and nightly nameserver json dump  2013 10 25
 # `/home/postgres/work/pgpopulation/obo_oa_ontologies/geneace/populate_gin_nightly.pl`;
 # This needs java / aws / and geneace/get_nameserver_genes.sh to get the gin files.
-# 
-# # get new sequence features data and email Daniela and Xiaodong about new objects or added/changed papers.  2014 10 01
+ 
+# get new sequence features data and email Daniela and Xiaodong about new objects or added/changed papers.  2014 10 01
+`/usr/lib/scripts/pgpopulation/sqf_sequencefeature/populate_from_geneace/parse_seqfeat.pl`;
 # `/home/postgres/work/pgpopulation/sqf_sequencefeature/populate_from_geneace/parse_seqfeat.pl`;
 
 
