@@ -33,8 +33,8 @@ RUN chmod -R a+r /usr/lib/cgi-bin/
 RUN mkdir -p /etc/user_files
 
 RUN mkdir /root/.aws
-RUN echo -e "[default]\n" > /root/.aws/config
-RUN echo -e "[default]\naws_access_key_id = ${AWS_ACCESS_KEY_ID}\naws_secret_access_key = ${AWS_SECRET_ACCESS_KEY_NAME}\n"
+RUN echo "[default]\n" > /root/.aws/config
+RUN echo "[default]\naws_access_key_id = ${AWS_ACCESS_KEY_ID}\naws_secret_access_key = ${AWS_SECRET_ACCESS_KEY}\n" > /root/.aws/credentials
 
 ENV APACHE_RUN_USER www-data
 ENV APACHE_RUN_GROUP www-data
