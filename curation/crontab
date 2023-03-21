@@ -15,6 +15,7 @@ BASH_ENV=/container.env
 # azurebrd section
 # 0 4 * * * /usr/lib/scripts/cronjobs/update_wormbase_header.pl
 # 0 5 * * sat /usr/lib/scripts/cronjobs/get_worm_lineage.pl
+# 0 5 1 * * /usr/lib/scripts/cronjobs/curation_stats/get_daily_curation_stats.pl
 
 
 # acedb section
