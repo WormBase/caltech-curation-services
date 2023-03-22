@@ -35,6 +35,14 @@ how to import modules in dockerized system
   use lib qw(  /usr/lib/scripts/perl_modules/ );                  # for general ace dumping functions
   use ace_dumper;
 
+how to queue a bunch of insertions
+  my @pgcommands;
+  push @pgcommands, qq(INSERT INTO obo_name_hgnc VALUES $name_commands;);
+  foreach my $pgcommand (@pgcommands) {
+    print qq($pgcommand\n);
+# UNCOMMENT TO POPULATE
+#     $dbh->do($pgcommand);
+  } # foreach my $pgcommand (@pgcommands)
 
 
 my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb;host=131.215.52.76", "", "") or die "Cannot connect to database!\n";	# for remote access
