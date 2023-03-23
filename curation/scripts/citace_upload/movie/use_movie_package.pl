@@ -24,26 +24,18 @@ use lib qw( /usr/lib/scripts/citace_upload/movie/ );
 # use get_allele_phenotype_ace;
 use get_movie_ace;
 
-my $outfile = 'movie.ace.' . $date;
-# my $molfile = 'mol_phene.ace.' . $date;
-# my $outlong = 'abstracts.ace.' . $date;
-my $errfile = 'err_movie.out.' . $date;
+my $outfile = 'files/movie.ace.' . $date;
+my $errfile = 'files/err_movie.out.' . $date;
 open (OUT, ">$outfile") or die "Cannot create $outfile : $!\n";
-# open (MOL, ">$molfile") or die "Cannot create $molfile : $!\n";
-# open (LON, ">$outlong") or die "Cannot create $outlong : $!\n";
 open (ERR, ">$errfile") or die "Cannot create $errfile : $!\n";
 
 my ($all_entry, $err_text) = &getMovie('all');
 # my ($all_entry, $err_text) = &getMovie('WBMovie0000000001');
 
 print OUT "$all_entry\n";
-# print MOL "$mol_entry\n";
-# print LON "$long_text\n";
 if ($err_text) { print ERR "$err_text\n"; }
 
 close (OUT) or die "Cannot close $outfile : $!";
-# close (MOL) or die "Cannot close $molfile : $!";
-# close (LON) or die "Cannot close $outlong : $!";
 close (ERR) or die "Cannot close $errfile : $!";
 
 $date = &getSimpleSecDate();
