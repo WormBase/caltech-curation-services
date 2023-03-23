@@ -5723,6 +5723,7 @@ sub getAnyWBPaperTermInfo {
   foreach my $syn (sort keys %{ $ids{$joinkey} }) {
     if ($syn =~ m/^pmid(\d+)/) { my $url = 'http://www.ncbi.nlm.nih.gov/pubmed/' . $1; $syn =~ s/pmid/PMID:/g; $syn = qq(<a href="$url" target="new">$syn</a>); }
       elsif ($syn =~ m/^doi(.*)/) { my $url = 'http://dx.doi.org/' . $1; $syn = qq(<a href="$url" target="new">$syn</a>); }
+      elsif ($syn =~ m/^(AGRKB:.*)/) { my $url = 'https://literature.alliancegenome.org/Biblio/?action=display&referenceCurie=' . $1; $syn = qq(<a href="$url" target="new">$syn</a>); }
     $to_print .= "synonym: \"$syn\"<br />\n"; }
   # to link to paper editor
 #   my $query = new CGI;
@@ -5744,7 +5745,8 @@ sub getAnyWBPaperTermInfo {
     elsif (scalar(@journal) > 0) { 
       $to_print .= "Journal: $journal[0]<br />\n"; 
       my %journal_has_permission;			# for image_overview below
-      my $infile = '/etc/user_files/picture_curation/journal_with_permission';
+      my $infile = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/daniela/picture_curatable/journal_with_permission';
+      # my $infile = '/home/acedb/draciti/picture_curatable/journal_with_permission';
       open (IN, "$infile") or die "Cannot open $infile : $!";
       while (my $line = <IN>) { chomp $line; $journal_has_permission{$line}++; }
       close (IN) or die "Cannot close $infile : $!";
