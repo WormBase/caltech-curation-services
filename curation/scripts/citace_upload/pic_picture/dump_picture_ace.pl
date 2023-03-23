@@ -74,11 +74,13 @@ my $result;
 
 my $date = &getSimpleDate();
 
-# my $outfile = 'pictures.ace';
-# my $errfile = 'pictures.err';
-my $outfile = 'pictures.ace.' . $date;
-my $errfile = 'pictures.err.' . $date;
+my $outfile = 'pictures.ace';
+my $outfile2 = 'files/pictures.ace.' . $date;
+my $errfile = 'pictures.err';
+# my $outfile = 'pictures.ace.' . $date;
+# my $errfile = 'pictures.err.' . $date;
 open (OUT, ">$outfile") or die "Cannot create $outfile : $!";
+open (OU2, ">$outfile2") or die "Cannot create $outfile2 : $!";
 open (ERR, ">$errfile") or die "Cannot create $errfile : $!";
 
 my %pipeSplit;
@@ -271,11 +273,13 @@ foreach my $pgid (sort {$a<=>$b} keys %{ $theHash{name} }) {
   }
   $entry .= "\n";
   print OUT $entry;
+  print OU2 $entry;
 } # foreach my $pgid (sort {$a<=>$b} keys %{ $theHash{name} })
 
 foreach my $entry (sort keys %database_entries) { print OUT $entry; }
 
 close (OUT) or die "Cannot close $outfile : $!";
+close (OU2) or die "Cannot close $outfile : $!";
 close (ERR) or die "Cannot close $errfile : $!";
 
 

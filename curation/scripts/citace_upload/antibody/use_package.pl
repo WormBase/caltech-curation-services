@@ -24,8 +24,8 @@ use lib qw( /usr/lib/scripts/citace_upload/antibody/ );
 # use get_allele_phenotype_ace;
 use get_antibody_ace;
 
-my $outfile = 'antibody.ace.' . $date;
-my $errfile = 'err.out.' . $date;
+my $outfile = 'files/antibody.ace.' . $date;
+my $errfile = 'files/err.out.' . $date;
 
 open (OUT, ">$outfile") or die "Cannot create $outfile : $!\n";
 open (ERR, ">$errfile") or die "Cannot create $errfile : $!\n";
