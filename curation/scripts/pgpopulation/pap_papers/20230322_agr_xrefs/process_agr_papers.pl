@@ -10,8 +10,8 @@ use diagnostics;
 use DBI;
 use Encode qw( from_to is_utf8 );
 # use JSON::Parse 'parse_json';
-use JSON::XS;
-# use JSON;
+# use JSON::XS;
+use JSON;
 use Dotenv -load => '/usr/lib/.env';
 
 my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST};port=$ENV{PSQL_PORT}", "$ENV{PSQL_USERNAME}", "$ENV{PSQL_PASSWORD}") or die "Cannot connect to database!\n";
@@ -30,7 +30,7 @@ close (IN) or die "Cannot open $infile : $!";
 
 print "Start decoding json\n";
 # my %perl = parse_json($json_data);	# JSON::Parse, not installed in dockerized
-my $perl = decode_json($json_data);	# JSON  very very slow on dockerized, but fast on tazendra
+my $perl = decode_json($json_data);	# JSON  very very slow on dockerized without JSON::XS, but fast on tazendra.  with JSON::XS installed is fast even without directly calling JSON::XS->new like below, and without use JSON::XS, just use JSON
 # my $perl = JSON::XS->new->utf8->decode ($json_data);
 
 print "Done decoding json\n";
