@@ -62,6 +62,8 @@ use Tie::IxHash;
 use Math::SigFigs;                              # significant figures $new = FormatSigFigs($n, $d);
 # # use GD::Graph::lines;	# generate statistics graphs
 # use GD::Graph::area;	# generate statistics graphs	# can't install on dockerized 2023 02 27 okay to remove with Paul S and Raymond
+use LWP::Simple;
+use JSON;
 use Dotenv -load => '/usr/lib/.env';
 
 my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST};port=$ENV{PSQL_PORT}", "$ENV{PSQL_USERNAME}", "$ENV{PSQL_PASSWORD}") or die "Cannot connect to database!\n";
@@ -953,15 +955,17 @@ sub displayPaper {
   while (my @row = $result->fetchrow) { $curation_done{$row[0]}++; } $curation_done = join", ", sort keys %curation_done;
   if ($curation_done) { print "<b style=\"color: red;font-size: 14pt\">curation_done : $curation_done</b><br />\n"; }
 
+  my $agrkb = '';
   my $paper_editor_url = $baseUrl . "paper_editor.cgi?curator_id=$curator_two&action=Search&data_number=$joinkey";
   # my $paper_editor_url = "http://tazendra.caltech.edu/~postgres/cgi-bin/paper_editor.cgi?curator_id=$curator_two&action=Search&data_number=$joinkey";
   print "WBPaper$joinkey <a target=\"new\" href=\"$paper_editor_url\">paper editor link</a>.<br />\n";
   my $pmid; my %pg_aid;
-  $result = $dbh->prepare( "SELECT * FROM pap_identifier WHERE joinkey = '$joinkey'" );
+  $result = $dbh->prepare( "SELECT DISTINCT(pap_identifier) FROM pap_identifier WHERE joinkey = '$joinkey' ORDER BY pap_identifier" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) { 
-    if ($row[1] =~ m/pmid/) { $pmid = $row[1]; $pmid =~ s/pmid//; $row[1] = "<a href=\"http://www.ncbi.nlm.nih.gov/pubmed/$pmid\" target=\"new\">$row[1]</a>"; }
-    print "Identifier : $row[1]<br />\n"; }
+    if ($row[0] =~ m/pmid/) { $pmid = $row[0]; $pmid =~ s/pmid//; $row[0] = "<a href=\"http://www.ncbi.nlm.nih.gov/pubmed/$pmid\" target=\"new\">$row[0]</a>"; }
+    elsif ($row[0] =~ m/AGRKB/) { $agrkb = $row[0]; $row[0] = qq(<a href="https://literature.alliancegenome.org/Biblio/?action=display&referenceCurie=$row[0]" target="new">$row[0]</a>); }
+    print "Identifier : $row[0]<br />\n"; }
   $result = $dbh->prepare( "SELECT * FROM pap_affiliation WHERE joinkey = '$joinkey'" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) { 
@@ -985,23 +989,28 @@ sub displayPaper {
   my %xml_authors;			# data from authors by name
   my %xml_authors_found;		# names found, to print ones not found
 
-  if ($pmid) {
-      $/ = undef;
-      my @xml_paths = qw( /home/postgres/work/pgpopulation/wpa_papers/pmid_downloads/done/ /home/postgres/work/pgpopulation/wpa_papers/wpa_pubmed_final/xml/ );
-      my $xmlfile = '';
-      foreach my $path (@xml_paths) {
-        my $file = '/home/postgres/work/pgpopulation/wpa_papers/pmid_downloads/done/' . $pmid;
-        if (-e $file) { $xmlfile = $file; }
-      }
-      if ($xmlfile) {
-          print "pmid $pmid xml found<br />\n";
-          open (IN, "<$xmlfile") or die "Cannot open $xmlfile : $!";
-          $xmldata = <IN>;
-          close (IN) or die "Cannot close $xmlfile : $!";
-          $/ = "\n";
-          %xml_authors = &getXmlAuthors($xmldata); }
-        else { print "NO XML for $pmid\n"; } }
-    else { print "<br />No PMID found for WBPaper$joinkey<br />\n"; }
+# using local files with .xml
+#   if ($pmid) {
+#       $/ = undef;
+#       my @xml_paths = qw( /home/postgres/work/pgpopulation/wpa_papers/pmid_downloads/done/ /home/postgres/work/pgpopulation/wpa_papers/wpa_pubmed_final/xml/ );
+#       my $xmlfile = '';
+#       foreach my $path (@xml_paths) {
+#         my $file = '/home/postgres/work/pgpopulation/wpa_papers/pmid_downloads/done/' . $pmid;
+#         if (-e $file) { $xmlfile = $file; }
+#       }
+#       if ($xmlfile) {
+#           print "pmid $pmid xml found<br />\n";
+#           open (IN, "<$xmlfile") or die "Cannot open $xmlfile : $!";
+#           $xmldata = <IN>;
+#           close (IN) or die "Cannot close $xmlfile : $!";
+#           $/ = "\n";
+#           %xml_authors = &getXmlAuthors($xmldata); }
+#         else { print "NO XML for $pmid\n"; } }
+#     else { print "<br />No PMID found for WBPaper$joinkey<br />\n"; }
+
+  # using ABC from AGR
+  if ($agrkb) { %xml_authors = &getAgrAuthors($agrkb); }
+    else { print "<br />No AGRKB found for WBPaper$joinkey<br />\n"; }
   
   print "<hr>\n";
   print "<form name='form1' method=\"post\" action=\"person_editor.cgi\">\n";
@@ -1087,11 +1096,12 @@ sub displayPaper {
 
   foreach my $aname (sort keys %xml_authors) {		# list all authors in xml that were not found in current paper
     next unless $aname; next if ($xml_authors_found{$aname});
-    my ($firstname, $lastname, $initials) = ('','','','');
-    if ($xml_authors{$aname}{lastname}) {  $lastname  = shift @{ $xml_authors{$aname}{lastname} };  }
-    if ($xml_authors{$aname}{firstname}) { $firstname = shift @{ $xml_authors{$aname}{firstname} }; }
-    if ($xml_authors{$aname}{initials}) {  $initials  = shift @{ $xml_authors{$aname}{initials} };  }
-    print "XML author $aname has no match in paper Firstname : $firstname ; Lastname : $lastname ; Initials : $initials<br />\n"; }
+    my ($firstname, $lastname, $initials, $affiliation) = ('','','','','');
+    if ($xml_authors{$aname}{lastname}) {    $lastname    = shift @{ $xml_authors{$aname}{lastname} };    }
+    if ($xml_authors{$aname}{firstname}) {   $firstname   = shift @{ $xml_authors{$aname}{firstname} };   }
+    if ($xml_authors{$aname}{initials}) {    $initials    = shift @{ $xml_authors{$aname}{initials} };    }
+    if ($xml_authors{$aname}{affiliation}) { $affiliation = shift @{ $xml_authors{$aname}{affiliation} }; }
+    print "XML author $aname has no match in paper Firstname : $firstname ; Lastname : $lastname ; Initials : $initials ; Affiliation : $affiliation<br />\n"; }
 
   print "</form>\n";
 } # sub displayPaper
@@ -1119,6 +1129,29 @@ sub matchFullnameToAka {
 #   return "<td colspan=\"2\" align=\"right\">$count matches</td><td colspan=\"10\">$twos</td>";
   return ($count, $twos);
 } # sub matchFullnameToAka
+
+sub getAgrAuthors {
+  my ($agrkb) = @_; my %xml_authors;
+  my $url = "https://literature-rest.alliancegenome.org/reference/$agrkb";
+  my $agrData = get $url;
+  my $agr_href = decode_json($agrData);     # JSON
+  my %agr = %$agr_href;
+  foreach my $author_href (@{ $agr{authors} }) {
+    my %author = %$author_href;
+    my @fn = split/ /, $author{first_name};
+    my $firstinit = '';
+    foreach my $fn (@fn) { my ($first_char) = $fn =~ m/^(.)/; $firstinit .= $first_char; }
+    my $author = $author{last_name} . " " . $firstinit;
+    push @{ $xml_authors{$author}{lastname} },     $author{last_name};
+    push @{ $xml_authors{$author}{firstname} },    $author{first_name};
+    push @{ $xml_authors{$author}{initials} },     $author{first_name};
+    push @{ $xml_authors{$author}{orcid} },        $author{orcid};
+    push @{ $xml_authors{$author}{standardname} }, $author{name};
+    foreach my $aff (@{ $author{affiliations} }) {
+      push @{ $xml_authors{$author}{affiliation} }, $aff; }
+  }
+  return %xml_authors; 
+} # sub getAgrAuthors
 
 sub getXmlAuthors {
   my ($xmldata) = @_; my %xml_authors;
