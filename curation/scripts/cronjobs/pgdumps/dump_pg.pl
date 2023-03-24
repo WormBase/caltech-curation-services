@@ -18,6 +18,11 @@
 # Diffing files was running out of memory since 202010060200.  2021 03 25
 #
 # Dockerized, but pg_dump doesn't work.  2023 03 23
+#
+# Added extra parameters for pg_dump that will be needed, but there's a version mismatch
+# pg_dump: server version: 13.10 (Debian 13.10-1.pgdg110+1); pg_dump version: 11.19 (Debian 11.19-0+deb10u1)
+# pg_dump: aborting because of server version mismatch
+# Valerio's looking into it.  2023 03 24
 
 
 use strict;
@@ -36,7 +41,7 @@ my $date = &GetDate();
 # while ($out == 0) { sleep 60; }
 # print "OUT $out OUT\n";
 
-`/usr/bin/pg_dump $dbname > $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH}/cronjobs/pgdumps/${dbname}.dump.$date`;
+`/usr/bin/pg_dump -h curation_db -p $ENV{PSQL_PORT} -U postgres $dbname > $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH}/cronjobs/pgdumps/${dbname}.dump.$date`;
 # `/usr/bin/pg_dump testdb > /home/postgres/work/pgdumps/testdb.dump.$date`;
 
 # my $diff = `diff testdb.dump.latest testdb.dump.$date`;	# this was running out of memory since 202010060200  2021 03 25
