@@ -69,7 +69,7 @@ use Dotenv -load => '/usr/lib/.env';
 my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST};port=$ENV{PSQL_PORT}", "$ENV{PSQL_USERNAME}", "$ENV{PSQL_PASSWORD}") or die "Cannot connect to database!\n";
 # my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n"; 
 
-my $baseUrl = $ENV{THIS_HOST} . "priv/cgi-bin/cecilia";
+my $baseUrl = $ENV{THIS_HOST} . "priv/cgi-bin/cecilia/";
 my $thishost = $ENV{THIS_HOST};
 
 # Use all timestamps to use latest to create  Last_verified  date
@@ -806,7 +806,7 @@ sub createPeopleFromXml {
 
     # add link to checkout more papers, also add link to next WBPaper ID
   (my $var, my $paper_joinkey) = &getHtmlVar($query, "paper_joinkey");
-  my $paper_editor_url = $baseUrl . "paper_editor.cgi?curator_id=$curator_two&action=Search&data_number=$paper_joinkey";
+  my $paper_editor_url = $baseUrl . "../paper_editor.cgi?curator_id=$curator_two&action=Search&data_number=$paper_joinkey";
   # my $paper_editor_url = "http://tazendra.caltech.edu/~postgres/cgi-bin/paper_editor.cgi?curator_id=$curator_two&action=Search&data_number=$paper_joinkey";
   print "Creating persons from authors in WBPaper$paper_joinkey <a target=\"new\" href=\"$paper_editor_url\">paper editor link</a>.<br />\n";
   my $prev_paper_joinkey = $paper_joinkey - 1;
@@ -931,7 +931,7 @@ sub searchPaper {
   &printHtmlHeader();
   my ($curator_two) = &getCuratorFromForm();
   my ($var, $paper_id) = &getHtmlVar($query, "paper_id");
-  if ($paper_id =~ m/(\d+)/) { &displayPaper(&padZeros($1), $curator_two); return; }
+  if ($paper_id =~ m/(\d+)/) { &displayPaper(&padZeros($1), $curator_two); }
     else { print "Not a number in $paper_id<br />\n"; }
 } # sub searchPaper
 
@@ -956,7 +956,7 @@ sub displayPaper {
   if ($curation_done) { print "<b style=\"color: red;font-size: 14pt\">curation_done : $curation_done</b><br />\n"; }
 
   my $agrkb = '';
-  my $paper_editor_url = $baseUrl . "paper_editor.cgi?curator_id=$curator_two&action=Search&data_number=$joinkey";
+  my $paper_editor_url = $baseUrl . "../paper_editor.cgi?curator_id=$curator_two&action=Search&data_number=$joinkey";
   # my $paper_editor_url = "http://tazendra.caltech.edu/~postgres/cgi-bin/paper_editor.cgi?curator_id=$curator_two&action=Search&data_number=$joinkey";
   print "WBPaper$joinkey <a target=\"new\" href=\"$paper_editor_url\">paper editor link</a>.<br />\n";
   my $pmid; my %pg_aid;
@@ -1011,7 +1011,7 @@ sub displayPaper {
   # using ABC from AGR
   if ($agrkb) { %xml_authors = &getAgrAuthors($agrkb); }
     else { print "<br />No AGRKB found for WBPaper$joinkey<br />\n"; }
-  
+
   print "<hr>\n";
   print "<form name='form1' method=\"post\" action=\"person_editor.cgi\">\n";
   print "<input type=\"hidden\" name=\"curator_two\" id=\"curator_two\" value=\"$curator_two\">";
@@ -1083,7 +1083,8 @@ sub displayPaper {
     if ($already_verified) { $bgcolor = $grey; }
     $line = "<tr bgcolor=\"$bgcolor\">" . $line;
     $line .= "</tr><tr bgcolor=\"$bgcolor\">";
-    my ($matchCount, $matchTwos) = &matchFullnameToAka($standardname, $firstname, $lastname, \%aka_hash, $curator_two);
+    my ($matchCount, $matchTwos) = ('', '');
+#     my ($matchCount, $matchTwos) = &matchFullnameToAka($standardname, $firstname, $lastname, \%aka_hash, $curator_two);
     $line .= qq(<td colspan="2" align="right">$matchCount matches</td><td colspan="4">$matchTwos</td><td colspan="6">$affiliation</td>);
     $line .= "</tr>";
     print "$line\n";
@@ -1140,6 +1141,7 @@ sub getAgrAuthors {
     my %author = %$author_href;
     my @fn = split/ /, $author{first_name};
     my $firstinit = '';
+    if ($author{orcid}) { $author{orcid} =~ s/ORCID://; }
     foreach my $fn (@fn) { my ($first_char) = $fn =~ m/^(.)/; $firstinit .= $first_char; }
     my $author = $author{last_name} . " " . $firstinit;
     push @{ $xml_authors{$author}{lastname} },     $author{last_name};
