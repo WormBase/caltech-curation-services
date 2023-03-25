@@ -928,11 +928,16 @@ sub addToPgAndHst {
 } # sub addToPgAndHst
 
 sub searchPaper {
+  my $start = time;
   &printHtmlHeader();
+  print qq(SEARCH PAPER<br>);
   my ($curator_two) = &getCuratorFromForm();
   my ($var, $paper_id) = &getHtmlVar($query, "paper_id");
   if ($paper_id =~ m/(\d+)/) { &displayPaper(&padZeros($1), $curator_two); }
     else { print "Not a number in $paper_id<br />\n"; }
+  my $end = time;
+  my $diff = $end - $start;
+  print qq(TOTAL $diff<br>\n);
 } # sub searchPaper
 
 sub makePdfLinkFromPath {
@@ -942,6 +947,7 @@ sub makePdfLinkFromPath {
   my $data = "<a href=\"$link\" target=\"new\">$pdf</a>"; return $data; }
 
 sub displayPaper {
+  my $start = time;
   my ($joinkey, $curator_two) = @_;
   print "<input type=\"hidden\" name=\"which_page\" id=\"which_page\" value=\"displayPaperXml\">";
   my %curation_flags; my $curation_flags;
@@ -989,6 +995,10 @@ sub displayPaper {
   my %xml_authors;			# data from authors by name
   my %xml_authors_found;		# names found, to print ones not found
 
+  my $mid = time;
+  my $diff = $mid - $start;
+  print qq(MID $diff secs<br>);
+
 # using local files with .xml
 #   if ($pmid) {
 #       $/ = undef;
@@ -1012,6 +1022,10 @@ sub displayPaper {
   if ($agrkb) { %xml_authors = &getAgrAuthors($agrkb); }
     else { print "<br />No AGRKB found for WBPaper$joinkey<br />\n"; }
 
+  $mid = time;
+  $diff = $mid - $start;
+  print qq(MID2 $diff secs<br>);
+  
   print "<hr>\n";
   print "<form name='form1' method=\"post\" action=\"person_editor.cgi\">\n";
   print "<input type=\"hidden\" name=\"curator_two\" id=\"curator_two\" value=\"$curator_two\">";
@@ -1031,9 +1045,17 @@ sub displayPaper {
 
   print "<hr>\n";
 
+  $mid = time;
+  $diff = $mid - $start;
+  print qq(MID3 $diff secs<br>);
+  
 #   my %aka_hash = (); # &getAkaHash();
   my %aka_hash = &getAkaHash();
 
+  $mid = time;
+  $diff = $mid - $start;
+  print qq(MID4 $diff secs<br>);
+  
   print "<table border=0 cellspacing=5>\n";
   print "<tr bgcolor=\"$blue\"><td>aid</td><td>author</td><td>possible</td><td>sent</td><td>verified</td><td>standard name</td><td>firstname</td><td>middlename</td><td>lastname</td><td>orcid</td><td>email</td><td>inst</td><td>old inst</td></tr>\n";
   foreach my $i (0 .. $#aids) {
@@ -1083,12 +1105,16 @@ sub displayPaper {
     if ($already_verified) { $bgcolor = $grey; }
     $line = "<tr bgcolor=\"$bgcolor\">" . $line;
     $line .= "</tr><tr bgcolor=\"$bgcolor\">";
-    my ($matchCount, $matchTwos) = ('', '');
-#     my ($matchCount, $matchTwos) = &matchFullnameToAka($standardname, $firstname, $lastname, \%aka_hash, $curator_two);
+#     my ($matchCount, $matchTwos) = ('', '');
+    my ($matchCount, $matchTwos) = &matchFullnameToAka($standardname, $firstname, $lastname, \%aka_hash, $curator_two);
     $line .= qq(<td colspan="2" align="right">$matchCount matches</td><td colspan="4">$matchTwos</td><td colspan="6">$affiliation</td>);
     $line .= "</tr>";
     print "$line\n";
   } # foreach my $i (0 .. $#aids)
+
+  $mid = time;
+  $diff = $mid - $start;
+  print qq(MID5 $diff secs<br>);
 
   print "</table>\n";
   print "<input type=\"hidden\" name=\"aids_to_check\" value=\"$#aids\">\n";
@@ -1105,6 +1131,9 @@ sub displayPaper {
     print "XML author $aname has no match in paper Firstname : $firstname ; Lastname : $lastname ; Initials : $initials ; Affiliation : $affiliation<br />\n"; }
 
   print "</form>\n";
+  $mid = time;
+  $diff = $mid - $start;
+  print qq(MID6 $diff secs<br>);
 } # sub displayPaper
 
 sub twonumToLink {
