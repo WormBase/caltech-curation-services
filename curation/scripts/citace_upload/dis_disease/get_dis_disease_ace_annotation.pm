@@ -32,6 +32,8 @@ our $VERSION	= 1.00;
 #
 # no longer need checking that wbgene|variation require an inferredgene
 # before needed wbgene|variation|strain|transgene, now can also be genotype.  2023 03 06
+#
+# for dot_entry only, treat dis_assertedgene as if it were a dis_wbgene.  2023 03 27
 
 
 
@@ -103,6 +105,7 @@ $tableHasText{"transgene"}            = "transgenetext";
 
 my %extraTableToTag;
 $extraTableToTag{"wbgene"}                 = "Gene_by_biology";
+$extraTableToTag{"assertedgene"}           = "Gene_by_biology";
 $extraTableToTag{"strain"}                 = "Disease_model_strain";
 $extraTableToTag{"variation"}              = "Disease_model_variation";
 $extraTableToTag{"transgene"}              = "Disease_model_transgene";
@@ -238,7 +241,7 @@ sub getDiseaseAnnotation {
     } # foreach my $table (@tables)
 
     
-    my @extraTables = qw( wbgene strain variation transgene genotype modtransgene modvariation modstrain modgene modgenotype inducingchemical inducingagent modmolecule );
+    my @extraTables = qw( wbgene assertedgene strain variation transgene genotype modtransgene modvariation modstrain modgene modgenotype inducingchemical inducingagent modmolecule );
     my $dot_entry = '';
     if ($theHash{"humandoid"}{$pgid}) {
       if ($theHash{"humandoid"}{$pgid} =~ m/\"/) { $theHash{"humandoid"}{$pgid} =~ s/\"//g; }
