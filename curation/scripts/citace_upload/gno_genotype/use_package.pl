@@ -18,11 +18,15 @@ use lib qw( /usr/lib/scripts/citace_upload/gno_genotype/ );
 # use get_allele_phenotype_ace;
 use get_genotype_ace;
 
-my $outfile = 'genotype.ace.' . $date;
-my $errfile = 'err.out.' . $date;
+my $outfile = 'files/genotype.ace.' . $date;
+my $errfile = 'files/err.out.' . $date;
+my $outfile2 = 'genotype.ace';
+my $errfile2 = 'err.out';
 
 open (OUT, ">$outfile") or die "Cannot create $outfile : $!\n";
 open (ERR, ">$errfile") or die "Cannot create $errfile : $!\n";
+open (OU2, ">$outfile2") or die "Cannot create $outfile2 : $!\n";
+open (ER2, ">$errfile2") or die "Cannot create $errfile2 : $!\n";
 
 
 my ($all_entry, $err_text) = &getGenotype('all');
@@ -30,10 +34,15 @@ my ($all_entry, $err_text) = &getGenotype('all');
 # my ($all_entry, $err_text) = &getGenotype('WBGenotype00000001');
 
 print OUT "$all_entry\n";
-if ($err_text) { print ERR "$err_text"; }
+print OU2 "$all_entry\n";
+if ($err_text) { 
+  print ERR "$err_text";
+  print ER2 "$err_text"; }
 
 close (OUT) or die "Cannot close $outfile : $!";
 close (ERR) or die "Cannot close $errfile : $!";
+close (OU2) or die "Cannot close $outfile : $!";
+close (ER2) or die "Cannot close $errfile : $!";
 
 $date = &getSimpleSecDate();
 my $end_time = time;
