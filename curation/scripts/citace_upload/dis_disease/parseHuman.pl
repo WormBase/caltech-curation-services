@@ -9,10 +9,14 @@
 # changed .obo url 2017 02 24
 #
 # changed .obo url 2018 08 29
+#
+# output to .ace file like before, but also to files/HumanDO.ace.<date>  2023 03 27
+
 
 use strict;
 use warnings;
 use LWP::Simple;
+use Jex;
 
   # get obo file each time
 # my $url = 'http://diseaseontology.svn.sourceforge.net/viewvc/diseaseontology/trunk/HumanDO.obo';
@@ -32,8 +36,12 @@ my $all_file = get $url;
 my @orderedTags = qw( Name Status Alternate_id Definition Comment Broad Exact Narrow Related Is_a Type );
 push @orderedTags, 'Database	"OMIM"	"Disease"';
 
+my $date = &getSimpleDate();
+
 my $outfile = 'HumanDO.ace';
+my $outfile2 = 'files/HumanDO.ace.' . $date;
 open (OUT, ">$outfile") or die "Cannot create $outfile : $!";
+open (OU2, ">$outfile2") or die "Cannot create $outfile2 : $!";
 
 # my (@objs) = split/\n\[Term\]\n/, $all_file;	# there are some non-[Term] paragraphs, so don't do it like this
 my (@objs) = split/\n\n/, $all_file;
@@ -75,17 +83,21 @@ foreach my $obj (@objs) {
 
 foreach my $id (sort keys %hash) {
   print OUT qq(DO_term : "$id"\n);
+  print OU2 qq(DO_term : "$id"\n);
   foreach my $tag (@orderedTags) {						# only dump tags that have been ordered
     next unless ($hash{$id}{$tag});
     foreach my $value (sort keys %{ $hash{$id}{$tag} }) {
       $value =~ s/[^[:ascii:]]+//g;						# strip out non-ascii characters
       print OUT qq($tag\t$value\n);
+      print OU2 qq($tag\t$value\n);
     } # foreach my $value (sort keys %{ $hash{$id}{$tag} })
   } # foreach my $tag (@orderedTags)
   print OUT qq(\n);
+  print OU2 qq(\n);
 } # foreach my $id (sort keys %hash)
 
 close (OUT) or die "Cannot close $outfile : $!";
+close (OU2) or die "Cannot close $outfile : $!";
 
 __END__
 
