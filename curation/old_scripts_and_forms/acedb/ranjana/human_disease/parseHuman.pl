@@ -1,4 +1,4 @@
-#!/usr/bin/env perl
+#!/usr/bin/perl
 
 # download obo file from sourceforge and generate HumanDO.ace for Ranjana  2012 12 05
 #
