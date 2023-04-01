@@ -64,6 +64,7 @@ use Math::SigFigs;                              # significant figures $new = For
 # use GD::Graph::area;	# generate statistics graphs	# can't install on dockerized 2023 02 27 okay to remove with Paul S and Raymond
 use LWP::Simple;
 use JSON;
+use Text::Unaccent;
 use Dotenv -load => '/usr/lib/.env';
 
 my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST};port=$ENV{PSQL_PORT}", "$ENV{PSQL_USERNAME}", "$ENV{PSQL_PASSWORD}") or die "Cannot connect to database!\n";
@@ -1172,17 +1173,38 @@ sub getAgrAuthors {
     my $firstinit = '';
     if ($author{orcid}) { $author{orcid} =~ s/ORCID://; }
     foreach my $fn (@fn) { my ($first_char) = $fn =~ m/^(.)/; $firstinit .= $first_char; }
-    my $author = $author{last_name} . " " . $firstinit;
-    push @{ $xml_authors{$author}{lastname} },     $author{last_name};
-    push @{ $xml_authors{$author}{firstname} },    $author{first_name};
-    push @{ $xml_authors{$author}{initials} },     $author{first_name};
+
+# without escape characters
+#     my $author = $author{last_name} . " " . $firstinit;
+#     push @{ $xml_authors{$author}{lastname} },     $author{last_name};
+#     push @{ $xml_authors{$author}{firstname} },    $author{first_name};
+#     push @{ $xml_authors{$author}{initials} },     $author{first_name};
+#     push @{ $xml_authors{$author}{orcid} },        $author{orcid};
+#     push @{ $xml_authors{$author}{standardname} }, $author{name};
+#     foreach my $aff (@{ $author{affiliations} }) {
+#       push @{ $xml_authors{$author}{affiliation} }, $aff; }
+
+    # escaping characters with accents
+    my $author = unac_string("utf-8", qq($author{last_name} $firstinit));
+    push @{ $xml_authors{$author}{lastname} },     &unaccentText($author{last_name});
+    push @{ $xml_authors{$author}{firstname} },    &unaccentText($author{first_name});
+    push @{ $xml_authors{$author}{initials} },     &unaccentText($author{first_name});
     push @{ $xml_authors{$author}{orcid} },        $author{orcid};
-    push @{ $xml_authors{$author}{standardname} }, $author{name};
+    push @{ $xml_authors{$author}{standardname} }, &unaccentText($author{name});
     foreach my $aff (@{ $author{affiliations} }) {
-      push @{ $xml_authors{$author}{affiliation} }, $aff; }
+      push @{ $xml_authors{$author}{affiliation} }, &unaccentText($aff); }
   }
   return %xml_authors; 
 } # sub getAgrAuthors
+
+sub unaccentText {
+  my $line = shift;
+#     my $unaccented = unac_string_utf16($line);
+#     my $unaccented = unac_string("iso-8859-1", $line);                # for IWM Kimberly files
+  my $unaccented = unac_string("utf-8", $line);               # for WBG Daniel files
+  return $unaccented;
+} # sub unaccentText
+
 
 sub getXmlAuthors {
   my ($xmldata) = @_; my %xml_authors;
