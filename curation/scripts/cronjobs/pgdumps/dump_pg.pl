@@ -23,6 +23,11 @@
 # pg_dump: server version: 13.10 (Debian 13.10-1.pgdg110+1); pg_dump version: 11.19 (Debian 11.19-0+deb10u1)
 # pg_dump: aborting because of server version mismatch
 # Valerio's looking into it.  2023 03 24
+#
+# pg_dump working now, Valerio fixed it.  2023 04 01
+
+# cronjob after every work day
+# 0 2 * * tue,wed,thu,fri,sat /usr/lib/scripts/cronjobs/pgdumps/dump_pg.pl
 
 
 use strict;
@@ -57,7 +62,7 @@ if ($md5sumNew ne $md5sumLatest) { $diff = 1; }
 if ($diff) {				# new dump is different
 # print "DIFF\n";
   unlink ("${dbname}.dump.latest") or die "Cannot unlink : $!";	# unlink symlink to latest
-  symlink("${dbname}.dump.$date", "testdb.dump.latest") or warn "cannot symlink : $!";
+  symlink("${dbname}.dump.$date", "${dbname}.dump.latest") or warn "cannot symlink : $!";
 #   unlink ("testdb.dump.latest") or die "Cannot unlink : $!";	# unlink symlink to latest
 #   symlink("testdb.dump.$date", "testdb.dump.latest") or warn "cannot symlink : $!";
 					# link newest dump to latest
@@ -67,7 +72,7 @@ if ($diff) {				# new dump is different
 # print "NOT DIFF\n";
 } # if($diff)
 
-my $current_dump = '${dbname}.dump.' . $date;
+my $current_dump = $dbname . ".dump." . $date;
 # my $current_dump = 'testdb.dump.' . $date;
 my @old_dumps = <$ENV{CALTECH_CURATION_FILES_INTERNAL_PATH}/cronjobs/pgdumps/old/*>;
 # my @old_dumps = </home2/postgres/work/pgdumps/old/*>;
@@ -81,7 +86,9 @@ my ($back_it_up) = $current_dump =~ m/(${dbname}\.dump\.\d{6})/;
 # print "BACK IT UP $back_it_up BACK IT UP\n";
 unless ($old_dumps{$back_it_up}) { 
 #   print "COPY $current_dump TO OLD\n";
-  `cp $current_dump /home2/postgres/work/pgdumps/old/`; }
+#   `cp $current_dump /home2/postgres/work/pgdumps/old/`;
+  `cp $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH}/cronjobs/pgdumps/$current_dump $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH}/cronjobs/pgdumps/old/`;
+}
 
 my @current_dumps = <$ENV{CALTECH_CURATION_FILES_INTERNAL_PATH}/cronjobs/pgdumps/${dbname}.dump.2*>;
 # my @current_dumps = </home/postgres/work/pgdumps/testdb.dump.2*>;

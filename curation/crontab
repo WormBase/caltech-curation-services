@@ -7,6 +7,7 @@ BASH_ENV=/container.env
 # Uncomment these when live
 
 # postgres section
+# 0 2 * * tue,wed,thu,fri,sat /usr/lib/scripts/cronjobs/pgdumps/dump_pg.pl
 # 0 3 * * tue,wed,thu,fri,sat /usr/lib/scripts/pgpopulation/two_people/two_lineage/update_twos_in_two_lineage.pl
 # 0 4 * * * /usr/lib/scripts/pgpopulation/cur_curation/cur_nncdata/populate_nnc_result.pl
 # 0 4 * * * /usr/lib/scripts/pgpopulation/cur_curation/cur_strdata/populate_str_result.pl
