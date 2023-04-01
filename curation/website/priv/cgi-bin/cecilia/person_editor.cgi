@@ -51,6 +51,9 @@
 #
 # Transferred to dockerized on cervino, added yui/2.7.0/ to repo in pub/stylesheets/ and pub/javascript/ but still uses tazendra
 # in &makePdfLinkFromPath() since those aren't going to cervino.  2023 03 01 
+#
+# Valerio fixed Text::Unaccent on dockerized system, Search Paper can now get from ABC the author information instead of needing
+# flatfile xml, escape the characters, and match against what we have in postgres for author and person.  2023 04 01
  
 
 
