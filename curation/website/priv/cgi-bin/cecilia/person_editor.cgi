@@ -1084,7 +1084,9 @@ sub displayPaper {
         if ($pap_join > $highest_join) { $highest_join = $pap_join; } }
       my $data = join"<br />", @data; $line .= "<td>$data</td>\n"; }
     my ($firstname, $middlename, $lastname, $standardname, $affiliation, $orcid) = ('','','','','', '');
+print qq(ANAME $aname<br>\n);
     if ($xml_authors{$aname}) {				# without this check, the subhash checks create the hash entry
+print qq(YES $aname<br>\n);
 #       if ($xml_authors{$aname}{affiliation}) { $affiliation = $xml_authors{$aname}{affiliation}; $xml_authors_found{$aname}++; }
 #       if ($xml_authors{$aname}{lastname}) { $lastname = $xml_authors{$aname}{lastname}; $xml_authors_found{$aname}++; }
 #       if ($xml_authors{$aname}{firstname}) { $firstname = $xml_authors{$aname}{firstname}; $xml_authors_found{$aname}++; }
@@ -1094,6 +1096,10 @@ sub displayPaper {
       if ($xml_authors{$aname}{firstname}) {    $firstname    = shift @{ $xml_authors{$aname}{firstname} };    $xml_authors_found{$aname}++; }
       if ($xml_authors{$aname}{orcid}) {        $orcid        = shift @{ $xml_authors{$aname}{orcid} };        $xml_authors_found{$aname}++; }
       if ($xml_authors{$aname}{standardname}) { $standardname = shift @{ $xml_authors{$aname}{standardname} }; $xml_authors_found{$aname}++; } }
+else {
+foreach my $xmla (sort keys %xml_authors) {
+  print qq(XMLA $xmla<br>);
+} }
     print "<input type=\"hidden\" name=\"highest_join_$i\" value=\"$highest_join\">\n";
     $line .= "<td><input name=\"standardname_$i\" value=\"$standardname\"></td>";
     $line .= "<td><input name=\"firstname_$i\" value=\"$firstname\"></td>";
@@ -1129,6 +1135,7 @@ sub displayPaper {
     print "<input type=submit name=action value=\"Create people from XML\"><br/>\n"; }
 
   foreach my $aname (sort keys %xml_authors) {		# list all authors in xml that were not found in current paper
+print qq(ANAME $aname<br>\n);
     next unless $aname; next if ($xml_authors_found{$aname});
     my ($firstname, $lastname, $initials, $affiliation) = ('','','','','');
     if ($xml_authors{$aname}{lastname}) {    $lastname    = shift @{ $xml_authors{$aname}{lastname} };    }
@@ -1178,7 +1185,11 @@ sub getAgrAuthors {
     my @fn = split/ /, $author{first_name};
     my $firstinit = '';
     if ($author{orcid}) { $author{orcid} =~ s/ORCID://; }
-    foreach my $fn (@fn) { my ($first_char) = $fn =~ m/^(.)/; $firstinit .= $first_char; }
+    # foreach my $fn (@fn) { my ($first_char) = $fn =~ m/^(.)/; $firstinit .= $first_char; }	# does not account for - names like Kyung-Won Park in AGRKB:101000000956547
+    foreach my $fn (@fn) { 
+      my @split_hyphen = split/\-/, $fn;
+      foreach my $spl (@split_hyphen) {
+        my ($first_char) = $spl =~ m/^(.)/; $firstinit .= $first_char; } }
 
 # without escape characters
 #     my $author = $author{last_name} . " " . $firstinit;
