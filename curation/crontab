@@ -23,6 +23,7 @@ BASH_ENV=/container.env
 
 # cecilia
 # 0 2 * * thu /usr/caltech_curation_files/cecilia/citace_upload/wrapper.pl
+# 0 4 * * * /usr/lib/scripts/cronjobs/author_person_possible/get_author_person_possible.pl
 #
 # chris
 # 0 4 * * * /usr/lib/scripts/pgpopulation/pro_process/cronjobs/populate_pro_paperprimarystatus.pl

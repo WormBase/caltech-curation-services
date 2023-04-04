@@ -54,6 +54,9 @@
 #
 # Valerio fixed Text::Unaccent on dockerized system, Search Paper can now get from ABC the author information instead of needing
 # flatfile xml, escape the characters, and match against what we have in postgres for author and person.  2023 04 01
+#
+# Use flatfile from cronjob that generate aka_hash nightly, saves about 2 seconds by reading 14M file instead of querying db
+# and generating data.  2023 04 03
  
 
 
@@ -1321,6 +1324,24 @@ sub showInstitutionEditor {
 } # sub showInstitutionEditor
 
 sub getAkaHash {
+  my %aka_hash = &getAkaHashFromFile();
+  unless (scalar keys %aka_hash > 1) {
+    %aka_hash = &getAkaHashFromPg(); }
+  return %aka_hash;
+} # sub getAkaHash
+
+sub getAkaHashFromFile {
+  $/ = undef;
+  my $infile = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . "/cronjobs/author_person_possible/two_aka_hash.json";
+  open (IN, "<$infile") or warn "Cannot open $infile : $!";
+  my $filedata = <IN>;
+  close (IN) or die "Cannot close $infile : $!";
+  $/ = "\n";
+  my $perl = decode_json($filedata);
+  return %$perl;
+} # sub getAkaHashFromFile
+
+sub getAkaHashFromPg {
   my %filter; my %aka_hash;
   my @tables = qw (first middle last);
   foreach my $table (@tables) {
@@ -1365,7 +1386,7 @@ sub getAkaHash {
             $possible = "$first $middle $last"; $aka_hash{$possible}{$person}++;
             $possible = "${first}$middle $last"; $aka_hash{$possible}{$person}++; } } } } }
   return %aka_hash;
-} # sub getAkaHash
+} # sub getAkaHashFromPg
 
 ### End Paper Editing Section ###
 
