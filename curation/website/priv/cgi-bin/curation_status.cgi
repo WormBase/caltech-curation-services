@@ -3341,6 +3341,16 @@ sub populatePmid {
 } # sub populatePmid
 
 sub populatePdf {
+  $result = $dbh->prepare( "SELECT * FROM pap_identifier WHERE pap_identifier ~ '^AGRKB' ;" );
+  $result->execute();
+  while (my @row = $result->fetchrow) {
+    if ($row[0]) {
+      if ($row[1] =~ m/^(AGRKB:.*)/) {
+        my $url = 'https://literature.alliancegenome.org/Biblio/?action=display&referenceCurie=' . $1;
+        $pdf{$row[0]} = qq(<a href="$url" target="_blank">$row[1]</a>); } } }
+} # sub populatePdf
+
+sub populatePdfTazendra {
   $result = $dbh->prepare( "SELECT * FROM pap_electronic_path WHERE pap_electronic_path IS NOT NULL");
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
   my %temp;
@@ -3355,7 +3365,7 @@ sub populatePdf {
     my ($pdfs) = join"<br/>", @pdfs;
     $pdf{$joinkey} = $pdfs;
   } # foreach my $joinkey (sort keys %temp)
-} # sub populatePdf
+} # sub populatePdfTazendra
 
 sub makePdfLinkFromPath {
   my ($path) = shift;
