@@ -29,10 +29,13 @@ use lib qw( /usr/lib/scripts/citace_upload/allele_phenotype/ );
 use get_allele_phenotype_phenote_ace;
 
 my $outDir = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . "/pub/citace_upload/karen/";
-my $outfile = $outDir . 'allele_phenotype.ace.' . $date;
-my $molfile = $outDir . 'mol_phene.ace.' . $date;
+my $outfile = $outDir . 'allele_phenotype.ace';
+my $molfile = $outDir . 'mol_phene.ace';
+# my $outfile = $outDir . 'allele_phenotype.ace.' . $date;
+# my $molfile = $outDir . 'mol_phene.ace.' . $date;
 # my $outlong = $outDir . 'abstracts.ace.' . $date;
-my $errfile = 'err.out.' . $date;
+my $errfile = 'err.out';
+# my $errfile = 'err.out.' . $date;
 open (OUT, ">$outfile") or die "Cannot create $outfile : $!\n";
 open (MOL, ">$molfile") or die "Cannot create $molfile : $!\n";
 # open (LON, ">$outlong") or die "Cannot create $outlong : $!\n";
