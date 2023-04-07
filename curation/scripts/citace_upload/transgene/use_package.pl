@@ -8,6 +8,8 @@
 #
 # Dockerized cronjob. Output to /usr/caltech_curation_files/pub/citace_upload/karen/  2023 03 14
 #
+# Dump to single file instead of separate files by date.  2023 04 06
+#
 # cronjob
 # 0 4 * * sun /usr/lib/scripts/citace_upload/transgene/use_package.pl
 
@@ -29,9 +31,11 @@ use lib qw( /usr/lib/scripts/citace_upload/transgene/ );
 use get_transgene_ace;
 
 my $outDir = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . "/pub/citace_upload/karen/";
-my $outfile = $outDir . 'transgene.ace.' . $date;
+my $outfile = $outDir . 'transgene.ace';
+# my $outfile = $outDir . 'transgene.ace.' . $date;
 # my $outfile2 = 'transgene.ace';
-my $errfile = $outDir . 'err.out.' . $date;
+my $errfile = $outDir . 'err.out';
+# my $errfile = $outDir . 'err.out.' . $date;
 
 open (OUT, ">$outfile") or die "Cannot create $outfile : $!\n";
 # open (OU2, ">$outfile2") or die "Cannot create $outfile2 : $!\n";

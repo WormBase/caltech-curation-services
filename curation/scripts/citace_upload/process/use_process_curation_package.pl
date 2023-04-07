@@ -5,6 +5,8 @@
 #
 # Dockerized cronjob. Output to /usr/caltech_curation_files/pub/citace_upload/karen/  2023 03 14
 #
+# Output single file instead of separate file with date.  2023 04 06
+#
 # cronjob
 # 0 4 * * sun /usr/lib/scripts/citace_upload/process/use_process_curation_package.pl
 
@@ -27,10 +29,12 @@ use lib qw( /usr/lib/scripts/citace_upload/process/ );
 use get_process_curation_ace;
 
 my $outDir = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . "/pub/citace_upload/karen/";
-my $outfile = $outDir . 'process_curation.ace.' . $date;
+my $outfile = $outDir . 'process_curation.ace';
+# my $outfile = $outDir . 'process_curation.ace.' . $date;
 # my $molfile = 'mol_phene.ace.' . $date;
 # my $outlong = 'abstracts.ace.' . $date;
-my $errfile = $outDir . 'err_process_curation.out.' . $date;
+my $errfile = $outDir . 'err_process_curation.out';
+# my $errfile = $outDir . 'err_process_curation.out.' . $date;
 open (OUT, ">$outfile") or die "Cannot create $outfile : $!\n";
 # open (MOL, ">$molfile") or die "Cannot create $molfile : $!\n";
 # open (LON, ">$outlong") or die "Cannot create $outlong : $!\n";

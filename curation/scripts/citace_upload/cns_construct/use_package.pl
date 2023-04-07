@@ -5,6 +5,8 @@
 # them.  2005 07 13
 #
 # Change to default get all papers, not just valid ones.  2005 11 10
+#
+# Output to files/ folder to cleanup files older than 2 years.  2023 04 06
 
 use strict;
 use Jex;
@@ -23,8 +25,8 @@ use lib qw( /usr/lib/scripts/citace_upload/cns_construct/ );
 # use get_allele_phenotype_ace;
 use get_construct_ace;
 
-my $outfile = 'construct.ace.' . $date;
-my $errfile = 'err.out.' . $date;
+my $outfile = 'files/construct.ace.' . $date;
+my $errfile = 'files/err.out.' . $date;
 
 open (OUT, ">$outfile") or die "Cannot create $outfile : $!\n";
 open (ERR, ">$errfile") or die "Cannot create $errfile : $!\n";
