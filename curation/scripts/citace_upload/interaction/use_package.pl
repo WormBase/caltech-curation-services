@@ -23,8 +23,8 @@ use lib qw( /usr/lib/scripts/citace_upload/interaction/ );
 # use get_allele_phenotype_ace;
 use get_interaction_ace;
 
-my $outfile = 'interaction.ace.' . $date;
-my $errfile = 'err.out.' . $date;
+my $outfile = 'files/interaction.ace.' . $date;
+my $errfile = 'files/err.out.' . $date;
 
 open (OUT, ">$outfile") or die "Cannot create $outfile : $!\n";
 open (ERR, ">$errfile") or die "Cannot create $errfile : $!\n";

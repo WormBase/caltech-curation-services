@@ -22,8 +22,8 @@ use lib qw( /usr/lib/scripts/citace_upload/rnai/ );
 # use lib qw( /home/postgres/work/citace_upload/rnai/ );
 use get_rnai_ace;
 
-my $outfile = 'rnai.ace.' . $date;
-my $errfile = 'err.out.' . $date;
+my $outfile = 'files/rnai.ace.' . $date;
+my $errfile = 'files/err.out.' . $date;
 
 open (OUT, ">$outfile") or die "Cannot create $outfile : $!\n";
 open (ERR, ">$errfile") or die "Cannot create $errfile : $!\n";

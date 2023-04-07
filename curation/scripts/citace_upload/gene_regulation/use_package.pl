@@ -23,8 +23,8 @@ use lib qw( /usr/lib/scripts/citace_upload/gene_regulation/ );
 # use get_allele_phenotype_ace;
 use get_gene_regulation_ace;
 
-my $outfile = 'gene_regulation.ace.' . $date;
-my $errfile = 'err.out.' . $date;
+my $outfile = 'files/gene_regulation.ace.' . $date;
+my $errfile = 'files/err.out.' . $date;
 
 open (OUT, ">$outfile") or die "Cannot create $outfile : $!\n";
 open (ERR, ">$errfile") or die "Cannot create $errfile : $!\n";
