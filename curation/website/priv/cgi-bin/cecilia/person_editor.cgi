@@ -935,16 +935,16 @@ sub addToPgAndHst {
 } # sub addToPgAndHst
 
 sub searchPaper {
-  my $start = time;
+  # my $start = time;
   &printHtmlHeader();
-  print qq(SEARCH PAPER<br>);
+  # print qq(SEARCH PAPER<br>);
   my ($curator_two) = &getCuratorFromForm();
   my ($var, $paper_id) = &getHtmlVar($query, "paper_id");
   if ($paper_id =~ m/(\d+)/) { &displayPaper(&padZeros($1), $curator_two); }
     else { print "Not a number in $paper_id<br />\n"; }
-  my $end = time;
-  my $diff = $end - $start;
-  print qq(TOTAL $diff<br>\n);
+  # my $end = time;
+  # my $diff = $end - $start;
+  # print qq(TOTAL $diff<br>\n);
 } # sub searchPaper
 
 sub makePdfLinkFromPath {
@@ -1002,10 +1002,6 @@ sub displayPaper {
   my %xml_authors;			# data from authors by name
   my %xml_authors_found;		# names found, to print ones not found
 
-  my $mid = time;
-  my $diff = $mid - $start;
-  print qq(MID $diff secs<br>);
-
 # using local files with .xml
 #   if ($pmid) {
 #       $/ = undef;
@@ -1029,10 +1025,6 @@ sub displayPaper {
   if ($agrkb) { %xml_authors = &getAgrAuthors($agrkb); }
     else { print "<br />No AGRKB found for WBPaper$joinkey<br />\n"; }
 
-  $mid = time;
-  $diff = $mid - $start;
-  print qq(MID2 $diff secs<br>);
-  
   print "<hr>\n";
   print "<form name='form1' method=\"post\" action=\"person_editor.cgi\">\n";
   print "<input type=\"hidden\" name=\"curator_two\" id=\"curator_two\" value=\"$curator_two\">";
@@ -1052,17 +1044,9 @@ sub displayPaper {
 
   print "<hr>\n";
 
-  $mid = time;
-  $diff = $mid - $start;
-  print qq(MID3 $diff secs<br>);
-  
 #   my %aka_hash = (); # &getAkaHash();
   my %aka_hash = &getAkaHash();
 
-  $mid = time;
-  $diff = $mid - $start;
-  print qq(MID4 $diff secs<br>);
-  
   print "<table border=0 cellspacing=5>\n";
   print "<tr bgcolor=\"$blue\"><td>aid</td><td>author</td><td>possible</td><td>sent</td><td>verified</td><td>standard name</td><td>firstname</td><td>middlename</td><td>lastname</td><td>orcid</td><td>email</td><td>inst</td><td>old inst</td></tr>\n";
   foreach my $i (0 .. $#aids) {
@@ -1084,9 +1068,9 @@ sub displayPaper {
         if ($pap_join > $highest_join) { $highest_join = $pap_join; } }
       my $data = join"<br />", @data; $line .= "<td>$data</td>\n"; }
     my ($firstname, $middlename, $lastname, $standardname, $affiliation, $orcid) = ('','','','','', '');
-print qq(ANAME $aname<br>\n);
+# print qq(ANAME $aname<br>\n);
     if ($xml_authors{$aname}) {				# without this check, the subhash checks create the hash entry
-print qq(YES $aname<br>\n);
+# print qq(YES $aname<br>\n);
 #       if ($xml_authors{$aname}{affiliation}) { $affiliation = $xml_authors{$aname}{affiliation}; $xml_authors_found{$aname}++; }
 #       if ($xml_authors{$aname}{lastname}) { $lastname = $xml_authors{$aname}{lastname}; $xml_authors_found{$aname}++; }
 #       if ($xml_authors{$aname}{firstname}) { $firstname = $xml_authors{$aname}{firstname}; $xml_authors_found{$aname}++; }
@@ -1096,10 +1080,7 @@ print qq(YES $aname<br>\n);
       if ($xml_authors{$aname}{firstname}) {    $firstname    = shift @{ $xml_authors{$aname}{firstname} };    $xml_authors_found{$aname}++; }
       if ($xml_authors{$aname}{orcid}) {        $orcid        = shift @{ $xml_authors{$aname}{orcid} };        $xml_authors_found{$aname}++; }
       if ($xml_authors{$aname}{standardname}) { $standardname = shift @{ $xml_authors{$aname}{standardname} }; $xml_authors_found{$aname}++; } }
-else {
-foreach my $xmla (sort keys %xml_authors) {
-  print qq(XMLA $xmla<br>);
-} }
+    # else { foreach my $xmla (sort keys %xml_authors) { print qq(XMLA $xmla<br>); } }
     print "<input type=\"hidden\" name=\"highest_join_$i\" value=\"$highest_join\">\n";
     $line .= "<td><input name=\"standardname_$i\" value=\"$standardname\"></td>";
     $line .= "<td><input name=\"firstname_$i\" value=\"$firstname\"></td>";
@@ -1125,17 +1106,13 @@ foreach my $xmla (sort keys %xml_authors) {
     print "$line\n";
   } # foreach my $i (0 .. $#aids)
 
-  $mid = time;
-  $diff = $mid - $start;
-  print qq(MID5 $diff secs<br>);
-
   print "</table>\n";
   print "<input type=\"hidden\" name=\"aids_to_check\" value=\"$#aids\">\n";
   unless ($curation_done =~ m/author_person/) {		# only show button to create person if it's not done for author_person
     print "<input type=submit name=action value=\"Create people from XML\"><br/>\n"; }
 
   foreach my $aname (sort keys %xml_authors) {		# list all authors in xml that were not found in current paper
-print qq(ANAME $aname<br>\n);
+    # print qq(ANAME $aname<br>\n);
     next unless $aname; next if ($xml_authors_found{$aname});
     my ($firstname, $lastname, $initials, $affiliation) = ('','','','','');
     if ($xml_authors{$aname}{lastname}) {    $lastname    = shift @{ $xml_authors{$aname}{lastname} };    }
@@ -1145,9 +1122,6 @@ print qq(ANAME $aname<br>\n);
     print "XML author $aname has no match in paper Firstname : $firstname ; Lastname : $lastname ; Initials : $initials ; Affiliation : $affiliation<br />\n"; }
 
   print "</form>\n";
-  $mid = time;
-  $diff = $mid - $start;
-  print qq(MID6 $diff secs<br>);
 } # sub displayPaper
 
 sub twonumToLink {
