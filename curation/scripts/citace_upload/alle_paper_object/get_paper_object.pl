@@ -70,9 +70,10 @@ $result = $dbh->prepare( "SELECT * FROM app_paper;" );
 $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
 while (my @row = $result->fetchrow) { $hash{paper}{$row[1]}{$row[0]}++; }
 
-my $outDir = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . "/pub/citace_upload/karen/";
+# my $outDir = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . "/pub/citace_upload/karen/";
 # my $outfile = '/home/acedb/karen/WS_upload_scripts/paper_object/alle_paper.ace';
-my $outfile = $outDir . 'alle_paper.ace';
+# my $outfile = $outDir . 'alle_paper.ace';
+my $outfile = 'alle_paper.ace';
 open (OUT, ">$outfile") or die "Cannot create $outfile : $!";
 
 my $error_messages = '';

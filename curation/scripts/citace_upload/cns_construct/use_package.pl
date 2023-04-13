@@ -25,8 +25,10 @@ use lib qw( /usr/lib/scripts/citace_upload/cns_construct/ );
 # use get_allele_phenotype_ace;
 use get_construct_ace;
 
-my $outfile = 'files/construct.ace.' . $date;
-my $errfile = 'files/err.out.' . $date;
+# my $outfile = 'files/construct.ace.' . $date;
+# my $errfile = 'files/err.out.' . $date;
+my $outfile = 'construct.ace';
+my $errfile = 'err.out';
 
 open (OUT, ">$outfile") or die "Cannot create $outfile : $!\n";
 open (ERR, ">$errfile") or die "Cannot create $errfile : $!\n";

@@ -28,13 +28,17 @@ use lib qw( /usr/lib/scripts/citace_upload/process/ );
 # use get_allele_phenotype_ace;
 use get_process_curation_ace;
 
-my $outDir = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . "/pub/citace_upload/karen/";
-my $outfile = $outDir . 'process_curation.ace';
+# my $outDir = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . "/pub/citace_upload/karen/";
+# my $outfile = $outDir . 'process_curation.ace';
 # my $outfile = $outDir . 'process_curation.ace.' . $date;
 # my $molfile = 'mol_phene.ace.' . $date;
 # my $outlong = 'abstracts.ace.' . $date;
-my $errfile = $outDir . 'err_process_curation.out';
+# my $errfile = $outDir . 'err_process_curation.out';
 # my $errfile = $outDir . 'err_process_curation.out.' . $date;
+
+my $outfile = 'process_curation.ace';
+my $errfile = 'err_process_curation.out';
+
 open (OUT, ">$outfile") or die "Cannot create $outfile : $!\n";
 # open (MOL, ">$molfile") or die "Cannot create $molfile : $!\n";
 # open (LON, ">$outlong") or die "Cannot create $outlong : $!\n";

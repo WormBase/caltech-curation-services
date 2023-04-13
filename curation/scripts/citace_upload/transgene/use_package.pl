@@ -30,12 +30,15 @@ use lib qw( /usr/lib/scripts/citace_upload/transgene/ );
 # use lib qw( /home/postgres/work/citace_upload/transgene );
 use get_transgene_ace;
 
-my $outDir = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . "/pub/citace_upload/karen/";
-my $outfile = $outDir . 'transgene.ace';
+# my $outDir = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . "/pub/citace_upload/karen/";
+# my $outfile = $outDir . 'transgene.ace';
 # my $outfile = $outDir . 'transgene.ace.' . $date;
 # my $outfile2 = 'transgene.ace';
-my $errfile = $outDir . 'err.out';
+# my $errfile = $outDir . 'err.out';
 # my $errfile = $outDir . 'err.out.' . $date;
+
+my $outfile = 'transgene.ace';
+my $errfile = 'err.out';
 
 open (OUT, ">$outfile") or die "Cannot create $outfile : $!\n";
 # open (OU2, ">$outfile2") or die "Cannot create $outfile2 : $!\n";
