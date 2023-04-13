@@ -37,7 +37,8 @@ my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST}
 my $result;
 
 # my $infile = 'temp.json';
-my $infile = 'files/reference_WB_nightly.json';
+my $infile = 'files/reference_WB_accents.json';
+# my $infile = 'files/reference_WB_nightly.json';
 # my $infile = '/usr/lib/scripts/pgpopulation/pap_papers/20230322_agr_xrefs/reference_WB_nightly.json';
 
 $/ = undef;
