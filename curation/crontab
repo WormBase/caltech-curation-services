@@ -37,12 +37,12 @@ BASH_ENV=/container.env
 #
 # karen
 # 0 4 * * * /usr/lib/scripts/pgpopulation/transgene/20121004_assign_transgene_IDs/assign_transgene_IDs.pl
-# 0 4 * * sun /usr/lib/scripts/citace_upload/mop_molecule/dump_molecule_ace.pl
-# 0 4 * * sun /usr/lib/scripts/citace_upload/transgene/use_package.pl
-# 0 4 * * sun /usr/lib/scripts/citace_upload/allele_phenotype/use_package.pl
-# 0 4 * * sun /usr/lib/scripts/citace_upload/process/use_process_package.pl
-# 0 4 * * sun /usr/lib/scripts/citace_upload/process/use_process_curation_package.pl
-# 0 4 * * sun /usr/lib/scripts/citace_upload/alle_paper_object/get_paper_object.pl
+# # 0 4 * * sun /usr/lib/scripts/citace_upload/mop_molecule/dump_molecule_ace.pl
+# # 0 4 * * sun /usr/lib/scripts/citace_upload/transgene/use_package.pl
+# # 0 4 * * sun /usr/lib/scripts/citace_upload/allele_phenotype/use_package.pl
+# # 0 4 * * sun /usr/lib/scripts/citace_upload/process/use_process_package.pl
+# # 0 4 * * sun /usr/lib/scripts/citace_upload/process/use_process_curation_package.pl
+# # 0 4 * * sun /usr/lib/scripts/citace_upload/alle_paper_object/get_paper_object.pl
 #
 # kimberly
 # 0 2 * * tue,wed,thu,fri,sat /usr/lib/scripts/citace_upload/papers/wrapper.pl
