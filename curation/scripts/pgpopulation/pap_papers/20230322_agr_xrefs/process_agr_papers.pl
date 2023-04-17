@@ -39,7 +39,8 @@ my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST}
 my $result;
 
 # my $infile = 'temp.json';
-my $infile = 'files/reference_WB_accents.json';
+my $infile = 'files/reference_WB_doublequotes.json';
+# my $infile = 'files/reference_WB_accents.json';
 # my $infile = 'files/reference_WB_nightly.json';
 # my $infile = '/usr/lib/scripts/pgpopulation/pap_papers/20230322_agr_xrefs/reference_WB_nightly.json';
 
@@ -359,9 +360,9 @@ foreach my $agr (sort keys %agrs) {
 #       $good++;
 #       print qq($agr\t$doi\t$pgIdentToWbp{$doi}\n); } }
 #   next if $good;
-#   if ($agrToPmid{$agr}) { 
+#   if ($agrToPmid{$agr}) {
 #     my $pmid = $agrToPmid{$agr};
-#     if ($pgIdentToWbp{$pmid}) { 
+#     if ($pgIdentToWbp{$pmid}) {
 #       $good++;
 #       print qq($agr\t$pmid\t$pgIdentToWbp{$pmid}\n); } }
 #   next if $good;
@@ -386,9 +387,29 @@ foreach my $agr (sort keys %agrs) {
 
 __END__
 
+ grep abstract agr_pg_doublequotes | wc -l
+ grep abstract agr_pubmed_types | wc -l
+ grep title agr_pg_doublequotes | wc -l
+ grep title agr_pubmed_types | wc -l
+ grep journal agr_pg_doublequotes | wc -l
+ grep journal agr_pubmed_types | wc -l
+ grep publisher agr_pg_doublequotes | wc -l
+ grep publisher agr_pubmed_types | wc -l
+ grep pages agr_pg_doublequotes | wc -l
+ grep pages agr_pubmed_types | wc -l
+ grep volume agr_pg_doublequotes | wc -l
+ grep volume agr_pubmed_types | wc -l
+ grep author agr_pg_doublequotes | wc -l
+ grep author agr_pubmed_types | wc -l
+ grep date_published agr_pg_doublequotes | wc -l
+ grep date_published agr_pubmed_types | wc -l
+
+
+
+
 my %highestPapIdent;
 $result = $dbh->prepare( "SELECT * FROM pap_identifier ORDER BY joinkey, pap_order" );
-$result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+$result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
 while (my @row = $result->fetchrow) {
   $highestPapIdent{$row[0]} = $row[2];
 }
