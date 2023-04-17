@@ -115,6 +115,28 @@ $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
 while (my @row = $result->fetchrow) {
   $pgIdentToWbp{$row[1]} = $row[0]; }
 
+my %type_index;               # type to type_index mapping
+$result = $dbh->prepare( "SELECT * FROM pap_type_index;" );
+$result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+while (my @row = $result->fetchrow) { $type_index{$row[1]} = $row[0]; }
+
+my %type_override_journal;
+$type_override_journal{'Review'}++;
+$type_override_journal{'Comment'}++;
+$type_override_journal{'News'}++;
+$type_override_journal{'Letter'}++;
+$type_override_journal{'Editorial'}++;
+$type_override_journal{'Congresses'}++;
+$type_override_journal{'Historical_article'}++;
+$type_override_journal{'Biography'}++;
+$type_override_journal{'Interview'}++;
+$type_override_journal{'Lectures'}++;
+$type_override_journal{'Interactive_tutorial'}++;
+$type_override_journal{'Retracted_publication'}++;
+$type_override_journal{'Technical_report'}++;
+$type_override_journal{'Directory'}++;
+$type_override_journal{'Monograph'}++;
+$type_override_journal{'Published_erratum'}++;
 
 my $count = 0;
 foreach my $papobj_href (@{ $agr{data} }) {
@@ -183,8 +205,38 @@ sub comparePgAgr {
     }
     &compareAuthors($wbp, $papobj{authors});
     &compareDatePublished($wbp, $papobj{date_published});
+    &comparePubTypes($wbp, $papobj{pubmed_types});
   }
 } # sub comparePgAgr
+
+sub comparePubTypes {
+  my ($wbp, $agrPubTypes_href) = @_;
+  my $agrPubTypes = '';
+  if ($agrPubTypes_href) {
+    my @agrPubTypes = @$agrPubTypes_href;
+   
+    my %filtered_data; my $override_journal_flag = 0;
+    foreach my $data (@agrPubTypes) {
+      my ($type) = ucfirst(lc($data)); $type =~ s/\s+/_/g;
+      if ($type_override_journal{$type}) { $override_journal_flag++; }      # if it's a type to override, set flag
+      if ($type_index{$type}) { $data = $type_index{$type}; $filtered_data{$data}++; } }
+    if ($override_journal_flag) { delete $filtered_data{'1'}; }             # if meant to override remove type 1
+    my @data = ();                                                     # reset data and populate from filtered_data
+    foreach (sort {$a<=>$b} keys %filtered_data) { push @data, $_; }
+    $agrPubTypes = join", ", @data;
+    # print qq($agrPubTypes\n);
+  }
+
+  my %pgPubTypes; my @pgPubTypes = ();
+  foreach my $order (sort keys %{ $pgData{type}{$wbp} }) { $pgPubTypes{$pgData{type}{$wbp}{$order}}++; }
+  foreach (sort {$a<=>$b} keys %pgPubTypes) { push @pgPubTypes, $_; }
+  my $pgPubTypes = join", ", @pgPubTypes;
+  # print qq($pgPubTypes\n);
+
+  if ($agrPubTypes ne $pgPubTypes) {
+    print qq(DIFF\t$wbp\tpap_type\t$agrPubTypes\t$pgPubTypes\n);
+  }
+} # sub comparePubTypes
 
 sub compareDatePublished {
   my ($wbp, $agrDate) = @_;
