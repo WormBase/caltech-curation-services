@@ -17,6 +17,8 @@ use Text::Unaccent;
 use Dotenv -load => '/usr/lib/.env';
 use utf8;
 
+binmode STDOUT, ':utf8';
+
 # my $line = 'Z\u00fcmr\u00fct Duygu';	# from AGRKB:101000000258056  PMID:23449592
 # 
 # 
@@ -193,6 +195,17 @@ sub compareAuthors {
     my $agr_order = $agr_aut{order};
     if ($agr_order > $max_order) { $max_order = $agr_order; }
     my $agr_name = $agr_aut{name};
+    if ($agr_aut{last_name}) {
+      my $last_name = $agr_aut{last_name};
+      my $first_init = '';
+      if ($agr_aut{first_name}) {
+        my $first_name = $agr_aut{first_name};
+        my @firsts = split/[ \-]/, $first_name;
+        foreach my $first (@firsts) {
+          my ($first_char) = $first =~ m/^(.)/; $first_init .= ucfirst($first_char); } }
+      if ($first_init) { $agr_name = $last_name . ' ' . $first_init; }
+        else { $agr_name = $last_name; }
+    }
     $agrAut{$agr_order} = $agr_name;
   }
   my %pgAut;
