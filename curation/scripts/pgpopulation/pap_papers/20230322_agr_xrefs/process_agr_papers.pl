@@ -182,8 +182,21 @@ sub comparePgAgr {
       &compareSimple($wbp, $field, $papobj{$agrField}, $pgData{$field}{$wbp}{0});
     }
     &compareAuthors($wbp, $papobj{authors});
+    &compareDatePublished($wbp, $papobj{date_published});
   }
 } # sub comparePgAgr
+
+sub compareDatePublished {
+  my ($wbp, $agrDate) = @_;
+  my ($year, $month, $day) = ('1970', '01', '01');
+  if ($pgData{year}{$wbp}{0}) { $year = $pgData{year}{$wbp}{0}; }
+  if ($pgData{month}{$wbp}{0}) { $month = $pgData{month}{$wbp}{0}; if ($month < 10) { $month = '0' . $month; } }
+  if ($pgData{day}{$wbp}{0}) { $day = $pgData{day}{$wbp}{0}; if ($day < 10) { $day = '0' . $day; } }
+  my $pgDate = $year . '-' . $month . '-' . $day;
+  if ($agrDate ne $pgDate) {
+    print qq(DIFF\t$wbp\tdate_published\t$agrDate\t$pgDate\n);
+  }
+} # sub compareDatePublished
 
 sub compareAuthors {
   my ($wbp, $agrAuthors_href) = @_;
