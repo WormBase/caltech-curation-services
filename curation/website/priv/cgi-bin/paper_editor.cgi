@@ -156,9 +156,10 @@ use LWP::Simple;
 use POSIX qw(ceil);
 use Dotenv -load => '/usr/lib/.env';
 
-# in dockerized no longer process pubmed xml
+# in dockerized no longer process pubmed xml	# OBSOLETE when Biblio SoT to ABC  2023 04 17
 # use lib qw( /home/postgres/work/pgpopulation/pap_papers/new_papers );
-# use pap_match qw( processXmlIds );
+use lib qw(  /usr/lib/scripts/perl_modules/ );                      # for paper matching and generating
+use pap_match qw( processXmlIds );
 
 
 my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST};port=$ENV{PSQL_PORT}", "$ENV{PSQL_USERNAME}", "$ENV{PSQL_PASSWORD}") or die "Cannot connect to database!\n";
