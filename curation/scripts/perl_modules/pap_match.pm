@@ -196,11 +196,13 @@ sub processXmlIds {
   &getLoci();		# need to get loci to populate wbgenes 2007 09 05
   &populatePostgresPubmedHashes();
   my $date = &getSimpleSecDate();
-  my $logfile = '/home/postgres/work/pgpopulation/pap_papers/xml/logs/logfile.xml.' . $date;
+  # my $logfile = '/home/postgres/work/pgpopulation/pap_papers/xml/logs/logfile.xml.' . $date;
+  my $logfile = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} .  '/postgres/pgpopulation/pap_papers/xml/logs/logfile.xml.' . $date;
   open (LOG, ">$logfile") or die "Cannot write $logfile : $!";
 # print LOG "D $data D\n";
   my (@pairs) = split/\t/, $data;
-  unless ($directory) { $directory = '/home/postgres/work/pgpopulation/wpa_papers/pmid_downloads'; }
+  # unless ($directory) { $directory = '/home/postgres/work/pgpopulation/wpa_papers/pmid_downloads'; }
+  unless ($directory) { $directory = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/postgres/work/pgpopulation/wpa_papers/pmid_downloads'; }
   my @pmids_to_download;
   foreach my $pair (@pairs) {
     my ($pmid, $primary_flag, $aut_per_priority, $speciesTaxons) = split/, /, $pair;
@@ -226,6 +228,7 @@ sub processXmlIds {
           $return_text .= &processPubmedPage($page, $pmid, $curator_id, $primary_flag, $aut_per_priority, $speciesTaxons, $functional_only);
 # UNDO TO MAKE LIVE
           `mv ${directory}/xml/$pmid ${directory}/done/`;
+          $return_text .= qq(mv ${directory}/xml/$pmid ${directory}/done/\n);
         }
       else { $return_text .= "No xml for $pmid\n"; }
   }
