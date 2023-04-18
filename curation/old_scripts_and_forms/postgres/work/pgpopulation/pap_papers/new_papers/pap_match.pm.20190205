@@ -1,0 +1,731 @@
+package pap_match;
+require Exporter;
+
+
+our @ISA        = qw(Exporter);
+our @EXPORT     = qw( getPubmedPage processXmlIds processArrayOfHashes );
+our $VERSION    = 1.00;
+
+# export &getPubmedPage and &processXmlIds for /home/postgres/work/pgpopulation/wpa_papers/pmid_downloads/get_new_elegans_xml.pl
+
+
+use strict;
+use diagnostics;
+use LWP::UserAgent;
+use Jex;
+use DBI;
+
+
+# cur_ tables replaced by cfp_ tables  2009 04 06
+#
+# switched to DBI  2009 05 27
+#
+# PublicationType now has a UI=".*?" value that we don't care about.  2014 12 17
+
+
+my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n"; 
+
+
+my %cdsToGene;
+
+my %month_to_num;
+$month_to_num{Jan} = '1';
+$month_to_num{Feb} = '2';
+$month_to_num{Mar} = '3';
+$month_to_num{Apr} = '4';
+$month_to_num{May} = '5';
+$month_to_num{Jun} = '6';
+$month_to_num{Jul} = '7';
+$month_to_num{Aug} = '8';
+$month_to_num{Sep} = '9';
+$month_to_num{Oct} = '10';
+$month_to_num{Nov} = '11';
+$month_to_num{Dec} = '12';
+
+
+# unique (single value) tables :  status title journal publisher pages volume year month day pubmed_final primary_data abstract );
+
+my %single;
+$single{'status'}++;
+$single{'title'}++;
+$single{'journal'}++;
+$single{'publisher'}++;
+$single{'volume'}++;
+$single{'pages'}++;
+$single{'year'}++;
+$single{'month'}++;
+$single{'day'}++;
+$single{'pubmed_final'}++;
+$single{'primary_data'}++;
+$single{'abstract'}++;
+
+# multivalue tables :  editor type author affiliation fulltext_url contained_in gene identifier ignore remark erratum_in internal_comment curation_flags
+
+my %multi;
+$multi{'editor'}++;
+$multi{'type'}++;
+$multi{'author'}++;
+$multi{'affiliation'}++;
+$multi{'fulltext_url'}++;
+$multi{'contained_in'}++;
+$multi{'gene'}++;
+$multi{'curation_flags'}++;
+$multi{'identifier'}++;
+$multi{'ignore'}++;
+$multi{'remark'}++;
+$multi{'erratum_in'}++;
+$multi{'internal_comment'}++;
+$multi{'curation_flags'}++;
+$multi{'electronic_path'}++;
+$multi{'author_possible'}++;
+$multi{'author_sent'}++;
+$multi{'author_verified'}++;
+
+my $highest_joinkey = 0;	# get highest wbpaper id from pap_status table
+my $result = $dbh->prepare( "SELECT joinkey FROM pap_status ORDER BY joinkey DESC;" );
+$result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+my @row = $result->fetchrow();
+if ($row[0]) { $highest_joinkey = $row[0]; }
+
+my $highest_aid = 0;		# get highest author id from pap_author table
+$result = $dbh->prepare( "SELECT pap_author FROM pap_author ORDER BY CAST (pap_author AS integer) DESC;" );
+$result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+@row = $result->fetchrow();
+if ($row[0]) { $highest_aid = $row[0]; }
+
+my %type_index;               # type to type_index mapping
+$result = $dbh->prepare( "SELECT * FROM pap_type_index;" );
+$result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+while (my @row = $result->fetchrow) { $type_index{$row[1]} = $row[0]; }
+# $type_index{"Journal_article"} = '1';
+# $type_index{"Review"} = '2';
+# $type_index{"Meeting_abstract"} = '3';
+# $type_index{"Gazette_article"} = '4';
+# $type_index{"Book_chapter"} = '5';
+# $type_index{"News"} = '6';
+# $type_index{"Email"} = '7';
+# $type_index{"Book"} = '8';
+# $type_index{"Historical_article"} = '9';
+# $type_index{"Comment"} = '10';
+# $type_index{"Letter"} = '11';
+# $type_index{"Monograph"} = '12';
+# $type_index{"Editorial"} = '13';
+# $type_index{"Published_erratum"} = '14';
+# $type_index{"Retracted_publication"} = '15';
+# $type_index{"Technical_report"} = '16';
+# $type_index{"Other"} = '17';
+# $type_index{"Wormbook"} = '18';
+# $type_index{"Interview"} = '19';
+# $type_index{"Lectures"} = '20';
+# $type_index{"Congresses"} = '21';
+# $type_index{"Interactive_tutorial"} = '22';
+# $type_index{"Biography"} = '23';
+# $type_index{"Directory"} = '24';
+
+my %type_override_journal;
+$type_override_journal{'Review'}++;
+$type_override_journal{'Comment'}++;
+$type_override_journal{'News'}++;
+$type_override_journal{'Letter'}++;
+$type_override_journal{'Editorial'}++;
+$type_override_journal{'Congresses'}++;
+$type_override_journal{'Historical_article'}++;
+$type_override_journal{'Biography'}++;
+$type_override_journal{'Interview'}++;
+$type_override_journal{'Lectures'}++;
+$type_override_journal{'Interactive_tutorial'}++;
+$type_override_journal{'Retracted_publication'}++;
+$type_override_journal{'Technical_report'}++;
+$type_override_journal{'Directory'}++;
+$type_override_journal{'Monograph'}++;
+$type_override_journal{'Published_erratum'}++;
+
+
+my %pubmed_final;		# key joinkey  value final / not_final
+my %pubmed_idents;		# key pmid  value joinkey
+
+
+
+
+1;
+
+sub getPubmedByPmids {
+  my ($pmids_to_download, $directory) = @_;
+  my @pmids_to_download = split/\t/, $pmids_to_download;
+  my $sleep = 0; my $count = 0;
+  my $to_return = '';
+  foreach my $pmid (@pmids_to_download) {
+    if ($sleep) { &slp(); }			# if flagged to sleep, wait
+    unless ($sleep) { $sleep++; }		# first time through don't sleep
+    my @lc = localtime;			# comply with NCBI's requirement of doing it at night
+# TODO uncomment this when live
+    if ( ( ($lc[2] > 4) && ($lc[2] < 18) ) && ($count > 100) ) { sleep 600; $count = 0; }
+    $count++;
+    my $url = "https\:\/\/eutils\.ncbi\.nlm\.nih\.gov\/entrez\/eutils\/efetch\.fcgi\?db\=pubmed\&id\=$pmid\&retmode\=xml";
+    my $page = getPubmedPage($url);
+    $page =~ s/\n//g;
+    if ($page =~ /\<Error\>.+?\<\/Error\>/i) { $to_return .= "Error downloading $pmid from $url\n"; }
+      else {
+#         my $directory = '/home/postgres/work/pgpopulation/wpa_papers/pmid_downloads';	# get directory from function call in case parasite
+        my $xmlfile = "${directory}/xml/$pmid";
+        open (OUT, ">$xmlfile") or die "Cannot write $xmlfile : $!";
+        print OUT $page;
+        close (OUT) or die "Cannot close $xmlfile : $!"; } }
+  if ($to_return) { return $to_return; }
+} # sub getPubmedByPmids
+
+
+sub populatePostgresPubmedHashes {
+  my $result = $dbh->prepare( "SELECT * FROM pap_pubmed_final;" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+  while (my @row = $result->fetchrow) { $pubmed_final{$row[0]} = $row[1]; }
+
+  $result = $dbh->prepare( "SELECT * FROM pap_identifier WHERE pap_identifier ~ '^pmid' ORDER BY pap_timestamp;" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+  while (my @row = $result->fetchrow) { $pubmed_idents{$row[1]} = $row[0]; }
+} # sub populatePostgresPubmedHashes
+
+
+
+sub processXmlIds {
+  my ($curator_id, $functional_only, $data, $directory) = @_;
+  my $return_text;
+  &getLoci();		# need to get loci to populate wbgenes 2007 09 05
+  &populatePostgresPubmedHashes();
+  my $date = &getSimpleSecDate();
+  my $logfile = '/home/postgres/work/pgpopulation/pap_papers/xml/logs/logfile.xml.' . $date;
+  open (LOG, ">$logfile") or die "Cannot write $logfile : $!";
+# print LOG "D $data D\n";
+  my (@pairs) = split/\t/, $data;
+  unless ($directory) { $directory = '/home/postgres/work/pgpopulation/wpa_papers/pmid_downloads'; }
+  my @pmids_to_download;
+  foreach my $pair (@pairs) {
+    my ($pmid, $primary_flag, $aut_per_priority, $speciesTaxons) = split/, /, $pair;
+    if ($pubmed_idents{"pmid$pmid"}) { 		# make note and skip if pmid already in a paper and pubmed is final
+      my $joinkey = $pubmed_idents{"pmid$pmid"};
+      if ($pubmed_final{$joinkey} eq 'final') { $return_text .= "$pmid already final in WBPaper$joinkey\n"; next; } }
+    my $xmlfile = "${directory}/xml/$pmid";
+    unless (-e $xmlfile) { 
+      push @pmids_to_download, $pmid; } }
+  my $pmids_to_download = join"\t", @pmids_to_download;
+  if ($pmids_to_download) { $return_text .= &getPubmedByPmids($pmids_to_download, $directory); }
+  foreach my $pair (@pairs) {
+    my ($pmid, $primary_flag, $aut_per_priority, $speciesTaxons) = split/, /, $pair;
+    if ($pubmed_idents{"pmid$pmid"}) { next if ($pubmed_final{$pubmed_idents{"pmid$pmid"}} eq 'final'); }	# skip if pmid already in paper and pubmed is final
+# print LOG "C $curator_id P $pair P\n";
+    my $xmlfile = "${directory}/xml/$pmid";
+    if (-e $xmlfile) {
+          my $page_loc = $directory . "/xml/$pmid";
+          $/ = undef;
+          open (IN, "<$page_loc") or die "Cannot open $page_loc : $!";
+          my $page = <IN>;
+          close (IN) or die "Cannot close $page_loc : $!";
+          $return_text .= &processPubmedPage($page, $pmid, $curator_id, $primary_flag, $aut_per_priority, $speciesTaxons, $functional_only);
+# UNDO TO MAKE LIVE
+          `mv ${directory}/xml/$pmid ${directory}/done/`;
+        }
+      else { $return_text .= "No xml for $pmid\n"; }
+  }
+  close (LOG) or die "Cannot close $logfile : $!";
+  return $return_text;
+} # sub processXmlIds
+
+
+sub processPubmedPage {
+  my ($page, $pmid, $form_curator_id, $primary_flag, $aut_per_priority, $speciesTaxons, $functional_only) = @_; 
+  $page =~ s/\n//g;
+  
+  my $link_text = '';
+
+  my ($title) = $page =~ /\<ArticleTitle\>(.+?)\<\/ArticleTitle\>/i;   
+  my ($journal) = $page =~ /<MedlineTA>(.+?)\<\/MedlineTA\>/i;
+  my ($pages) = $page =~ /\<MedlinePgn\>(.+?)\<\/MedlinePgn\>/i;   
+  my ($volume) = $page =~ /\<Volume\>(.+?)\<\/Volume\>/i;   
+  my $year = ''; my $month = ''; my $day = '';
+  if ( $page =~ /\<PubDate\>(.+?)\<\/PubDate\>/si ) {
+    my ($PubDate) = $page =~ /\<PubDate\>(.+?)\<\/PubDate\>/si;
+    if ( $PubDate =~ /\<Year\>(.+?)\<\/Year\>/i ) { $year = $1; }
+    if ( $PubDate =~ /\<Month\>(.+?)\<\/Month\>/i ) { $month = $1;
+      if ($month_to_num{$month}) { $month = $month_to_num{$month}; }
+      else {          # in one case 00013115 / pmid12167287, it says Jul-Sep
+        foreach my $key (keys %month_to_num) {        # so see if it begins with any month and use that
+          if ($month =~ m/^$key/) { $month = $month_to_num{$key}; } } } }
+    if ( $PubDate =~ /\<Day\>(.+?)\<\/Day\>/i ) { $day = $1; if ($day =~ m/^0/) { $day =~ s/^0//; } } }
+  my (@types) = $page =~ /\<PublicationType\>(.+?)\<\/PublicationType\>/gi;
+  unless ($types[0]) {
+    (@types) = $page =~ /\<PublicationType UI=\".*?\"\>(.+?)\<\/PublicationType\>/gi; }
+  my ($abstract) = $page =~ /\<AbstractText\>(.+?)\<\/AbstractText\>/i;
+  unless ($abstract) {				# if there is no abstract match, try to get label and concatenate multiple matches.
+    my @abstracts = $page =~ /\<AbstractText(.+?)\<\/AbstractText\>/gi;
+    foreach my $ab (@abstracts) {
+      if ($ab =~ m/Label=\"(.*?)\"/i) { $abstract .= "${1}: "; }
+      if ($ab =~ m/^.*\>/) { $ab =~ s/^.*\>//; } $abstract .= "$ab "; }
+    if ($abstract =~ m/ +$/) { $abstract =~ s/ +$//; } }
+  my ($doi) = $page =~ /\<ArticleId IdType=\"doi\"\>(.+?)\<\/ArticleId\>/i; if ($doi) { $doi = 'doi' . $doi; }
+#   my ($pii) = $page =~ /\<ArticleId IdType=\"pii\"\>(.+?)\<\/ArticleId\>/i; if ($pii) { $pii = 'pii' . $pii; }
+  my $pubmed_final = 'not_final';
+  my $medline_citation = '';
+  if ($page =~ m/(\<MedlineCitation.*?>)/) { $medline_citation = $1; }
+#   if ($page =~ /\<MedlineCitation Owner=\"NLM\" Status=\"MEDLINE\"\>/) { $pubmed_final = 'final'; }	# final version	# changed 2010 07 27, don't care about owner, allow three types (case insensitive)
+  if ($medline_citation =~ /\<MedlineCitation .*Status=\"MEDLINE\"\>/i) { $pubmed_final = 'final'; }	# final version
+  elsif ($medline_citation =~ /\<MedlineCitation .*Status=\"PubMed-not-MEDLINE\"\>/i) { $pubmed_final = 'final'; }	# final version
+  elsif ($medline_citation =~ /\<MedlineCitation .*Status=\"OLDMEDLINE\"\>/i) { $pubmed_final = 'final'; }	# final version
+
+  my $editor = '';
+  my $fulltext_url = '';
+  
+  my @xml_authors = $page =~ /\<Author.*?\>(.+?)\<\/Author\>/ig;
+  my @authors;
+  foreach (@xml_authors){
+      my ($lastname, $initials) = $_ =~ /\<LastName\>(.+?)\<\/LastName\>.+\<Initials\>(.+?)\<\/Initials\>/i;
+      my $author = $lastname . " " . $initials; push @authors, $author; }
+
+  ($title) = &filterForPg($title);
+  ($journal) = &filterForPg($journal);
+  ($volume) = &filterForPg($volume);
+  ($pages) = &filterForPg($pages);
+  ($year) = &filterForPg($year);
+  ($month) = &filterForPg($month);
+  ($day) = &filterForPg($day);
+#   ($affiliation) = &filterForPg($affiliation);
+  ($abstract) = &filterForPg($abstract);
+  foreach (@types) { ($_) = &filterForPg($_); }
+  foreach (@authors) { ($_) = &filterForPg($_); }
+
+#   my $curator_id = 'two10877';           # pubmed, data from pubmed, override actual curator_id
+  my $curator_id = $form_curator_id;
+  my $pubmed_curator_id = 'two10877';
+  my $timestamp = 'CURRENT_TIMESTAMP';
+
+  my $joinkey = '';
+  if ($pubmed_idents{"pmid$pmid"}) { $joinkey = $pubmed_idents{"pmid$pmid"}; }
+  if ( ($joinkey eq '') && ($doi) ) {				# if pmid didn't match an existing paper, and there is a doi, check the doi is not in a paper
+    if ($journal) { if ($journal eq 'Genetics') {		# only genetics papers
+      $result = $dbh->prepare( "SELECT * FROM pap_identifier WHERE pap_identifier = '$doi' ORDER BY pap_timestamp;" );
+      $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+      my @row = $result->fetchrow();
+      if ($row[0]) { 			 			# doi matched wbpaper add pmid and set joinkey, else joinkey is blank
+# TODO add PII for Genetics without a WBPaper
+         $joinkey = $row[0]; my $pgtable = 'pap_identifier';
+         my ($order) = &getHighestOrderByTableJoinkey($pgtable, $joinkey); $order++;
+         &appendMultiPg($order, 'pap_identifier', $joinkey, $pubmed_curator_id, $timestamp, "pmid$pmid"); $order++;	# add pmid
+#          &appendMultiPg($order, 'pap_identifier', $joinkey, $pubmed_curator_id, $timestamp, "$pii"); 			# add pii
+         if ($authors[0]) { &changeXmlPg('new', 'pap_author', $joinkey, $pubmed_curator_id, $timestamp, \@authors); }	# genetics papers don't have authors, if adding a pmid, also tack on authors.  hopefully this works.  2011 02 15
+  } } } }
+
+  my $update_or_new = 'new';
+  if ($joinkey) {
+      $link_text .= "$pmid is updating WBPaper$joinkey\n";
+      $update_or_new = 'update';
+      if ($pubmed_final{$joinkey}) {
+        if ($pubmed_final{$joinkey} eq 'final') { return "$pmid already final in WBPaper$joinkey\n"; } 
+        elsif ($pubmed_final{$joinkey} eq 'not_final') { 
+          if ($pubmed_final eq 'not_final') { return "$pmid already exists in WBPaper$joinkey and still not final\n"; } } } }
+    else { 
+      $highest_joinkey++; $joinkey = $highest_joinkey; 		# get new joinkey if new paper
+      my $link = qq(<a href="paper_editor.cgi?curator_id=${form_curator_id}&action=Search&data_number=${joinkey}" target="_blank">WBPaper$joinkey<a/>);
+      $link_text .= qq($pmid is creating $link\n); }
+
+  &changeXmlPg($update_or_new, 'pap_title', $joinkey, $pubmed_curator_id, $timestamp, $title);
+  &changeXmlPg($update_or_new, 'pap_journal', $joinkey, $pubmed_curator_id, $timestamp, $journal);
+  &changeXmlPg($update_or_new, 'pap_pages', $joinkey, $pubmed_curator_id, $timestamp, $pages);
+  &changeXmlPg($update_or_new, 'pap_volume', $joinkey, $pubmed_curator_id, $timestamp, $volume);
+  &changeXmlPg($update_or_new, 'pap_year', $joinkey, $pubmed_curator_id, $timestamp, $year);
+  &changeXmlPg($update_or_new, 'pap_month', $joinkey, $pubmed_curator_id, $timestamp, $month);
+  &changeXmlPg($update_or_new, 'pap_day', $joinkey, $pubmed_curator_id, $timestamp, $day);
+  &changeXmlPg($update_or_new, 'pap_abstract', $joinkey, $pubmed_curator_id, $timestamp, $abstract);
+  &changeXmlPg($update_or_new, 'pap_pubmed_final', $joinkey, $pubmed_curator_id, $timestamp, $pubmed_final);
+  &changeXmlPg($update_or_new, 'pap_type', $joinkey, $pubmed_curator_id, $timestamp, \@types);
+#   my @temp = ( "pmid$pmid", $doi, $pii );		# some data is %multi, so needs to be passed to &changeXmlPg as an array
+  my @temp = ( "pmid$pmid", $doi );		# some data is %multi, so needs to be passed to &changeXmlPg as an array
+  &changeXmlPg($update_or_new, 'pap_identifier', $joinkey, $pubmed_curator_id, $timestamp, \@temp); 	# doi pii could change, so always update it (this has exception to only delete pmid doi pii and not other types of identifiers, and only from pubmed curator
+
+  if ( $update_or_new eq 'new' ) {
+    if ($authors[0]) { &changeXmlPg($update_or_new, 'pap_author', $joinkey, $pubmed_curator_id, $timestamp, \@authors); }
+    &changeXmlPg($update_or_new, 'pap_status', $joinkey, $curator_id, $timestamp, 'valid'); 
+#   check these two work correctly, especially functional_only, which only adds, doesn't update all pap_curation_flags values  maybe have some kind of ignore value ?
+    if ($primary_flag) { &changeXmlPg($update_or_new, 'pap_primary_data', $joinkey, $curator_id, $timestamp, $primary_flag); }
+    if ($speciesTaxons) {
+       &changeXmlPg($update_or_new, 'pap_species', $joinkey, $curator_id, $timestamp, $speciesTaxons); }
+    if ( ($functional_only) || ($aut_per_priority) ) { 
+      @temp = ( ); 
+      if ($functional_only) { push @temp, $functional_only; }
+      if ($aut_per_priority) { push @temp, $aut_per_priority; }
+      &changeXmlPg($update_or_new, 'pap_curation_flags', $joinkey, $curator_id, $timestamp, \@temp); }
+  }
+
+  return $link_text;
+} # sub processPubmedPage
+
+sub getHighestOrderByTableJoinkey {
+  my ($pgtable, $joinkey) = @_; 
+  my $highest_order = 0;	# the orders used by $curator_id, the highest order used
+  my $result = $dbh->prepare( "SELECT * FROM $pgtable WHERE joinkey = '$joinkey' ORDER BY pap_order DESC;" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+  my @row = $result->fetchrow(); 
+  if ($row[2]) { $highest_order = $row[2]; }
+  return $highest_order;
+} # sub getHighestOrderByTableJoinkey
+
+sub appendMultiPg {		# append to a %multi table 
+  my ($order, $pgtable, $joinkey, $curator_id, $timestamp, $data, $evi) = @_; 
+  my @pgcommands;
+  if ($evi) {
+      my $command = "INSERT INTO $pgtable VALUES ('$joinkey', '$data', '$order', '$curator_id', $timestamp, $evi)";
+      push @pgcommands, $command;
+      $command = "INSERT INTO h_$pgtable VALUES ('$joinkey', '$data', '$order', '$curator_id', $timestamp, $evi)";
+      push @pgcommands, $command; }
+    else {
+      my $command = "INSERT INTO $pgtable VALUES ('$joinkey', '$data', '$order', '$curator_id', $timestamp)";
+      push @pgcommands, $command;
+      $command = "INSERT INTO h_$pgtable VALUES ('$joinkey', '$data', '$order', '$curator_id', $timestamp)";
+      push @pgcommands, $command; }
+  foreach my $command (@pgcommands) {
+    print LOG "$command\n";
+    $result = $dbh->do( $command );
+  }
+} # sub appendMultiPg
+
+sub changeXmlPg {		# change xml data from pubmed in postgres
+# always wipe out all pubmed fields and enter what's in pubmed.  but not genes and not authors.
+# if update, delete from table.  whether update or new, insert to table and h_table.  
+# if it's a %multi table (has order), query entries by that curator_id (always pubmed for now)
+# and track the highest used order.  for every data that is to be added now, use an order starting 
+# at one.  if more data entries than the previously highest-used-order, add one to the highest used 
+# order.  if less data than orders, write NULL to the h_table for those unused orders.
+
+  my ($update_or_new, $pgtable, $joinkey, $curator_id, $timestamp, $data) = @_; 
+  my @pgcommands;
+  my ($non_pap_table) = $pgtable =~ m/pap_(.*)/;
+  if ($pgtable eq 'pap_author') { 		# authors are only created and need author_index
+      my @data = @$data;			# get the array from the array ref
+      my $order = 0;
+      foreach my $data (@data) {
+        next unless $data;
+        $order++;
+        $highest_aid++;
+        my $command = "INSERT INTO $pgtable VALUES ('$joinkey', '$highest_aid', '$order', '$curator_id', $timestamp)";
+        push @pgcommands, $command;
+        $command = "INSERT INTO h_$pgtable VALUES ('$joinkey', '$highest_aid', '$order', '$curator_id', $timestamp)";
+        push @pgcommands, $command;
+        $command = "INSERT INTO pap_author_index VALUES ('$highest_aid', '$data', NULL, '$curator_id', $timestamp)";
+        push @pgcommands, $command;
+        $command = "INSERT INTO h_$pgtable VALUES ('$joinkey', '$highest_aid', NULL, '$curator_id', $timestamp)";
+        push @pgcommands, $command; } }
+#     elsif ( ($pgtable eq 'pap_identifier') || ($pgtable eq 'pap_curation_flags') || ($pgtable eq 'pap_type') ) { 		# } # these are %multi value tables (have order to track)
+    elsif ($pgtable eq 'pap_identifier') {	# pmid + doi + pii from pubmed curator (two10877) should get deleted and repopulated
+      my @data = @$data;			# get the array from the array ref
+#       my $result = $dbh->prepare( " SELECT pap_order FROM $pgtable WHERE joinkey = '$joinkey' AND ( pap_identifier ~ '^pmid' OR pap_identifier ~ '^doi' OR pap_identifier ~ '^pii' ) AND pap_curator = 'two10877' " );
+      my $result = $dbh->prepare( " SELECT pap_order FROM $pgtable WHERE joinkey = '$joinkey' AND ( pap_identifier ~ '^pmid' OR pap_identifier ~ '^doi' ) AND pap_curator = 'two10877' " );
+      my %orders_to_delete;			# get orders to delete in data table and overwrite with NULL in history table
+      $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+      while (my @row = $result->fetchrow) { $orders_to_delete{$row[0]}++; }
+      foreach my $otd (sort keys %orders_to_delete) {
+        my $command = "DELETE FROM $pgtable WHERE joinkey = '$joinkey' AND pap_order = '$otd'";
+        push @pgcommands, $command;
+        $command = "INSERT INTO h_$pgtable VALUES ('$joinkey', NULL, '$otd', '$curator_id', $timestamp)";
+        push @pgcommands, $command; }
+      my ($order) = &getHighestOrderByTableJoinkey($pgtable, $joinkey);
+      foreach my $data (@data) {
+        next unless $data;			# skip if no data
+        $order++;
+        my $command = "INSERT INTO $pgtable VALUES ('$joinkey', '$data', '$order', '$curator_id', $timestamp)";
+        push @pgcommands, $command;
+        $command = "INSERT INTO h_$pgtable VALUES ('$joinkey', '$data', '$order', '$curator_id', $timestamp)";
+        push @pgcommands, $command; } }
+    elsif ($pgtable eq 'pap_species') { 		# authors are only created and need author_index
+      my (@speciesTaxons) = split/\|/, $data;			# species/taxon data is pipe-separated
+      my $order = 0;
+      foreach my $speciesTaxon (@speciesTaxons) {
+        next unless $speciesTaxon;
+        my $species = $speciesTaxon; my ($taxon) = $speciesTaxon =~ m/(\d+)/; $species =~ s/ $taxon//g;
+        my $curator_evidence = $curator_id; $curator_evidence =~ s/two/WBPerson/;            # store WBPerson in evidence
+        $order++;
+        my $command = "INSERT INTO   $pgtable VALUES ('$joinkey', '$taxon', '$order', '$curator_id', $timestamp, 'Curator_confirmed\t\"$curator_evidence\"')";
+        push @pgcommands, $command;
+        $command    = "INSERT INTO h_$pgtable VALUES ('$joinkey', '$taxon', '$order', '$curator_id', $timestamp, 'Curator_confirmed\t\"$curator_evidence\"')";
+        push @pgcommands, $command;
+        $order++;
+        my $command = "INSERT INTO   $pgtable VALUES ('$joinkey', '$taxon', '$order', '$curator_id', $timestamp, 'Manually_connected\t\"$species\"')";
+        push @pgcommands, $command;
+        $command    = "INSERT INTO h_$pgtable VALUES ('$joinkey', '$taxon', '$order', '$curator_id', $timestamp, 'Manually_connected\t\"$species\"')";
+        push @pgcommands, $command; } }
+#     elsif ( ($pgtable eq 'pap_identifier') || ($pgtable eq 'pap_curation_flags') || ($pgtable eq 'pap_type') ) { 		# } # these are %multi value tables (have order to track)
+    elsif ($multi{$non_pap_table}) { 		# these are %multi value tables (have order to track)
+      my @data = @$data;			# get the array from the array ref
+      my $highest_order = 0;	# the orders used by $curator_id, the highest order used
+      my $result = $dbh->prepare( "SELECT * FROM $pgtable WHERE joinkey = '$joinkey' ORDER BY pap_order DESC;" );
+      $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+      my @row = $result->fetchrow(); 
+      if ($row[2]) { $highest_order = $row[2]; }
+      my $command = "DELETE FROM $pgtable WHERE joinkey = '$joinkey'";
+      if ($update_or_new eq 'update') { push @pgcommands, $command; }	# only delete if it's an update
+      my $order = 0;
+      if ($pgtable eq 'pap_type') { 		# convert type to type_index numbers, override journal_article if others
+        my %filtered_data; my $override_journal_flag = 0;
+        foreach my $data (@data) {
+          my ($type) = ucfirst(lc($data)); $type =~ s/\s+/_/g;
+          if ($type_override_journal{$type}) { $override_journal_flag++; }	# if it's a type to override, set flag
+          if ($type_index{$type}) { $data = $type_index{$type}; $filtered_data{$data}++; } }
+        if ($override_journal_flag) { delete $filtered_data{'1'}; }		# if meant to override remove type 1
+        @data = (); 							# reset data and populate from filtered_data
+        foreach (sort {$a<=>$b} keys %filtered_data) { push @data, $_; } }
+      foreach my $data (@data) {
+        next unless $data;			# skip if no data
+        $order++;
+        $command = "INSERT INTO $pgtable VALUES ('$joinkey', '$data', '$order', '$curator_id', $timestamp)";
+        push @pgcommands, $command;
+        $command = "INSERT INTO h_$pgtable VALUES ('$joinkey', '$data', '$order', '$curator_id', $timestamp)";
+        push @pgcommands, $command; }
+      if ($order < $highest_order) {
+        for my $order_to_nullify ($order+1 .. $highest_order) {
+          $command = "INSERT INTO h_$pgtable VALUES ('$joinkey', NULL, '$order_to_nullify', '$curator_id', $timestamp)";
+          push @pgcommands, $command; } } }
+    else {
+      return unless $data;			# skip if no data
+      my $command = "DELETE FROM $pgtable WHERE joinkey = '$joinkey'";
+      if ($update_or_new eq 'update') { push @pgcommands, $command; }	# only delete if it's an update
+      $command = "INSERT INTO $pgtable VALUES ('$joinkey', '$data', NULL, '$curator_id', $timestamp)";
+      push @pgcommands, $command;
+      $command = "INSERT INTO h_$pgtable VALUES ('$joinkey', '$data', NULL, '$curator_id', $timestamp)";
+      push @pgcommands, $command;
+  }
+  if ( ($update_or_new eq 'new') && ($pgtable eq 'pap_abstract') ) {	# only add genes if abstract and new entry
+    my @words = split/\s+/, $data; my %filtered_loci;
+    foreach my $word (@words) { 
+      if ($word =~ m/,/) { $word =~ s/,//g; }
+      if ($word =~ m/\(/) { $word =~ s/\(//g; }
+      if ($word =~ m/\)/) { $word =~ s/\)//g; }
+      if ($word =~ m/;/) { $word =~ s/;//g; }
+      if ($cdsToGene{locus}{$word}) {
+        foreach my $wbgene (@{ $cdsToGene{locus}{$word} }) { $filtered_loci{$wbgene}{$word}++; } } }
+    my $pgtable = 'pap_gene';
+    my ($order) = &getHighestOrderByTableJoinkey($pgtable, $joinkey);
+    foreach my $wbgene (sort keys %filtered_loci) { 
+      foreach my $word (sort keys %{ $filtered_loci{$wbgene} }) { 
+        $order++;
+        my $evidence = "'Inferred_automatically\t\"Abstract read $word\"'";
+        &appendMultiPg($order, $pgtable, $joinkey, $curator_id, $timestamp, $wbgene, $evidence); } } }
+
+  foreach my $command (@pgcommands) {
+    print LOG "$command\n";
+# UNCOMMENT TO POPULATE
+# UNDO TO MAKE LIVE
+    $result = $dbh->do( $command );
+  }
+} # sub changeXmlPg
+
+
+sub processArrayOfHashes {	# for manual generation of array of hashes for abstracts and gazettes
+  my ($curator_id, $timestamp, $array_ref) = @_;	# two#, '2010-04-17 12:00' / CURRENT_TIMESTAMP, ref to AoH
+  my @array_of_hashes = @$array_ref;
+
+  my $date = &getSimpleSecDate();
+  my $logfile = '/home/postgres/work/pgpopulation/pap_papers/abstracts/logs/logfile.AoH.' . $date;
+  open (LOG, ">$logfile") or die "Cannot write $logfile : $!";
+  &getLoci();
+
+  foreach my $hash_ref (@array_of_hashes) {
+    $highest_joinkey++; my $joinkey = $highest_joinkey; 		# get new joinkey if new paper
+    my %hash = %$hash_ref;
+    foreach my $table (sort keys %hash) {
+      if ($multi{$table}) {
+          my $array_ref = $hash{$table};
+          foreach (@$array_ref) { ($_) = &filterForPg($_); }
+#           my @array = @$array_ref;
+#           foreach my $data (@array) {
+#             print "MULTI pap_$table $data\n"; } 
+          &changeXmlPg('new', "pap_$table", $joinkey, $curator_id, $timestamp, $array_ref); }
+        else {
+          my ($data) = &filterForPg($hash{$table});
+#           print "SINGLE pap_$table $data\n"; 
+          &changeXmlPg('new', "pap_$table", $joinkey, $curator_id, $timestamp, $data); }
+    } # foreach my $table (sort keys %hash)
+  } # foreach my $hash_ref (@array_of_hashes)
+  close (LOG) or die "Cannot close $logfile : $!";
+} # processArrayOfHashes
+
+
+
+  
+sub padZeros {
+  my $joinkey = shift;
+  if ($joinkey < 10) { $joinkey = '0000000' . $joinkey; }
+  elsif ($joinkey < 100) { $joinkey = '000000' . $joinkey; }
+  elsif ($joinkey < 1000) { $joinkey = '00000' . $joinkey; }
+  elsif ($joinkey < 10000) { $joinkey = '0000' . $joinkey; }
+  elsif ($joinkey < 100000) { $joinkey = '000' . $joinkey; }
+  elsif ($joinkey < 1000000) { $joinkey = '00' . $joinkey; }
+  elsif ($joinkey < 10000000) { $joinkey = '0' . $joinkey; }
+  return $joinkey;
+} # sub padZeros
+
+
+
+sub getPubmedPage {
+    my $u = shift;
+    my $page = "";
+    my $ua = LWP::UserAgent->new(timeout => 30); # instantiates a new user agent
+    my $request = HTTP::Request->new(GET => $u); # grabs url
+    my $response = $ua->request($request);       # checks url, dies if not valid.
+#    die "Error while getting ", $response->request->uri," -- ", $response->status_line, "\nAborting" unless $response-> is_success;
+    $page = $response->content;    #splits by line
+    $page = &filterForeign($page);
+    return $page;
+} # sub getPubmedPage
+
+
+
+
+sub getLoci {			# genes to all other possible names
+#   my @pgtables = qw( gin_locus gin_molname gin_protein gin_seqname gin_sequence gin_synonyms );
+  my @pgtables = qw( gin_locus gin_seqname gin_synonyms );		# just these 3, Kimberly, 2010 04 11
+  foreach my $table (@pgtables) {					# updated to get values from postgres 2006 12 19
+    my $result = $dbh->prepare( "SELECT * FROM $table;" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) { 
+#       my $wbgene = 'WBGene' . $row[0];
+      my $wbgene = $row[0];
+      push @{ $cdsToGene{locus}{$row[1]} }, $wbgene; 
+      if ($table eq 'gin_locus') { my ($upLocus) = uc($row[1]); push @{ $cdsToGene{locus}{$upLocus} }, $wbgene; }	# match fully upcased locus names  2009 10 19
+  } }
+ 
+  if ($cdsToGene{locus}{run}) { delete $cdsToGene{locus}{run}; }	# Andrei's exclusion list 2006 07 15
+  if ($cdsToGene{locus}{SC}) { delete $cdsToGene{locus}{SC}; }
+  if ($cdsToGene{locus}{GATA}) { delete $cdsToGene{locus}{GATA}; }
+  if ($cdsToGene{locus}{eT1}) { delete $cdsToGene{locus}{eT1}; }
+  if ($cdsToGene{locus}{RhoA}) { delete $cdsToGene{locus}{RhoA}; }
+  if ($cdsToGene{locus}{TBP}) { delete $cdsToGene{locus}{TBP}; }
+  if ($cdsToGene{locus}{syn}) { delete $cdsToGene{locus}{syn}; }
+  if ($cdsToGene{locus}{TRAP240}) { delete $cdsToGene{locus}{TRAP240}; }
+  if ($cdsToGene{locus}{'AP-1'}) { delete $cdsToGene{locus}{'AP-1'}; }
+} # sub getLoci
+
+sub filterForeign {		# take out foreign characters before they can get into postgres  for Cecilia  2006 05 04
+  my $change = shift;
+  if ($change =~ m/[‚„…ˆŠ‹ŒŽ‘’“”—˜š›œžŸª«­¯±·»¼½¾ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüý]/) {
+    if ($change =~ m/‚/) { $change =~ s/‚/,/g; }
+    if ($change =~ m/„/) { $change =~ s/„/"/g; }
+    if ($change =~ m/…/) { $change =~ s/…/.../g; }
+    if ($change =~ m/ˆ/) { $change =~ s/ˆ/^/g; }
+    if ($change =~ m/Š/) { $change =~ s/Š/S/g; }
+    if ($change =~ m/‹/) { $change =~ s/‹/</g; }
+    if ($change =~ m/Œ/) { $change =~ s/Œ/OE/g; }
+    if ($change =~ m/Ž/) { $change =~ s/Ž/Z/g; }
+    if ($change =~ m/‘/) { $change =~ s/‘/'/g; }
+    if ($change =~ m/’/) { $change =~ s/’/'/g; }
+    if ($change =~ m/“/) { $change =~ s/“/"/g; }
+    if ($change =~ m/”/) { $change =~ s/”/"/g; }
+    if ($change =~ m/—/) { $change =~ s/—/-/g; }
+    if ($change =~ m/˜/) { $change =~ s/˜/~/g; }
+    if ($change =~ m/š/) { $change =~ s/š/s/g; }
+    if ($change =~ m/›/) { $change =~ s/›/>/g; }
+    if ($change =~ m/œ/) { $change =~ s/œ/oe/g; }
+    if ($change =~ m/ž/) { $change =~ s/ž/z/g; }
+    if ($change =~ m/Ÿ/) { $change =~ s/Ÿ/y/g; }
+    if ($change =~ m/ª/) { $change =~ s/ª/a/g; }
+    if ($change =~ m/«/) { $change =~ s/«/"/g; }
+    if ($change =~ m/­/) { $change =~ s/­/-/g; }
+    if ($change =~ m/¯/) { $change =~ s/¯/-/g; }
+    if ($change =~ m/±/) { $change =~ s/±/+\/-/g; }
+    if ($change =~ m/·/) { $change =~ s/·/-/g; }
+    if ($change =~ m/»/) { $change =~ s/»/"/g; }
+    if ($change =~ m/¼/) { $change =~ s/¼/1\/4/g; }
+    if ($change =~ m/½/) { $change =~ s/½/1\/2/g; }
+    if ($change =~ m/¾/) { $change =~ s/¾/3\/4/g; }
+    if ($change =~ m/À/) { $change =~ s/À/A/g; }
+    if ($change =~ m/Á/) { $change =~ s/Á/A/g; }
+    if ($change =~ m/Â/) { $change =~ s/Â/A/g; }
+    if ($change =~ m/Ã/) { $change =~ s/Ã/A/g; }
+    if ($change =~ m/Ä/) { $change =~ s/Ä/A/g; }
+    if ($change =~ m/Å/) { $change =~ s/Å/A/g; }
+    if ($change =~ m/Æ/) { $change =~ s/Æ/AE/g; }
+    if ($change =~ m/Ç/) { $change =~ s/Ç/C/g; }
+    if ($change =~ m/È/) { $change =~ s/È/E/g; }
+    if ($change =~ m/É/) { $change =~ s/É/E/g; }
+    if ($change =~ m/Ê/) { $change =~ s/Ê/E/g; }
+    if ($change =~ m/Ë/) { $change =~ s/Ë/E/g; }
+    if ($change =~ m/Ì/) { $change =~ s/Ì/I/g; }
+    if ($change =~ m/Í/) { $change =~ s/Í/I/g; }
+    if ($change =~ m/Î/) { $change =~ s/Î/I/g; }
+    if ($change =~ m/Ï/) { $change =~ s/Ï/I/g; }
+    if ($change =~ m/Ð/) { $change =~ s/Ð/D/g; }
+    if ($change =~ m/Ñ/) { $change =~ s/Ñ/N/g; }
+    if ($change =~ m/Ò/) { $change =~ s/Ò/O/g; }
+    if ($change =~ m/Ó/) { $change =~ s/Ó/O/g; }
+    if ($change =~ m/Ô/) { $change =~ s/Ô/O/g; }
+    if ($change =~ m/Õ/) { $change =~ s/Õ/O/g; }
+    if ($change =~ m/Ö/) { $change =~ s/Ö/O/g; }
+    if ($change =~ m/×/) { $change =~ s/×/x/g; }
+    if ($change =~ m/Ø/) { $change =~ s/Ø/O/g; }
+    if ($change =~ m/Ù/) { $change =~ s/Ù/U/g; }
+    if ($change =~ m/Ú/) { $change =~ s/Ú/U/g; }
+    if ($change =~ m/Û/) { $change =~ s/Û/U/g; }
+    if ($change =~ m/Ü/) { $change =~ s/Ü/U/g; }
+    if ($change =~ m/Ý/) { $change =~ s/Ý/Y/g; }
+    if ($change =~ m/ß/) { $change =~ s/ß/B/g; }
+    if ($change =~ m/à/) { $change =~ s/à/a/g; }
+    if ($change =~ m/á/) { $change =~ s/á/a/g; }
+    if ($change =~ m/â/) { $change =~ s/â/a/g; }
+    if ($change =~ m/ã/) { $change =~ s/ã/a/g; }
+    if ($change =~ m/ä/) { $change =~ s/ä/a/g; }
+    if ($change =~ m/å/) { $change =~ s/å/a/g; }
+    if ($change =~ m/æ/) { $change =~ s/æ/ae/g; }
+    if ($change =~ m/ç/) { $change =~ s/ç/c/g; }
+    if ($change =~ m/è/) { $change =~ s/è/e/g; }
+    if ($change =~ m/é/) { $change =~ s/é/e/g; }
+    if ($change =~ m/ê/) { $change =~ s/ê/e/g; }
+    if ($change =~ m/ë/) { $change =~ s/ë/e/g; }
+    if ($change =~ m/ì/) { $change =~ s/ì/i/g; }
+    if ($change =~ m/í/) { $change =~ s/í/i/g; }
+    if ($change =~ m/î/) { $change =~ s/î/i/g; }
+    if ($change =~ m/ï/) { $change =~ s/ï/i/g; }
+    if ($change =~ m/ð/) { $change =~ s/ð/o/g; }
+    if ($change =~ m/ñ/) { $change =~ s/ñ/n/g; }
+    if ($change =~ m/ò/) { $change =~ s/ò/o/g; }
+    if ($change =~ m/ó/) { $change =~ s/ó/o/g; }
+    if ($change =~ m/ô/) { $change =~ s/ô/o/g; }
+    if ($change =~ m/õ/) { $change =~ s/õ/o/g; }
+    if ($change =~ m/ö/) { $change =~ s/ö/o/g; }
+    if ($change =~ m/÷/) { $change =~ s/÷/\//g; }
+    if ($change =~ m/ø/) { $change =~ s/ø/o/g; }
+    if ($change =~ m/ù/) { $change =~ s/ù/u/g; }
+    if ($change =~ m/ú/) { $change =~ s/ú/u/g; }
+    if ($change =~ m/û/) { $change =~ s/û/u/g; }
+    if ($change =~ m/ü/) { $change =~ s/ü/u/g; }
+    if ($change =~ m/ý/) { $change =~ s/ý/y/g; }
+  }
+  if ($change =~ m/[€ƒ†‡‰•™¡¢£¤¥¦§¨©¬®°²³´µ¶¹º¿þÞ]/) { $change =~ s/[€ƒ†‡‰•™¡¢£¤¥¦§¨©¬®°²³´µ¶¹º¿þÞ]//g; }
+  return $change;
+} # sub filterForeign
+
+sub slp {
+#     my $rand = int(rand 15) + 5;	# random 5-20 seconds
+    my $rand = 5;			# just 5 seconds
+    print LOG "Sleeping for $rand seconds...\n";
+    sleep $rand;
+    print LOG "done.\n";
+} # sub slp
+
+
+__END__
+
+# SELECT * FROM wpa_author_index_author_id_seq;
+# SELECT setval('wpa_author_index_author_id_seq', 74426);
+
+pg_deleting :	# CHANGE DATE IF USING THIS !
+SELECT * FROM wpa WHERE wpa_timestamp > '2005-08-17 15:30:00';
+SELECT * FROM wpa_identifier WHERE wpa_timestamp > '2005-08-17 15:30:00';
+SELECT * FROM wpa_title WHERE wpa_timestamp > '2005-08-17 15:30:00';
+SELECT * FROM wpa_journal WHERE wpa_timestamp > '2005-08-17 15:30:00';
+SELECT * FROM wpa_volume WHERE wpa_timestamp > '2005-08-17 15:30:00';
+SELECT * FROM wpa_pages WHERE wpa_timestamp > '2005-08-17 15:30:00';
+SELECT * FROM wpa_year WHERE wpa_timestamp > '2005-08-17 15:30:00';
+SELECT * FROM wpa_type WHERE wpa_timestamp > '2005-08-17 15:30:00';
+SELECT * FROM wpa_abstract WHERE wpa_timestamp > '2005-08-17 15:30:00';
+SELECT * FROM wpa_author WHERE wpa_timestamp > '2005-08-17 15:30:00';
+SELECT * FROM wpa_author_index WHERE wpa_timestamp > '2005-08-17 15:30:00';
+SELECT * FROM wpa_gene WHERE wpa_timestamp > '2005-08-17 15:30:00';
+
+
+
