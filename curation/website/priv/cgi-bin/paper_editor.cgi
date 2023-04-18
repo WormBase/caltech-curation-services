@@ -132,6 +132,8 @@
 #
 # pap_gene_comp added for comparator genes using gic_ table.  Had to generalize
 # stuff to work like 'gene' but for 'gene_comp'.  for Kimberly.  2022 02 11
+#
+# Dockerized but added back pubmed xml pipeline to create papers from xml.  2023 04 17
 
 
 
@@ -208,9 +210,9 @@ sub display {
   elsif ($action eq 'Page') { &enterNewPapers('page'); }
   elsif ($action eq 'Enter New Papers') { &enterNewPapers('wormbase'); }
   elsif ($action eq 'Enter New Parasite Papers') { &enterNewPapers('parasite'); }
-#   elsif ($action eq 'Enter PMIDs') { &enterPmids(); }				# obsolete in dockerized 2023 03 21
+  elsif ($action eq 'Enter PMIDs') { &enterPmids(); }				# obsolete in dockerized 2023 03 21  # comment out when SoT to ABC 2023 04 17
   elsif ($action eq 'Enter non-PMID paper') { &enterNonPmids(); }
-#   elsif ($action eq 'Confirm Abstracts') { &confirmAbstracts(); }		# obsolete in dockerized 2023 03 21
+  elsif ($action eq 'Confirm Abstracts') { &confirmAbstracts(); }		# obsolete in dockerized 2023 03 21  # comment out when SoT to ABC 2023 04 17
   elsif ($action eq 'Find Dead Genes') { &findDeadGenes(); }				# sort by genes, link to each paper per gene
 #   elsif ($action eq 'Flag False Positives') { &flagFalsePositives(); }
 #   elsif ($action eq 'Enter False Positives') { &enterFalsePositives(); }
@@ -604,13 +606,18 @@ sub findDeadGenes {	# for Kimberly to find dead genes and update them in the pap
   &printFooter();
 } # sub findDeadGenes
 
-sub OBSOLETEenterPmids {
+sub enterPmids {	# OBSOLETE when Biblio SoT to ABC  2023 04 17
   &printHtmlHeader();
   print "<input type=\"hidden\" name=\"which_page\" id=\"which_page\" value=\"enterPmids\">";
   (my $oop, my $curator_id) = &getHtmlVar($query, 'curator_id');		# some tables assign the curator, most will be overridden by two10877 for pubmed
   ($oop, my $wormbaseVsParasite) = &getHtmlVar($query, 'wormbaseVsParasite');
-  my $directory = '/home/postgres/work/pgpopulation/wpa_papers/pmid_downloads';
-  if ($wormbaseVsParasite eq 'parasite') { $directory = '/home/postgres/work/pgpopulation/wpa_papers/pmid_parasite_downloads'; }
+
+  # my $directory = '/home/postgres/work/pgpopulation/wpa_papers/pmid_downloads';
+  my $directory = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/postgres/pgpopulation/pap_papers/pmid_downloads';
+  if ($wormbaseVsParasite eq 'parasite') { 
+    $directory = '/home/postgres/work/pgpopulation/wpa_papers/pmid_parasite_downloads';
+    $directory = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/postgres/pgpopulation/pap_papers/pmid_parasite_downloads'; }
+
   unless ($curator_id) { print "ERROR NO CURATOR<br />\n"; return; }
   my $functional_flag = ''; my $primary_flag = ''; my $aut_per_priority = '';
   ($oop, $functional_flag) = &getHtmlVar($query, 'functional_flag');
@@ -637,14 +644,18 @@ sub OBSOLETEenterPmids {
   $list =~ s/\t/<br \/>/g;
   print "Processed $curator_id $functional_flag<br/>$list.<br/>\n";
   &printFooter();
-} # sub OBSOLETEenterPmids
+} # sub enterPmids
 
-sub OBSOLETEconfirmAbstracts {
+sub confirmAbstracts {	# OBSOLETE when Biblio SoT to ABC  2023 04 17
   &printHtmlHeader();
   print "<input type=\"hidden\" name=\"which_page\" id=\"which_page\" value=\"confirmAbstracts\">";
   my ($oop, $wormbaseVsParasite) = &getHtmlVar($query, 'wormbaseVsParasite');
-  my $directory = '/home/postgres/work/pgpopulation/wpa_papers/pmid_downloads';
-  if ($wormbaseVsParasite eq 'parasite') { $directory = '/home/postgres/work/pgpopulation/wpa_papers/pmid_parasite_downloads'; }
+
+  # my $directory = '/home/postgres/work/pgpopulation/wpa_papers/pmid_downloads';
+  my $directory = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/postgres/pgpopulation/pap_papers/pmid_downloads';
+  if ($wormbaseVsParasite eq 'parasite') { 
+    $directory = '/home/postgres/work/pgpopulation/wpa_papers/pmid_parasite_downloads';
+    $directory = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/postgres/pgpopulation/pap_papers/pmid_parasite_downloads'; }
   my $rejected_file = $directory . '/rejected_pmids';
   my $removed_file  = $directory . '/removed_pmids';
   
@@ -700,9 +711,9 @@ sub OBSOLETEconfirmAbstracts {
 #   foreach my $move (@move_queue) { `$move`; }
 # print "CREATED<br>\n";
   &printFooter();
-} # sub OBSOLETEconfirmAbstracts
+} # sub confirmAbstracts
 
-sub enterNewPapers {
+sub enterNewPapers {	# OBSOLETE when Biblio SoT to ABC  2023 04 17
   my ($wormbaseVsParasite) = @_;
   if ($wormbaseVsParasite eq 'page') { 
     ($oop, $wormbaseVsParasite) = &getHtmlVar($query, 'wormbaseVsParasite'); }
@@ -756,9 +767,13 @@ sub showConfirmXmlTable {
   unless ($page) { $page = 1; }
   unless ($perpage) { $perpage = 20; }
   
-  my $directory = '/home/postgres/work/pgpopulation/wpa_papers/pmid_downloads';
-  if ($wormbaseVsParasite eq 'parasite') { $directory = '/home/postgres/work/pgpopulation/wpa_papers/pmid_parasite_downloads'; }
-  my $rejected_file = '/home/postgres/work/pgpopulation/wpa_papers/pmid_downloads/rejected_pmids';
+  # my $directory = '/home/postgres/work/pgpopulation/wpa_papers/pmid_downloads';
+  my $directory = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/postgres/pgpopulation/pap_papers/pmid_downloads';
+  if ($wormbaseVsParasite eq 'parasite') { 
+    $directory = '/home/postgres/work/pgpopulation/wpa_papers/pmid_parasite_downloads';
+    $directory = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/postgres/pgpopulation/pap_papers/pmid_parasite_downloads'; }
+  # my $rejected_file = '/home/postgres/work/pgpopulation/wpa_papers/pmid_downloads/rejected_pmids';
+  my $rejected_file = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/postgres/work/pgpopulation/pap_papers/pmid_downloads/rejected_pmids';
   my @read_pmids = <$directory/xml/*>;
   foreach (@read_pmids) { $_ =~ s|$directory/xml/||g; }
   my @sorted_pmids = reverse sort {$a<=>$b} @read_pmids;
