@@ -11,6 +11,7 @@ BASH_ENV=/container.env
 # 0 4 * * * /usr/lib/scripts/pgpopulation/cur_curation/cur_nncdata/populate_nnc_result.pl
 # 0 4 * * * /usr/lib/scripts/pgpopulation/cur_curation/cur_strdata/populate_str_result.pl
 # 0 20 * * * /usr/lib/scripts/pgpopulation/obo_oa_ontologies/update_obo_oa_ontologies.pl
+# 0 1 * * * /usr/lib/scripts/pgpopulation/pap_papers/pmid_downloads/get_new_elegans_xml.pl
 
 # azurebrd section
 # 0 4 * * * /usr/lib/scripts/cronjobs/update_wormbase_header.pl
