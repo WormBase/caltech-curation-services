@@ -57,6 +57,9 @@
 #
 # Use flatfile from cronjob that generate aka_hash nightly, saves about 2 seconds by reading 14M file instead of querying db
 # and generating data.  2023 04 03
+#
+# Put back the xml-based affiliation matching because SoT won't switch to ABC for a while.  Cecilia on vacation, hasn't
+# tested this.  2023 04 18
  
 
 
@@ -1002,28 +1005,32 @@ sub displayPaper {
   my %xml_authors;			# data from authors by name
   my %xml_authors_found;		# names found, to print ones not found
 
-# using local files with .xml
-#   if ($pmid) {
-#       $/ = undef;
-#       my @xml_paths = qw( /home/postgres/work/pgpopulation/wpa_papers/pmid_downloads/done/ /home/postgres/work/pgpopulation/wpa_papers/wpa_pubmed_final/xml/ );
-#       my $xmlfile = '';
-#       foreach my $path (@xml_paths) {
-#         my $file = '/home/postgres/work/pgpopulation/wpa_papers/pmid_downloads/done/' . $pmid;
-#         if (-e $file) { $xmlfile = $file; }
-#       }
-#       if ($xmlfile) {
-#           print "pmid $pmid xml found<br />\n";
-#           open (IN, "<$xmlfile") or die "Cannot open $xmlfile : $!";
-#           $xmldata = <IN>;
-#           close (IN) or die "Cannot close $xmlfile : $!";
-#           $/ = "\n";
-#           %xml_authors = &getXmlAuthors($xmldata); }
-#         else { print "NO XML for $pmid\n"; } }
-#     else { print "<br />No PMID found for WBPaper$joinkey<br />\n"; }
+  # Comment this out OBSOLETE when Biblio SoT to ABC  2023 04 18
+  # using local files with .xml
+  if ($pmid) {
+      $/ = undef;
+      # my @xml_paths = qw( /home/postgres/work/pgpopulation/wpa_papers/pmid_downloads/done/ /home/postgres/work/pgpopulation/wpa_papers/wpa_pubmed_final/xml/ );
+      my @xml_paths = qw( $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH}/postgres/pgpopulation/pap_papers/pmid_downloads/done/ $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH}/postgres/pgpopulation/pap_papers/wpa_pubmed_final/xml/ );
+      my $xmlfile = '';
+      foreach my $path (@xml_paths) {
+        # my $file = '/home/postgres/work/pgpopulation/wpa_papers/pmid_downloads/done/' . $pmid;
+        my $file = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH}. '/postgres/pgpopulation/pap_papers/pmid_downloads/done/' . $pmid;
+        if (-e $file) { $xmlfile = $file; }
+      }
+      if ($xmlfile) {
+          print "pmid $pmid xml found<br />\n";
+          open (IN, "<$xmlfile") or die "Cannot open $xmlfile : $!";
+          $xmldata = <IN>;
+          close (IN) or die "Cannot close $xmlfile : $!";
+          $/ = "\n";
+          %xml_authors = &getXmlAuthors($xmldata); }
+        else { print "NO XML for $pmid\n"; } }
+    else { print "<br />No PMID found for WBPaper$joinkey<br />\n"; }
 
+  # Put this back when Biblio SoT to ABC  2023 04 18
   # using ABC from AGR
-  if ($agrkb) { %xml_authors = &getAgrAuthors($agrkb); }
-    else { print "<br />No AGRKB found for WBPaper$joinkey<br />\n"; }
+#   if ($agrkb) { %xml_authors = &getAgrAuthors($agrkb); }
+#     else { print "<br />No AGRKB found for WBPaper$joinkey<br />\n"; }
 
   print "<hr>\n";
   print "<form name='form1' method=\"post\" action=\"person_editor.cgi\">\n";
