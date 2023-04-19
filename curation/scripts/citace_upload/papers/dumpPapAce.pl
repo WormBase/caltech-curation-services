@@ -27,6 +27,8 @@ use lib qw( /usr/lib/scripts/citace_upload/papers/ );	# for general ace dumping 
 # use lib qw( /home/postgres/work/citace_upload/papers/ );
 use get_brief_citation;
 
+binmode STDOUT, ':utf8';
+
 
 my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST};port=$ENV{PSQL_PORT}", "$ENV{PSQL_USERNAME}", "$ENV{PSQL_PASSWORD}") or die "Cannot connect to database!\n";
 # my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n";

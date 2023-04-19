@@ -61,6 +61,8 @@ chdir ($directory) or die "Cannot chdir to $directory : $!";
   # print "END $date\n";
 
   `./dumpPapAce.pl > $outfile`;
+  # print qq(cp $outfile $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH}/kimberly/citace_upload/papers/papers.ace\n);
+  `cp $outfile $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH}/kimberly/citace_upload/papers/papers.ace`;
 
 #   my $location_of_latest = '/home/postgres/public_html/cgi-bin/data/papers.ace';
 #   unlink ("$location_of_latest") or warn "Cannot unlink $location_of_latest : $!";       # unlink symlink to latest
