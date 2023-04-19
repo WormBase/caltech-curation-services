@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-/usr/bin/perl "$@"
+/usr/local/bin/perl -CSDA "$@"
