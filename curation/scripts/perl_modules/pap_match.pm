@@ -338,15 +338,16 @@ sub processPubmedPage {
   &changeXmlPg($update_or_new, 'pap_month', $joinkey, $pubmed_curator_id, $timestamp, $month);
   &changeXmlPg($update_or_new, 'pap_day', $joinkey, $pubmed_curator_id, $timestamp, $day);
   &changeXmlPg($update_or_new, 'pap_pubmed_final', $joinkey, $pubmed_curator_id, $timestamp, $pubmed_final);
-  if ($journal ne 'MicroPubl Biol') {	# micropubs should not update data, everything else should
-    &changeXmlPg($update_or_new, 'pap_title', $joinkey, $pubmed_curator_id, $timestamp, $title);
-    &changeXmlPg($update_or_new, 'pap_pages', $joinkey, $pubmed_curator_id, $timestamp, $pages);
-    &changeXmlPg($update_or_new, 'pap_volume', $joinkey, $pubmed_curator_id, $timestamp, $volume);
-    &changeXmlPg($update_or_new, 'pap_abstract', $joinkey, $pubmed_curator_id, $timestamp, $abstract);
-    &changeXmlPg($update_or_new, 'pap_type', $joinkey, $pubmed_curator_id, $timestamp, \@types);
-    my @temp = ( "pmid$pmid", $doi );		# some data is %multi, so needs to be passed to &changeXmlPg as an array
-    &changeXmlPg($update_or_new, 'pap_identifier', $joinkey, $pubmed_curator_id, $timestamp, \@temp); 	# doi pii could change, so always update it (this has exception to only delete pmid doi pii and not other types of identifiers, and only from pubmed curator
-  }
+#   if ($journal ne 'MicroPubl Biol') {	# micropubs should not update data, everything else should
+# always update all these fields, since we disabled the datacite update script  2023 04 19
+  &changeXmlPg($update_or_new, 'pap_title', $joinkey, $pubmed_curator_id, $timestamp, $title);
+  &changeXmlPg($update_or_new, 'pap_pages', $joinkey, $pubmed_curator_id, $timestamp, $pages);
+  &changeXmlPg($update_or_new, 'pap_volume', $joinkey, $pubmed_curator_id, $timestamp, $volume);
+  &changeXmlPg($update_or_new, 'pap_abstract', $joinkey, $pubmed_curator_id, $timestamp, $abstract);
+  &changeXmlPg($update_or_new, 'pap_type', $joinkey, $pubmed_curator_id, $timestamp, \@types);
+  my @temp = ( "pmid$pmid", $doi );		# some data is %multi, so needs to be passed to &changeXmlPg as an array
+  &changeXmlPg($update_or_new, 'pap_identifier', $joinkey, $pubmed_curator_id, $timestamp, \@temp); 	# doi pii could change, so always update it (this has exception to only delete pmid doi pii and not other types of identifiers, and only from pubmed curator
+#   }
 
   if ($speciesTaxons) {				# always update the speciesTaxons
     &changeXmlPg($update_or_new, 'pap_species', $joinkey, $curator_id, $timestamp, $speciesTaxons); }
