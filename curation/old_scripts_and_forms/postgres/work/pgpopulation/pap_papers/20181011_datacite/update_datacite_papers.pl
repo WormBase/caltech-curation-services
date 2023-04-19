@@ -3,9 +3,10 @@
 # update papers from Datacite XML, which have micropublication biology, have a DOI, but don't have a title.  For Daniela.  2018 10 11
 #
 # also give it type Journal_article. for Daniela  2020 01 24
-
+# 
 # 0 20 * * * /home/postgres/work/pgpopulation/pap_papers/20181011_datacite/update_datacite_papers.pl      # daniela
 
+# cronjob disabled for Kimberly and Daniela  2023 04 19
 
 
 
