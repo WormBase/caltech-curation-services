@@ -18,84 +18,187 @@ my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST}
 # my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n"; 
 my $result;
 
-my $infile = 'files/reference_WB_nightly.json';
-# my $infile = '/usr/lib/scripts/pgpopulation/pap_papers/20230322_agr_xrefs/reference_WB_nightly.json';
-
-$/ = undef;
-open (IN, "<$infile") or die "Cannot open $infile : $!";
-print "Start reading $infile\n";
-my $json_data = <IN>;
-print "Done reading $infile\n";
-close (IN) or die "Cannot open $infile : $!";
-
-print "Start decoding json\n";
-# my %perl = parse_json($json_data);	# JSON::Parse, not installed in dockerized
-my $perl = decode_json($json_data);	# JSON  very very slow on dockerized without JSON::XS, but fast on tazendra.  with JSON::XS installed is fast even without directly calling JSON::XS->new like below, and without use JSON::XS, just use JSON
-# my $perl = JSON::XS->new->utf8->decode ($json_data);
-
-print "Done decoding json\n";
-my %agr = %$perl;
-foreach my $key (sort keys %agr) {
-  print qq($key\n);
-}
 
 my %wbps;
 my %wbpToAgr;
+my %pmids;
+my %pmidToAgr;
 
-my $count = 0;
-foreach my $papobj_href (@{ $agr{data} }) {
-#   print qq(papobj_href\n);
-  my %papobj = %$papobj_href;
-#   $count++; last if ($count > 10);
-  my $agr = $papobj{curie};
-  my $wbp = '';
-#   print qq($agr\n);
-  my %xrefs;
-  foreach my $xref_href (@{ $papobj{cross_references} }) {
-    my %xref = %$xref_href;
-    if ($xref{curie} =~ m/^WB:WBPaper(\d+)/) { $wbp = $1; }
-#     print qq($xref{curie}\n);
+# &populateFromNightlyAbcWb();
+&populateFromAbcXrefs();
+
+sub populateFromAbcXrefs {
+  # this requires getting the most recent cross_references from ABC, needs okta token
+  #  %curl -X 'GET' \
+  #    'https://stage-literature-rest.alliancegenome.org/bulk_download/references/external_ids/' \
+  #    -H 'accept: application/json' \
+  #    -H 'Authorization: Bearer eyJraWQiOiJNX1N0dWxfYlE5cEw1aHdLQ1hmN2hOSjcyYzJLYjl4SjhuYlQ3NjdPQzJzIiwiYWxnIjoiUlMyNTYifQ.eyJ2ZXIiOjEsImp0aSI6IkFULmlQMFp5NG9SYkdKZ0E3ZExnU2dSSmE5ZE45blhvR05VUm5nT2M1dnlBWnMiLCJpc3MiOiJodHRwczovL2Rldi0zMDQ1NjU4Ny5va3RhLmNvbS9vYXV0aDIvZGVmYXVsdCIsImF1ZCI6ImFwaTovL2RlZmF1bHQiLCJpYXQiOjE2NDc2NzQyODUsImV4cCI6MTY0Nzc2MDY4NSwiY2lkIjoiMG9hMWJuMXdqZFppSldhSmU1ZDciLCJ1aWQiOiIwMHUxY3R6dmpnTXBrODdRbTVkNyIsInNjcCI6WyJlbWFpbCIsIm9wZW5pZCJdLCJhdXRoX3RpbWUiOjE2NDc2NzQyODQsInN1YiI6Imp1YW5jYXJsb3NAd29ybWJhc2Uub3JnIn0.HlShhBK1tNyalpYGhDId_LbqaG2541E5yE9ErGWtBKOGtXJvS-ZEDrSM62Xq_0cbL_h85Icj7pWLtPTjcphGngT_9AQMeVMFLuGx9BIUdVhdXWS5uu8VRjhO-WVbHBQOopwUdMCILh9P5vkBax47_dzuwPUlaJboGtgnafNMNqZCJAmPqWpIepmsrjCEHoWRPJxWlor_fXQBvTcBxVWfa7_eN27-0TJP_YPA7rofl1FvVGGUDgornKLJCFbBvte13qgeOsVv8kPlPZHtJ46rV19OZ3LZSmTKFH1cxyviHgB51ACt2qWjDFA8qxiyBBTFyBsnly0ks93ygpsat8qj4Q' \
+  #    -H 'Content-Type: application/json'  >  ref_xref.json
+  # optionally to make more readable version
+  #  % cat ref_xref.json | json_pp > ref_xref.json_pp
+
+  my $infile = 'files/ref_xref.json';
+  # my $infile = '/usr/lib/scripts/pgpopulation/pap_papers/20230322_agr_xrefs/files/ref_xref.json';
+  
+  $/ = undef;
+  open (IN, "<$infile") or die "Cannot open $infile : $!";
+  print "Start reading $infile\n";
+  my $json_data = <IN>;
+  print "Done reading $infile\n";
+  close (IN) or die "Cannot open $infile : $!";
+  
+  print "Start decoding json\n";
+  # my %perl = parse_json($json_data);	# JSON::Parse, not installed in dockerized
+  my $perl = decode_json($json_data);	# JSON  very very slow on dockerized without JSON::XS, but fast on tazendra.  with JSON::XS installed is fast even without directly calling JSON::XS->new like below, and without use JSON::XS, just use JSON
+
+  print "Done decoding json\n";
+  my @agr = @$perl;
+#   foreach my $key (sort keys %agr) {
+#     print qq($key\n);
+#   }
+
+  my $count = 0;
+  foreach my $papobj_href (@agr) {
+  #   print qq(papobj_href\n);
+    my %papobj = %$papobj_href;
+#     $count++; last if ($count > 10);
+    my $agr = $papobj{curie};
+    my $pmid = '';
+    print qq($agr\n);
+    my %xrefs;
+    foreach my $xref_href (@{ $papobj{cross_references} }) {
+      my %xref = %$xref_href;
+      next unless $xref{curie};
+      if ($xref{curie} =~ m/^PMID:(\d+)/) { $pmid = 'pmid' . $1; }
+  #     print qq($xref{curie}\n);
+    }
+  #   print qq(\n);
+    if ($pmid) { 
+      $pmids{$pmid}++;
+      print qq($pmid : $agr\n);
+      $pmidToAgr{$pmid} = $agr;
+    }
   }
-#   print qq(\n);
-  if ($wbp) { 
-    $wbps{$wbp}++;
-    print qq($wbp : $agr\n);
-    $wbpToAgr{$wbp} = $agr;
+
+  my %valid;
+  $result = $dbh->prepare( "SELECT * FROM pap_status WHERE pap_status = 'valid'" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+  while (my @row = $result->fetchrow) { $valid{$row[0]}++; }
+  
+  my %highestPapIdent;
+  my %wbpToAgr;
+  my %wbpToPmid;
+  $result = $dbh->prepare( "SELECT * FROM pap_identifier ORDER BY joinkey, pap_order" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+  while (my @row = $result->fetchrow) {
+    $highestPapIdent{$row[0]} = $row[2];
+    if ($row[1] =~ m/AGRKB:/) { $wbpToAgr{$row[0]} = $row[1]; }
+    if ($row[1] =~ m/pmid/) { $wbpToPmid{$row[0]} = $row[1]; }
   }
-}
 
-foreach my $wbp (sort keys %wbps) {
-  if ($wbps{$wbp} > 1) { print qq(ERR : Too many wbps $wbp $wbps{$wbp}\n); }
-}
+  my @pgcommands;
+  foreach my $joinkey (sort {$a<=>$b} keys %valid) {
+    next if ($wbpToAgr{$joinkey});
+    if ($wbpToPmid{$joinkey}) { 
+      my $pmid = $wbpToPmid{$joinkey};
+      if ($pmidToAgr{$pmid}) { 
+        my $agr = $pmidToAgr{$pmid};
+        print qq(WBPaper$joinkey\t$pmid\t$agr\n);
+        my $order = 1;
+        if ($highestPapIdent{$joinkey}) {
+          $order = $highestPapIdent{$joinkey} + 1;
+          # print qq(ERR : No order for $joinkey\n);
+        }
+        push @pgcommands, qq(INSERT INTO pap_identifier VALUES ('$joinkey', '$agr', $order, 'two1823'););
+  } } }
 
-my %valid;
-$result = $dbh->prepare( "SELECT * FROM pap_status WHERE pap_status = 'valid'" );
-$result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
-while (my @row = $result->fetchrow) { $valid{$row[0]}++; }
+  foreach my $pgcommand (@pgcommands) {
+    print qq($pgcommand\n);
+  # UNCOMMENT TO POPULATE
+  #   $dbh->do($pgcommand);
+  } # foreach my $pgcommand (@pgcommands)
+  
+} # sub populateFromAbcXrefs
 
-my %highestPapIdent;
-$result = $dbh->prepare( "SELECT * FROM pap_identifier ORDER BY joinkey, pap_order" );
-$result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
-while (my @row = $result->fetchrow) {
-  $highestPapIdent{$row[0]} = $row[2];
-}
-
-my @pgcommands;
-foreach my $joinkey (sort keys %wbpToAgr) {
-  next unless $valid{$joinkey};
-  my $order = 1;
-  if ($highestPapIdent{$joinkey}) {
-    $order = $highestPapIdent{$joinkey} + 1;
-    # print qq(ERR : No order for $joinkey\n);
+sub populateFromNightlyAbcWb {
+  # this only populates AGR for papers that are in corpus at ABC, assuming that ABC is Biblio SoT, but for a while PDFs will be at ABC before switching SoT
+  my $infile = 'files/reference_WB_nightly.json';
+  # my $infile = '/usr/lib/scripts/pgpopulation/pap_papers/20230322_agr_xrefs/reference_WB_nightly.json';
+  
+  $/ = undef;
+  open (IN, "<$infile") or die "Cannot open $infile : $!";
+  print "Start reading $infile\n";
+  my $json_data = <IN>;
+  print "Done reading $infile\n";
+  close (IN) or die "Cannot open $infile : $!";
+  
+  print "Start decoding json\n";
+  # my %perl = parse_json($json_data);	# JSON::Parse, not installed in dockerized
+  my $perl = decode_json($json_data);	# JSON  very very slow on dockerized without JSON::XS, but fast on tazendra.  with JSON::XS installed is fast even without directly calling JSON::XS->new like below, and without use JSON::XS, just use JSON
+  # my $perl = JSON::XS->new->utf8->decode ($json_data);
+  
+  print "Done decoding json\n";
+  my %agr = %$perl;
+  foreach my $key (sort keys %agr) {
+    print qq($key\n);
   }
-  push @pgcommands, qq(INSERT INTO pap_identifier VALUES ('$joinkey', '$wbpToAgr{$joinkey}', $order, 'two1823'););
-}
+  
+  my $count = 0;
+  foreach my $papobj_href (@{ $agr{data} }) {
+  #   print qq(papobj_href\n);
+    my %papobj = %$papobj_href;
+  #   $count++; last if ($count > 10);
+    my $agr = $papobj{curie};
+    my $wbp = '';
+  #   print qq($agr\n);
+    my %xrefs;
+    foreach my $xref_href (@{ $papobj{cross_references} }) {
+      my %xref = %$xref_href;
+      if ($xref{curie} =~ m/^WB:WBPaper(\d+)/) { $wbp = $1; }
+  #     print qq($xref{curie}\n);
+    }
+  #   print qq(\n);
+    if ($wbp) { 
+      $wbps{$wbp}++;
+      print qq($wbp : $agr\n);
+      $wbpToAgr{$wbp} = $agr;
+    }
+  }
 
-foreach my $pgcommand (@pgcommands) {
-  print qq($pgcommand\n);
-# UNCOMMENT TO POPULATE
-#   $dbh->do($pgcommand);
-} # foreach my $pgcommand (@pgcommands)
+  foreach my $wbp (sort keys %wbps) {
+    if ($wbps{$wbp} > 1) { print qq(ERR : Too many wbps $wbp $wbps{$wbp}\n); }
+  }
+  
+  my %valid;
+  $result = $dbh->prepare( "SELECT * FROM pap_status WHERE pap_status = 'valid'" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+  while (my @row = $result->fetchrow) { $valid{$row[0]}++; }
+  
+  my %highestPapIdent;
+  $result = $dbh->prepare( "SELECT * FROM pap_identifier ORDER BY joinkey, pap_order" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+  while (my @row = $result->fetchrow) {
+    $highestPapIdent{$row[0]} = $row[2];
+  }
+  
+  my @pgcommands;
+  foreach my $joinkey (sort keys %wbpToAgr) {
+    next unless $valid{$joinkey};
+    my $order = 1;
+    if ($highestPapIdent{$joinkey}) {
+      $order = $highestPapIdent{$joinkey} + 1;
+      # print qq(ERR : No order for $joinkey\n);
+    }
+    push @pgcommands, qq(INSERT INTO pap_identifier VALUES ('$joinkey', '$wbpToAgr{$joinkey}', $order, 'two1823'););
+  }
+  
+  foreach my $pgcommand (@pgcommands) {
+    print qq($pgcommand\n);
+  # UNCOMMENT TO POPULATE
+  #   $dbh->do($pgcommand);
+  } # foreach my $pgcommand (@pgcommands)
+
+} # sub populateFromNightlyAbcWb
 
 __END__
 
