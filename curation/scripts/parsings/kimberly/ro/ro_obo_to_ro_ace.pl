@@ -17,11 +17,11 @@ use strict;
 use LWP::Simple;
 # use Text::Unaccent;
 
-use open qw( :std :encoding(UTF-8) );	# to avoid 'Wide character in print' warning when getting ro.obo with get as opposed to local file
 
 # get from URL
-my $url = 'https://raw.githubusercontent.com/oborel/obo-relations/master/ro.obo';
-my $obo_file = get $url;
+# use open qw( :std :encoding(UTF-8) );	# to avoid 'Wide character in print' warning when getting ro.obo with get as opposed to local file
+# my $url = 'https://raw.githubusercontent.com/oborel/obo-relations/master/ro.obo';
+# my $obo_file = get $url;
 
 # this doesn't work
 # if ($obo_file =~ m/ω/) { $obo_file =~ s/ω/w/g; }
@@ -29,13 +29,13 @@ my $obo_file = get $url;
 # def: "x is preceded by y if and only if the time point at which y ends is before or equivalent to the time point at which x starts. Formally: x preceded by y iff ω(y) <= α(x), where α is a function that maps a process to a start point, and ω is a function that maps a process to an end point." []
 
 
-# get from local file
-# $/ = undef;
-# my $infile = 'ro.obo';
-# open (IN, "<$infile") or die "Cannot open $infile : $!";
-# my $obo_file = <IN>;
-# close (IN) or die "Cannot close $infile : $!";
-# $/ = "\n";
+# get from local file	# Kimberly manually edits ro.obo so it needs to be manually downloaded first
+$/ = undef;
+my $infile = 'ro.obo';
+open (IN, "<$infile") or die "Cannot open $infile : $!";
+my $obo_file = <IN>;
+close (IN) or die "Cannot close $infile : $!";
+$/ = "\n";
 
 # causes segmentation fault for some reason.  2018 06 28
 # my $unaccented = unac_string("iso-8859-1", $obo_file);
