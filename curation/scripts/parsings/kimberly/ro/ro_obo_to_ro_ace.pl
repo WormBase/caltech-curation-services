@@ -17,9 +17,11 @@ use strict;
 use LWP::Simple;
 # use Text::Unaccent;
 
+use open qw( :std :encoding(UTF-8) );	# to avoid 'Wide character in print' warning when getting ro.obo with get as opposed to local file
+
 # get from URL
-# my $url = 'https://raw.githubusercontent.com/oborel/obo-relations/master/ro.obo';
-# my $obo_file = get $url;
+my $url = 'https://raw.githubusercontent.com/oborel/obo-relations/master/ro.obo';
+my $obo_file = get $url;
 
 # this doesn't work
 # if ($obo_file =~ m/ω/) { $obo_file =~ s/ω/w/g; }
@@ -28,12 +30,12 @@ use LWP::Simple;
 
 
 # get from local file
-$/ = undef;
-my $infile = 'ro.obo';
-open (IN, "<$infile") or die "Cannot open $infile : $!";
-my $obo_file = <IN>;
-close (IN) or die "Cannot close $infile : $!";
-$/ = "\n";
+# $/ = undef;
+# my $infile = 'ro.obo';
+# open (IN, "<$infile") or die "Cannot open $infile : $!";
+# my $obo_file = <IN>;
+# close (IN) or die "Cannot close $infile : $!";
+# $/ = "\n";
 
 # causes segmentation fault for some reason.  2018 06 28
 # my $unaccented = unac_string("iso-8859-1", $obo_file);
