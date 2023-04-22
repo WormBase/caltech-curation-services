@@ -23,7 +23,8 @@ $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
 while (my @row = $result->fetchrow) { if ($row[0]) { $pap{"WBPaper$row[0]"} = $row[1]; } }
 
 
-my $inDir = '/home2/acedb/cron/dump_from_ws/files/';
+# my $inDir = '/home2/acedb/cron/dump_from_ws/files/';
+my $inDir = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/kimberly/uniprot/uniprot_paper_data/files/'; 
 my $outfile = 'uniprot_paper_data';
 
 open (OUT, ">$outfile") or die "Cannot open $outfile : $!";
