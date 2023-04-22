@@ -27,6 +27,16 @@ my %pmidToAgr;
 # &populateFromNightlyAbcWb();
 &populateFromAbcXrefs();
 
+sub generateOktaToken {
+  my $okta_token = `curl -s --request POST --url https://$ENV{OKTA_DOMAIN}/v1/token \    --header 'accept: application/json' \    --header 'cache-control: no-cache' \    --header 'content-type: application/x-www-form-urlencoded' \    --data "grant_type=client_credentials&scope=admin&client_id=$ENV{OKTA_CLIENT_ID}&client_secret=$ENV{OKTA_CLIENT_SECRET}" \      | jq '.access_token' | tr -d '"'`;
+  return $okta_token;
+}
+
+sub generateXrefJsonFile {
+  my $okta_token = &generateOktaToken();
+  `curl -X 'GET' 'https://stage-literature-rest.alliancegenome.org/bulk_download/references/external_ids/' -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json'  >  files/ref_xref.json`;
+}
+
 sub populateFromAbcXrefs {
   # this requires getting the most recent cross_references from ABC, needs okta token
   #  %curl -X 'GET' \
@@ -36,6 +46,9 @@ sub populateFromAbcXrefs {
   #    -H 'Content-Type: application/json'  >  ref_xref.json
   # optionally to make more readable version
   #  % cat ref_xref.json | json_pp > ref_xref.json_pp
+
+  # UNCOMMENT for live run with latest data
+#   &generateXrefJsonFile();
 
   my $infile = 'files/ref_xref.json';
   # my $infile = '/usr/lib/scripts/pgpopulation/pap_papers/20230322_agr_xrefs/files/ref_xref.json';
