@@ -68,6 +68,8 @@
 # Using category_headers instead of headers.  2020 10 21
 # 
 # Can now queryListBySpecies() to show all genes in a species set.  2020 11 18
+#
+# Added XBXL and XBXT for Wen.  2022 11 16
 
 # http://tazendra.caltech.edu/~azurebrd/cgi-bin/forms/agr_simplemine.cgi
 
@@ -440,6 +442,8 @@ sub showFraqForm {
   $species{'MGI'} = 'Mus musculus';
   $species{'RGD'} = 'Rattus norvegicus';
   $species{'SGD'} = 'Saccharomyces cerevisiae';
+  $species{'XBXL'} = 'Xenopus laevis';
+  $species{'XBXT'} = 'Xenopus tropicalis';
   my $select_size = scalar keys %species;
   $select_size++; 			# to account for any species added at the end
   print qq(<span style="font-weight:bold">Step 1: Select species of the genes that you will enter (Required)</span>\n);
