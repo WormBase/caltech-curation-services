@@ -200,15 +200,30 @@ sub comparePgAgr {
   if ($wbp) {
     print qq($agr is $wbp\n);
     &populatePgData($wbp);
-    foreach my $field (sort keys %simpleFields) {
-      my $agrField = $simpleFields{$field};
-      &compareSimple($wbp, $field, $papobj{$agrField}, $pgData{$field}{$wbp}{0});
-    }
-    &compareAuthors($wbp, $papobj{authors});
-    &compareDatePublished($wbp, $papobj{date_published});
-    &comparePubTypes($wbp, $papobj{pubmed_types});
+# PUT THIS BACK
+#     foreach my $field (sort keys %simpleFields) {
+#       my $agrField = $simpleFields{$field};
+#       &compareSimple($wbp, $field, $papobj{$agrField}, $pgData{$field}{$wbp}{0});
+#     }
+#     &compareAuthors($wbp, $papobj{authors});
+#     &compareDatePublished($wbp, $papobj{date_published});
+#     &comparePubTypes($wbp, $papobj{pubmed_types});
+    &compareCommentsCorrections($wbp, $papobj{comment_and_corrections});
   }
 } # sub comparePgAgr
+
+sub compareCommentsCorrections {	# data is wrong from abc exporter, wbp and other wbp are the same curie in all cases
+  my ($wbp, $agrComCor_href) = @_;
+  if ($agrComCor_href) {
+    my %agrComCor = %$agrComCor_href;
+    foreach my $type (sort keys %agrComCor) {
+      my $otherAgr = $agrComCor{$type}{'reference_curie'};
+      my $otherWbp = 'no match';
+      $otherWbp = &resolveAgrToWbp($otherAgr);
+      print qq($wbp\t$type\t$otherAgr\t$otherWbp\n);
+    } # foreach my $type (sort keys %agrComCor)
+  }
+} # sub compareCommentsCorrections
 
 sub comparePubTypes {
   my ($wbp, $agrPubTypes_href) = @_;
