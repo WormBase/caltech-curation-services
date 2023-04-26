@@ -39,7 +39,8 @@ my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST}
 my $result;
 
 # my $infile = 'temp.json';
-my $infile = 'files/reference_WB_doublequotes.json';
+my $infile = 'files/reference_WB_comcor.json';
+# my $infile = 'files/reference_WB_doublequotes.json';
 # my $infile = 'files/reference_WB_accents.json';
 # my $infile = 'files/reference_WB_nightly.json';
 # my $infile = '/usr/lib/scripts/pgpopulation/pap_papers/20230322_agr_xrefs/reference_WB_nightly.json';
@@ -139,6 +140,9 @@ $type_override_journal{'Directory'}++;
 $type_override_journal{'Monograph'}++;
 $type_override_journal{'Published_erratum'}++;
 
+my %agrComCor;
+# $agrComCor{$type}{$wbp} = $otherAgr;
+
 my $count = 0;
 foreach my $papobj_href (@{ $agr{data} }) {
 #   print qq(papobj_href\n);
@@ -168,10 +172,11 @@ foreach my $papobj_href (@{ $agr{data} }) {
   }
 }
 
+&compareCommentsCorrections(); 
+
 foreach my $wbp (sort keys %wbps) {
   if ($wbps{$wbp} > 1) { print qq(ERR : Too many wbps $wbp $wbps{$wbp}\n); }
 }
-
 
 sub populatePgData {
   # 20 seconds to read all postgres data for all joinkeys
@@ -201,29 +206,88 @@ sub comparePgAgr {
     print qq($agr is $wbp\n);
     &populatePgData($wbp);
 # PUT THIS BACK
-#     foreach my $field (sort keys %simpleFields) {
-#       my $agrField = $simpleFields{$field};
-#       &compareSimple($wbp, $field, $papobj{$agrField}, $pgData{$field}{$wbp}{0});
-#     }
-#     &compareAuthors($wbp, $papobj{authors});
-#     &compareDatePublished($wbp, $papobj{date_published});
-#     &comparePubTypes($wbp, $papobj{pubmed_types});
-    &compareCommentsCorrections($wbp, $papobj{comment_and_corrections});
+    foreach my $field (sort keys %simpleFields) {
+      my $agrField = $simpleFields{$field};
+      &compareSimple($wbp, $field, $papobj{$agrField}, $pgData{$field}{$wbp}{0});
+    }
+    &compareAuthors($wbp, $papobj{authors});
+    &compareDatePublished($wbp, $papobj{date_published});
+    &comparePubTypes($wbp, $papobj{pubmed_types});
+    &extractCommentsCorrections($wbp, $papobj{comment_and_corrections});
   }
 } # sub comparePgAgr
 
 sub compareCommentsCorrections {	# data is wrong from abc exporter, wbp and other wbp are the same curie in all cases
-  my ($wbp, $agrComCor_href) = @_;
-  if ($agrComCor_href) {
-    my %agrComCor = %$agrComCor_href;
-    foreach my $type (sort keys %agrComCor) {
-      my $otherAgr = $agrComCor{$type}{'reference_curie'};
+  # print qq(compareCommentsCorrections\n);
+  my %agrErratumIn;
+  my %agrRetractionIn;
+  foreach my $type (sort keys %agrComCor) {
+    print qq(comcorType : $type\n);
+    foreach my $wbp (sort keys %{ $agrComCor{$type} }) {
+      my $otherAgr = $agrComCor{$type}{$wbp};
       my $otherWbp = 'no match';
       $otherWbp = &resolveAgrToWbp($otherAgr);
       print qq($wbp\t$type\t$otherAgr\t$otherWbp\n);
-    } # foreach my $type (sort keys %agrComCor)
+      if (($type eq 'ErratumIn') && ($otherWbp)) { $agrErratumIn{$wbp}{$otherWbp}++; }
+        elsif (($type eq 'ErratumFor') && $otherWbp) { $agrErratumIn{$otherWbp}{$wbp}++; }
+        elsif (($type eq 'RetractionIn') && ($otherWbp)) { $agrRetractionIn{$wbp}{$otherWbp}++; }
+        elsif (($type eq 'RetractionOf') && $otherWbp) { $agrRetractionIn{$otherWbp}{$wbp}++; }
+    } # foreach my $wbp (sort keys %{ $agrComCor{$type} })
+  } # foreach my $type (sort keys %agrComCor)
+
+  foreach my $wbp (sort keys %agrErratumIn) {
+    my @data;
+    foreach (sort {$a<=>$b} keys %{ $agrErratumIn{$wbp} }) { push @data, $_; }
+    my $agrErratumIn = join", ", @data;
+
+    my %pgErratumIn; my @pgErratumIn = ();
+    foreach my $order (sort keys %{ $pgData{erratum_in}{$wbp} }) { $pgErratumIn{$pgData{erratum_in}{$wbp}{$order}}++; }
+    foreach (sort {$a<=>$b} keys %pgErratumIn) { push @pgErratumIn, $_; }
+    my $pgErratumIn = join", ", @pgErratumIn;
+    # print qq($pgErratumIn\n);
+  
+    if ($agrErratumIn ne $pgErratumIn) {
+      print qq(DIFF\t$wbp\tpap_erratum_in\t$agrErratumIn\t$pgErratumIn\n);
+    }
   }
+
+  foreach my $wbp (sort keys %agrRetractionIn) {
+    my @data;
+    foreach (sort {$a<=>$b} keys %{ $agrRetractionIn{$wbp} }) { push @data, $_; }
+    my $agrRetractionIn = join", ", @data;
+
+    my %pgRetractionIn; my @pgRetractionIn = ();
+    foreach my $order (sort keys %{ $pgData{retraction_in}{$wbp} }) { $pgRetractionIn{$pgData{retraction_in}{$wbp}{$order}}++; }
+    foreach (sort {$a<=>$b} keys %pgRetractionIn) { push @pgRetractionIn, $_; }
+    my $pgRetractionIn = join", ", @pgRetractionIn;
+    # print qq($pgRetractionIn\n);
+  
+    if ($agrRetractionIn ne $pgRetractionIn) {
+      print qq(DIFF\t$wbp\tpap_retraction_in\t$agrRetractionIn\t$pgRetractionIn\n);
+    }
+  }
+
+
+  # TODO clean up data, not sure if it makes sense that pap_erratum_in have papers going both ways from these queries :
+  # SELECT * FROM pap_erratum_in WHERE joinkey IN (SELECT joinkey FROM pap_erratum_in  GROUP BY joinkey HAVING COUNT(*) > 1) ORDER BY joinkey;
+  # SELECT * FROM pap_erratum_in WHERE pap_erratum_in IN (SELECT pap_erratum_in FROM pap_erratum_in  GROUP BY pap_erratum_in HAVING COUNT(*) > 1) ORDER BY pap_erratum_in;
+  # Once cleaned up aggregate ErratumFor with ErratumIn ?
 } # sub compareCommentsCorrections
+
+sub extractCommentsCorrections {	# data is wrong from abc exporter, wbp and other wbp are the same curie in all cases
+  my ($wbp, $thisAgrComCor_href) = @_;
+  if ($thisAgrComCor_href) {
+    my %thisAgrComCor = %$thisAgrComCor_href;
+    foreach my $type (sort keys %thisAgrComCor) {
+      my $otherAgr = $thisAgrComCor{$type}{'reference_curie'};
+      # can't do this here, the other Agr hasn't been processed yet, so we don't know what the WBPaper is, must add to %agrComCor to process after all json is done
+      # my $otherWbp = 'no match';
+      # $otherWbp = &resolveAgrToWbp($otherAgr);
+      # print qq($wbp\t$type\t$otherAgr\t$otherWbp\n);
+      $agrComCor{$type}{$wbp} = $otherAgr;
+    } # foreach my $type (sort keys %thisAgrComCor)
+  }
+} # sub extractCommentsCorrections
 
 sub comparePubTypes {
   my ($wbp, $agrPubTypes_href) = @_;
