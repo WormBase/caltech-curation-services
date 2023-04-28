@@ -21,7 +21,7 @@ my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST}
 
 my $infile = 'Original_Large_Scale_Interactions_new_format.ace';
 # my $infile = 'test';
-my $outfile = 'Large_scale_interactions_WS288.ace';
+my $outfile = 'Large_scale_interactions.ace';
 
 my %dead; my %mapTo; my %splitTo;
 my $result = $dbh->prepare( "SELECT * FROM gin_dead" );
@@ -80,8 +80,11 @@ while (my $para = <IN>) {
 close (IN) or die "Cannot close $infile : $!";
 close (OUT) or die "Cannot close $outfile : $!";
 
-foreach my $dead_line (sort keys %dead_errors) { print $dead_line; }
-foreach my $split_line (sort keys %split_errors) { print $split_line; }
+my $errfile = 'ls_dead_genes.txt';
+open (ERR, ">$errfile") or die "Cannot create $errfile : $!";
+foreach my $dead_line (sort keys %dead_errors) { print ERR $dead_line; }
+foreach my $split_line (sort keys %split_errors) { print ERR $split_line; }
+close (ERR) or die "Cannot close $outfile : $!";
 
 __END__
 
