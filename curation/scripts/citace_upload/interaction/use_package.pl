@@ -9,6 +9,8 @@
 use strict;
 use Jex;
 
+binmode STDOUT, ':utf8';
+
 my $date = &getSimpleSecDate();
 my $start_time = time;
 my $estimate_time = time + 697;
@@ -29,6 +31,7 @@ my $errfile = 'files/err.out.' . $date;
 open (OUT, ">$outfile") or die "Cannot create $outfile : $!\n";
 open (ERR, ">$errfile") or die "Cannot create $errfile : $!\n";
 
+binmode OUT, ':utf8';
 
 my ($all_entry, $err_text) = &getInteraction('all');
 
