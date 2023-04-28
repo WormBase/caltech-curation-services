@@ -10,7 +10,17 @@
 use strict;
 use LWP::Simple;
 
-my $url = 'https://github.com/obophenotype/c-elegans-development-ontology/raw/vWS288/wbls.obo';
+# my $url = 'https://github.com/obophenotype/c-elegans-development-ontology/raw/vWS288/wbls.obo';
+
+# Chris needs to be able to change the url, so using an external file for it
+my $infile = 'obo_url';
+open (IN, "<$infile") or die "Cannot open $infile : $!";
+my $url = <IN>;
+chomp $url;
+close (IN) or die "Cannot open $infile : $!";
+
+print qq(using url $url\n);
+
 my $page = get $url;
 
 my @objects = split/\n\n/, $page;
