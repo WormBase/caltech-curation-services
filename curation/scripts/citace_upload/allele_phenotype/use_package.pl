@@ -43,6 +43,8 @@ open (MOL, ">$molfile") or die "Cannot create $molfile : $!\n";
 # open (LON, ">$outlong") or die "Cannot create $outlong : $!\n";
 open (ERR, ">$errfile") or die "Cannot create $errfile : $!\n";
 
+binmode OUT, ':utf8';
+binmode MOL, ':utf8';
 
 # my ($all_entry, $long_text, $err_text) = &getPaper('00000003');
 # my ($all_entry, $long_text, $err_text) = &getPaper('valid');
