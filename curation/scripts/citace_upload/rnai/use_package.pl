@@ -28,8 +28,6 @@ my $errfile = 'files/err.out.' . $date;
 open (OUT, ">$outfile") or die "Cannot create $outfile : $!\n";
 open (ERR, ">$errfile") or die "Cannot create $errfile : $!\n";
 
-binmode OUT, ':utf8';
-
 my ($all_entry, $err_text) = &getRnai('all');
 
 # my ($all_entry, $err_text) = &getRnai('WBRNAi00008227');
