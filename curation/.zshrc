@@ -56,7 +56,7 @@ alias h='history'
 alias gerp='grep -A10'
 
 # PROMPT="%m-%15<..<%/-%!</home/azurebrd/www/cgi/counter.bin; can counterfile<: "
-PROMPT="%m-%15<..<%/-%!: "
+PROMPT="dtaz-%15<..<%/-%!: "
 # RRPROMPT="(%m) ugcs %B%T%b%(0?,, [exit %?])"
 RRPROMPT="%([cat counter]?)"
 # (0?,, [exit %?])"
