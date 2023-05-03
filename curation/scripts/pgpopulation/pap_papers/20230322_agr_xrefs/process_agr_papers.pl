@@ -108,10 +108,13 @@ $simpleFields{'abstract'} = 'abstract';
 # species topic_entity_tag = species
 
 
-my %valid;
+my %valid; my %invalid;
 $result = $dbh->prepare( "SELECT * FROM pap_status WHERE pap_status = 'valid'" );
 $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
 while (my @row = $result->fetchrow) { $valid{$row[0]}++; }
+$result = $dbh->prepare( "SELECT * FROM pap_status WHERE pap_status = 'invalid'" );
+$result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+while (my @row = $result->fetchrow) { $invalid{$row[0]}++; }
 
 my %pgIdentToWbp;
 $result = $dbh->prepare( "SELECT * FROM pap_identifier ORDER BY joinkey, pap_order" );
@@ -172,19 +175,21 @@ foreach my $papobj_href (@{ $agr{data} }) {
 #     print qq($xref{curie}\n);
   }
 # PUT THIS BACK
-  &comparePgAgr($papobj_href);
+#   &comparePgAgr($papobj_href);
 #   print qq(\n);
   if ($wbp) { 
     $wbps{$wbp}++;
-    print qq($wbp : $agr\n);
+#     print qq($wbp : $agr\n);
   } else {
     $agrData{$agr} = $papobj_href;
     # $agrData{$agr} = \%papobj;
   }
 }
 
-&compareCommentsCorrections(); 
+# PUT THIS BACK
+# &compareCommentsCorrections(); 
 &compareIdentifiers();
+# &processCreate();
 
 foreach my $wbp (sort keys %wbps) {
   if ($wbps{$wbp} > 1) { print qq(ERR : Too many wbps $wbp $wbps{$wbp}\n); }
@@ -230,6 +235,7 @@ sub comparePgAgr {
 } # sub comparePgAgr
 
 sub compareIdentifiers {
+  my %agrToCreate;
   foreach my $wbp (sort keys %wbpToAgr) {
     if ($agrObsId{$wbp}) {		# wbpaper id obsolete at abc
       if ($valid{$wbp}) { 		# at caltech is valid
@@ -238,7 +244,8 @@ sub compareIdentifiers {
       if ($pgIdentToWbp{$wbp}) { 	# at caltech is ident for another paper
         print qq(MERGE conflict  WBPaper$wbp at ABC is $wbpToAgr{$wbp} and valid, but at Caltech postgres in alternate identifier for WBPaper$pgIdentToWbp{$wbp}\n); }
     }
-    if ( (!$valid{$wbp}) && (!$pgIdentToWbp{$wbp}) ) {
+    if ( (!$invalid{$wbp}) && (!$valid{$wbp}) && (!$pgIdentToWbp{$wbp}) ) {	# if completely new, create it
+      $agrToCreate{$wbpToAgr{$wbp}}++;
       print qq(CREATE new WBPaper$wbp from $wbpToAgr{$wbp}\n); }
   }
   foreach my $wbp (sort keys %valid) {
@@ -246,6 +253,7 @@ sub compareIdentifiers {
   foreach my $wbp (sort keys %pgIdentToWbp) {
     if ($wbp =~ m/^\d{8}$/) {
       unless ($wbpToAgr{$wbp}) { print qq(MERGE conflict secondary WBPaper$wbp for WBPaper$pgIdentToWbp{$wbp} not in ABC\n); } } }
+
   # Kimberly : Do we need other kinds of checks ?
   # CREATE should handle new papers and add their xrefs
   # How to handle xrefs in ABC not in WB ?  If main wbp already in, add it ?
@@ -462,32 +470,32 @@ sub resolveAgrToWbp {
 
 
 
-my %agrToProcess;
-foreach my $agr (sort keys %agrs) {
-#   my $good = 0; my $skip = 0;
-#   if ($agrToWbp{$agr}) {						# AGRKB maps to WBPaper ID
-#     if ($valid{$agrToWbp{$agr}}) { $good++; }				# WBPaper is valid
-#       else { print qq(ERR $agr\t$agrToWbp{$agr}\tnot valid\n); $skip++; } }	# WBPaper is not valid
-#   next if $good; next if $skip;
-#   if ($agrToDoi{$agr}) { 
-#     my $doi = $agrToDoi{$agr};
-#     if ($pgIdentToWbp{$doi}) {
-#       $good++;
-#       print qq($agr\t$doi\t$pgIdentToWbp{$doi}\n); } }
-#   next if $good;
-#   if ($agrToPmid{$agr}) {
-#     my $pmid = $agrToPmid{$agr};
-#     if ($pgIdentToWbp{$pmid}) {
-#       $good++;
-#       print qq($agr\t$pmid\t$pgIdentToWbp{$pmid}\n); } }
-#   next if $good;
-  my $wbp = &resolveAgrToWbp($agr);
-  unless ($wbp) {
-    print qq(Needs $agr $agrCategory{$agr}\n);
-    $agrToProcess{$agr}++;
+sub processCreate {	# this is not well defined and probably not doing the right thing
+  my %agrToProcess;
+  foreach my $agr (sort keys %agrs) {
+  #   my $good = 0; my $skip = 0;
+  #   if ($agrToWbp{$agr}) {						# AGRKB maps to WBPaper ID
+  #     if ($valid{$agrToWbp{$agr}}) { $good++; }				# WBPaper is valid
+  #       else { print qq(ERR $agr\t$agrToWbp{$agr}\tnot valid\n); $skip++; } }	# WBPaper is not valid
+  #   next if $good; next if $skip;
+  #   if ($agrToDoi{$agr}) { 
+  #     my $doi = $agrToDoi{$agr};
+  #     if ($pgIdentToWbp{$doi}) {
+  #       $good++;
+  #       print qq($agr\t$doi\t$pgIdentToWbp{$doi}\n); } }
+  #   next if $good;
+  #   if ($agrToPmid{$agr}) {
+  #     my $pmid = $agrToPmid{$agr};
+  #     if ($pgIdentToWbp{$pmid}) {
+  #       $good++;
+  #       print qq($agr\t$pmid\t$pgIdentToWbp{$pmid}\n); } }
+  #   next if $good;
+    my $wbp = &resolveAgrToWbp($agr);
+    unless ($wbp) {
+      print qq(Needs $agr $agrCategory{$agr}\n);
+      $agrToProcess{$agr}++;
+    }
   }
-}
-
 
 # foreach my $agr (sort keys %agrToProcess) {
 #   print qq($agr\n);
@@ -498,6 +506,7 @@ foreach my $agr (sort keys %agrs) {
 #   print qq($papobj{category}\n);
 #   print qq(\n);
 # }
+} # sub processCreate
 
 
 __END__
