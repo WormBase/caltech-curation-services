@@ -39,7 +39,8 @@ my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST}
 my $result;
 
 # my $infile = 'temp.json';
-my $infile = 'files/reference_WB_comcor.json';
+my $infile = 'files/reference_WB_20230428.json';
+# my $infile = 'files/reference_WB_comcor.json';
 # my $infile = 'files/reference_WB_doublequotes.json';
 # my $infile = 'files/reference_WB_accents.json';
 # my $infile = 'files/reference_WB_nightly.json';
@@ -75,6 +76,7 @@ my %agrToWbp;
 my %agrToDoi;
 my %agrToPmid;
 my %agrCategory;
+my %agrObsId;
 
 my %agrData;
 my %pgData;
@@ -156,11 +158,20 @@ foreach my $papobj_href (@{ $agr{data} }) {
   my %xrefs;
   foreach my $xref_href (@{ $papobj{cross_references} }) {
     my %xref = %$xref_href;
-    if ($xref{curie} =~ m/^WB:WBPaper(\d+)/) { $wbp = $1;           $agrToWbp{$agr}  = $wbp;  $wbpToAgr{$wbp}   = $agr; }
-    if ($xref{curie} =~ m/^DOI:(.*)/) {        $doi = 'doi' . $1;   $agrToDoi{$agr}  = $doi;  $doiToAgr{$doi}   = $agr; }
-    if ($xref{curie} =~ m/^PMID:(\d+)/) {      $pmid = 'pmid' . $1; $agrToPmid{$agr} = $pmid; $pmidToAgr{$pmid} = $agr; }
+    # my $is_obs = 0;
+    # if ($xref{is_obsolete}) { print qq(OBS $xref{curie}\n); } else { print qq(NOT OBS $xref{curie}\n); }
+    if ($xref{curie} =~ m/^WB:WBPaper(\d+)/) {
+      $wbp = $1;           $agrToWbp{$agr}  = $wbp;  $wbpToAgr{$wbp}   = $agr;
+      if ($xref{is_obsolete}) { $agrObsId{$wbp}++; } }
+    if ($xref{curie} =~ m/^DOI:(.*)/) {
+      $doi = 'doi' . $1;   $agrToDoi{$agr}  = $doi;  $doiToAgr{$doi}   = $agr;
+      if ($xref{is_obsolete}) { $agrObsId{$doi}++; } }
+    if ($xref{curie} =~ m/^PMID:(\d+)/) {
+      $pmid = 'pmid' . $1; $agrToPmid{$agr} = $pmid; $pmidToAgr{$pmid} = $agr;
+      if ($xref{is_obsolete}) { $agrObsId{$pmid}++; } }
 #     print qq($xref{curie}\n);
   }
+# PUT THIS BACK
   &comparePgAgr($papobj_href);
 #   print qq(\n);
   if ($wbp) { 
@@ -173,6 +184,7 @@ foreach my $papobj_href (@{ $agr{data} }) {
 }
 
 &compareCommentsCorrections(); 
+&compareIdentifiers();
 
 foreach my $wbp (sort keys %wbps) {
   if ($wbps{$wbp} > 1) { print qq(ERR : Too many wbps $wbp $wbps{$wbp}\n); }
@@ -216,6 +228,28 @@ sub comparePgAgr {
     &extractCommentsCorrections($wbp, $papobj{comment_and_corrections});
   }
 } # sub comparePgAgr
+
+sub compareIdentifiers {
+  foreach my $wbp (sort keys %wbpToAgr) {
+    if ($agrObsId{$wbp}) {		# wbpaper id obsolete at abc
+      if ($valid{$wbp}) { 		# at caltech is valid
+        print qq(MERGE conflict  WBPaper$wbp at ABC is $wbpToAgr{$wbp} and obsolete, but valid at Caltech postgres\n); }
+    } else {				# wbpaper id valid at abc
+      if ($pgIdentToWbp{$wbp}) { 	# at caltech is ident for another paper
+        print qq(MERGE conflict  WBPaper$wbp at ABC is $wbpToAgr{$wbp} and valid, but at Caltech postgres in alternate identifier for WBPaper$pgIdentToWbp{$wbp}\n); }
+    }
+    if ( (!$valid{$wbp}) && (!$pgIdentToWbp{$wbp}) ) {
+      print qq(CREATE new WBPaper$wbp from $wbpToAgr{$wbp}\n); }
+  }
+  foreach my $wbp (sort keys %valid) {
+    unless ($wbpToAgr{$wbp}) { print qq(MERGE conflict primary WBPaper$wbp not in ABC\n); } }
+  foreach my $wbp (sort keys %pgIdentToWbp) {
+    if ($wbp =~ m/^\d{8}$/) {
+      unless ($wbpToAgr{$wbp}) { print qq(MERGE conflict secondary WBPaper$wbp for WBPaper$pgIdentToWbp{$wbp} not in ABC\n); } } }
+  # Kimberly : Do we need other kinds of checks ?
+  # CREATE should handle new papers and add their xrefs
+  # How to handle xrefs in ABC not in WB ?  If main wbp already in, add it ?
+} # sub compareIdentifiers
 
 sub compareCommentsCorrections {	# data is wrong from abc exporter, wbp and other wbp are the same curie in all cases
   # print qq(compareCommentsCorrections\n);
@@ -294,7 +328,7 @@ sub comparePubTypes {
   my $agrPubTypes = '';
   if ($agrPubTypes_href) {
     my @agrPubTypes = @$agrPubTypes_href;
-   
+
     my %filtered_data; my $override_journal_flag = 0;
     foreach my $data (@agrPubTypes) {
       my ($type) = ucfirst(lc($data)); $type =~ s/\s+/_/g;
@@ -320,6 +354,7 @@ sub comparePubTypes {
 
 sub compareDatePublished {
   my ($wbp, $agrDate) = @_;
+  unless ($agrDate) { $agrDate = ''; }
   my ($year, $month, $day) = ('1970', '01', '01');
   if ($pgData{year}{$wbp}{0}) { $year = $pgData{year}{$wbp}{0}; }
   if ($pgData{month}{$wbp}{0}) { $month = $pgData{month}{$wbp}{0}; if ($month < 10) { $month = '0' . $month; } }
@@ -332,27 +367,28 @@ sub compareDatePublished {
 
 sub compareAuthors {
   my ($wbp, $agrAuthors_href) = @_;
-  my @agrAuthors = @$agrAuthors_href;
-  my %agrAut;
   my $max_order = 0;
-  foreach my $agr_aut_href (@agrAuthors) {
-    my %agr_aut = %$agr_aut_href;
-    my $agr_order = $agr_aut{order};
-    if ($agr_order > $max_order) { $max_order = $agr_order; }
-    my $agr_name = $agr_aut{name};
-    if ($agr_aut{last_name}) {
-      my $last_name = $agr_aut{last_name};
-      my $first_init = '';
-      if ($agr_aut{first_name}) {
-        my $first_name = $agr_aut{first_name};
-        my @firsts = split/[ \-]/, $first_name;
-        foreach my $first (@firsts) {
-          my ($first_char) = $first =~ m/^(.)/; $first_init .= ucfirst($first_char); } }
-      if ($first_init) { $agr_name = $last_name . ' ' . $first_init; }
-        else { $agr_name = $last_name; }
-    }
-    $agrAut{$agr_order} = $agr_name;
-  }
+  my %agrAut;
+  if ($agrAuthors_href) {
+    my @agrAuthors = @$agrAuthors_href;
+    foreach my $agr_aut_href (@agrAuthors) {
+      my %agr_aut = %$agr_aut_href;
+      my $agr_order = $agr_aut{order};
+      if ($agr_order > $max_order) { $max_order = $agr_order; }
+      my $agr_name = $agr_aut{name};
+      if ($agr_aut{last_name}) {
+        my $last_name = $agr_aut{last_name};
+        my $first_init = '';
+        if ($agr_aut{first_name}) {
+          my $first_name = $agr_aut{first_name};
+          my @firsts = split/[ \-]/, $first_name;
+          foreach my $first (@firsts) {
+            my ($first_char) = $first =~ m/^(.)/; $first_init .= ucfirst($first_char); } }
+        if ($first_init) { $agr_name = $last_name . ' ' . $first_init; }
+          else { $agr_name = $last_name; }
+      }
+      $agrAut{$agr_order} = $agr_name;
+  } }
   my %pgAut;
   my @author_ids = ();
   foreach my $pg_order (sort {$a<=>$b} keys %{ $pgData{author}{$wbp} }) {
