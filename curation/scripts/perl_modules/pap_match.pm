@@ -228,7 +228,7 @@ sub processXmlIds {
           $return_text .= &processPubmedPage($page, $pmid, $curator_id, $primary_flag, $aut_per_priority, $speciesTaxons, $functional_only);
 # UNDO TO MAKE LIVE
           `mv ${directory}/xml/$pmid ${directory}/done/`;
-          $return_text .= qq(mv ${directory}/xml/$pmid ${directory}/done/\n);
+          # $return_text .= qq(mv ${directory}/xml/$pmid ${directory}/done/\n);		# to debug how xml files moved
         }
       else { $return_text .= "No xml for $pmid\n"; }
   }
