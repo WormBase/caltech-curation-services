@@ -444,7 +444,7 @@ function matchGeneTextarea(order, type, datatype) {
     // Make the call to the server to update postgres
     // var url="http://tazendra.caltech.edu/~azurebrd/cgi-bin/testing/javascript/ajax/gethint.cgi";	// possible doesn't work cross server anymore 2019 01 17
     // var url="/~azurebrd/cgi-bin/testing/javascript/ajax/gethint.cgi";	
-    var url="/pub/cgi-bin/forms/datatype_objects.cgi?action=multiValueValidValue";	
+    var url="/pub/cgi-bin/forms/datatype_objects.cgi?action=multiValueValidValue";	// in dockerized moved functionality from ajax/gethint.cgi to datatype_objects.cgi?action=multiValueValidValue
     var text = geneTextareaValue;	// newlines break the get call
     var text = text.replace(/\n/g, ' ');	// newlines break the get call
     // url=url+"?type=genestudied";			// to get genes
