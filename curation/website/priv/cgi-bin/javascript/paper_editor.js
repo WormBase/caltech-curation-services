@@ -442,14 +442,18 @@ function matchGeneTextarea(order, type, datatype) {
 //         failure : function(o) { alert("ERROR did not get call back from gethint.cgi for " + geneTextareaValue + " <br>" + o.responseText+ " <br>" + o.statusText); },		// this error is popping a bit, with o.responseText being undefined, I don't know why
     };
     // Make the call to the server to update postgres
-//     var url="http://tazendra.caltech.edu/~azurebrd/cgi-bin/testing/javascript/ajax/gethint.cgi";	// possible doesn't work cross server anymore 2019 01 17
-    var url="/~azurebrd/cgi-bin/testing/javascript/ajax/gethint.cgi";	
+    // var url="http://tazendra.caltech.edu/~azurebrd/cgi-bin/testing/javascript/ajax/gethint.cgi";	// possible doesn't work cross server anymore 2019 01 17
+    // var url="/~azurebrd/cgi-bin/testing/javascript/ajax/gethint.cgi";	
+    var url="/pub/cgi-bin/forms/datatype_objects.cgi?action=multiValueValidValue";	
     var text = geneTextareaValue;	// newlines break the get call
     var text = text.replace(/\n/g, ' ');	// newlines break the get call
     // url=url+"?type=genestudied";			// to get genes
-    url=url+"?type="+datatype;			// to get gin_ genes (genestudied) or gic_ pap_gene_comp 
+    // url=url+"?type="+datatype;			// to get gin_ genes (genestudied) or gic_ pap_gene_comp 
+    // url=url+"&sid="+Math.random();                      // random to prevent browser using a cached page
+    // url=url+"&all="+text;                               // the text to send in
+    url=url+"&objectType="+datatype;			// to get gin_ genes (genestudied) or gic_ pap_gene_comp 
     url=url+"&sid="+Math.random();                      // random to prevent browser using a cached page
-    url=url+"&all="+text;                               // the text to send in
+    url=url+"&userValue="+text;                               // the text to send in
     if (text !== undefined) {		// sometimes this is blank, maybe because toggleGeneTextareaToDiv gets called first ?
         YAHOO.util.Connect.asyncRequest('GET', url, callbacks);
     }
