@@ -19,6 +19,9 @@ sed -i "s/^.*X11Forwarding.*$/X11Forwarding yes/" /etc/ssh/sshd_config
 sed -i "s/^.*X11UseLocalhost.*$/X11UseLocalhost no/" /etc/ssh/sshd_config
 grep "^X11UseLocalhost" /etc/ssh/sshd_config || echo "X11UseLocalhost no" >> /etc/ssh/sshd_config
 
+# set ssh host key to mounted volume
+echo "HostKey ${CALTECH_CURATION_FILES_INTERNAL_PATH}/ssh_host_key/id_rsa" >> /etc/ssh/sshd_config
+
 # start services
 service apache2 start
 service ssh start
