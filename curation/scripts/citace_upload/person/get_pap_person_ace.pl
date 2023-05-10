@@ -124,6 +124,10 @@
 # added  pis  as  Principal_investigator  with tag only.  2016 02 09
 #
 # remove mainphone labphone officephone otherphone fax.  2022 10 18 
+#
+# use Unaccent for Possibly_publishes_as, which comes from authors, which will come from 
+# ABC, but don't use it for data in general, because there's some bad characters that get
+# escaped wrong, like ’ –  2023 04 09
 
 
 use strict;
@@ -132,6 +136,7 @@ use diagnostics;
 use DBI;
 use Jex;
 use LWP;
+use Text::Unaccent;
 use Dotenv -load => '/usr/lib/.env';
 
 binmode STDOUT, ':utf8';
@@ -175,7 +180,10 @@ sub populateLineageHash {
   while (my @row = $result->fetchrow) {
     my $stuff = '';
     my $num = $row[3]; $num =~ s/two//g;
-    my $role = $row[4]; my $known = 'known'; if ($row[4] =~ m/Unknown/) { $known = 'unknown'; }
+    my $role = ''; my $known = 'known';
+    if ($row[4]) {
+      $role = $row[4]; 
+      if ($row[4] =~ m/Unknown/) { $known = 'unknown'; } }
     if ($row[5]) { $role .= " $row[5]"; }
     if ($row[6]) { unless ($row[6] eq 'present') { $role .= " $row[6]"; } }     # add end year unless it's present  2009 10 27
     if ($role =~ m/^Collaborated/) {                     $stuff = "Worked_with\t\"WBPerson$num\" $role\n"; }
@@ -275,7 +283,8 @@ foreach my $twonum (sort {$a<=>$b} keys %{ $data{status} }) {
         if ($datenum > $highest_date_num) { $highest_date = $time; $highest_date_num = $datenum; } }
       if ($table eq 'firstname') {
         if ($data{middlename}{$twonum}{$order}{data}) { print "Full_name\t\"$data{firstname}{$twonum}{$order}{data} $data{middlename}{$twonum}{$order}{data} $data{lastname}{$twonum}{$order}{data}\"\n"; }
-          else { print "Full_name\t\"$data{firstname}{$twonum}{$order}{data} $data{lastname}{$twonum}{$order}{data}\"\n"; } }
+          elsif ($data{lastname}{$twonum}{$order}{data}) { print "Full_name\t\"$data{firstname}{$twonum}{$order}{data} $data{lastname}{$twonum}{$order}{data}\"\n"; }
+          else { print "Full_name\t\"$data{firstname}{$twonum}{$order}{data}\"\n"; } }
       if ($table eq 'acqmerge') { $data =~ s/two/WBPerson/; }			# change twos to WBPerson
       if ($table eq 'city') { $city = $data; }
         elsif ($table eq 'state') { $state = $data; }
@@ -433,8 +442,17 @@ sub filterAce {
   if ($comment) {
     if ($identifier =~ m/[^"]$/) { $identifier .= "\" "; }
     $identifier .= "-C \"$comment"; }
-  return $identifier;
+  # return $identifier;
+  return &unaccentText($identifier);
 } # sub filterAce
+
+sub unaccentText {
+  my $line = shift;
+#   my $unaccented = unac_string_utf16($line);
+#   my $unaccented = unac_string("iso-8859-1", $line);                # for IWM Kimberly files
+  my $unaccented = unac_string("utf-8", $line);               # for WBG Daniel files
+  return $unaccented;
+} # sub unaccentText
 
 
 
