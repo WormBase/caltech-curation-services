@@ -338,6 +338,17 @@ sub populateCurators {
   } # while (my @row = $result->fetchrow)
 } # sub populateCurators
 
+sub updateCurator {
+  my ($joinkey) = @_;
+  my $ip = $query->remote_host();
+  my $result = $dbh->prepare( "SELECT * FROM two_curator_ip WHERE two_curator_ip = '$ip' AND joinkey = '$joinkey';" );
+  $result->execute;
+  my @row = $result->fetchrow;
+  unless ($row[0]) {
+    $result = $dbh->do( "DELETE FROM two_curator_ip WHERE two_curator_ip = '$ip' ;" );
+    $result = $dbh->do( "INSERT INTO two_curator_ip VALUES ('$joinkey', '$ip')" );
+    print "IP $ip updated for $joinkey<br />\n"; } }
+
 
 __END__
 
@@ -2199,17 +2210,6 @@ sub padZeros {
   return $joinkey;
 } # sub padZeros
 
-
-sub updateCurator {
-  my ($joinkey) = @_;
-  my $ip = $query->remote_host();
-  my $result = $dbh->prepare( "SELECT * FROM two_curator_ip WHERE two_curator_ip = '$ip' AND joinkey = '$joinkey';" );
-  $result->execute;
-  my @row = $result->fetchrow;
-  unless ($row[0]) {
-    $result = $dbh->do( "DELETE FROM two_curator_ip WHERE two_curator_ip = '$ip' ;" );
-    $result = $dbh->do( "INSERT INTO two_curator_ip VALUES ('$joinkey', '$ip')" );
-    print "IP $ip updated for $joinkey<br />\n"; } }
 
 sub populateMonthIndex {
   $month_index{1} = 'January';
