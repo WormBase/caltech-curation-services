@@ -492,10 +492,10 @@ sub processCreate {	# this is not well defined and probably not doing the right 
   #   next if $good;
     my $wbp = &resolveAgrToWbp($agr);
     unless ($wbp) {
-      if ($agrToPmid{$agr}) {	# this is for figuring out corrections that need to be manually created by Kimberly, they have a PMID
-        my $pmid = $agrToPmid{$agr}; $pmid =~ s/pmid//;
-        print qq(Needs\t$agr\t$pmid\t$agrCategory{$agr}\n);
-      }
+      # if ($agrToPmid{$agr}) {	# this is for figuring out corrections that need to be manually created by Kimberly, they have a PMID
+      #   my $pmid = $agrToPmid{$agr}; $pmid =~ s/pmid//;
+      #   print qq(Needs\t$agr\t$pmid\t$agrCategory{$agr}\n);
+      # }
       print qq(Needs $agr $agrCategory{$agr}\n);
       $agrToProcess{$agr}++;
     }
