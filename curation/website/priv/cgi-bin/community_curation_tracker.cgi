@@ -82,6 +82,16 @@
 #
 # Password file set at $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/insecure/outreachwormbase';
 # 2023 03 19
+#
+# Data wasn't getting generated because trying to access curation_status form on tazendra
+# without access, now gets it from local curation status form and data works.  File generation
+# for mass emails saves to /usr/caltech_curation_files/priv/community_curation/community_curation_source
+# which can be viewed in a browser at 
+# https://caltech-curation-dev.textpressolab.com/files/priv/community_curation/community_curation_source
+# (based on ENV variables).
+# Links to PDFs still use tazendra, which won't be maintained in the future, but need 
+# feedback on whether to update to point to ABC.  2023 05 12
+
 
 
 use strict;
@@ -96,8 +106,6 @@ use Email::Simple::Creator;
 use Tie::IxHash;
 use Dotenv -load => '/usr/lib/.env';
 
-my $thishost = $ENV{THIS_HOST};
-
 my %curator;
 
 my $query = new CGI;	# new CGI form
@@ -105,6 +113,13 @@ my $result;
 # my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n";
 # my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb;host=131.215.52.76", "", "") or die "Cannot connect to database!\n";
 my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST};port=$ENV{PSQL_PORT}", "$ENV{PSQL_USERNAME}", "$ENV{PSQL_PASSWORD}") or die "Cannot connect to database!\n";
+
+my $thishost = $ENV{THIS_HOST};
+
+# my $curation_status_url = 'http://tazendra.caltech.edu/~postgres/cgi-bin/curation_status.cgi';
+my $curation_status_url = $thishost . 'priv/cgi-bin/curation_status.cgi';	# dockerized
+
+my $filesPath = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/priv/community_curation/';
 
 sub printHtmlHeader {
   print <<"EndOfText";
@@ -170,26 +185,26 @@ sub massEmail {
   my $debugPaper = '';
 
   my %flagged;
-  my $flaggedRnaiUrl = 'http://tazendra.caltech.edu/~postgres/cgi-bin/curation_status.cgi?action=listCurationStatisticsPapersPage&select_datatypesource=caltech&select_curator=two2987&listDatatype=rnai&method=any%20pos%20ncur&checkbox_cfp=on&checkbox_afp=on&checkbox_str=on&checkbox_svm=on';
+  my $flaggedRnaiUrl = $curation_status_url . '?action=listCurationStatisticsPapersPage&select_datatypesource=caltech&select_curator=two2987&listDatatype=rnai&method=any%20pos%20ncur&checkbox_cfp=on&checkbox_afp=on&checkbox_str=on&checkbox_svm=on';
   my $dataFlaggedRnai = get $flaggedRnaiUrl;
   my (@papers) = $dataFlaggedRnai =~ m/specific_papers=WBPaper(\d+)/g;
   foreach (@papers) { 
     if ($_ eq $debugPaper) { print qq(PAP $_ FLAGGED RNAI URL $flaggedRnaiUrl <br>\n); }
     $flagged{$_}{rnai}++; }
-  my $flaggedNmutUrl = 'http://tazendra.caltech.edu/~postgres/cgi-bin/curation_status.cgi?action=listCurationStatisticsPapersPage&select_datatypesource=caltech&select_curator=two2987&listDatatype=newmutant&method=any%20pos%20ncur&checkbox_cfp=on&checkbox_afp=on&checkbox_str=on&checkbox_svm=on'; 
+  my $flaggedNmutUrl = $curation_status_url . '?action=listCurationStatisticsPapersPage&select_datatypesource=caltech&select_curator=two2987&listDatatype=newmutant&method=any%20pos%20ncur&checkbox_cfp=on&checkbox_afp=on&checkbox_str=on&checkbox_svm=on'; 
   my $dataFlaggedNmut = get $flaggedNmutUrl;
   (@papers) = $dataFlaggedNmut =~ m/specific_papers=WBPaper(\d+)/g;
   foreach (@papers) { 
     if ($_ eq $debugPaper) { print qq(PAP $_ FLAGGED NMUT URL $flaggedNmutUrl <br>\n); }
     $flagged{$_}{nmut}++; }
 
-  my $valNegativeRnaiUrl   = 'http://tazendra.caltech.edu/~postgres/cgi-bin/curation_status.cgi?action=listCurationStatisticsPapersPage&select_datatypesource=caltech&select_curator=two2987&listDatatype=rnai&method=allval%20neg&checkbox_cfp=on&checkbox_afp=on&checkbox_str=on&checkbox_svm=on';
+  my $valNegativeRnaiUrl   = $curation_status_url . '?action=listCurationStatisticsPapersPage&select_datatypesource=caltech&select_curator=two2987&listDatatype=rnai&method=allval%20neg&checkbox_cfp=on&checkbox_afp=on&checkbox_str=on&checkbox_svm=on';
   my $dataCurated = get $valNegativeRnaiUrl;
   (@papers) = $dataCurated =~ m/specific_papers=WBPaper(\d+)/g;
   foreach (@papers) { 
     if ($_ eq $debugPaper) { print qq(PAP $_ VALIDATED NEGATIVE RNAI URL $valNegativeRnaiUrl <br>\n); }
     delete $flagged{$_}{rnai}; }
-  my $valNegativeNmutUrl   = 'http://tazendra.caltech.edu/~postgres/cgi-bin/curation_status.cgi?action=listCurationStatisticsPapersPage&select_datatypesource=caltech&select_curator=two2987&listDatatype=newmutant&method=allval%20neg&checkbox_cfp=on&checkbox_afp=on&checkbox_str=on&checkbox_svm=on';
+  my $valNegativeNmutUrl   = $curation_status_url . '?action=listCurationStatisticsPapersPage&select_datatypesource=caltech&select_curator=two2987&listDatatype=newmutant&method=allval%20neg&checkbox_cfp=on&checkbox_afp=on&checkbox_str=on&checkbox_svm=on';
   my $dataCurated = get $valNegativeNmutUrl;
   (@papers) = $dataCurated =~ m/specific_papers=WBPaper(\d+)/g;
   foreach (@papers) { 
@@ -198,16 +213,16 @@ sub massEmail {
 
   my %curated;
   my @urlsRnai; my @urlsNmut;
-#   my $curatedRnaiUrl = 'http://tazendra.caltech.edu/~postgres/cgi-bin/curation_status.cgi?action=listCurationStatisticsPapersPage&select_datatypesource=caltech&select_curator=two2987&listDatatype=rnai&method=allcur&checkbox_cfp=on&checkbox_afp=on&checkbox_str=on&checkbox_svm=on';
+#   my $curatedRnaiUrl = $curation_status_url . '?action=listCurationStatisticsPapersPage&select_datatypesource=caltech&select_curator=two2987&listDatatype=rnai&method=allcur&checkbox_cfp=on&checkbox_afp=on&checkbox_str=on&checkbox_svm=on';
 #     my $dataCuratedRnai = get $curatedRnaiUrl;
 #     (@papers) = $dataCuratedRnai =~ m/specific_papers=WBPaper(\d+)/g;
 #     foreach (@papers) { $curated{$_}++; }
-#   my $curatedNmutUrl = 'http://tazendra.caltech.edu/~postgres/cgi-bin/curation_status.cgi?action=listCurationStatisticsPapersPage&select_datatypesource=caltech&select_curator=two2987&listDatatype=newmutant&method=allcur&checkbox_cfp=on&checkbox_afp=on&checkbox_str=on&checkbox_svm=on';
+#   my $curatedNmutUrl = $curation_status_url . '?action=listCurationStatisticsPapersPage&select_datatypesource=caltech&select_curator=two2987&listDatatype=newmutant&method=allcur&checkbox_cfp=on&checkbox_afp=on&checkbox_str=on&checkbox_svm=on';
 #   my $dataCuratedNmut = get $curatedNmutUrl;
 #   (@papers) = $dataCuratedNmut =~ m/specific_papers=WBPaper(\d+)/g;
 #   foreach (@papers) { $curated{$_}++; }
-  my $curatedValPosRnaiUrl = 'http://tazendra.caltech.edu/~postgres/cgi-bin/curation_status.cgi?action=listCurationStatisticsPapersPage&select_datatypesource=caltech&select_curator=two2987&listDatatype=rnai&method=allval%20pos%20cur&checkbox_cfp=on&checkbox_afp=on&checkbox_str=on&checkbox_svm=on';
-  my $valConflictRnaiUrl   = 'http://tazendra.caltech.edu/~postgres/cgi-bin/curation_status.cgi?action=listCurationStatisticsPapersPage&select_datatypesource=caltech&select_curator=two1823&listDatatype=rnai&method=allval%20conf&checkbox_cfp=on&checkbox_afp=on&checkbox_str=on&checkbox_svm=on';
+  my $curatedValPosRnaiUrl = $curation_status_url . '?action=listCurationStatisticsPapersPage&select_datatypesource=caltech&select_curator=two2987&listDatatype=rnai&method=allval%20pos%20cur&checkbox_cfp=on&checkbox_afp=on&checkbox_str=on&checkbox_svm=on';
+  my $valConflictRnaiUrl   = $curation_status_url . '?action=listCurationStatisticsPapersPage&select_datatypesource=caltech&select_curator=two1823&listDatatype=rnai&method=allval%20conf&checkbox_cfp=on&checkbox_afp=on&checkbox_str=on&checkbox_svm=on';
   push @urlsRnai, $curatedValPosRnaiUrl; push @urlsRnai, $valConflictRnaiUrl;
   foreach my $url (@urlsRnai) {
     my $dataCurated = get $url;
@@ -217,8 +232,8 @@ sub massEmail {
       $curated{$_}{rnai}++; }
   }
 
-  my $curatedValPosNmutUrl = 'http://tazendra.caltech.edu/~postgres/cgi-bin/curation_status.cgi?action=listCurationStatisticsPapersPage&select_datatypesource=caltech&select_curator=two2987&listDatatype=newmutant&method=allval%20pos%20cur&checkbox_cfp=on&checkbox_afp=on&checkbox_str=on&checkbox_svm=on';
-  my $valConflictNmutUrl   = 'http://tazendra.caltech.edu/~postgres/cgi-bin/curation_status.cgi?action=listCurationStatisticsPapersPage&select_datatypesource=caltech&select_curator=two1823&listDatatype=newmutant&method=allval%20conf&checkbox_cfp=on&checkbox_afp=on&checkbox_str=on&checkbox_svm=on';
+  my $curatedValPosNmutUrl = $curation_status_url . '?action=listCurationStatisticsPapersPage&select_datatypesource=caltech&select_curator=two2987&listDatatype=newmutant&method=allval%20pos%20cur&checkbox_cfp=on&checkbox_afp=on&checkbox_str=on&checkbox_svm=on';
+  my $valConflictNmutUrl   = $curation_status_url . '?action=listCurationStatisticsPapersPage&select_datatypesource=caltech&select_curator=two1823&listDatatype=newmutant&method=allval%20conf&checkbox_cfp=on&checkbox_afp=on&checkbox_str=on&checkbox_svm=on';
   push @urlsNmut, $curatedValPosNmutUrl; push @urlsNmut, $valConflictNmutUrl;
   foreach my $url (@urlsNmut) {
     my $dataCurated = get $url;
@@ -444,15 +459,15 @@ sub massEmail {
   my $count = 0;
   foreach my $pap (reverse sort keys %filter) {
 #   foreach my $pap (sort keys %flagged)
-    my $pmids = join", ", sort keys %{ $pap{$pap}{pmid} };
-    my @pdfs;
-    foreach my $path (sort keys %{ $pap{$pap}{pdf} }) {
-      my ($pdfname) = $path =~ m/\/([^\/]*?)$/;
-      my $url = 'http://tazendra.caltech.edu/~acedb/daniel/' . $pdfname;
-      my $link = qq(<a href='$url' target='new'>$pdfname</a>);
-      push @pdfs, $link; }
-    my $pdfs = join" ", @pdfs;
-    my $recentlyEmailed = 0;
+#     my $pmids = join", ", sort keys %{ $pap{$pap}{pmid} };
+#     my @pdfs;
+#     foreach my $path (sort keys %{ $pap{$pap}{pdf} }) {
+#       my ($pdfname) = $path =~ m/\/([^\/]*?)$/;
+#       my $url = 'http://tazendra.caltech.edu/~acedb/daniel/' . $pdfname;
+#       my $link = qq(<a href='$url' target='new'>$pdfname</a>);
+#       push @pdfs, $link; }
+#     my $pdfs = join" ", @pdfs;
+#     my $recentlyEmailed = 0;
     my %bestTwo;
     my ($two, $personName, $person, $emails) = ('', '', '', '');
     my $aidFirstAuthor = ''; if ($pap{$pap}{aid}{1}) { $aidFirstAuthor = $pap{$pap}{aid}{1}; }
@@ -692,8 +707,10 @@ if ($pap eq '00060032') { print "GOOD $pdfemail TWO $two PAP $pap E<br>"; }
 } # sub massEmail
 
 sub generateMassEmailFile {
-  my $outfile = '/home/postgres/public_html/cgi-bin/data/community_curation/community_curation_source';
-  print qq(<a target="_blank" href="data/community_curation/community_curation_source">source file</a><br/>);
+  # my $outfile = '/home/postgres/public_html/cgi-bin/data/community_curation/community_curation_source';
+  # print qq(<a target="_blank" href="data/community_curation/community_curation_source">source file</a><br/>);
+  my $outfile = $filesPath . 'community_curation_source';
+  print qq(<a target="_blank" href="${thishost}files/priv/community_curation/community_curation_source">source file</a><br/>);
   my ($var, $total_count)          = &getHtmlVar($query, 'total_count');
   open (OUT, ">$outfile") or die "Cannot create $outfile : $!";
   for my $i (1 .. $total_count) { 
@@ -1129,13 +1146,13 @@ sub readyToGo {
       foreach (@paps) { $pap{$_}{curated}++; } } }
 
   if ($datatype eq 'app') {
-    my $urlAnyFlaggedNCur = 'http://tazendra.caltech.edu/~postgres/cgi-bin/curation_status.cgi?action=listCurationStatisticsPapersPage&select_curator=two1823&listDatatype=newmutant&method=any%20pos%20ncur&checkbox_cfp=on&checkbox_afp=on&checkbox_str=on&checkbox_svm=on';
+    my $urlAnyFlaggedNCur = $curation_status_url . '?action=listCurationStatisticsPapersPage&select_curator=two1823&listDatatype=newmutant&method=any%20pos%20ncur&checkbox_cfp=on&checkbox_afp=on&checkbox_str=on&checkbox_svm=on';
     my $dataAnyFlaggedNCur = get $urlAnyFlaggedNCur;
     my (@papers) = $dataAnyFlaggedNCur =~ m/specific_papers=WBPaper(\d+)/g;
     foreach (@papers) { $pap{$_}{flaggeddatatype}++; }
 
       # remove papers that have been curated for RNAi for Chris.  2016 08 23
-    my $urlRnaiCurated = 'http://tazendra.caltech.edu/~postgres/cgi-bin/curation_status.cgi?action=listCurationStatisticsPapersPage&select_curator=two1823&listDatatype=rnai&method=allcur&checkbox_cfp=on&checkbox_afp=on&checkbox_str=on&checkbox_svm=on';
+    my $urlRnaiCurated = $curation_status_url . '?action=listCurationStatisticsPapersPage&select_curator=two1823&listDatatype=rnai&method=allcur&checkbox_cfp=on&checkbox_afp=on&checkbox_str=on&checkbox_svm=on';
     my $dataRnaiCurated = get $urlRnaiCurated;
     my (@rnaiPapers) = $dataRnaiCurated =~ m/specific_papers=WBPaper(\d+)/g;
     foreach (@rnaiPapers) { 
