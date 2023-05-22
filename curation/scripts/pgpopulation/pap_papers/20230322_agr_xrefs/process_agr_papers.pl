@@ -39,7 +39,8 @@ my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST}
 my $result;
 
 # my $infile = 'temp.json';
-my $infile = 'files/reference_WB_20230428.json';
+my $infile = 'files/reference_WB_20230522.json';
+# my $infile = 'files/reference_WB_20230428.json';
 # my $infile = 'files/reference_WB_comcor.json';
 # my $infile = 'files/reference_WB_doublequotes.json';
 # my $infile = 'files/reference_WB_accents.json';
@@ -86,7 +87,8 @@ my @pgtables = qw( identifier status erratum_in retraction_in title journal publ
 
 my %simpleFields;
 $simpleFields{'title'} = 'title';
-$simpleFields{'journal'} = 'resource_title';
+# $simpleFields{'journal'} = 'resource_title';
+$simpleFields{'journal'} = 'resource_medline_abbreviation';
 $simpleFields{'publisher'} = 'publisher';
 $simpleFields{'pages'} = 'page_range';
 $simpleFields{'volume'} = 'volume';
@@ -175,8 +177,8 @@ foreach my $papobj_href (@{ $agr{data} }) {
 #     print qq($xref{curie}\n);
   }
 # PUT THIS BACK
-#   &comparePgAgr($papobj_href);
-#   print qq(\n);
+  &comparePgAgr($papobj_href);
+  print qq(\n);
   if ($wbp) { 
     $wbps{$wbp}++;
 #     print qq($wbp : $agr\n);
@@ -187,7 +189,7 @@ foreach my $papobj_href (@{ $agr{data} }) {
 }
 
 # PUT THIS BACK
-# &compareCommentsCorrections(); 
+&compareCommentsCorrections(); 
 &compareIdentifiers();
 # &processCreate();
 
@@ -386,8 +388,8 @@ sub compareAuthors {
       my $agr_name = $agr_aut{name};
       if ($agr_aut{last_name}) {
         my $last_name = $agr_aut{last_name};
-        my $first_init = '';
-        if ($agr_aut{first_name}) {
+        my $first_init = $agr_aut{first_initial};
+        if (!$first_init && $agr_aut{first_name}) {
           my $first_name = $agr_aut{first_name};
           my @firsts = split/[ \-]/, $first_name;
           foreach my $first (@firsts) {
