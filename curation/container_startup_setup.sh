@@ -2,6 +2,11 @@
 
 # This is the main script called by the Dockerfile to set up the container when started
 
+# backups
+
+restic -r ${RESTIC_REPOSITORY}/daily_backups init
+restic -r ${RESTIC_REPOSITORY}/monthly_backups init
+
 # set apache env variables
 echo "export CALTECH_CURATION_FILES_INTERNAL_PATH=${CALTECH_CURATION_FILES_INTERNAL_PATH}" >> /etc/apache2/envvars
 echo "export HOST_NAME=${HOST_NAME}" >> /etc/apache2/envvars
