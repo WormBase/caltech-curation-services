@@ -29,15 +29,12 @@ COPY curation/perl_wrapper.sh /usr/local/sbin/perl
 RUN chmod +x /usr/local/sbin/perl
 COPY curation/.zshrc /root/.zshrc
 COPY curation/.vimrc /root/.vimrc
+COPY curation/restic_exclude.txt /restic_exclude.txt
 RUN touch /etc/apache2/additional_listeners.conf
 RUN chown -R www-data:www-data /usr/lib/cgi-bin/
 RUN find /usr/lib/cgi-bin/ \( -name "*.cgi" -o -name "*.pl" \) -exec chmod +x {} \;
 RUN chmod -R a+r /usr/lib/cgi-bin/
 RUN mkdir -p /etc/user_files
-
-RUN mkdir /root/.aws
-RUN echo "[default]\n" > /root/.aws/config
-RUN echo "[default]\naws_access_key_id = ${AWS_ACCESS_KEY_ID}\naws_secret_access_key = ${AWS_SECRET_ACCESS_KEY}\n" > /root/.aws/credentials
 
 RUN echo "en_US.UTF-8 UTF-8" > /etc/locale.gen
 RUN locale-gen

@@ -1,6 +1,9 @@
 SHELL=/bin/bash
 BASH_ENV=/container.env
 
+26 16 * * * restic -r ${RESTIC_REPOSITORY}/daily_backups backup /usr/caltech_curation_files --exclude-file=/restic_excludes.txt >> /var/log/restic_daily.log
+0 3 1 * * restic -r ${RESTIC_REPOSITORY}/monthly_backups backup /usr/caltech_curation_files --exclude-file=/restic_excludes.txt >> /var/log/restic_monthly.log
+
 # # 0 2 * * * python3 /script.pl > /var/log/script.log 2>&1
 
 # Uncomment these when live
