@@ -1,0 +1,1 @@
+/usr/caltech_curation_files/kimberly/uniprot/uniprot_paper_data/files/*
