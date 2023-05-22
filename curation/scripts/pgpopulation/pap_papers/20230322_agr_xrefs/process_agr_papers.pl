@@ -88,7 +88,7 @@ my @pgtables = qw( identifier status erratum_in retraction_in title journal publ
 my %simpleFields;
 $simpleFields{'title'} = 'title';
 # $simpleFields{'journal'} = 'resource_title';
-$simpleFields{'journal'} = 'resource_medline_abbreviation';
+# $simpleFields{'journal'} = 'resource_medline_abbreviation';	# we use this at WB
 $simpleFields{'publisher'} = 'publisher';
 $simpleFields{'pages'} = 'page_range';
 $simpleFields{'volume'} = 'volume';
@@ -229,6 +229,7 @@ sub comparePgAgr {
       my $agrField = $simpleFields{$field};
       &compareSimple($wbp, $field, $papobj{$agrField}, $pgData{$field}{$wbp}{0});
     }
+    &compareJournal($wbp, 'journal', $papobj{'resource_medline_abbreviation'}, $pgData{'journal'}{$wbp}{0});
     &compareAuthors($wbp, $papobj{authors});
     &compareDatePublished($wbp, $papobj{date_published});
     &comparePubTypes($wbp, $papobj{pubmed_types});
@@ -425,6 +426,26 @@ sub compareAuthors {
     }
   }
 } # sub compareAuthors
+
+sub compareJournal {
+  # 2023 05 22 - Kimberly thinks most of the differences are okay.  When ABC doesn't have a journal, don't do anything because WB is not sending resources to ABC yet.  When ABC has data replace WB data with it.
+  my ($wbp, $field, $agrValue, $pgValue) = @_;
+  my $skipType = 0; my %ignoreTypeForJournal;
+  $ignoreTypeForJournal{3}++;	# ABC doesn't have resource for meetings, so don't compare
+  $ignoreTypeForJournal{4}++;	# ABC doesn't have resource for gazettes, so don't compare
+  foreach my $order (sort keys %{ $pgData{type}{$wbp} }) { 
+    if ($ignoreTypeForJournal{$pgData{type}{$wbp}{$order}}) { $skipType++; } }
+  return if ($skipType);
+  unless ($agrValue) { $agrValue = ''; }
+  unless ($pgValue) { $pgValue = ''; }
+  if ($agrValue ne $pgValue) {
+    print qq(DIFF\t$wbp\t$field\t$agrValue\t$pgValue\n);
+  }
+  # TODO - check this works
+  # if ($agrValue) { 
+  #   if ($agrValue ne $pgValue) {
+  #     print qq(REPLACE\t$wbp\t$field\t$agrValue\t$pgValue\n); } }
+} # sub compareJournal
 
 sub compareSimple {
   my ($wbp, $field, $agrValue, $pgValue) = @_;
