@@ -324,12 +324,15 @@ sub extractCommentsCorrections {	# data is wrong from abc exporter, wbp and othe
   if ($thisAgrComCor_href) {
     my %thisAgrComCor = %$thisAgrComCor_href;
     foreach my $type (sort keys %thisAgrComCor) {
-      my $otherAgr = $thisAgrComCor{$type}{'reference_curie'};
-      # can't do this here, the other Agr hasn't been processed yet, so we don't know what the WBPaper is, must add to %agrComCor to process after all json is done
-      # my $otherWbp = 'no match';
-      # $otherWbp = &resolveAgrToWbp($otherAgr);
-      # print qq($wbp\t$type\t$otherAgr\t$otherWbp\n);
-      $agrComCor{$type}{$wbp} = $otherAgr;
+      foreach my $entry (@{ $thisAgrComCor{$type} }) {
+        my $otherAgr = $$entry{'reference_curie'};
+        # my $otherAgr = $thisAgrComCor{$type}{'reference_curie'};	# when comcor type had only one value instead of array
+        # can't do this here, the other Agr hasn't been processed yet, so we don't know what the WBPaper is, must add to %agrComCor to process after all json is done
+        # my $otherWbp = 'no match';
+        # $otherWbp = &resolveAgrToWbp($otherAgr);
+        # print qq($wbp\t$type\t$otherAgr\t$otherWbp\n);
+        $agrComCor{$type}{$wbp} = $otherAgr;
+      } # foreach my $entry (@{ $thisAgrComCor{$type} })
     } # foreach my $type (sort keys %thisAgrComCor)
   }
 } # sub extractCommentsCorrections
