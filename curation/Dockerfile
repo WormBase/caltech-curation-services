@@ -1,5 +1,6 @@
 FROM perl:5.18.4-buster
 ARG SSH_ACEDB_PASSWORD=""
+ARG SSH_CITACE_PASSWORD=""
 ARG CALTECH_CURATION_FILES_INTERNAL_PATH=/usr/caltech_curation_files
 ARG DEBIAN_FRONTEND=noninteractive
 ARG AWS_ACCESS_KEY_ID=""
@@ -9,6 +10,7 @@ ENV TZ="America/Los_Angeles"
 RUN mkdir -p ${CALTECH_CURATION_FILES_INTERNAL_PATH}
 RUN chmod -R 777 ${CALTECH_CURATION_FILES_INTERNAL_PATH}
 RUN useradd -rm -d ${CALTECH_CURATION_FILES_INTERNAL_PATH} -s /bin/bash -p $(echo "${SSH_ACEDB_PASSWORD}" | makepasswd --crypt-md5 --clearfrom - | awk '{print $2}') acedb
+RUN useradd -rm -d ${CALTECH_CURATION_FILES_INTERNAL_PATH}/citace -s /bin/bash -p $(echo "${SSH_CITACE_PASSWORD}" | makepasswd --crypt-md5 --clearfrom - | awk '{print $2}') citace
 RUN cpanm install --force DBI Bundle::CPAN Mail::Mailer MIME::Lite Tie::IxHash JSON JSON::XS LWP::Protocol::https LWP Math::SigFigs Email::Send::Gmail Text::CSV_XS Dotenv CGI DBD::Pg Mail::Sendmail
 RUN wget https://cpan.metacpan.org/authors/id/L/LD/LDACHARY/Text-Unaccent-1.08.tar.gz && tar xvf Text-Unaccent-1.08.tar.gz && cd Text-Unaccent-1.08 && sed -i 's/int utf16_length = 0;/size_t utf16_length = 0;/;s/int utf16_unaccented_length = 0;/size_t utf16_unaccented_length = 0;/' unac.c && sed -i 's/static int buffer_length;/static size_t buffer_length;/' Unaccent.xs && perl Makefile.PL && make && make test && make install && cd .. && rm -rf Text-Unaccent-1.08*
 RUN a2enmod headers
@@ -29,7 +31,7 @@ COPY curation/perl_wrapper.sh /usr/local/sbin/perl
 RUN chmod +x /usr/local/sbin/perl
 COPY curation/.zshrc /root/.zshrc
 COPY curation/.vimrc /root/.vimrc
-COPY curation/restic_exclude.txt /restic_exclude.txt
+COPY curation/restic_excludes.txt /restic_excludes.txt
 RUN touch /etc/apache2/additional_listeners.conf
 RUN chown -R www-data:www-data /usr/lib/cgi-bin/
 RUN find /usr/lib/cgi-bin/ \( -name "*.cgi" -o -name "*.pl" \) -exec chmod +x {} \;

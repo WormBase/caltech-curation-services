@@ -1,1 +1,6 @@
 /usr/caltech_curation_files/kimberly/uniprot/uniprot_paper_data/files/*
+/usr/caltech_curation_files/citace/citace/*
+/usr/caltech_curation_files/citace/citaceMinus/*
+/usr/caltech_curation_files/citace/archive/*
+/usr/caltech_curation_files/citace/bin/*
+/usr/caltech_curation_files/citace/citaceAdmin/*

@@ -36,6 +36,10 @@ chmod -R 777 ${CALTECH_CURATION_FILES_INTERNAL_PATH}
 echo "$(ip -4 -br address | awk '{if (NR!=1) print $3}' | cut -d '/' -f1) ${HOSTNAME} ${HOST_NAME}" >> /etc/hosts
 yes | sendmailconfig
 
+# set up citace user home dir
+mkdir -p "${CALTECH_CURATION_FILES_INTERNAL_PATH}/citace"
+ln -s "${CALTECH_CURATION_FILES_INTERNAL_PATH}/citace" /home/citace
+
 declare -p | grep -Ev 'BASHOPTS|BASH_VERSINFO|EUID|PPID|SHELLOPTS|UID' > /container.env
 chmod 0644 /etc/cron.d/curation_crontab
 crontab /etc/cron.d/curation_crontab
