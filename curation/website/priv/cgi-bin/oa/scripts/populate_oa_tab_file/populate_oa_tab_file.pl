@@ -66,7 +66,7 @@ if ($ARGV[0]) {
   else { $printUsage .= qq(Need a server : $subDomains\n); }
 
 # my $baseUrl = '';
-my $baseUrl = $thishost . "/priv/cgi-bin/oa/ontology_annotator.cgi";
+my $baseUrl = 'https://' . $thishost . "/priv/cgi-bin/oa/ontology_annotator.cgi";
 
 
 if ($ARGV[1]) { 
@@ -98,7 +98,8 @@ foreach my $table (@tables) {
           else { $datatype = $1; } }
       else { $hasError .= qq($1 not an allowed Datatype\n); }
   } # if ($table =~ m/^([a-z]{3})/)
-  my $url = 'http://' . $subdomain . '.caltech.edu/~postgres/cgi-bin/referenceform.cgi?pgcommand=SELECT+*+FROM+' . $table . '&perpage=1&action=Pg+!';
+  # my $url = 'http://' . $subdomain . '.caltech.edu/~postgres/cgi-bin/referenceform.cgi?pgcommand=SELECT+*+FROM+' . $table . '&perpage=1&action=Pg+!';
+  my $url = 'https://' . $thishost . '/priv/cgi-bin/referenceform.cgi?pgcommand=SELECT+*+FROM+' . $table . '&perpage=1&action=Pg+!';
   my $page = get $url;
   my ($thereAre) = $page =~ m/There are (\d+) results/;
   if ($thereAre == 0) { $hasError .= qq($table has no data in postgres, may not be a valid table\n); }
