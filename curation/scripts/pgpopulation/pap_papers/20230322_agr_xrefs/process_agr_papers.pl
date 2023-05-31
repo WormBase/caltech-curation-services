@@ -176,6 +176,13 @@ foreach my $papobj_href (@{ $agr{data} }) {
       if ($xref{is_obsolete}) { $agrObsId{$pmid}++; } }
 #     print qq($xref{curie}\n);
   }
+
+# to output comcor mappings
+#   foreach my $type (%{ $papobj{comment_and_corrections} }) {
+#     foreach my $entry (@{ $papobj{comment_and_corrections}{$type} }) {
+#       my $otherAgr = $$entry{'reference_curie'};
+#       print qq(COMCOR\t$agr\t$type\t$otherAgr\n); } }
+
 # PUT THIS BACK
   &comparePgAgr($papobj_href);
   print qq(\n);
