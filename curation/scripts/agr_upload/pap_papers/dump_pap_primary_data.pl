@@ -46,7 +46,7 @@ $result = $dbh->prepare( "SELECT * FROM pap_primary_data ORDER BY joinkey");
 $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
 while (my @row = $result->fetchrow) { 
   unless ($mapToAtp{$row[1]}) { print qq(ERR not ATP value : @row\n); next; }
-  print OUT qq(WBPaper$row[0]\t$mapToAtp{$row[1]}\n);
+  print OUT qq(WB:WBPaper$row[0]\t$mapToAtp{$row[1]}\n);
 }
 
 close (OUT) or die "Cannot close $outfile : $!";
