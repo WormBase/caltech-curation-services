@@ -1,13 +1,16 @@
 #!/usr/bin/env perl
 
-# dump merged wbpaper for alliance, do not upload to fms
+# dump pap_primary_data for ABC.  2023 06 07
 
 # modified  dump_agr_literature.pl
 
-# ./dump_merged_wbpapers.pl > merged_wb_papers.tsv
+# ./dump_pap_primary_data.pl
 # symlinked to
-# https://tazendra.caltech.edu/~postgres/agr/lit/merged_papers.tsv
+# https://tazendra.caltech.edu/~postgres/agr/lit/wb_curatability_reference_type.tsv
 
+#  primary        = 'experimental'     = 'ATP:0000103'
+#  not_primary    = 'not_experimental' = 'ATP:0000104'
+#  not_designated = 'meeting'          = 'ATP:0000106'
 
 
 use strict;
@@ -27,31 +30,28 @@ use Dotenv -load => '/usr/lib/.env';
 
 # my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n"; 
 my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST};port=$ENV{PSQL_PORT}", "$ENV{PSQL_USERNAME}", "$ENV{PSQL_PASSWORD}") or die "Cannot connect to database!\n";
-
 my $result;
 
+my %mapToAtp;
+$mapToAtp{'primary'}        = 'ATP:0000103';
+$mapToAtp{'not_primary'}    = 'ATP:0000104';
+$mapToAtp{'not_designated'} = 'ATP:0000106';
+
+
+my $outfile = 'wb_curatability_reference_type.tsv';
+open (OUT, ">$outfile") or die "Cannot create $outfile : $!";
+
 my %valid;
-$result = $dbh->prepare( "SELECT * FROM pap_status WHERE pap_status = 'valid'");
+$result = $dbh->prepare( "SELECT * FROM pap_primary_data ORDER BY joinkey");
 $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
-while (my @row = $result->fetchrow) { $valid{$row[0]}++; }
-
-my %filter;
-$result = $dbh->prepare( "SELECT * FROM pap_identifier WHERE pap_identifier ~ '^000' ORDER BY joinkey");
-$result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
-while (my @row = $result->fetchrow) {
-  unless ($valid{$row[0]}) { 
-    print qq(Invalid\t$row[0]\t$row[1]\n); }
-  my $line = qq(WB:WBPaper$row[0]\tWB:WBPaper$row[1]);
-  $filter{$line}++;
+while (my @row = $result->fetchrow) { 
+  unless ($mapToAtp{$row[1]}) { print qq(ERR not ATP value : @row\n); next; }
+  print OUT qq(WBPaper$row[0]\t$mapToAtp{$row[1]}\n);
 }
 
-foreach my $line (sort keys %filter) {
-  print qq($line\n);
-}
+close (OUT) or die "Cannot close $outfile : $!";
 
-#         if ($identifier !~ m/^000/) {			# skip merged WBPaper IDs.
-#           $wms{"WM:$identifier"}++;
-#           $filteredXref{"WM:$identifier"}++; } }
+
 
 
 __END__
