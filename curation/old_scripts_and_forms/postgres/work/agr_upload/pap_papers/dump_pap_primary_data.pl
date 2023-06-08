@@ -40,7 +40,7 @@ my $outfile = 'wb_curatability_reference_type.tsv';
 open (OUT, ">$outfile") or die "Cannot create $outfile : $!";
 
 my %valid;
-$result = $dbh->prepare( "SELECT * FROM pap_primary_data ORDER BY joinkey");
+$result = $dbh->prepare( "SELECT * FROM pap_primary_data WHERE joinkey IN (SELECT joinkey FROM pap_status WHERE pap_status = 'valid') ORDER BY joinkey");
 $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
 while (my @row = $result->fetchrow) { 
   unless ($mapToAtp{$row[1]}) { print qq(ERR not ATP value : @row\n); next; }
