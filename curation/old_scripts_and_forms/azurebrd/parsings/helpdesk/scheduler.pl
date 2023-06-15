@@ -59,31 +59,26 @@
 # removed Marie-Claire Harrison	(late) 2020 01 15  
 #
 # removed Nick Stiffler, removed Matthew Russell, removed Gary Williams, added Mark Quinton-Tulloch  2020 06 01
+# 
+# removed Matej Vucak, not around anymore.  2023 04 03
+#
+# added Steph Brown, parasite.  2023 06 15
 
 
 # current queue :
-# Raymond Lee, Scott Cain, Karen Yook, Wen Chen, Mark Quinton-Tulloch, Dionysis Grigoriadis, Adam Wright, Juancarlos Chan, Cecilia Nakamura, Stavros Diamantakis, Gary Schindelman, Daniel Wang, Todd Harris, Ranjana Kishore, Paul Davis, Kimberly Van Auken, Chris Grove, Daniela Raciti, Valerio Arnaboldi, Jae Cho. 
+# Raymond Lee, Steph Brown, Scott Cain, Karen Yook, Wen Chen, Mark Quinton-Tulloch, Dionysis Grigoriadis, Adam Wright, Juancarlos Chan, Cecilia Nakamura, Stavros Diamantakis, Gary Schindelman, Daniel Wang, Todd Harris, Ranjana Kishore, Paul Davis, Kimberly Van Auken, Chris Grove, Daniela Raciti, Valerio Arnaboldi, Jae Cho. 
 
 use strict;
 use Time::Local;
 
 my @ppl;
 
-push @ppl, "Stavros Diamantakis";	# 2020 09 04  added to list
-# push @ppl, "Andres Becerra";		# 2021 06 17  not added to list, Magda says full time alliance
-# push @ppl, "Faye Rodgers";		# 2017 01 04  added to list by Kevin Howe on wiki	# left 2021 09 02
-push @ppl, "Gary Schindelman";
-push @ppl, "Daniel Wang";
-push @ppl, "Todd Harris";
-push @ppl, "Ranjana Kishore";
-# push @ppl, "Paul Davis";		# 2022 07 21  left sometime before
-push @ppl, "Matej Vucak";		# 2022 07 21  added to list
-push @ppl, "Kimberly Van Auken";
 push @ppl, "Chris Grove";		# 2010 01 04  new person	(message 2009 09 30)
 push @ppl, "Daniela Raciti";		# 2010 09 08  new person
 push @ppl, "Valerio Arnaboldi";		# 2017 09 06  new person
 push @ppl, "Jae Cho";			# 2017 09 06  new person
 push @ppl, "Raymond Lee";
+push @ppl, "Steph Brown";		# 2023 06 16  new person parasite
 push @ppl, "Scott Cain";		# 2014 04 30  added to list
 # push @ppl, "Manuel Luypaert";		# 2020 06 01  added to list	# don't add yet by Kevin  2020 06 01	# don't add at all 2020 09 04
 # push @ppl, "Magdalena Zarowieki";	# 2020 09 04  added to list	# removed 2023 01 19
@@ -95,6 +90,16 @@ push @ppl, "Dionysis Grigoriadis";	# 2021 04 19  not added to list until 2021 05
 # push @ppl, "Sibyl Gao";		# 2014 06 05  added to list	# left 2021 08
 push @ppl, "Juancarlos Chan";
 push @ppl, "Cecilia Nakamura";
+push @ppl, "Stavros Diamantakis";	# 2020 09 04  added to list
+# push @ppl, "Andres Becerra";		# 2021 06 17  not added to list, Magda says full time alliance
+# push @ppl, "Faye Rodgers";		# 2017 01 04  added to list by Kevin Howe on wiki	# left 2021 09 02
+push @ppl, "Gary Schindelman";
+push @ppl, "Daniel Wang";
+push @ppl, "Todd Harris";
+push @ppl, "Ranjana Kishore";
+# push @ppl, "Paul Davis";		# 2022 07 21  left sometime before
+# push @ppl, "Matej Vucak";		# 2022 07 21  added to list	# removed 2023 04 03, not sure when he left
+push @ppl, "Kimberly Van Auken";
 
 # push @ppl, "Matthew Russell";		# 2016 03 15			(removed 2020 06 01)
 # push @ppl, "Marie-Claire Harrison";	# 2018 09 10  new person	(removed late 2020 01 15)
@@ -160,10 +165,11 @@ push @ppl, "Cecilia Nakamura";
 # my $date = '20200824:12';		# losing an hour / day if midnight to daylight savings, use noon
 # my $date = '20210419:12';		# losing an hour / day if midnight to daylight savings, use noon
 # my $date = '20220627:12';		# losing an hour / day if midnight to daylight savings, use noon
-my $date = '20230109:12';		# losing an hour / day if midnight to daylight savings, use noon
+# my $date = '20230109:12';		# losing an hour / day if midnight to daylight savings, use noon
+my $date = '20231211:12';		# losing an hour / day if midnight to daylight savings, use noon
 my $secs = &toSeconds($date);
 my $timePeriod = 86400 * 14;
-while ($date < '20240101') {
+while ($date < '20250101') {
   $secs += $timePeriod;
   $date = &toDate($secs);
   my ($year, $mon, $day) = $date =~ m/(\d{4})(\d{2})(\d{2})/;
