@@ -66,6 +66,11 @@
 # get_nameserver_genes.sh   2020 07 02
 #
 # Got new wb-names-export.jar, updated to have species.  2020 07 03
+#
+# Getting genes from nameserver directly broke 2023 03 19 when aws keys were committed to github
+# Paulo added a cronjob to generate genes.csv into s3 on 2023 06 23 and can now
+# wget http://namesoutput.s3-website-us-east-1.amazonaws.com/genes.csv
+# 2023 06 23
 
 
 # gets called by cronjob
@@ -121,7 +126,9 @@ open (SPE, ">$speciesfile")  or die "Cannot create $speciesfile : $!";
 
 
 # get genes from nameserver
-`/home/postgres/work/pgpopulation/obo_oa_ontologies/geneace/get_nameserver_genes.sh`;
+# `/home/postgres/work/pgpopulation/obo_oa_ontologies/geneace/get_nameserver_genes.sh`;	# this broke 2023 03 19 when aws keys were committed to github
+`rm genes.csv`;		# wget will make a .1 file if not removing the previous file
+`wget http://namesoutput.s3-website-us-east-1.amazonaws.com/genes.csv`;	# paulo added a cronjob to generate into s3 on 2023 06 23
 
 
 # get genes from .json dump that's no longer happening  2020 07 02
