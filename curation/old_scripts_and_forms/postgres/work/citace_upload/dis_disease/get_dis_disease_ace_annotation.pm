@@ -34,6 +34,8 @@ our $VERSION	= 1.00;
 # before needed wbgene|variation|strain|transgene, now can also be genotype.  2023 03 06
 #
 # for dot_entry only, treat dis_assertedgene as if it were a dis_wbgene.  2023 03 27
+#
+# add dis_assertedhumangene dumping for Ranjana.  2023 07 05
 
 
 
@@ -51,7 +53,7 @@ my $result;
 
 my %theHash;
 # my @tables = qw( wbgene curator humandoid paperexpmod dbexpmod lastupdateexpmod species diseaserelevance paperdisrel dbdisrel genedisrel lastupdatedisrel );
-my @tables = qw( humandoid species strain straintext variation variationtext transgene transgenetext genotype wbgene wbgenetext interactvariation interacttransgene interactgene rnaiexperiment modelremark assertedgene assertedvariation associationtype goinference eco qualifier inducingchemical inducingagent modtransgene modvariation modstrain modgene modgenotype modmolecule modother moleculetype modqualifier geneticsex phenotypedisease phenotypeameliorated phenotypeexacerbated commentdisphen paperexpmod diseasemodeldesc genedisrel dbexpmod curator lastupdateexpmod );
+my @tables = qw( humandoid species strain straintext variation variationtext transgene transgenetext genotype wbgene wbgenetext interactvariation interacttransgene interactgene rnaiexperiment modelremark assertedgene assertedvariation assertedhumangene associationtype goinference eco qualifier inducingchemical inducingagent modtransgene modvariation modstrain modgene modgenotype modmolecule modother moleculetype modqualifier geneticsex phenotypedisease phenotypeameliorated phenotypeexacerbated commentdisphen paperexpmod diseasemodeldesc genedisrel dbexpmod curator lastupdateexpmod );
 
 
 my %tableToTag;
@@ -69,6 +71,7 @@ $tableToTag{"rnaiexperiment"}         = "RNAi_experiment";
 $tableToTag{"modelremark"}            = "Modeled_by_remark";
 $tableToTag{"assertedgene"}           = "Asserted_gene";
 $tableToTag{"assertedvariation"}      = "Asserted_variation";
+$tableToTag{"assertedhumangene"}      = "Asserted_human_gene";
 $tableToTag{"associationtype"}        = "Association_type";
 $tableToTag{"goinference"}            = "GO_code";
 $tableToTag{"eco"}                    = "ECO_term";
