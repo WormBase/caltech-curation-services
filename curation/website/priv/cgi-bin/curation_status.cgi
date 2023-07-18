@@ -196,6 +196,8 @@
 #   16 "Host-pathogen/virulence"
 #
 # Removed premadeComments 15 and added new value 'Toxicology'.  for Ranjana 2021 03 16
+#
+# Added premadeComments 17 18 19 for disease values for Ranjana.  2023 07 18
 
 
 
@@ -3482,6 +3484,9 @@ sub populatePremadeComments {
 #   $premadeComments{"15"} = "No disease models";	# removed for Ranjana and removed from postgres.  2021 03 16
   $premadeComments{"15"} = "Toxicology";
   $premadeComments{"16"} = "Host-pathogen/virulence";
+  $premadeComments{"17"} = "Disease model";
+  $premadeComments{"18"} = "Non-genetic disease model";
+  $premadeComments{"19"} = "Genetic disease model";
 } # sub populatePremadeComments
 
 
