@@ -25,6 +25,9 @@
 # 0 4 * * * /home/azurebrd/public_html/sanger/wormbaseheader/update_wormbase_header.pl
 #
 # Dockerized to write to web accessible directory in files volume.  2023 03 17
+#
+# wormbase header and footer at different URLs now.  ssl certificate expired requires
+# using IO::Socket::SSL to prevent verification.  2023 07 19
 
 # Set to cronjob to update everyday.  2023 03 17
 # 0 4 * * * /usr/lib/scripts/cronjobs/update_wormbase_header.pl
@@ -36,6 +39,7 @@ use LWP::Simple;
 use Jex;
 use LWP::UserAgent;
 use Net::Domain qw(hostname hostfqdn hostdomain);
+use IO::Socket::SSL qw();
 
 use Dotenv -load => '/usr/lib/.env';
 
@@ -43,7 +47,15 @@ use Dotenv -load => '/usr/lib/.env';
 my $hostfqdn = hostfqdn();
 
 my $date = &getSimpleSecDate();
-my $ua = LWP::UserAgent->new;
+# my $ua = LWP::UserAgent->new;
+my $ua = LWP::UserAgent->new(
+    ssl_opts => {
+        SSL_verify_mode => IO::Socket::SSL::SSL_VERIFY_NONE,
+        verify_hostname => 0,
+        # SSL_hostname => '',# Set SSL_hostname if you do want to verify the hostname
+                            # (ie, when using SNI https://en.wikipedia.org/wiki/Server_Name_Indication)
+    }
+);
 
 my $directory =  $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . "/pub/wormbaseheader";
 # my $directory = '/home/azurebrd/public_html/sanger/wormbaseheader';
@@ -68,10 +80,14 @@ my $dependencies  = qq(<link href="https://www.wormbase.org/static/css/main.min.
    $dependencies .= qq(<script src="https://www.wormbase.org/static/js/wormbase.min.js" type="text/javascript"></script>\n);
    $dependencies .= qq(<script>\n(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){ (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o), m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m) })\n(window,document,'script','\/\/www.google-analytics.com\/analytics.js','ga');\nga('create', 'UA-16257183-1', {'cookieDomain': 'wormbase.org'});\nga('require', 'displayfeatures');\nga('send', 'pageview');\n<\/script>\n);
 
-my $header = get "https://www.wormbase.org/header";
+# my $header = get "https://www.wormbase.org/header";
+my $response = $ua->get("https://wormbase.org//header");
+my $header = $response->content;
    $header =~ s/href="\//href="https:\/\/www.wormbase.org\//g;
    $header =~ s/src="\//src="https:\/\/www.wormbase.org\//g;
-my $footer = get "https://www.wormbase.org/footer";
+# my $footer = get "https://www.wormbase.org/footer";
+$response = $ua->get("https://wormbase.org//footer");
+my $header = $response->content;
    $footer =~ s/href="\//href="https:\/\/www.wormbase.org\//g;
    $footer =~ s/src="\//src="https:\/\/www.wormbase.org\//g;
 

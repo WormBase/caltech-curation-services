@@ -20,6 +20,9 @@
 # http not supported at wormbase anymore, https not accessible with curl nor LWP, because of some 
 # TLS issue that Adam found https://github.com/curl/curl/issues/5496  Disabling emails until some
 # software update somewhere hopefully fixes it.  2020 10 10
+#
+# wormbase header and footer at different URLs now.  ssl certificate expired requires
+# using IO::Socket::SSL to prevent verification.  2023 07 19
 
 
 # Set to cronjob to update everyday.  2007 11 20
@@ -32,17 +35,27 @@ use LWP::Simple;
 use Jex;
 use LWP::UserAgent;
 use Net::Domain qw(hostname hostfqdn hostdomain);
-
+use IO::Socket::SSL qw();
 
 my $hostfqdn = hostfqdn();
 
 my $date = &getSimpleSecDate();
-my $ua = LWP::UserAgent->new;
+# my $ua = LWP::UserAgent->new;
+my $ua = LWP::UserAgent->new(
+    ssl_opts => {
+        SSL_verify_mode => IO::Socket::SSL::SSL_VERIFY_NONE,
+        verify_hostname => 0,
+        # SSL_hostname => '',# Set SSL_hostname if you do want to verify the hostname
+                            # (ie, when using SNI https://en.wikipedia.org/wiki/Server_Name_Indication)
+    }
+);
 
 my $directory = '/home/azurebrd/public_html/sanger/wormbaseheader';
 chdir($directory) or die "Cannot go to $directory ($!)";
 
-my $page = get "https://www.wormbase.org/stylesheets/wormbase.css";
+# my $page = get "https://www.wormbase.org/stylesheets/wormbase.css";
+my $response = $ua->get("https://www.wormbase.org/stylesheets/wormbase.css");
+my $page = $response->content;
 if ($page) { 
     my $outfile = $directory . '/wormbase.css';
     if ($page =~ m/\@import.*?\n/) { $page =~ s/\@import.*?\n//g; }	# can't import stuff I'm not accounting for 2010 08 20
@@ -60,10 +73,15 @@ my $dependencies  = qq(<link href="https://www.wormbase.org/static/css/main.min.
    $dependencies .= qq(<script src="https://www.wormbase.org/static/js/wormbase.min.js" type="text/javascript"></script>\n);
    $dependencies .= qq(<script>\n(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){ (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o), m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m) })\n(window,document,'script','\/\/www.google-analytics.com\/analytics.js','ga');\nga('create', 'UA-16257183-1', {'cookieDomain': 'wormbase.org'});\nga('require', 'displayfeatures');\nga('send', 'pageview');\n<\/script>\n);
 
-my $header = get "https://www.wormbase.org/header";
+# my $header = get "https://www.wormbase.org/header";
+# my $header = get "https://wormbase.org//header";
+$response = $ua->get("https://wormbase.org//header");
+my $header = $response->content;
    $header =~ s/href="\//href="https:\/\/www.wormbase.org\//g;
    $header =~ s/src="\//src="https:\/\/www.wormbase.org\//g;
-my $footer = get "https://www.wormbase.org/footer";
+# my $footer = get "https://www.wormbase.org/footer";
+$response = $ua->get("https://wormbase.org//footer");
+my $footer = $response->content;
    $footer =~ s/href="\//href="https:\/\/www.wormbase.org\//g;
    $footer =~ s/src="\//src="https:\/\/www.wormbase.org\//g;
 
