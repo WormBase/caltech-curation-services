@@ -19,6 +19,9 @@ RUN a2enmod cgid
 RUN a2enmod ssl
 
 RUN git clone https://github.com/WormBase/acedb.git acedb && cd acedb && ln -s wmake/makefile Makefile && export ACEDB_MACHINE=LINUX_64 && make
+RUN git clone https://github.com/alliance-genome/agr_literature_service.git agr_literature_service
+RUN cp agr_literature_service/file_uploader/upload_files.sh /bin/agr_referencefile_bulk_uploader
+RUN chmod +x /bin/agr_referencefile_bulk_uploader
 
 COPY curation/website/apache_conf/apache2.conf /etc/apache2/apache2.conf
 COPY curation/website/apache_conf/000-default.conf /etc/apache2/sites-enabled/000-default.conf
