@@ -21,7 +21,8 @@ then echo "Listen ${SSL_PORT}" > /etc/apache2/additional_listeners.conf
 fi
 
 # symlink Daniel's pdf upload folder to folder used by agr bulk uploader
-mkdir -p "${CALTECH_CURATION_FILES_INTERNAL_PATH}/daniel/abc_upload/{files,logs}"
+mkdir -p "${CALTECH_CURATION_FILES_INTERNAL_PATH}/daniel/abc_upload/files"
+mkdir -p "${CALTECH_CURATION_FILES_INTERNAL_PATH}/daniel/abc_upload/logs"
 ln -s "${CALTECH_CURATION_FILES_INTERNAL_PATH}/daniel/abc_upload/files" /usr/files_to_upload
 
 # X11 forwarding config for ssh
