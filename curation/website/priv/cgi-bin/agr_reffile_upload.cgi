@@ -3,7 +3,9 @@
 # upload reference files (paper documents) to ABC
 
 # For Daniel to put files to upload in $path_to_files and upload all files by calling
-# Valerio's bulk uploader on that path.  2023 07 21
+# Valerio's bulk uploader on that path.  
+# Apache has permissions to delete main files, but not supplemental files in subdirectories
+# so this doesn't really do what it needs to, so we might get rid of it.  2023 07 21
 
 
 use CGI;
