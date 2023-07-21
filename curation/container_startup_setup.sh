@@ -24,6 +24,7 @@ fi
 mkdir -p "${CALTECH_CURATION_FILES_INTERNAL_PATH}/daniel/abc_upload/files"
 mkdir -p "${CALTECH_CURATION_FILES_INTERNAL_PATH}/daniel/abc_upload/logs"
 ln -s "${CALTECH_CURATION_FILES_INTERNAL_PATH}/daniel/abc_upload/files" /usr/files_to_upload
+chmod +x /usr/lib/scripts/agr_ref_files_bulk_uploader/upload_files_and_save_logs.sh
 
 # X11 forwarding config for ssh
 mkdir /var/run/sshd
