@@ -100,7 +100,7 @@ services:
       - ./curation/website/priv:/usr/lib/priv/
       - ./curation/scripts/:/usr/lib/scripts/
       - ./curation/user_files/:/usr/lib/user_files/
-      - .env:/usr/lib/.env
+      - "${ENV_FILE_PATH}:/usr/lib/.env"
       - ./curation/crontab:/etc/cron.d/curation_crontab
       - "${SSL_CERTIFICATE_DIR}:/etc/ssl_certificate"
       - "${CALTECH_CURATION_FILES_EXTERNAL_PATH}:${CALTECH_CURATION_FILES_INTERNAL_PATH}"
