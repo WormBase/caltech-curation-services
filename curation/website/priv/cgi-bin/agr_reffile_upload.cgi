@@ -51,7 +51,7 @@ sub deleteFiles {
 sub firstPage {
   print "<FORM METHOD=\"POST\" ACTION=\"agr_reffile_upload.cgi\">";
   print "<TABLE>\n";
-  print "<TR><TD ALIGN=\"right\">Upload all files from $path_to_files : </TD>";
+  print "<TR><TD ALIGN=\"right\">Upload all files from $path_to_files to $ENV{AGR_ABC_API_SERVER} : </TD>";
   print "<TD><INPUT TYPE=\"submit\" NAME=\"action\" VALUE=\"Upload !\"></TD></TR>\n";
   print "<TR><TD ALIGN=\"right\">Delete all files from $path_to_files : </TD>";
   print "<TD><INPUT TYPE=\"submit\" NAME=\"action\" VALUE=\"Delete !\"></TD></TR>\n";
