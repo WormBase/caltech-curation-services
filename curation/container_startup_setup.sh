@@ -23,7 +23,10 @@ fi
 # symlink Daniel's pdf upload folder to folder used by agr bulk uploader
 mkdir -p "${CALTECH_CURATION_FILES_INTERNAL_PATH}/daniel/abc_upload/files"
 mkdir -p "${CALTECH_CURATION_FILES_INTERNAL_PATH}/daniel/abc_upload/logs"
-ln -s "${CALTECH_CURATION_FILES_INTERNAL_PATH}/daniel/abc_upload/files" /usr/files_to_upload
+if [[ ! -f /usr/files_to_upload ]]
+then
+  ln -sf "${CALTECH_CURATION_FILES_INTERNAL_PATH}/daniel/abc_upload/files" /usr/files_to_upload
+fi
 chmod +x /usr/lib/scripts/agr_ref_files_bulk_uploader/upload_files_and_save_logs.sh
 
 # X11 forwarding config for ssh
