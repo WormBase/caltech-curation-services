@@ -19,12 +19,16 @@ use Dotenv -load => '/usr/lib/.env';
 
 my $query = new CGI;
 
-my $path_to_files = '/usr/lib/blahblah/';
+my $path_to_files = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . "/daniel/abc_upload/files/";
 
 my $action;
 unless ($action = $query->param('action')) {
   $action = 'none'; 
 }
+
+# apache/www-data need to have these variables set as API_SERVER/API_PORT for the upload_files_and_save_logs.sh  but they're seen as AGR_ABC_API_SERVER/AGR_ABC_API_PORT  so they need to be remapped when they're called by CGI through apache/www-data
+$ENV{API_SERVER} = $ENV{AGR_ABC_API_SERVER};
+$ENV{API_PORT} = $ENV{AGR_ABC_API_PORT};
 
 &printHeader('ABC Ref Files Upload');
 &process();
@@ -39,13 +43,13 @@ sub process {
 } # sub process
 
 sub uploadFiles {
-  my $result = `ls`;
-  print qq(upload : $result\n);
+  my $result = `/usr/lib/scripts/agr_ref_files_bulk_uploader/upload_files_and_save_logs.sh`;
+  print qq(Uploaded\n);
 }
 
 sub deleteFiles {
-  my $result = `ls`;
-  print qq(delete : $result\n);
+  my $result = `rm -rf /usr/files_to_upload/*`;
+  print qq(Deleted\n);
 }
 
 sub firstPage {
