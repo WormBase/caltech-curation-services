@@ -13,6 +13,8 @@ updatedb
 echo "export CALTECH_CURATION_FILES_INTERNAL_PATH=${CALTECH_CURATION_FILES_INTERNAL_PATH}" >> /etc/apache2/envvars
 echo "export HOST_NAME=${HOST_NAME}" >> /etc/apache2/envvars
 echo "export SSL_PORT=${SSL_PORT}" >> /etc/apache2/envvars
+echo "export API_SERVER=${API_SERVER}" >> /etc/apache2/envvars
+echo "export API_PORT=${API_PORT}" >> /etc/apache2/envvars
 echo "export IP_INSIDE_DOCKER=$(ip -4 -br address | awk '{if (NR!=1) print $3}' | cut -d '/' -f1)" >> /etc/apache2/envvars
 
 # listen on additional ssl port in case it is not the standard one
