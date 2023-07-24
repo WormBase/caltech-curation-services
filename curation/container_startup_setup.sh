@@ -30,6 +30,7 @@ then
   ln -sf "${CALTECH_CURATION_FILES_INTERNAL_PATH}/daniel/abc_upload/files" /usr/files_to_upload
 fi
 chmod +x /usr/lib/scripts/agr_ref_files_bulk_uploader/upload_files_and_save_logs.sh
+setfacl -R -d -m user:acedb:rwX "${CALTECH_CURATION_FILES_INTERNAL_PATH}/daniel/abc_upload/files"
 
 # X11 forwarding config for ssh
 mkdir /var/run/sshd
