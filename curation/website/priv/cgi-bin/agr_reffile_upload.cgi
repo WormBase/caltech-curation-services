@@ -6,6 +6,8 @@
 # Valerio's bulk uploader on that path.  
 # Apache has permissions to delete main files, but not supplemental files in subdirectories
 # so this doesn't really do what it needs to, so we might get rid of it.  2023 07 21
+#
+# Added link to logs (symlink of logs directory)  2023 07 24
 
 
 use CGI;
@@ -62,7 +64,7 @@ sub firstPage {
   print "<TR><TD ALIGN=\"right\">Delete all files from $path_to_files : </TD>";
   print "<TD><INPUT TYPE=\"submit\" NAME=\"action\" VALUE=\"Delete !\"></TD></TR>\n";
   print "<TR><TD ALIGN=\"right\">Link to reports : </TD>";
-  print "<TD>Link goes here</TD></TR>\n";
+  print qq(<TD><a href="https://caltech-curation-dev.textpressolab.com/files/priv/agr_reffile_upload/logs/" target="_blank">Logs</a></TD></TR>\n);
   print "</TABLE>\n";
   print "</FORM>\n";
 } # sub ChoosePhenotypeAssay
