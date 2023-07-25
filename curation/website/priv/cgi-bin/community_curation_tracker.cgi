@@ -177,7 +177,7 @@ sub process {
   if ($action eq 'Mass Email Tracker') { 1; }
     elsif ($action eq 'New Mutant Tracker') { 1; }
 #     elsif ($action eq 'Concise Description Tracker') { 1; }
-    else { &printHtmlFooter(); }
+    else { &printFooter(); }
 } # sub process
 
 sub massEmail {
@@ -821,7 +821,7 @@ sub massEmailTracker {
       else { print qq($rowText); }
   }
   if ($htmlOrText eq 'text') { 1; }
-    else { &printHtmlFooter(); }
+    else { &printFooter(); }
 } # sub massEmailTracker
 
 
