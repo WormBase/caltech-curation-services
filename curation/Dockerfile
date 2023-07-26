@@ -17,6 +17,8 @@ RUN a2enmod headers
 RUN a2enmod rewrite
 RUN a2enmod cgid
 RUN a2enmod ssl
+RUN a2enmod proxy
+RUN a2enmod proxy_http
 
 RUN git clone https://github.com/WormBase/acedb.git acedb && cd acedb && ln -s wmake/makefile Makefile && export ACEDB_MACHINE=LINUX_64 && make
 RUN git clone https://github.com/alliance-genome/agr_literature_service.git agr_literature_service

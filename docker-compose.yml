@@ -66,6 +66,7 @@ services:
     networks:
       - caltech-curation-network
     environment:
+      GF_SERVER_ROOT_URL: "https://${HOST_NAME}/grafana"
       TZ: 'America/Los_Angeles'
 
   curation:
