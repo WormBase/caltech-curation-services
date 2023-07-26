@@ -97,12 +97,12 @@ services:
       - "${SSH_PORT}:22"
     volumes:
       - "${HTTPD_AUTH_FILE_PATH}:/etc/httpd/passwd/passwords"
-      - ./curation/website/pub:/usr/lib/pub/
-      - ./curation/website/priv:/usr/lib/priv/
-      - ./curation/scripts/:/usr/lib/scripts/
-      - ./curation/user_files/:/usr/lib/user_files/
+      - "${SRC_DIR_PATH}/curation/website/pub:/usr/lib/pub/"
+      - "${SRC_DIR_PATH}/curation/website/priv:/usr/lib/priv/"
+      - "${SRC_DIR_PATH}/curation/scripts/:/usr/lib/scripts/"
+      - "${SRC_DIR_PATH}/curation/user_files/:/usr/lib/user_files/"
       - "${ENV_FILE_PATH}:/usr/lib/.env"
-      - ./curation/crontab:/etc/cron.d/curation_crontab
+      - "${SRC_DIR_PATH}/curation/crontab:/etc/cron.d/curation_crontab"
       - "${SSL_CERTIFICATE_DIR}:/etc/ssl_certificate"
       - "${CALTECH_CURATION_FILES_EXTERNAL_PATH}:${CALTECH_CURATION_FILES_INTERNAL_PATH}"
     networks:
