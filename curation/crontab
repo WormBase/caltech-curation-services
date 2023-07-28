@@ -53,7 +53,7 @@ BASH_ENV=/container.env
 #
 # kimberly
 # 0 2 * * tue,wed,thu,fri,sat /usr/lib/scripts/citace_upload/papers/wrapper.pl
-# 0 5 * * sat /usr/lib/scripts/agr_upload/pap_papers/dump_agr_literature.pl
+# 0 5 * * tue,wed,thu,fri,sat /usr/lib/scripts/agr_upload/pap_papers/dump_agr_literature.pl
 #
 # wen
 # 0 1 1 * * /usr/lib/scripts/cronjobs/check_apache_simplemine.pl
