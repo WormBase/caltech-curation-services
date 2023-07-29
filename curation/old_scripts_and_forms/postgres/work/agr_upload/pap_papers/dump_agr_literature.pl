@@ -17,18 +17,21 @@
 # Don't dump date copy, Kimberly doesn't need that.  2022 11 21
 #
 # Dump CGC, WBG, WM identifiers are xref.  CGC can have multiple.  2023 02 23
+#
+# Changed to dumping after every workday.  2023 07 28
 
 
 # dump every sunday at 5am, gets picked up by abc cronjob at 9am every sunday
-# 0 5 * * sun /home/postgres/work/agr_upload/pap_papers/dump_agr_literature.pl
+# 0 5 * * tue,wed,thu,fri,sat /home/postgres/work/agr_upload/pap_papers/dump_agr_literature.pl
 
-
-# WB_false_positive_pmids is aggregation of
-# /home/postgres/work/pgpopulation/wpa_papers/pmid_downloads/rejected_pmids
-# /home/postgres/work/pgpopulation/wpa_papers/pmid_downloads/removed_pmids
-# cat /home/postgres/work/pgpopulation/wpa_papers/pmid_downloads/rejected_pmids > blah
-# cat /home/postgres/work/pgpopulation/wpa_papers/pmid_downloads/removed_pmids >> blah
-# cat blah | sort | uniq > WB_false_positive_pmids
+# WB_false_positive_pmids is symlink to /home/postgres/work/pgpopulation/wpa_papers/pmid_downloads/rejected_pmids 2023 06 05
+# no longer include removed_pmids
+# # WB_false_positive_pmids is aggregation of
+# # /home/postgres/work/pgpopulation/wpa_papers/pmid_downloads/rejected_pmids
+# # /home/postgres/work/pgpopulation/wpa_papers/pmid_downloads/removed_pmids
+# # cat /home/postgres/work/pgpopulation/wpa_papers/pmid_downloads/rejected_pmids > blah
+# # cat /home/postgres/work/pgpopulation/wpa_papers/pmid_downloads/removed_pmids >> blah
+# # cat blah | sort | uniq > WB_false_positive_pmids
 #
 #
 # dump into agr_wb_literature.json with
