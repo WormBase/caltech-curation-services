@@ -3,6 +3,11 @@
 # read agr wb reference json and extract agr IDs to connect to existing WBPaper IDs.
 # 60010 AGR IDs loaded into pap_identifier on dockerized on 2023 03 22, against postgres dump from 20230215.
 # 2023 03 22
+#
+# generate xref json file to full path for cronjob to know what to use.  
+# prioritize mapping based on pmid to abc pmid agrkb, then wbpaper at abc.  
+# output conflicts to screen, later create email to Kimberly"
+# 2023 08 04
 
 
 use strict;
