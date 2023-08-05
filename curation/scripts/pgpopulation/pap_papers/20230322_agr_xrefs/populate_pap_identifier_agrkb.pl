@@ -15,14 +15,19 @@ use JSON;
 use Dotenv -load => '/usr/lib/.env';
 
 my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST};port=$ENV{PSQL_PORT}", "$ENV{PSQL_USERNAME}", "$ENV{PSQL_PASSWORD}") or die "Cannot connect to database!\n";
-# my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n"; 
+# my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n";
 my $result;
 
 
-my %wbps;
-my %wbpToAgr;
-my %pmids;
-my %pmidToAgr;
+my %abcWbps;
+my %abcWbpToAgr;
+my %abcPmids;
+my %abcPmidToAgr;
+
+my $xref_file_path = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/postgres/pgpopulation/pap_papers/20230322_agr_xrefs/files/ref_xref.json';
+
+my @pgcommands;
+my %highestPapIdent;
 
 # &populateFromNightlyAbcWb();
 &populateFromAbcXrefs();
@@ -34,7 +39,8 @@ sub generateOktaToken {
 
 sub generateXrefJsonFile {
   my $okta_token = &generateOktaToken();
-  `curl -X 'GET' 'https://stage-literature-rest.alliancegenome.org/bulk_download/references/external_ids/' -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json'  >  files/ref_xref.json`;
+  `curl -X 'GET' 'https://stage-literature-rest.alliancegenome.org/bulk_download/references/external_ids/' -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json'  > $xref_file_path`;
+#   `curl -X 'GET' 'https://stage-literature-rest.alliancegenome.org/bulk_download/references/external_ids/' -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json'  > files/ref_xref.json`;
 }
 
 sub populateFromAbcXrefs {
@@ -50,16 +56,16 @@ sub populateFromAbcXrefs {
   # UNCOMMENT for live run with latest data
 #   &generateXrefJsonFile();
 
-  my $infile = 'files/ref_xref.json';
-  # my $infile = '/usr/lib/scripts/pgpopulation/pap_papers/20230322_agr_xrefs/files/ref_xref.json';
-  
+  # my $xref_file_path = 'files/ref_xref.json';
+  # my $xref_file_path = '/usr/lib/scripts/pgpopulation/pap_papers/20230322_agr_xrefs/files/ref_xref.json';
+
   $/ = undef;
-  open (IN, "<$infile") or die "Cannot open $infile : $!";
-  print "Start reading $infile\n";
+  open (IN, "<$xref_file_path") or die "Cannot open $xref_file_path : $!";
+  print "Start reading $xref_file_path\n";
   my $json_data = <IN>;
-  print "Done reading $infile\n";
-  close (IN) or die "Cannot open $infile : $!";
-  
+  print "Done reading $xref_file_path\n";
+  close (IN) or die "Cannot open $xref_file_path : $!";
+
   print "Start decoding json\n";
   # my %perl = parse_json($json_data);	# JSON::Parse, not installed in dockerized
   my $perl = decode_json($json_data);	# JSON  very very slow on dockerized without JSON::XS, but fast on tazendra.  with JSON::XS installed is fast even without directly calling JSON::XS->new like below, and without use JSON::XS, just use JSON
@@ -77,61 +83,107 @@ sub populateFromAbcXrefs {
 #     $count++; last if ($count > 10);
     my $agr = $papobj{curie};
     my $pmid = '';
+    my $wbp = '';
     print qq($agr\n);
     my %xrefs;
     foreach my $xref_href (@{ $papobj{cross_references} }) {
       my %xref = %$xref_href;
       next unless $xref{curie};
       if ($xref{curie} =~ m/^PMID:(\d+)/) { $pmid = 'pmid' . $1; }
+      if ($xref{curie} =~ m/^WB:WBPaper(\d+)/) { $wbp = $1; }
   #     print qq($xref{curie}\n);
     }
   #   print qq(\n);
-    if ($pmid) { 
-      $pmids{$pmid}++;
-      print qq($pmid : $agr\n);
-      $pmidToAgr{$pmid} = $agr;
+    if ($pmid) {
+      $abcPmids{$pmid}++;
+      print qq(ABC $pmid : $agr\n);
+      $abcPmidToAgr{$pmid} = $agr;
     }
+    if ($wbp) {
+      $abcWbps{$wbp}++;
+      print qq(ABC WBPaper$wbp : $agr\n);
+      $abcWbpToAgr{$wbp} = $agr;
+    }
+  }
+
+  foreach my $wbp (sort keys %abcWbps) {
+    if ($abcWbps{$wbp} > 1) { print qq(ERR : Too many wbps at ABC $wbp $abcWbps{$wbp}\n); }
   }
 
   my %valid;
   $result = $dbh->prepare( "SELECT * FROM pap_status WHERE pap_status = 'valid'" );
-  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) { $valid{$row[0]}++; }
-  
-  my %highestPapIdent;
-  my %wbpToAgr;
-  my %wbpToPmid;
+
+  my %pgWbpToAgr;
+  my %pgWbpToPmid;
   $result = $dbh->prepare( "SELECT * FROM pap_identifier ORDER BY joinkey, pap_order" );
-  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     $highestPapIdent{$row[0]} = $row[2];
-    if ($row[1] =~ m/AGRKB:/) { $wbpToAgr{$row[0]} = $row[1]; }
-    if ($row[1] =~ m/pmid/) { $wbpToPmid{$row[0]} = $row[1]; }
+    if ($row[1] =~ m/AGRKB:/) { $pgWbpToAgr{$row[0]} = $row[1]; }
+    if ($row[1] =~ m/pmid/) { $pgWbpToPmid{$row[0]} = $row[1]; }
   }
 
-  my @pgcommands;
+  # Kimberly : if there's a PMID, use that preferentially, and if there's not a PMID, then map WBPaper IDs
   foreach my $joinkey (sort {$a<=>$b} keys %valid) {
-    next if ($wbpToAgr{$joinkey});
-    if ($wbpToPmid{$joinkey}) { 
-      my $pmid = $wbpToPmid{$joinkey};
-      if ($pmidToAgr{$pmid}) { 
-        my $agr = $pmidToAgr{$pmid};
-        print qq(WBPaper$joinkey\t$pmid\t$agr\n);
-        my $order = 1;
-        if ($highestPapIdent{$joinkey}) {
-          $order = $highestPapIdent{$joinkey} + 1;
-          # print qq(ERR : No order for $joinkey\n);
-        }
-        push @pgcommands, qq(INSERT INTO pap_identifier VALUES ('$joinkey', '$agr', $order, 'two1823'););
-  } } }
+    my $pgAgr = ''; my $agrFromPmid = ''; my $agrFromWbp = ''; my $pgPmid = '';
+    if ($pgWbpToAgr{$joinkey}) { $pgAgr = $pgWbpToAgr{$joinkey}; }
+    if ($pgWbpToPmid{$joinkey}) {
+      $pgPmid = $pgWbpToPmid{$joinkey};
+      if ($abcPmidToAgr{$pgPmid}) {
+        $agrFromPmid = $abcPmidToAgr{$pgPmid}; } }
+    if ($abcWbpToAgr{$joinkey}) {
+      $agrFromWbp = $abcWbpToAgr{$joinkey}; }
+
+#     if ( ($pgAgr ne '') && ($agrFromPmid ne '') && ($agrFromWbp ne '') )
+    if ( ($agrFromPmid ne '') && ($agrFromWbp ne '') && ($agrFromPmid ne $agrFromWbp) ) {
+      print qq(CONFLICT $joinkey at ABC is $agrFromWbp , $joinkey has pg pmid $pgPmid at ABC is $agrFromPmid , $joinkey in pg is $pgAgr\n); }
+    elsif ( $agrFromPmid ne '') {
+      if ($pgAgr ne $agrFromPmid) {
+        if ($pgAgr eq '') {
+          &createAgrXref($joinkey, $agrFromPmid);
+          print qq(CREATE $joinkey to $agrFromPmid based on pmid $pgPmid at ABC\n); }
+        else {
+          &updateAgrXref($joinkey, $agrFromPmid, $pgAgr);
+          print qq(UPDATE $joinkey to $agrFromPmid based on pmid $pgPmid at ABC, was $pgAgr\n); } } }
+    elsif ( $agrFromWbp ne '') {
+      if ($pgAgr ne $agrFromWbp) {
+        if ($pgAgr eq '') {
+          &createAgrXref($joinkey, $agrFromWbp);
+          print qq(CREATE $joinkey to $agrFromWbp based wbp at ABC\n); }
+        else {
+          &updateAgrXref($joinkey, $agrFromWbp, $pgAgr);
+          print qq(UPDATE $joinkey to $agrFromWbp based wbp at ABC, was $pgAgr\n); } } }
+  }
 
   foreach my $pgcommand (@pgcommands) {
     print qq($pgcommand\n);
   # UNCOMMENT TO POPULATE
   #   $dbh->do($pgcommand);
   } # foreach my $pgcommand (@pgcommands)
-  
+
 } # sub populateFromAbcXrefs
+
+sub updateAgrXref {
+  my ($joinkey, $agr, $agrOld) = @_;
+  print qq(WBPaper$joinkey\t$agr\twas\t$agrOld\n);
+  push @pgcommands, qq(UPDATE pap_identifier SET pap_identifier = '$agr' WHERE joinkey = '$joinkey' AND pap_identifier = '$agr';);
+}
+
+sub createAgrXref {
+  my ($joinkey, $agr) = @_;
+#   print qq(WBPaper$joinkey\t$pgPmid\t$agr\n);
+  print qq(WBPaper$joinkey\t$agr\n);
+  my $order = 1;
+  if ($highestPapIdent{$joinkey}) {
+    $order = $highestPapIdent{$joinkey} + 1;
+    # print qq(ERR : No order for $joinkey\n);
+  }
+  push @pgcommands, qq(INSERT INTO pap_identifier VALUES ('$joinkey', '$agr', $order, 'two1823'););
+}
+
+__END__
 
 sub populateFromNightlyAbcWb {
   # this only populates AGR for papers that are in corpus at ABC, assuming that ABC is Biblio SoT, but for a while PDFs will be at ABC before switching SoT
