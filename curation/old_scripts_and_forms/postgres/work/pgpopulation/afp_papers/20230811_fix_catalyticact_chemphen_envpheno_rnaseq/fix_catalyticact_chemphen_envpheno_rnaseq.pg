@@ -1,0 +1,58 @@
+# tables to fix
+# catalyticact
+# chemphen
+# envpheno
+# rnaseq
+
+# create test table to test modifying
+# CREATE TABLE afp_test (  joinkey text,
+#                          afp_test text,
+#                          afp_timestamp timestamp with time zone DEFAULT "timestamp"('now'::text));
+# ALTER TABLE afp_test ADD COLUMN afp_curator text;
+# ALTER TABLE afp_test ADD COLUMN afp_approve text;
+# ALTER TABLE afp_test ADD COLUMN afp_cur_timestamp timestamp with time zone DEFAULT "timestamp"('now'::text);
+
+# backup tables
+COPY afp_catalyticact TO '/home/postgres/work/pgpopulation/afp_papers/20230811_fix_catalyticact_chemphen_envpheno_rnaseq/afp_catalyticact.pg';
+COPY afp_chemphen TO '/home/postgres/work/pgpopulation/afp_papers/20230811_fix_catalyticact_chemphen_envpheno_rnaseq/afp_chemphen.pg';
+COPY afp_envpheno TO '/home/postgres/work/pgpopulation/afp_papers/20230811_fix_catalyticact_chemphen_envpheno_rnaseq/afp_envpheno.pg';
+COPY afp_rnaseq TO '/home/postgres/work/pgpopulation/afp_papers/20230811_fix_catalyticact_chemphen_envpheno_rnaseq/afp_rnaseq.pg';
+
+COPY afp_catalyticact_hst TO '/home/postgres/work/pgpopulation/afp_papers/20230811_fix_catalyticact_chemphen_envpheno_rnaseq/afp_catalyticact_hst.pg';
+COPY afp_chemphen_hst TO '/home/postgres/work/pgpopulation/afp_papers/20230811_fix_catalyticact_chemphen_envpheno_rnaseq/afp_chemphen_hst.pg';
+COPY afp_envpheno_hst TO '/home/postgres/work/pgpopulation/afp_papers/20230811_fix_catalyticact_chemphen_envpheno_rnaseq/afp_envpheno_hst.pg';
+COPY afp_rnaseq_hst TO '/home/postgres/work/pgpopulation/afp_papers/20230811_fix_catalyticact_chemphen_envpheno_rnaseq/afp_rnaseq_hst.pg';
+
+# add columns to data tables
+ALTER TABLE afp_catalyticact ADD COLUMN afp_curator text;
+ALTER TABLE afp_catalyticact ADD COLUMN afp_approve text;
+ALTER TABLE afp_catalyticact ADD COLUMN afp_cur_timestamp timestamp with time zone DEFAULT "timestamp"('now'::text);
+
+ALTER TABLE afp_chemphen ADD COLUMN afp_curator text;
+ALTER TABLE afp_chemphen ADD COLUMN afp_approve text;
+ALTER TABLE afp_chemphen ADD COLUMN afp_cur_timestamp timestamp with time zone DEFAULT "timestamp"('now'::text);
+
+ALTER TABLE afp_envpheno ADD COLUMN afp_curator text;
+ALTER TABLE afp_envpheno ADD COLUMN afp_approve text;
+ALTER TABLE afp_envpheno ADD COLUMN afp_cur_timestamp timestamp with time zone DEFAULT "timestamp"('now'::text);
+
+ALTER TABLE afp_rnaseq ADD COLUMN afp_curator text;
+ALTER TABLE afp_rnaseq ADD COLUMN afp_approve text;
+ALTER TABLE afp_rnaseq ADD COLUMN afp_cur_timestamp timestamp with time zone DEFAULT "timestamp"('now'::text);
+
+# add columns to history tables
+ALTER TABLE afp_catalyticact_hst ADD COLUMN afp_curator text;
+ALTER TABLE afp_catalyticact_hst ADD COLUMN afp_approve text;
+ALTER TABLE afp_catalyticact_hst ADD COLUMN afp_cur_timestamp timestamp with time zone DEFAULT "timestamp"('now'::text);
+
+ALTER TABLE afp_chemphen_hst ADD COLUMN afp_curator text;
+ALTER TABLE afp_chemphen_hst ADD COLUMN afp_approve text;
+ALTER TABLE afp_chemphen_hst ADD COLUMN afp_cur_timestamp timestamp with time zone DEFAULT "timestamp"('now'::text);
+
+ALTER TABLE afp_envpheno_hst ADD COLUMN afp_curator text;
+ALTER TABLE afp_envpheno_hst ADD COLUMN afp_approve text;
+ALTER TABLE afp_envpheno_hst ADD COLUMN afp_cur_timestamp timestamp with time zone DEFAULT "timestamp"('now'::text);
+
+ALTER TABLE afp_rnaseq_hst ADD COLUMN afp_curator text;
+ALTER TABLE afp_rnaseq_hst ADD COLUMN afp_approve text;
+ALTER TABLE afp_rnaseq_hst ADD COLUMN afp_cur_timestamp timestamp with time zone DEFAULT "timestamp"('now'::text);
