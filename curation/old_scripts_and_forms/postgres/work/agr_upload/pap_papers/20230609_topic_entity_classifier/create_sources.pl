@@ -4,6 +4,9 @@
 #
 # create sources at ABC if they don't already exist.
 # does not handle cur_svmdata nor cur_nncdata until confirmation.  2023 08 15
+#
+# handle second strdata for antibody from Valerio/Daniela pipeline, use for strdata after 2021-06-09
+# handles nnc and svm, although Kimberly has not confirmed.  2023 08 16
 
 # ./create_sources.pl
 
@@ -22,9 +25,12 @@ my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect 
 my $result;
 
 my $mod = 'WB';
-my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
-# my $okta_token = &generateOktaToken();
-my $okta_token = 'use_above_when_live';
+# my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
+my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
+my $okta_token = &generateOktaToken();
+# my $okta_token = 'use_above_when_live';
+
+
 
 
 # my $source_json = '{
@@ -136,7 +142,54 @@ unless ($source_id) {
   &createSource($source_type, $source_method, $source_json);
 }
 
-# TODO  create cur_svmdata and cur_nncdata, confirm that for each, we're creating a new source for each datatype
+$source_type = 'TBD';
+$source_method = 'script_antibody_data_2';
+$source_id = &getSourceId($source_type, $source_method);
+unless ($source_id) { 
+  my %source_json = %{ dclone (\%source_default) };
+  $source_json{source_type}     = $source_type;
+  $source_json{source_method}   = $source_method;
+  $source_json{description}     = 'valerio daniela script';	# script name here
+  my $source_json = encode_json \%source_json;
+  &createSource($source_type, $source_method, $source_json);
+}
+
+# for each nnc/svm, we're creating a new source for each datatype
+
+$result = $dbh->prepare( "SELECT DISTINCT(cur_datatype) FROM cur_nncdata" );
+$result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+while (my @row = $result->fetchrow) { 
+  print qq($row[0]\n);
+  $source_type = 'TBD';
+  $source_method = 'nnc_' . $row[0];
+  $source_id = &getSourceId($source_type, $source_method);
+  unless ($source_id) { 
+    my %source_json = %{ dclone (\%source_default) };
+    $source_json{source_type}     = $source_type;
+    $source_json{source_method}   = $source_method;
+    $source_json{description}     = "TBD nnc $row[0]";
+    my $source_json = encode_json \%source_json;
+    &createSource($source_type, $source_method, $source_json);
+  }
+} # while (my @row = $result->fetchrow)
+
+$result = $dbh->prepare( "SELECT DISTINCT(cur_datatype) FROM cur_svmdata" );
+$result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+while (my @row = $result->fetchrow) { 
+  print qq($row[0]\n);
+  $source_type = 'TBD';
+  $source_method = 'svm_' . $row[0];
+  $source_id = &getSourceId($source_type, $source_method);
+  unless ($source_id) { 
+    my %source_json = %{ dclone (\%source_default) };
+    $source_json{source_type}     = $source_type;
+    $source_json{source_method}   = $source_method;
+    $source_json{description}     = "TBD svm $row[0]";
+    my $source_json = encode_json \%source_json;
+    &createSource($source_type, $source_method, $source_json);
+  }
+} # while (my @row = $result->fetchrow)
+
 
 
 sub createSource {
@@ -168,4 +221,61 @@ sub generateOktaToken {
 #   print $okta_token;
   return $okta_token;
 }
+
+__END__
+
+
+my %datatypes;
+my %datatypesAfpCfp;
+&populateDatatypeStuff();
+
+sub populateDatatypeStuff {
+  $result = $dbh->prepare( "SELECT DISTINCT(cur_datatype) FROM cur_nncdata" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) { $datatypesAfpCfp{$row[0]} = $row[0]; }
+  $datatypesAfpCfp{'chemicals'}     = 'chemicals';              # added for Karen 2013 10 02
+  $datatypesAfpCfp{'blastomere'}    = 'cellfunc';
+  $datatypesAfpCfp{'exprmosaic'}    = 'siteaction';
+  $datatypesAfpCfp{'geneticmosaic'} = 'mosaic';
+  $datatypesAfpCfp{'laserablation'} = 'ablationdata';
+  $datatypesAfpCfp{'humandisease'}  = 'humdis';                 # added mapping to correct table 2018 05 17
+  $datatypesAfpCfp{'rnaseq'}        = 'rnaseq';                 # for new afp form 2018 10 31
+  $datatypesAfpCfp{'chemphen'}      = 'chemphen';               # for new afp form 2018 10 31
+  $datatypesAfpCfp{'envpheno'}      = 'envpheno';               # for new afp form 2018 10 31
+  $datatypesAfpCfp{'timeaction'}    = 'timeaction';             # for new afp form 2018 11 13
+  $datatypesAfpCfp{'siteaction'}    = 'siteaction';             # for new afp form 2018 11 13
+  #   delete $datatypesAfpCfp{'catalyticact'};    # has svm but no afp / cfp      # afp got added, so cfp table also created.  2018 11 07
+  delete $datatypesAfpCfp{'expression_cluster'};        # has svm but no afp / cfp      # should have been removed 2017 07 08, fixed 2017 08 04
+  delete $datatypesAfpCfp{'genesymbol'};                # has svm but no afp / cfp      # added 2021 01 25
+  delete $datatypesAfpCfp{'transporter'};               # has svm but no afp / cfp      # added 2021 01 25
+  
+  $datatypes{'antibody'}           = 'ATP:0000131';
+  $datatypes{'blastomere'}         = 'ATP:0000143';
+  $datatypes{'catalyticact'}       = 'ATP:0000061';
+  $datatypes{'chemphen'}           = 'ATP:0000080';
+  $datatypes{'envphen'}            = 'ATP:0000080';
+  # $datatypes{'expression_cluster'} = 'no atp, skip';
+  $datatypes{'expmosaic'}          = 'ATP:0000034';
+  $datatypes{'geneint'}            = 'ATP:0000068';
+  $datatypes{'geneprod'}           = 'ATP:0000069';
+  $datatypes{'genereg'}            = 'ATP:0000024';
+  $datatypes{'genesymbol'}         = 'ATP:0000048';
+  $datatypes{'geneticablation'}    = 'ATP:0000032';
+  $datatypes{'geneticmosaic'}      = 'ATP:0000034';
+  $datatypes{'humandisease'}       = 'ATP:0000111';
+  $datatypes{'laserablation'}      = 'ATP:0000032';
+  $datatypes{'newmutant'}          = 'ATP:0000083';
+  $datatypes{'optogenet'}          = 'ATP:0000145';
+  $datatypes{'otherexpr'}          = 'ATP:0000041';
+  $datatypes{'overexpr'}           = 'ATP:0000084';
+  # $datatypes{'picture'}            = 'no atp, skip';
+  $datatypes{'rnai'}               = 'ATP:0000082';
+  $datatypes{'rnaseq'}             = 'ATP:0000146';
+  # $datatypes{'seqchange'}          = 'no atp, skip';
+  $datatypes{'siteaction'}         = 'ATP:0000033';
+  # $datatypes{'strain'}             = 'ATP:0000027     not in WB';
+  $datatypes{'structcorr'}         = 'ATP:0000054';
+  # $datatypes{'timeaction'}         = 'no atp, skip';
+  $datatypes{'transporter'}        = 'ATP:0000062';
+} # sub populateDatatypeStuff
 
