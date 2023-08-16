@@ -7,6 +7,11 @@
 # ./dump_classifier_topic_entity.pl | json_pp
 
 
+# to clean up, must delete validation first, then tags.
+# DELETE FROM topic_entity_tag_validation WHERE validated_topic_entity_tag_id > 516 OR validating_topic_entity_tag_id > 516
+# DELETE FROM topic_entity_tag WHERE topic_entity_tag_id > 516
+
+
 use strict;
 use diagnostics;
 use DBI;
@@ -20,9 +25,10 @@ my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect 
 my $result;
 
 my $mod = 'WB';
-my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
-# my $okta_token = &generateOktaToken();
-my $okta_token = 'use_above_when_live';
+# my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
+my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
+my $okta_token = &generateOktaToken();
+# my $okta_token = 'use_above_when_live';
 
 # my @wbpapers = qw( 00004952 00005199 00026609 00030933 00035427 );
 # my @wbpapers = qw( 00004952 00005199 00046571 00057043 00064676 );
@@ -128,22 +134,30 @@ my %curData;
 &outputCurCurData();
 
 
-sub getSource {
+sub getSourceId {
   my ($source_type, $source_method) = @_;
   my $url = $baseUrl . 'topic_entity_tag/source/' . $source_type . '/' . $source_method . '/' . $mod;
 #   print qq($url\n);
   my $api_json = `curl -X 'GET' $url -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json'`;
   my $hash_ref = decode_json $api_json;
   my $source_id = $$hash_ref{'topic_entity_tag_source_id'};
+  if ($$hash_ref{'topic_entity_tag_source_id'}) {
+    my $source_id = $$hash_ref{'topic_entity_tag_source_id'};
+    # print qq($source_id\n);
+    return $source_id; }
+  else { return ''; }
 #   print qq($source_id\n);
-  return $source_id;
 }
 
 sub outputCurCurData {
   my @json;
   my $source_type = 'professional_biocurator';
   my $source_method = 'wormbase_curation_status';
-  my $source = &getSource($source_type, $source_method);
+  my $source_id = &getSourceId($source_type, $source_method);
+  unless ($source_id) {
+    print qq(ERROR no source_id for $source_type and $source_method);
+    return;
+  }
 #   { "source_type": "professional_biocurator", "source_method": "wormbase_curation_status", "evidence": "eco_string", "description": "cur_curdata", "mod_abbreviation": "WB" }
   foreach my $datatype (sort keys %curData) {
     unless ($datatypes{$datatype}) { 
@@ -164,17 +178,25 @@ sub outputCurCurData {
       $object{'note'}                       = $note;
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $datatypes{$datatype};
-      $object{'topic_entity_tag_source_id'} = $source;
+      $object{'topic_entity_tag_source_id'} = $source_id;
       $object{'created_by'}                 = $curData{$datatype}{$joinkey}{curator};
       $object{'updated_by'}                 = $curData{$datatype}{$joinkey}{curator};
       $object{'date_created'}               = $curData{$datatype}{$joinkey}{timestamp};
       $object{'date_updated'}               = $curData{$datatype}{$joinkey}{timestamp};
-      push @json, \%object;
-#       my $json = encode_json \%object;
-#       print qq($json\n);
+#       push @json, \%object;
+      my $object_json = encode_json \%object;
+      &createTag($object_json);
   } }
-  my $json = encode_json \@json;
-  print qq($json\n);
+#   my $json = encode_json \@json;
+#   print qq($json\n);
+}
+
+sub createTag {
+  my ($object_json) = @_;
+  my $url = $baseUrl . 'topic_entity_tag/';
+  my $api_json = `curl -X 'POST' $url -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json' --data '$object_json'`;
+  print qq(create $object_json\n);
+  print qq($api_json\n);
 }
 
 
