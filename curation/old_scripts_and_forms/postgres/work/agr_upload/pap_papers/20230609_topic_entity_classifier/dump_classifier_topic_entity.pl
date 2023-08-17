@@ -4,7 +4,7 @@
 #
 # modified for cur_curdata for general topics without entities.  2023 08 15
 #
-# modified for cur_svmdata and cur_nncdata.  2023 08 17
+# modified for cur_svmdata, cur_nncdata, cur_strdata, cfp_<*>   2023 08 17
 
 
 # if single json output
@@ -50,16 +50,13 @@ my @wbpapers = qw( 00057043 );
 
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 
 
+my %datatypesAfpCfp;
+my %datatypes;
+my %entitytypes;
 my %wbpToAgr;
-$wbpToAgr{'00004952'} = 'AGRKB:101000000618370';
-$wbpToAgr{'00005199'} = 'AGRKB:101000000618566';
-$wbpToAgr{'00026609'} = 'AGRKB:101000000620861';
-$wbpToAgr{'00030933'} = 'AGRKB:101000000622619';
-$wbpToAgr{'00035427'} = 'AGRKB:101000000624596';
-$wbpToAgr{'00046571'} = 'AGRKB:101000000630958';
-$wbpToAgr{'00057043'} = 'AGRKB:101000000390100';
-$wbpToAgr{'00064676'} = 'AGRKB:101000000947815';
-$wbpToAgr{'00037049'} = 'AGRKB:101000000625405';
+
+&populateDatatypesAndABC();
+
 my %chosenPapers;
 # $chosenPapers{all}++;
 foreach my $joinkey (sort keys %wbpToAgr) { $chosenPapers{$joinkey}++; }
@@ -72,76 +69,14 @@ while (my @row = $result->fetchrow) { $speciesToTaxon{$row[1]} = $row[0]; }
 my %premadeComments;
 &populatePremadeComments();
 
-# SELECT cur_selcomment, COUNT(cur_selcomment) FROM cur_curdata GROUP BY cur_selcomment ORDER BY COUNT(cur_selcomment) DESC;
-#   $premadeComments{"15"} = "Toxicology";
-#   $premadeComments{"16"} = "Host-pathogen/virulence";
-#   $premadeComments{"17"} = "Disease model";
-#   $premadeComments{"18"} = "Non-genetic disease model";
-#   $premadeComments{"19"} = "Genetic disease model";
 
-my %datatypesAfpCfp;
-$result = $dbh->prepare( "SELECT DISTINCT(cur_datatype) FROM cur_nncdata" );
-$result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
-while (my @row = $result->fetchrow) { $datatypesAfpCfp{$row[0]} = $row[0]; }
-$datatypesAfpCfp{'chemicals'}     = 'chemicals';              # added for Karen 2013 10 02
-$datatypesAfpCfp{'blastomere'}    = 'cellfunc';
-$datatypesAfpCfp{'exprmosaic'}    = 'siteaction';
-$datatypesAfpCfp{'geneticmosaic'} = 'mosaic';
-$datatypesAfpCfp{'laserablation'} = 'ablationdata';
-$datatypesAfpCfp{'humandisease'}  = 'humdis';                 # added mapping to correct table 2018 05 17
-$datatypesAfpCfp{'rnaseq'}        = 'rnaseq';                 # for new afp form 2018 10 31
-$datatypesAfpCfp{'chemphen'}      = 'chemphen';               # for new afp form 2018 10 31
-$datatypesAfpCfp{'envpheno'}      = 'envpheno';               # for new afp form 2018 10 31
-$datatypesAfpCfp{'timeaction'}    = 'timeaction';             # for new afp form 2018 11 13
-$datatypesAfpCfp{'siteaction'}    = 'siteaction';             # for new afp form 2018 11 13
-#   delete $datatypesAfpCfp{'catalyticact'};    # has svm but no afp / cfp      # afp got added, so cfp table also created.  2018 11 07
-delete $datatypesAfpCfp{'expression_cluster'};        # has svm but no afp / cfp      # should have been removed 2017 07 08, fixed 2017 08 04
-delete $datatypesAfpCfp{'genesymbol'};                # has svm but no afp / cfp      # added 2021 01 25
-delete $datatypesAfpCfp{'transporter'};               # has svm but no afp / cfp      # added 2021 01 25
-
-my %datatypes;
-$datatypes{'antibody'}           = 'ATP:0000131';
-$datatypes{'blastomere'}         = 'ATP:0000143';
-$datatypes{'catalyticact'}       = 'ATP:0000061';
-$datatypes{'chemphen'}           = 'ATP:0000080';
-$datatypes{'envphen'}            = 'ATP:0000080';
-# $datatypes{'expression_cluster'} = 'no atp, skip';
-$datatypes{'expmosaic'}          = 'ATP:0000034';
-$datatypes{'geneint'}            = 'ATP:0000068';
-$datatypes{'geneprod'}           = 'ATP:0000069';
-$datatypes{'genereg'}            = 'ATP:0000024';
-$datatypes{'genesymbol'}         = 'ATP:0000048';
-$datatypes{'geneticablation'}    = 'ATP:0000032';
-$datatypes{'geneticmosaic'}      = 'ATP:0000034';
-$datatypes{'humandisease'}       = 'ATP:0000111';
-$datatypes{'laserablation'}      = 'ATP:0000032';
-$datatypes{'newmutant'}          = 'ATP:0000083';
-$datatypes{'optogenet'}          = 'ATP:0000145';
-$datatypes{'otherexpr'}          = 'ATP:0000041';
-$datatypes{'overexpr'}           = 'ATP:0000084';
-# $datatypes{'picture'}            = 'no atp, skip';
-$datatypes{'rnai'}               = 'ATP:0000082';
-$datatypes{'rnaseq'}             = 'ATP:0000146';
-# $datatypes{'seqchange'}          = 'no atp, skip';
-$datatypes{'siteaction'}         = 'ATP:0000033';
-# $datatypes{'strain'}             = 'ATP:0000027     not in WB';
-$datatypes{'structcorr'}         = 'ATP:0000054';
-# $datatypes{'timeaction'}         = 'no atp, skip';
-$datatypes{'transporter'}        = 'ATP:0000062';
-
-my %entitytypes;
-$entitytypes{'species'}          = 'ATP:0000123';
-$entitytypes{'gene'}             = 'ATP:0000047';
-$entitytypes{'variation'}        = 'ATP:0000030';
-$entitytypes{'transgene'}        = 'ATP:0000099';
-$entitytypes{'chemical'}         = 'ATP:0000094';
-$entitytypes{'antibody'}         = 'ATP:0000096';
 
 my $errfile = 'dump_classifier_topic_entity.err';
 open (ERR, ">$errfile") or die "Cannot create $errfile : $!";
 
 
 my %curData;
+my %cfpData;
 my %svmData;
 my %nncData;
 my %strData;
@@ -156,6 +91,8 @@ my %strData;
 # &outputCurNncData();
 # &populateCurStrData();
 # &outputCurStrData();
+&populateCfpData();
+&outputCfpData();
 
 
 if ($output_format eq 'json') {
@@ -165,12 +102,54 @@ if ($output_format eq 'json') {
 
 close (ERR) or die "Cannot close $errfile : $!";
 
-sub tsToDigits {
-  my $timestamp = shift;
-  my $tsdigits = '';
-  if ($timestamp =~ m/^(\d{4})\-(\d{2})\-(\d{2})/) { $tsdigits = $1 . $2 . $3; }
-  return $tsdigits;
+sub outputCfpData {
+  my $source_type = 'professional_biocurator';
+  my $source_method = 'cfp';
+  my $source_id = &getSourceId($source_type, $source_method);
+  unless ($source_id) {
+    print qq(ERROR no source_id for $source_type and $source_method);
+    return;
+  }
+#   { "source_type": "professional_biocurator", "source_method": "wormbase_curation_status", "evidence": "eco_string", "description": "cur_curdata", "mod_abbreviation": "WB" }
+  foreach my $datatype (sort keys %cfpData) {
+    unless ($datatypes{$datatype}) { 
+      print ERR qq(no topic for $datatype\n); 
+      next;
+    }
+    foreach my $joinkey (sort keys %{ $cfpData{$datatype} }) {
+      my %object;
+      $object{'negated'}                    = FALSE;
+      $object{'note'}                       = $cfpData{$datatype}{$joinkey}{data};
+      $object{'reference_curie'}            = $wbpToAgr{$joinkey};
+      $object{'topic'}                      = $datatypes{$datatype};
+      $object{'topic_entity_tag_source_id'} = $source_id;
+      $object{'created_by'}                 = $cfpData{$datatype}{$joinkey}{curator};
+      $object{'updated_by'}                 = $cfpData{$datatype}{$joinkey}{curator};
+      $object{'date_created'}               = $cfpData{$datatype}{$joinkey}{timestamp};
+      $object{'date_updated'}               = $cfpData{$datatype}{$joinkey}{timestamp};
+      if ($output_format eq 'json') {
+        push @output_json, \%object; }
+      else {
+        my $object_json = encode_json \%object;
+        &createTag($object_json); }
+  } }
 }
+
+sub populateCfpData {
+  foreach my $datatype (sort keys %datatypesAfpCfp) {
+    $result = $dbh->prepare( "SELECT joinkey, cfp_$datatypesAfpCfp{$datatype}, cfp_curator, cfp_timestamp AT TIME ZONE 'UTC' FROM cfp_$datatypesAfpCfp{$datatype}" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+    while (my @row = $result->fetchrow) {
+      next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+      next unless ($row[2]);
+      my $curator = $row[2]; $curator =~ s/two/WBPerson/;
+      $cfpData{$datatype}{$row[0]}{data} = $row[1];
+      $cfpData{$datatype}{$row[0]}{curator} = $curator;
+      $cfpData{$datatype}{$row[0]}{timestamp} = $row[3];
+#       my $row = join"\t", @row;
+#       print qq($datatype\tcfp_$datatypesAfpCfp{$datatype}\t$row\n);
+} } }
+
 
 sub outputCurStrData {
   # maybe there's only one source, in which case simplify this
@@ -427,6 +406,13 @@ sub generateOktaToken {
 #   `curl -X 'GET' 'https://stage-literature-rest.alliancegenome.org/bulk_download/references/external_ids/' -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json'  > $xref_file_path`;
 # }
 
+sub tsToDigits {
+  my $timestamp = shift;
+  my $tsdigits = '';
+  if ($timestamp =~ m/^(\d{4})\-(\d{2})\-(\d{2})/) { $tsdigits = $1 . $2 . $3; }
+  return $tsdigits;
+}
+
 sub populatePremadeComments {
   $premadeComments{"1"}  = "SVM Positive, Curation Negative";
   $premadeComments{"2"}  = "C. elegans as heterologous expression system";
@@ -449,9 +435,83 @@ sub populatePremadeComments {
   $premadeComments{"19"} = "Genetic disease model";
 } # sub populatePremadeComments
 
+sub populateDatatypesAndABC {
+  $result = $dbh->prepare( "SELECT DISTINCT(cur_datatype) FROM cur_nncdata" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) { $datatypesAfpCfp{$row[0]} = $row[0]; }
+  $datatypesAfpCfp{'chemicals'}     = 'chemicals';              # added for Karen 2013 10 02
+  $datatypesAfpCfp{'blastomere'}    = 'cellfunc';
+  $datatypesAfpCfp{'exprmosaic'}    = 'siteaction';
+  $datatypesAfpCfp{'geneticmosaic'} = 'mosaic';
+  $datatypesAfpCfp{'laserablation'} = 'ablationdata';
+  $datatypesAfpCfp{'humandisease'}  = 'humdis';                 # added mapping to correct table 2018 05 17
+  $datatypesAfpCfp{'rnaseq'}        = 'rnaseq';                 # for new afp form 2018 10 31
+  $datatypesAfpCfp{'chemphen'}      = 'chemphen';               # for new afp form 2018 10 31
+  $datatypesAfpCfp{'envpheno'}      = 'envpheno';               # for new afp form 2018 10 31
+  $datatypesAfpCfp{'timeaction'}    = 'timeaction';             # for new afp form 2018 11 13
+  $datatypesAfpCfp{'siteaction'}    = 'siteaction';             # for new afp form 2018 11 13
+  #   delete $datatypesAfpCfp{'catalyticact'};    # has svm but no afp / cfp      # afp got added, so cfp table also created.  2018 11 07
+  delete $datatypesAfpCfp{'expression_cluster'};        # has svm but no afp / cfp      # should have been removed 2017 07 08, fixed 2017 08 04
+  delete $datatypesAfpCfp{'genesymbol'};                # has svm but no afp / cfp      # added 2021 01 25
+  delete $datatypesAfpCfp{'transporter'};               # has svm but no afp / cfp      # added 2021 01 25
+  
+  $datatypes{'antibody'}           = 'ATP:0000131';
+  $datatypes{'blastomere'}         = 'ATP:0000143';
+  $datatypes{'catalyticact'}       = 'ATP:0000061';
+  $datatypes{'chemphen'}           = 'ATP:0000080';
+  $datatypes{'envphen'}            = 'ATP:0000080';
+  # $datatypes{'expression_cluster'} = 'no atp, skip';
+  $datatypes{'expmosaic'}          = 'ATP:0000034';
+  $datatypes{'geneint'}            = 'ATP:0000068';
+  $datatypes{'geneprod'}           = 'ATP:0000069';
+  $datatypes{'genereg'}            = 'ATP:0000024';
+  $datatypes{'genesymbol'}         = 'ATP:0000048';
+  $datatypes{'geneticablation'}    = 'ATP:0000032';
+  $datatypes{'geneticmosaic'}      = 'ATP:0000034';
+  $datatypes{'humandisease'}       = 'ATP:0000111';
+  $datatypes{'laserablation'}      = 'ATP:0000032';
+  $datatypes{'newmutant'}          = 'ATP:0000083';
+  $datatypes{'optogenet'}          = 'ATP:0000145';
+  $datatypes{'otherexpr'}          = 'ATP:0000041';
+  $datatypes{'overexpr'}           = 'ATP:0000084';
+  # $datatypes{'picture'}            = 'no atp, skip';
+  $datatypes{'rnai'}               = 'ATP:0000082';
+  $datatypes{'rnaseq'}             = 'ATP:0000146';
+  # $datatypes{'seqchange'}          = 'no atp, skip';
+  $datatypes{'siteaction'}         = 'ATP:0000033';
+  # $datatypes{'strain'}             = 'ATP:0000027     not in WB';
+  $datatypes{'structcorr'}         = 'ATP:0000054';
+  # $datatypes{'timeaction'}         = 'no atp, skip';
+  $datatypes{'transporter'}        = 'ATP:0000062';
+  
+  $entitytypes{'species'}          = 'ATP:0000123';
+  $entitytypes{'gene'}             = 'ATP:0000047';
+  $entitytypes{'variation'}        = 'ATP:0000030';
+  $entitytypes{'transgene'}        = 'ATP:0000099';
+  $entitytypes{'chemical'}         = 'ATP:0000094';
+  $entitytypes{'antibody'}         = 'ATP:0000096';
+
+  $wbpToAgr{'00004952'} = 'AGRKB:101000000618370';
+  $wbpToAgr{'00005199'} = 'AGRKB:101000000618566';
+  $wbpToAgr{'00026609'} = 'AGRKB:101000000620861';
+  $wbpToAgr{'00030933'} = 'AGRKB:101000000622619';
+  $wbpToAgr{'00035427'} = 'AGRKB:101000000624596';
+  $wbpToAgr{'00046571'} = 'AGRKB:101000000630958';
+  $wbpToAgr{'00057043'} = 'AGRKB:101000000390100';
+  $wbpToAgr{'00064676'} = 'AGRKB:101000000947815';
+  $wbpToAgr{'00037049'} = 'AGRKB:101000000625405';
+}
+
 
 __END__
 
+
+# SELECT cur_selcomment, COUNT(cur_selcomment) FROM cur_curdata GROUP BY cur_selcomment ORDER BY COUNT(cur_selcomment) DESC;
+#   $premadeComments{"15"} = "Toxicology";
+#   $premadeComments{"16"} = "Host-pathogen/virulence";
+#   $premadeComments{"17"} = "Disease model";
+#   $premadeComments{"18"} = "Non-genetic disease model";
+#   $premadeComments{"19"} = "Genetic disease model";
 
 
 
