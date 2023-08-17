@@ -91,8 +91,8 @@ my %strData;
 # &outputCurNncData();
 # &populateCurStrData();
 # &outputCurStrData();
-&populateCfpData();
-&outputCfpData();
+# &populateCfpData();
+# &outputCfpData();
 
 
 if ($output_format eq 'json') {
