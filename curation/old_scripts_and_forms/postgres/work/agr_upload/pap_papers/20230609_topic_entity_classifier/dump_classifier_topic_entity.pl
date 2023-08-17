@@ -3,8 +3,15 @@
 # generate topic entity classifiers for Kimberly for ABC  https://agr-jira.atlassian.net/browse/SCRUM-2664  2023 06 09
 #
 # modified for cur_curdata for general topics without entities.  2023 08 15
+#
+# modified for cur_svmdata and cur_nncdata.  2023 08 17
 
+
+# if single json output
 # ./dump_classifier_topic_entity.pl | json_pp
+
+# if creating data through ABC API
+# ./dump_classifier_topic_entity.pl
 
 
 # to clean up, must delete validation first, then tags.
@@ -23,6 +30,11 @@ use constant TRUE => \1;
 
 my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n"; 
 my $result;
+
+my $output_format = 'json';
+# my $output_format = 'api';
+
+my @output_json;
 
 my $mod = 'WB';
 # my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
@@ -125,32 +137,196 @@ $entitytypes{'transgene'}        = 'ATP:0000099';
 $entitytypes{'chemical'}         = 'ATP:0000094';
 $entitytypes{'antibody'}         = 'ATP:0000096';
 
+my $errfile = 'dump_classifier_topic_entity.err';
+open (ERR, ">$errfile") or die "Cannot create $errfile : $!";
 
 
 my %curData;
+my %svmData;
+my %nncData;
+my %strData;
 
-&populateCurCurData();
 
-&outputCurCurData();
+# PUT THIS BACK
+# &populateCurCurData();
+# &outputCurCurData();
+# &populateCurSvmData();
+# &outputCurSvmData();
+# &populateCurNncData();
+# &outputCurNncData();
+# &populateCurStrData();
+# &outputCurStrData();
 
 
-sub getSourceId {
-  my ($source_type, $source_method) = @_;
-  my $url = $baseUrl . 'topic_entity_tag/source/' . $source_type . '/' . $source_method . '/' . $mod;
-#   print qq($url\n);
-  my $api_json = `curl -X 'GET' $url -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json'`;
-  my $hash_ref = decode_json $api_json;
-  my $source_id = $$hash_ref{'topic_entity_tag_source_id'};
-  if ($$hash_ref{'topic_entity_tag_source_id'}) {
-    my $source_id = $$hash_ref{'topic_entity_tag_source_id'};
-    # print qq($source_id\n);
-    return $source_id; }
-  else { return ''; }
-#   print qq($source_id\n);
+if ($output_format eq 'json') {
+  my $json = encode_json \@output_json;		# for single json file output
+  print qq($json\n);				# for single json file output
 }
 
+close (ERR) or die "Cannot close $errfile : $!";
+
+sub tsToDigits {
+  my $timestamp = shift;
+  my $tsdigits = '';
+  if ($timestamp =~ m/^(\d{4})\-(\d{2})\-(\d{2})/) { $tsdigits = $1 . $2 . $3; }
+  return $tsdigits;
+}
+
+sub outputCurStrData {
+  # maybe there's only one source, in which case simplify this
+  my $source_type = 'TBD';
+  foreach my $datatype (sort keys %strData) {
+    unless ($datatype eq 'antibody') {
+      print ERR qq(Only allowed string type is antibody, no $datatype\n); 
+      next;
+    }
+    unless ($datatypes{$datatype}) { 
+      print ERR qq(no topic for $datatype\n); 
+      next;
+    }
+    my $source_method_1 = 'script_antibody_data';
+    my $source_method_2 = 'script_antibody_data_2';
+    my $source_id_1 = &getSourceId($source_type, $source_method_1);
+    my $source_id_2 = &getSourceId($source_type, $source_method_2);
+    unless ($source_id_1) {
+      print qq(ERROR no source_id for $source_type and $source_method_1);
+      return;
+    }
+    unless ($source_id_2) {
+      print qq(ERROR no source_id for $source_type and $source_method_2);
+      return;
+    }
+    foreach my $joinkey (sort keys %{ $strData{$datatype} }) {
+      my %object;
+      my $source_id = $source_id_1;
+#       my ($tsyear, $tsmonth, $tsday) = $strData{$datatype}{$joinkey}{timestamp} =~ m/^(\d{4})\-(\d{2})\-(\d{2})/;
+#       my $tsdigits = $tsyear . $tsmonth . $tsday;
+      my $tsdigits = &tsToDigits($strData{$datatype}{$joinkey}{timestamp});
+      if ($tsdigits > '20190322') { $source_id = $source_id_2; }
+      $object{'negated'}                    = FALSE;
+      $object{'note'}                       = $strData{$datatype}{$joinkey}{result};
+      $object{'reference_curie'}            = $wbpToAgr{$joinkey};
+      $object{'topic'}                      = $datatypes{$datatype};
+      $object{'topic_entity_tag_source_id'} = $source_id;
+      $object{'created_by'}                 = 'default_user';
+      $object{'updated_by'}                 = 'default_user';
+      $object{'date_created'}               = $strData{$datatype}{$joinkey}{timestamp};
+      $object{'date_updated'}               = $strData{$datatype}{$joinkey}{timestamp};
+      if ($output_format eq 'json') {
+        push @output_json, \%object; }
+      else {
+        my $object_json = encode_json \%object;
+        &createTag($object_json); }
+  } }
+}
+
+sub populateCurStrData {
+  $result = $dbh->prepare( "SELECT cur_paper, cur_datatype, cur_date, cur_strdata, cur_version, cur_timestamp AT TIME ZONE 'UTC' FROM cur_strdata ORDER BY cur_timestamp" );     # in case multiple values get in for a paper-datatype (shouldn't happen), keep the latest
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) {
+    next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+    my $curator = $row[3]; $curator =~ s/two/WBPerson/;
+    $strData{$row[1]}{$row[0]}{date}       = $row[2];
+    $strData{$row[1]}{$row[0]}{result}     = $row[3];
+    $strData{$row[1]}{$row[0]}{version}    = $row[4];
+    $strData{$row[1]}{$row[0]}{timestamp}  = $row[5]; }
+} # sub populateCurStrData
+
+
+sub outputCurNncData {
+  my $source_type = 'TBD';
+  foreach my $datatype (sort keys %nncData) {
+    unless ($datatypes{$datatype}) { 
+      print ERR qq(no topic for $datatype\n); 
+      next;
+    }
+    my $source_method = 'nnc_' . $datatype;
+    my $source_id = &getSourceId($source_type, $source_method);
+    unless ($source_id) {
+      print qq(ERROR no source_id for $source_type and $source_method);
+      return;
+    }
+    foreach my $joinkey (sort keys %{ $nncData{$datatype} }) {
+      my %object;
+      my $negated = FALSE;  
+      if ($nncData{$datatype}{$joinkey}{result} eq 'NEG') { $negated = TRUE; }
+      $object{'negated'}                    = $negated;
+      $object{'confidence_level'}           = $nncData{$datatype}{$joinkey}{result};
+      $object{'reference_curie'}            = $wbpToAgr{$joinkey};
+      $object{'topic'}                      = $datatypes{$datatype};
+      $object{'topic_entity_tag_source_id'} = $source_id;
+      $object{'created_by'}                 = 'default_user';
+      $object{'updated_by'}                 = 'default_user';
+      $object{'date_created'}               = $nncData{$datatype}{$joinkey}{timestamp};
+      $object{'date_updated'}               = $nncData{$datatype}{$joinkey}{timestamp};
+      if ($output_format eq 'json') {
+        push @output_json, \%object; }
+      else {
+        my $object_json = encode_json \%object;
+        &createTag($object_json); }
+  } }
+}
+
+sub populateCurNncData {
+  $result = $dbh->prepare( "SELECT cur_paper, cur_datatype, cur_date, cur_nncdata, cur_timestamp AT TIME ZONE 'UTC' FROM cur_nncdata ORDER BY cur_timestamp" );     # in case multiple values get in for a paper-datatype (shouldn't happen), keep the latest
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) {
+    next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+    my $curator = $row[3]; $curator =~ s/two/WBPerson/;
+    $nncData{$row[1]}{$row[0]}{date}       = $row[2];
+    $nncData{$row[1]}{$row[0]}{result}     = $row[3];
+    $nncData{$row[1]}{$row[0]}{timestamp}  = $row[4]; }
+} # sub populateCurNncData
+
+
+sub outputCurSvmData {
+  my $source_type = 'TBD';
+  foreach my $datatype (sort keys %svmData) {
+    unless ($datatypes{$datatype}) { 
+      print ERR qq(no topic for $datatype\n); 
+      next;
+    }
+    my $source_method = 'svm_' . $datatype;
+    my $source_id = &getSourceId($source_type, $source_method);
+    unless ($source_id) {
+      print qq(ERROR no source_id for $source_type and $source_method);
+      return;
+    }
+    foreach my $joinkey (sort keys %{ $svmData{$datatype} }) {
+      my %object;
+      my $negated = FALSE;  
+      if ($svmData{$datatype}{$joinkey}{result} eq 'NEG') { $negated = TRUE; }
+      $object{'negated'}                    = $negated;
+      $object{'confidence_level'}           = $svmData{$datatype}{$joinkey}{result};
+      $object{'reference_curie'}            = $wbpToAgr{$joinkey};
+      $object{'topic'}                      = $datatypes{$datatype};
+      $object{'topic_entity_tag_source_id'} = $source_id;
+      $object{'created_by'}                 = 'default_user';
+      $object{'updated_by'}                 = 'default_user';
+      $object{'date_created'}               = $svmData{$datatype}{$joinkey}{timestamp};
+      $object{'date_updated'}               = $svmData{$datatype}{$joinkey}{timestamp};
+      if ($output_format eq 'json') {
+        push @output_json, \%object; }
+      else {
+        my $object_json = encode_json \%object;
+        &createTag($object_json); }
+  } }
+}
+
+sub populateCurSvmData {
+  $result = $dbh->prepare( "SELECT cur_paper, cur_datatype, cur_date, cur_svmdata, cur_version, cur_timestamp AT TIME ZONE 'UTC' FROM cur_svmdata ORDER BY cur_timestamp" );     # in case multiple values get in for a paper-datatype (shouldn't happen), keep the latest
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) {
+    next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+    my $curator = $row[3]; $curator =~ s/two/WBPerson/;
+    $svmData{$row[1]}{$row[0]}{date}       = $row[2];
+    $svmData{$row[1]}{$row[0]}{result}     = $row[3];
+    $svmData{$row[1]}{$row[0]}{version}    = $row[4];
+    $svmData{$row[1]}{$row[0]}{timestamp}  = $row[5]; }
+} # sub populateCurSvmData
+
+
 sub outputCurCurData {
-  my @json;
   my $source_type = 'professional_biocurator';
   my $source_method = 'wormbase_curation_status';
   my $source_id = &getSourceId($source_type, $source_method);
@@ -161,7 +337,7 @@ sub outputCurCurData {
 #   { "source_type": "professional_biocurator", "source_method": "wormbase_curation_status", "evidence": "eco_string", "description": "cur_curdata", "mod_abbreviation": "WB" }
   foreach my $datatype (sort keys %curData) {
     unless ($datatypes{$datatype}) { 
-      print STDERR qq(no topic for $datatype\n); 
+      print ERR qq(no topic for $datatype\n); 
       next;
     }
     foreach my $joinkey (sort keys %{ $curData{$datatype} }) {
@@ -183,22 +359,13 @@ sub outputCurCurData {
       $object{'updated_by'}                 = $curData{$datatype}{$joinkey}{curator};
       $object{'date_created'}               = $curData{$datatype}{$joinkey}{timestamp};
       $object{'date_updated'}               = $curData{$datatype}{$joinkey}{timestamp};
-#       push @json, \%object;
-      my $object_json = encode_json \%object;
-      &createTag($object_json);
+      if ($output_format eq 'json') {
+        push @output_json, \%object; }
+      else {
+        my $object_json = encode_json \%object;
+        &createTag($object_json); }
   } }
-#   my $json = encode_json \@json;
-#   print qq($json\n);
 }
-
-sub createTag {
-  my ($object_json) = @_;
-  my $url = $baseUrl . 'topic_entity_tag/';
-  my $api_json = `curl -X 'POST' $url -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json' --data '$object_json'`;
-  print qq(create $object_json\n);
-  print qq($api_json\n);
-}
-
 
 sub populateCurCurData {
   my $datatypeSource = 'caltech';
@@ -220,6 +387,30 @@ sub populateCurCurData {
 # print qq($row[5] $row[6]\n);
     $curData{$row[1]}{$row[0]}{timestamp}  = $row[7]; }
 } # sub populateCurCurData
+
+
+sub getSourceId {
+  my ($source_type, $source_method) = @_;
+  my $url = $baseUrl . 'topic_entity_tag/source/' . $source_type . '/' . $source_method . '/' . $mod;
+#   print qq($url\n);
+  my $api_json = `curl -X 'GET' $url -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json'`;
+  my $hash_ref = decode_json $api_json;
+  my $source_id = $$hash_ref{'topic_entity_tag_source_id'};
+  if ($$hash_ref{'topic_entity_tag_source_id'}) {
+    my $source_id = $$hash_ref{'topic_entity_tag_source_id'};
+    # print qq($source_id\n);
+    return $source_id; }
+  else { return ''; }
+#   print qq($source_id\n);
+}
+
+sub createTag {
+  my ($object_json) = @_;
+  my $url = $baseUrl . 'topic_entity_tag/';
+  my $api_json = `curl -X 'POST' $url -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json' --data '$object_json'`;
+  print qq(create $object_json\n);
+  print qq($api_json\n);
+}
 
 
 sub generateOktaToken {
