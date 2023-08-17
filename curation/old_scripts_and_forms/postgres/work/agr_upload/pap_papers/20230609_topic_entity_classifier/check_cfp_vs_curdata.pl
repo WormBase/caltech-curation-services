@@ -14,6 +14,8 @@
 #                 14 might be meaningful
 # For Kimberly to sort out topic migration to ABC.  2023 08 09
 
+# Delete cfp_ entries without a character in the data (empty curators not fixed).  2023 08 17
+
 
 use strict;
 use diagnostics;
@@ -83,6 +85,7 @@ sub readCfp {
 
 # find empty cfp_ tables
 sub findEmptyCfpData {
+  my @pgcommands;
   foreach my $datatype (sort keys %datatypesAfpCfp) {
   #   $result = $dbh->prepare( "SELECT * FROM cfp_$datatypesAfpCfp{$datatype} WHERE cfp_$datatypesAfpCfp{$datatype} IS NULL OR cfp_$datatypesAfpCfp{$datatype} = ''" );
     $result = $dbh->prepare( "SELECT * FROM cfp_$datatypesAfpCfp{$datatype} WHERE cfp_$datatypesAfpCfp{$datatype} IS NULL OR cfp_$datatypesAfpCfp{$datatype} !~ '[a-zA-Z]'" );
@@ -90,7 +93,14 @@ sub findEmptyCfpData {
     while (my @row = $result->fetchrow) {
       my $row = join"\t", @row;
       print qq($datatype\tcfp_$datatypesAfpCfp{$datatype}\t$row\n);
+      push @pgcommands, qq(DELETE FROM cfp_$datatypesAfpCfp{$datatype} WHERE joinkey = '$row[0]' AND cfp_curator = '$row[2]';);
+      push @pgcommands, qq(DELETE FROM cfp_$datatypesAfpCfp{$datatype}_hst WHERE joinkey = '$row[0]' AND cfp_curator = '$row[2]';);
     }
+  }
+  foreach my $pgcommand (@pgcommands) {
+    print qq($pgcommand\n);
+# UNCOMMENT TO POPULATE
+#     $dbh->do($pgcommand);
   }
 } # sub findEmtpyCfp
 
