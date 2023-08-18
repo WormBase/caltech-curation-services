@@ -6,7 +6,9 @@
 #
 # modified for cur_svmdata, cur_nncdata, cur_strdata, cfp_<*>   2023 08 17
 #
-# cur_strdata antibody only has data for the new pipeline, old data was overwritten or lost, only have 1 source now.  2023 08 18
+# cur_strdata antibody only has data for the new pipeline, old data was overwritten or lost, only have 1 source now.
+# dump afp_<datatype> data for afp_curator to curator/afp source, afp_author afp to author/afp source, 
+# afp_author ack based on timestamp to author/ACKnowledge source.  2023 08 18
 
 
 # if single json output
@@ -77,11 +79,15 @@ my $errfile = 'dump_classifier_topic_entity.err';
 open (ERR, ">$errfile") or die "Cannot create $errfile : $!";
 
 
-my %curData;
-my %cfpData;
+my %strData;
 my %svmData;
 my %nncData;
-my %strData;
+my %curData;
+my %cfpData;
+my %tfpData;
+my %afpContributor;
+my %afpAutData;
+my %afpCurData;
 
 
 # PUT THIS BACK
@@ -91,10 +97,13 @@ my %strData;
 # &outputCurSvmData();
 # &populateCurNncData();
 # &outputCurNncData();
-&populateCurStrData();
-&outputCurStrData();
+# &populateCurStrData();
+# &outputCurStrData();
 # &populateCfpData();
 # &outputCfpData();
+# &populateAfpData();
+# &outputAfpAutData();
+# &outputAfpCurData();
 
 
 if ($output_format eq 'json') {
@@ -103,6 +112,173 @@ if ($output_format eq 'json') {
 }
 
 close (ERR) or die "Cannot close $errfile : $!";
+
+
+sub outputAfpCurData {
+  my $source_type = 'professional_biocurator';
+  my $source_method = 'afp';
+  my $source_id = &getSourceId($source_type, $source_method);
+  unless ($source_id) {
+    print qq(ERROR no source_id for $source_type and $source_method);
+    return;
+  }
+#   { "source_type": "professional_biocurator", "source_method": "wormbase_curation_status", "evidence": "eco_string", "description": "cur_curdata", "mod_abbreviation": "WB" }
+  foreach my $datatype (sort keys %afpCurData) {
+    unless ($datatypes{$datatype}) { 
+      print ERR qq(no topic for afpCurData $datatype\n); 
+      next;
+    }
+    foreach my $joinkey (sort keys %{ $afpCurData{$datatype} }) {
+      my $negated = FALSE;
+      if ($afpCurData{$datatype}{$joinkey}{negated}) { $negated = TRUE; }
+      my %object;
+      $object{'negated'}                    = $negated;
+      $object{'reference_curie'}            = $wbpToAgr{$joinkey};
+      $object{'topic'}                      = $datatypes{$datatype};
+      $object{'topic_entity_tag_source_id'} = $source_id;
+      $object{'created_by'}                 = $afpCurData{$datatype}{$joinkey}{curator};
+      $object{'updated_by'}                 = $afpCurData{$datatype}{$joinkey}{curator};
+      $object{'date_created'}               = $afpCurData{$datatype}{$joinkey}{timestamp};
+      $object{'date_updated'}               = $afpCurData{$datatype}{$joinkey}{timestamp};
+      if ($output_format eq 'json') {
+        push @output_json, \%object; }
+      else {
+        my $object_json = encode_json \%object;
+        &createTag($object_json); }
+} } }
+
+sub outputAfpAutData {
+  my $source_type   = 'author';
+  my $source_method_ack = 'ACKnowledge';
+  my $source_method_afp = 'afp';
+  my $source_id_ack = &getSourceId($source_type, $source_method_ack);
+  my $source_id_afp = &getSourceId($source_type, $source_method_afp);
+  unless ($source_id_ack) {
+    print qq(ERROR no source_id for $source_type and $source_method_ack);
+    return;
+  }
+  unless ($source_id_afp) {
+    print qq(ERROR no source_id for $source_type and $source_method_afp);
+    return;
+  }
+#   { "source_type": "professional_biocurator", "source_method": "wormbase_curation_status", "evidence": "eco_string", "description": "cur_curdata", "mod_abbreviation": "WB" }
+  foreach my $datatype (sort keys %afpAutData) {
+    unless ($datatypes{$datatype}) { 
+      print ERR qq(no topic for afpAutData $datatype\n); 
+      next;
+    }
+    foreach my $joinkey (sort keys %{ $afpAutData{$datatype} }) {
+      my @auts;
+      if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
+      if (scalar @auts < 1) { push @auts, 'default_user'; }
+      foreach my $aut (@auts) {
+        my %object;
+        my $negated = FALSE;
+        if ($afpAutData{$datatype}{$joinkey}{negated}) { $negated = TRUE; }
+        my $source_id = $source_id_afp;
+        if ($afpAutData{$datatype}{$joinkey}{source} eq 'ack') { $source_id = $source_id_ack; }
+        if ($afpAutData{$datatype}{$joinkey}{note}) {
+          $object{'note'}                     = $afpAutData{$datatype}{$joinkey}{note}; }
+        $object{'negated'}                    = $negated;
+        $object{'reference_curie'}            = $wbpToAgr{$joinkey};
+        $object{'topic'}                      = $datatypes{$datatype};
+        $object{'topic_entity_tag_source_id'} = $source_id;
+        $object{'created_by'}                 = $aut;
+        $object{'updated_by'}                 = $aut;
+        $object{'date_created'}               = $afpAutData{$datatype}{$joinkey}{timestamp};
+        $object{'date_updated'}               = $afpAutData{$datatype}{$joinkey}{timestamp};
+        # $object{'datatype'}                 = $datatype;		# for debugging
+        if ($output_format eq 'json') {
+          push @output_json, \%object; }
+        else {
+          my $object_json = encode_json \%object;
+          &createTag($object_json); }
+} } } }
+
+
+sub populateAfpData {
+  &populateTfpData();
+  &populateAfpContributor();
+  foreach my $datatype (sort keys %datatypesAfpCfp) {
+    $result = $dbh->prepare( "SELECT joinkey, afp_$datatypesAfpCfp{$datatype}, afp_timestamp AT TIME ZONE 'UTC', afp_curator, afp_approve, afp_cur_timestamp AT TIME ZONE 'UTC' FROM afp_$datatypesAfpCfp{$datatype}" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+    while (my @row = $result->fetchrow) {
+      next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+      my $data = ''; my $negated = 0;
+      if ($row[1]) { $data = $row[1]; }
+        elsif ($tfpData{$datatype}{$row[0]}) { $negated = 1; }
+        else { next; }						# skip entry if no author data and no tfp_ data.
+      # my $row = join"\t", @row;
+      # print qq($datatype\tafp_$datatypesAfpCfp{$datatype}\t$row\n);
+      my $tsdigits = &tsToDigits($row[2]);
+      if ($tsdigits < '20190322') { 
+        $afpAutData{$datatype}{$row[0]}{note}      = $data;
+        $afpAutData{$datatype}{$row[0]}{negated}   = 0;		# there was no tfp_ data to validate old afp
+        $afpAutData{$datatype}{$row[0]}{source}    = 'afp';
+        $afpAutData{$datatype}{$row[0]}{timestamp} = $row[2]; }
+      else {
+        $afpAutData{$datatype}{$row[0]}{note}      = $data;  
+        $afpAutData{$datatype}{$row[0]}{negated}   = $negated;
+        $afpAutData{$datatype}{$row[0]}{source}    = 'ack';
+        $afpAutData{$datatype}{$row[0]}{timestamp} = $row[2]; }
+      if ($row[3]) {
+        my $curator = $row[3]; $curator =~ s/two/WBPerson/;
+        my $negated = 0;
+        if ($row[4] eq 'rejected') { $negated = 1; }
+        $afpCurData{$datatype}{$row[0]}{curator}   = $curator;
+        $afpCurData{$datatype}{$row[0]}{negated}   = $negated;
+        $afpCurData{$datatype}{$row[0]}{timestamp} = $row[5]; }
+} } }
+
+sub populateAfpContributor {
+  $result = $dbh->prepare( "SELECT joinkey, afp_contributor FROM afp_contributor" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) {
+    next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+    next unless ($row[1]);
+    my $who = $row[1]; $who =~ s/two/WBPerson/;
+    $afpContributor{$row[0]}{$who}++;
+} }
+
+sub populateTfpData {
+  foreach my $datatype (sort keys %datatypesAfpCfp) {
+    $result = $dbh->prepare( "SELECT joinkey, tfp_$datatypesAfpCfp{$datatype} FROM tfp_$datatypesAfpCfp{$datatype}" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+    while (my @row = $result->fetchrow) {
+      next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+      next unless ($row[1]);
+      $tfpData{$datatype}{$row[0]} = $row[1];
+} } }
+
+# sub populateAfpData_CURATION_STATUS {
+#   foreach my $datatype (sort keys %chosenDatatypes) {
+#     next unless $datatypesAfpCfp{$datatype};
+#     my $pgtable_datatype = $datatypesAfpCfp{$datatype};
+#     $result = $dbh->prepare( "SELECT * FROM afp_$pgtable_datatype" );
+#     $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+#     while (my @row = $result->fetchrow) {
+#       next unless ($curatablePapers{$row[0]});
+#       $afpData{$datatype}{$row[0]} = $row[1]; }
+#   } # foreach my $datatype (sort keys %chosenDatatypes)
+# 
+#   $result = $dbh->prepare( "SELECT * FROM afp_email" );
+#   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+#   while (my @row = $result->fetchrow) {
+#     next unless ($curatablePapers{$row[0]});
+#     $afpEmailed{$row[0]}++; }
+#   $result = $dbh->prepare( "SELECT * FROM afp_lasttouched" );
+#   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+#   while (my @row = $result->fetchrow) {
+#     next unless ($curatablePapers{$row[0]});
+#     foreach my $datatype (sort keys %chosenDatatypes) {
+#       $afpFlagged{$datatype}{$row[0]}++; } }
+#   foreach my $datatype (sort keys %chosenDatatypes) {
+#     foreach my $joinkey (sort keys %{ $afpFlagged{$datatype} }) {
+#       if ($afpData{$datatype}{$joinkey}) { $afpPos{$datatype}{$joinkey}++; }
+#         else { $afpNeg{$datatype}{$joinkey}++; } } }
+# } # sub populateAfpData_CURATION_STATUS
+
+
 
 sub outputCfpData {
   my $source_type = 'professional_biocurator';
@@ -115,7 +291,7 @@ sub outputCfpData {
 #   { "source_type": "professional_biocurator", "source_method": "wormbase_curation_status", "evidence": "eco_string", "description": "cur_curdata", "mod_abbreviation": "WB" }
   foreach my $datatype (sort keys %cfpData) {
     unless ($datatypes{$datatype}) { 
-      print ERR qq(no topic for $datatype\n); 
+      print ERR qq(no topic for cfpData $datatype\n); 
       next;
     }
     foreach my $joinkey (sort keys %{ $cfpData{$datatype} }) {
@@ -161,7 +337,7 @@ sub outputCurStrData {
       next;
     }
     unless ($datatypes{$datatype}) { 
-      print ERR qq(no topic for $datatype\n); 
+      print ERR qq(no topic for cur_strdata $datatype\n); 
       next;
     }
     my $source_method = 'script_antibody_data';
@@ -216,7 +392,7 @@ sub outputCurNncData {
   my $source_type = 'TBD';
   foreach my $datatype (sort keys %nncData) {
     unless ($datatypes{$datatype}) { 
-      print ERR qq(no topic for $datatype\n); 
+      print ERR qq(no topic for cur_nncdata $datatype\n); 
       next;
     }
     my $source_method = 'nnc_' . $datatype;
@@ -262,7 +438,7 @@ sub outputCurSvmData {
   my $source_type = 'TBD';
   foreach my $datatype (sort keys %svmData) {
     unless ($datatypes{$datatype}) { 
-      print ERR qq(no topic for $datatype\n); 
+      print ERR qq(no topic for cur_svmdata $datatype\n); 
       next;
     }
     my $source_method = 'svm_' . $datatype;
@@ -316,7 +492,7 @@ sub outputCurCurData {
 #   { "source_type": "professional_biocurator", "source_method": "wormbase_curation_status", "evidence": "eco_string", "description": "cur_curdata", "mod_abbreviation": "WB" }
   foreach my $datatype (sort keys %curData) {
     unless ($datatypes{$datatype}) { 
-      print ERR qq(no topic for $datatype\n); 
+      print ERR qq(no topic for cur_curdata $datatype\n); 
       next;
     }
     foreach my $joinkey (sort keys %{ $curData{$datatype} }) {
