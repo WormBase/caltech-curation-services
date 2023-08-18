@@ -5,6 +5,8 @@
 # modified for cur_curdata for general topics without entities.  2023 08 15
 #
 # modified for cur_svmdata, cur_nncdata, cur_strdata, cfp_<*>   2023 08 17
+#
+# cur_strdata antibody only has data for the new pipeline, old data was overwritten or lost, only have 1 source now.  2023 08 18
 
 
 # if single json output
@@ -89,8 +91,8 @@ my %strData;
 # &outputCurSvmData();
 # &populateCurNncData();
 # &outputCurNncData();
-# &populateCurStrData();
-# &outputCurStrData();
+&populateCurStrData();
+&outputCurStrData();
 # &populateCfpData();
 # &outputCfpData();
 
@@ -152,7 +154,6 @@ sub populateCfpData {
 
 
 sub outputCurStrData {
-  # maybe there's only one source, in which case simplify this
   my $source_type = 'TBD';
   foreach my $datatype (sort keys %strData) {
     unless ($datatype eq 'antibody') {
@@ -163,25 +164,24 @@ sub outputCurStrData {
       print ERR qq(no topic for $datatype\n); 
       next;
     }
-    my $source_method_1 = 'script_antibody_data';
-    my $source_method_2 = 'script_antibody_data_2';
-    my $source_id_1 = &getSourceId($source_type, $source_method_1);
-    my $source_id_2 = &getSourceId($source_type, $source_method_2);
-    unless ($source_id_1) {
-      print qq(ERROR no source_id for $source_type and $source_method_1);
+    my $source_method = 'script_antibody_data';
+    my $source_id = &getSourceId($source_type, $source_method);
+    unless ($source_id) {
+      print qq(ERROR no source_id for $source_type and $source_method);
       return;
     }
-    unless ($source_id_2) {
-      print qq(ERROR no source_id for $source_type and $source_method_2);
-      return;
-    }
+    # only data for 1 source exists, everything has date after 2019 03 22
+    # my $source_method_2 = 'script_antibody_data_2';
+    # my $source_id_2 = &getSourceId($source_type, $source_method_2);
+    # unless ($source_id_2) {
+    #   print qq(ERROR no source_id for $source_type and $source_method_2);
+    #   return;
+    # }
     foreach my $joinkey (sort keys %{ $strData{$datatype} }) {
       my %object;
-      my $source_id = $source_id_1;
-#       my ($tsyear, $tsmonth, $tsday) = $strData{$datatype}{$joinkey}{timestamp} =~ m/^(\d{4})\-(\d{2})\-(\d{2})/;
-#       my $tsdigits = $tsyear . $tsmonth . $tsday;
-      my $tsdigits = &tsToDigits($strData{$datatype}{$joinkey}{timestamp});
-      if ($tsdigits > '20190322') { $source_id = $source_id_2; }
+      # my $source_id = $source_id_1;
+      # my $tsdigits = &tsToDigits($strData{$datatype}{$joinkey}{timestamp});
+      # if ($tsdigits > '20190322') { $source_id = $source_id_2; }
       $object{'negated'}                    = FALSE;
       $object{'note'}                       = $strData{$datatype}{$joinkey}{result};
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
