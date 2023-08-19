@@ -88,6 +88,8 @@ my %tfpData;
 my %afpContributor;
 my %afpAutData;
 my %afpCurData;
+my %oaData;
+my %objsCurated;
 
 
 # PUT THIS BACK
@@ -104,6 +106,8 @@ my %afpCurData;
 # &populateAfpData();
 # &outputAfpAutData();
 # &outputAfpCurData();
+&populateOaData();
+
 
 
 if ($output_format eq 'json') {
@@ -678,10 +682,291 @@ sub populateDatatypesAndABC {
   $wbpToAgr{'00037049'} = 'AGRKB:101000000625405';
 }
 
+sub populateOaData {
+  my %chosenDatatypes;
+  foreach my $datatype (sort keys %datatypesAfpCfp) { $chosenDatatypes{$datatype}++; }
+
+  if ($chosenDatatypes{'chemicals'}) {
+      # there are 5 source for curated molecules, and 7 sources for papers related to curated molecules, from Karen 2013 11 02
+    $result = $dbh->prepare( "SELECT * FROM mop_name WHERE joinkey IN (SELECT joinkey FROM mop_paper WHERE mop_paper IS NOT NULL AND mop_paper != '')" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 	# only molecules with papers are curated
+    while (my @row = $result->fetchrow) { $objsCurated{'chemicals'}{$row[1]}++; }
+    $result = $dbh->prepare( "SELECT * FROM app_molecule WHERE joinkey NOT IN (SELECT joinkey FROM app_nodump)" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) { 
+      my (@chemicals) = $row[1] =~ m/(WBMol:\d+)/g;
+      foreach my $chemical (@chemicals) { $objsCurated{'chemicals'}{$chemical}++; } }
+    $result = $dbh->prepare( "SELECT * FROM grg_moleculeregulator" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) { 
+      my (@chemicals) = $row[1] =~ m/(WBMol:\d+)/g;
+      foreach my $chemical (@chemicals) { $objsCurated{'chemicals'}{$chemical}++; } }
+    $result = $dbh->prepare( "SELECT * FROM pro_molecule" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) { 
+      my (@chemicals) = $row[1] =~ m/(WBMol:\d+)/g;
+      foreach my $chemical (@chemicals) { $objsCurated{'chemicals'}{$chemical}++; } }
+    $result = $dbh->prepare( "SELECT * FROM rna_molecule WHERE joinkey NOT IN (SELECT joinkey FROM rna_nodump)" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) { 
+      my (@chemicals) = $row[1] =~ m/(WBMol:\d+)/g;
+      foreach my $chemical (@chemicals) { $objsCurated{'chemicals'}{$chemical}++; } }
+
+    $result = $dbh->prepare( "SELECT * FROM mop_paper" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) {
+      my (@papers) = $row[1] =~ m/WBPaper(\d+)/g;
+      foreach my $paper (@papers) {
+        $oaData{'chemicals'}{$paper} = 'curated'; } }
+    $result = $dbh->prepare( "SELECT * FROM app_paper WHERE joinkey IN (SELECT joinkey FROM app_molecule WHERE app_molecule IS NOT NULL AND app_molecule != '')" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) {
+      my (@papers) = $row[1] =~ m/WBPaper(\d+)/g;
+      foreach my $paper (@papers) {
+        $oaData{'chemicals'}{$paper} = 'curated'; } }
+    $result = $dbh->prepare( "SELECT * FROM grg_paper WHERE joinkey IN (SELECT joinkey FROM grg_moleculeregulator WHERE grg_moleculeregulator IS NOT NULL AND grg_moleculeregulator != '')" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) {
+      my (@papers) = $row[1] =~ m/WBPaper(\d+)/g;
+      foreach my $paper (@papers) {
+        $oaData{'chemicals'}{$paper} = 'curated'; } }
+    $result = $dbh->prepare( "SELECT * FROM pro_paper WHERE joinkey IN (SELECT joinkey FROM pro_molecule WHERE pro_molecule IS NOT NULL AND pro_molecule != '')" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) {
+      my (@papers) = $row[1] =~ m/WBPaper(\d+)/g;
+      foreach my $paper (@papers) {
+        $oaData{'chemicals'}{$paper} = 'curated'; } }
+    $result = $dbh->prepare( "SELECT * FROM rna_paper WHERE joinkey NOT IN (SELECT joinkey FROM rna_nodump) AND joinkey IN (SELECT joinkey FROM rna_molecule WHERE rna_molecule IS NOT NULL AND rna_molecule != '')" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) {
+      my (@papers) = $row[1] =~ m/WBPaper(\d+)/g;
+      foreach my $paper (@papers) {
+        $oaData{'chemicals'}{$paper} = 'curated'; } }
+    $result = $dbh->prepare( "SELECT * FROM int_paper WHERE joinkey IN (SELECT joinkey FROM int_moleculeone WHERE int_moleculeone IS NOT NULL) OR joinkey IN (SELECT joinkey FROM int_moleculetwo WHERE int_moleculetwo IS NOT NULL) OR joinkey IN (SELECT joinkey FROM int_moleculenondir WHERE int_moleculenondir IS NOT NULL)" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+    while (my @row = $result->fetchrow) {
+      my (@papers) = $row[1] =~ m/WBPaper(\d+)/g;
+      foreach my $paper (@papers) {
+        $oaData{'chemicals'}{$paper} = 'curated'; } }
+  } # if ($chosenDatatypes{'chemicals'})
+
+  if ($chosenDatatypes{'newmutant'}) {
+    $result = $dbh->prepare( "SELECT * FROM app_variation WHERE joinkey NOT IN (SELECT joinkey FROM app_nodump)" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) { $objsCurated{'newmutant'}{$row[1]}++; }
+    $result = $dbh->prepare( "SELECT * FROM app_paper WHERE joinkey NOT IN (SELECT joinkey FROM app_needsreview) AND joinkey NOT IN (SELECT joinkey FROM app_curator WHERE app_curator = 'WBPerson29819') AND joinkey NOT IN (SELECT joinkey FROM app_nodump)" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) {
+      my (@papers) = $row[1] =~ m/WBPaper(\d+)/g;
+      foreach my $paper (@papers) {
+        $oaData{'newmutant'}{$paper} = 'curated'; } } }
+  if ($chosenDatatypes{'overexpr'}) {
+    $result = $dbh->prepare( "SELECT * FROM app_transgene WHERE joinkey NOT IN (SELECT joinkey FROM app_nodump)" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) { $objsCurated{'overexpr'}{$row[1]}++; }
+    $result = $dbh->prepare( "SELECT * FROM app_paper WHERE joinkey IN (SELECT joinkey FROM app_transgene WHERE app_transgene IS NOT NULL AND app_transgene != '') AND joinkey NOT IN (SELECT joinkey FROM app_nodump)" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) {
+      my (@papers) = $row[1] =~ m/WBPaper(\d+)/g;
+      foreach my $paper (@papers) {
+        $oaData{'overexpr'}{$paper} = 'curated'; } } }
+
+  if ($chosenDatatypes{'antibody'}) {
+    $result = $dbh->prepare( "SELECT * FROM abp_name" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) { $objsCurated{'antibody'}{$row[1]}++; }
+    $result = $dbh->prepare( "SELECT * FROM abp_paper" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) {
+      my (@papers) = $row[1] =~ m/WBPaper(\d+)/g;
+      foreach my $paper (@papers) {
+        $oaData{'antibody'}{$paper} = 'curated'; } } }
+
+  if ($chosenDatatypes{'otherexpr'}) {
+    $result = $dbh->prepare( "SELECT * FROM exp_name WHERE joinkey NOT IN (SELECT joinkey FROM exp_nodump)" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) { $objsCurated{'otherexpr'}{$row[1]}++; }
+    $result = $dbh->prepare( "SELECT * FROM exp_paper WHERE joinkey NOT IN (SELECT joinkey FROM exp_nodump)" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) {
+      my (@papers) = $row[1] =~ m/WBPaper(\d+)/g;
+      foreach my $paper (@papers) {
+        $oaData{'otherexpr'}{$paper} = 'curated'; } } }
+
+  if ($chosenDatatypes{'humandisease'}) {
+    $result = $dbh->prepare( "SELECT * FROM dis_wbgene" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) { $objsCurated{'humandisease'}{$row[1]}++; }
+    $result = $dbh->prepare( "SELECT * FROM dis_paperdisrel" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) {
+      my (@papers) = $row[1] =~ m/WBPaper(\d+)/g;
+      foreach my $paper (@papers) {
+        $oaData{'humandisease'}{$paper} = 'curated'; } }
+    $result = $dbh->prepare( "SELECT * FROM dis_paperexpmod" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) {
+      my (@papers) = $row[1] =~ m/WBPaper(\d+)/g;
+      foreach my $paper (@papers) {
+        $oaData{'humandisease'}{$paper} = 'curated'; } } }
+
+  if ($chosenDatatypes{'seqfeature'}) {
+    $result = $dbh->prepare( "SELECT * FROM sqf_name" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) { $objsCurated{'seqfeature'}{$row[1]}++; }
+    $result = $dbh->prepare( "SELECT * FROM sqf_paper" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) {
+      my (@papers) = $row[1] =~ m/WBPaper(\d+)/g;
+      foreach my $paper (@papers) {
+        $oaData{'seqfeature'}{$paper} = 'curated'; } } }
+
+  if ($chosenDatatypes{'genereg'}) {
+    $result = $dbh->prepare( "SELECT * FROM grg_intid WHERE joinkey NOT IN (SELECT joinkey FROM grg_nodump)" );	# genereg object counts were coming from grg_name instead of grg_intid.  2015 02 04
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) { $objsCurated{'genereg'}{$row[1]}++; }
+    $result = $dbh->prepare( "SELECT * FROM grg_paper WHERE joinkey NOT IN (SELECT joinkey FROM grg_nodump)" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) {
+      my (@papers) = $row[1] =~ m/WBPaper(\d+)/g;
+      foreach my $paper (@papers) {
+        $oaData{'genereg'}{$paper} = 'curated'; } } }
+
+  if ($chosenDatatypes{'geneint'}) {	# corresponds to int_type being genetic, meaning not physical nor predicted 2015 04 02
+    my %int;
+    $result = $dbh->prepare( "SELECT * FROM int_name;" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) { $int{'name'}{$row[0]} = $row[1]; }
+    $result = $dbh->prepare( "SELECT * FROM int_paper" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) { $int{'paper'}{$row[0]} = $row[1]; }
+    $result = $dbh->prepare( "SELECT * FROM int_type" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) { $int{'type'}{$row[0]} = $row[1]; }
+    $result = $dbh->prepare( "SELECT * FROM int_nodump" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) { $int{'nodump'}{$row[0]} = $row[1]; }
+    my %typeSkip; 
+    $typeSkip{"Physical"}++;
+    $typeSkip{"ProteinProtein"}++;
+    $typeSkip{"ProteinDNA"}++;
+    $typeSkip{"ProteinRNA"}++;
+    $typeSkip{"Predicted"}++;
+    foreach my $joinkey (sort keys %{ $int{'name'} }) {
+      next unless $int{'type'}{$joinkey};
+      next if ($typeSkip{$int{'type'}{$joinkey}});
+      next if ($int{'nodump'}{$joinkey});
+      $objsCurated{'geneint'}{$int{'name'}{$joinkey}}++; 
+      if ($int{'paper'}{$joinkey}) {
+        my (@papers) = $int{'paper'}{$joinkey} =~ m/WBPaper(\d+)/g;
+        foreach my $paper (@papers) {
+          $oaData{'geneint'}{$paper} = 'curated'; } } } }
+
+  if ($chosenDatatypes{'geneprod'}) {	# corresponds to int_type being physical.  2015 04 02
+    $result = $dbh->prepare( "SELECT * FROM int_name WHERE joinkey IN (SELECT joinkey FROM int_type WHERE int_type = 'Physical' OR int_type = 'ProteinProtein' OR int_type = 'ProteinDNA' OR int_type = 'ProteinRNA') AND joinkey NOT IN (SELECT joinkey FROM int_nodump)" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) { $objsCurated{'geneprod'}{$row[1]}++; }
+    $result = $dbh->prepare( "SELECT * FROM int_paper WHERE joinkey IN (SELECT joinkey FROM int_type WHERE int_type = 'Physical' OR int_type = 'ProteinProtein' OR int_type = 'ProteinDNA' OR int_type = 'ProteinRNA') AND joinkey NOT IN (SELECT joinkey FROM int_nodump)" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) {
+      my (@papers) = $row[1] =~ m/WBPaper(\d+)/g;
+      foreach my $paper (@papers) {
+        $oaData{'geneprod'}{$paper} = 'curated'; } } }
+
+  if ($chosenDatatypes{'rnai'}) {
+    $result = $dbh->prepare( "SELECT * FROM rna_name WHERE joinkey NOT IN (SELECT joinkey FROM rna_nodump)" );
+#     $result = $dbh->prepare( "SELECT * FROM rna_name WHERE joinkey NOT IN (SELECT joinkey FROM rna_nodump) AND joinkey NOT IN (SELECT joinkey FROM rna_fromgenereg)" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) { $objsCurated{'rnai'}{$row[1]}++; }
+    $result = $dbh->prepare( "SELECT * FROM rna_paper WHERE joinkey NOT IN (SELECT joinkey FROM rna_nodump) AND joinkey NOT IN (SELECT joinkey FROM rna_curator WHERE rna_curator = 'WBPerson29819')" );
+#     $result = $dbh->prepare( "SELECT * FROM rna_paper WHERE joinkey NOT IN (SELECT joinkey FROM rna_nodump) AND joinkey NOT IN (SELECT joinkey FROM rna_fromgenereg)" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) {
+      my (@papers) = $row[1] =~ m/WBPaper(\d+)/g;
+      foreach my $paper (@papers) {
+        $oaData{'rnai'}{$paper} = 'curated'; } } }
+
+
+    # these are not in the OA but they're in postgres, so are here
+  if ($chosenDatatypes{'picture'}) {
+    $result = $dbh->prepare( "SELECT * FROM pic_name WHERE joinkey NOT IN (SELECT joinkey FROM pic_nodump)" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) { $objsCurated{'picture'}{$row[1]}++; }
+    $result = $dbh->prepare( "SELECT * FROM pic_paper WHERE joinkey NOT IN (SELECT joinkey FROM pic_nodump)" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) {
+      my (@papers) = $row[1] =~ m/WBPaper(\d+)/g;
+      foreach my $paper (@papers) {
+        $oaData{'picture'}{$paper} = 'curated'; } } }
+
+  if ($chosenDatatypes{'blastomere'}) {
+    $result = $dbh->prepare( "SELECT * FROM wbb_wbbtf WHERE joinkey IN (SELECT joinkey FROM wbb_assay WHERE wbb_assay = 'Blastomere_isolation')" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) { $objsCurated{'blastomere'}{$row[1]}++; }
+    $result = $dbh->prepare( "SELECT * FROM wbb_reference WHERE joinkey IN (SELECT joinkey FROM wbb_assay WHERE wbb_assay = 'Blastomere_isolation')" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) {
+      my (@papers) = $row[1] =~ m/WBPaper(\d+)/g;
+      foreach my $paper (@papers) {
+        $oaData{'blastomere'}{$paper} = 'curated'; } } }
+
+  if ($chosenDatatypes{'exprmosaic'}) {
+    $result = $dbh->prepare( "SELECT * FROM wbb_wbbtf WHERE joinkey IN (SELECT joinkey FROM wbb_assay WHERE wbb_assay = 'Expression_mosaic')" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) { $objsCurated{'exprmosaic'}{$row[1]}++; }
+    $result = $dbh->prepare( "SELECT * FROM wbb_reference WHERE joinkey IN (SELECT joinkey FROM wbb_assay WHERE wbb_assay = 'Expression_mosaic')" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) {
+      my (@papers) = $row[1] =~ m/WBPaper(\d+)/g;
+      foreach my $paper (@papers) {
+        $oaData{'exprmosaic'}{$paper} = 'curated'; } } }
+
+  if ($chosenDatatypes{'geneticablation'}) {
+    $result = $dbh->prepare( "SELECT * FROM wbb_wbbtf WHERE joinkey IN (SELECT joinkey FROM wbb_assay WHERE wbb_assay = 'Genetic_ablation')" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) { $objsCurated{'geneticablation'}{$row[1]}++; }
+    $result = $dbh->prepare( "SELECT * FROM wbb_reference WHERE joinkey IN (SELECT joinkey FROM wbb_assay WHERE wbb_assay = 'Genetic_ablation')" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) {
+      my (@papers) = $row[1] =~ m/WBPaper(\d+)/g;
+      foreach my $paper (@papers) {
+        $oaData{'geneticablation'}{$paper} = 'curated'; } } }
+
+  if ($chosenDatatypes{'geneticmosaic'}) {
+    $result = $dbh->prepare( "SELECT * FROM wbb_wbbtf WHERE joinkey IN (SELECT joinkey FROM wbb_assay WHERE wbb_assay = 'Genetic_mosaic')" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) { $objsCurated{'geneticmosaic'}{$row[1]}++; }
+    $result = $dbh->prepare( "SELECT * FROM wbb_reference WHERE joinkey IN (SELECT joinkey FROM wbb_assay WHERE wbb_assay = 'Genetic_mosaic')" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) {
+      my (@papers) = $row[1] =~ m/WBPaper(\d+)/g;
+      foreach my $paper (@papers) {
+        $oaData{'geneticmosaic'}{$paper} = 'curated'; } } }
+
+  if ($chosenDatatypes{'optogenetic'}) {
+    $result = $dbh->prepare( "SELECT * FROM wbb_wbbtf WHERE joinkey IN (SELECT joinkey FROM wbb_assay WHERE wbb_assay = 'Optogenetic')" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) { $objsCurated{'optogenetic'}{$row[1]}++; }
+    $result = $dbh->prepare( "SELECT * FROM wbb_reference WHERE joinkey IN (SELECT joinkey FROM wbb_assay WHERE wbb_assay = 'Optogenetic')" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) {
+      my (@papers) = $row[1] =~ m/WBPaper(\d+)/g;
+      foreach my $paper (@papers) {
+        $oaData{'optogenetic'}{$paper} = 'curated'; } } }
+
+  if ($chosenDatatypes{'laserablation'}) {
+    $result = $dbh->prepare( "SELECT * FROM wbb_wbbtf WHERE joinkey IN (SELECT joinkey FROM wbb_assay WHERE wbb_assay = 'Laser_ablation')" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) { $objsCurated{'laserablation'}{$row[1]}++; }
+    $result = $dbh->prepare( "SELECT * FROM wbb_reference WHERE joinkey IN (SELECT joinkey FROM wbb_assay WHERE wbb_assay = 'Laser_ablation')" );
+    $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+    while (my @row = $result->fetchrow) {
+      my (@papers) = $row[1] =~ m/WBPaper(\d+)/g;
+      foreach my $paper (@papers) {
+        $oaData{'laserablation'}{$paper} = 'curated'; } } }
+} # sub populateOaData
 
 __END__
-
-
 # SELECT cur_selcomment, COUNT(cur_selcomment) FROM cur_curdata GROUP BY cur_selcomment ORDER BY COUNT(cur_selcomment) DESC;
 #   $premadeComments{"15"} = "Toxicology";
 #   $premadeComments{"16"} = "Host-pathogen/virulence";
@@ -1059,4 +1344,6 @@ to concatenate string to query result :
   SELECT 'WBPaper' || joinkey FROM pap_identifier WHERE pap_identifier ~ 'pmid';
 to get :
   SELECT DISTINCT(gop_paper_evidence) FROM gop_paper_evidence WHERE gop_paper_evidence NOT IN (SELECT 'WBPaper' || joinkey FROM pap_identifier WHERE pap_identifier ~ 'pmid') AND gop_paper_evidence != '';
+
+
 
