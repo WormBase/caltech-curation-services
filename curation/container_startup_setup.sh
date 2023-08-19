@@ -52,7 +52,10 @@ yes | sendmailconfig
 
 # set up citace user home dir
 mkdir -p "${CALTECH_CURATION_FILES_INTERNAL_PATH}/citace"
-ln -s "${CALTECH_CURATION_FILES_INTERNAL_PATH}/citace" /home/citace
+if [[ ! -f /home/citace ]]
+then
+  ln -sf "${CALTECH_CURATION_FILES_INTERNAL_PATH}/citace" /home/citace
+fi
 
 declare -p | grep -Ev 'BASHOPTS|BASH_VERSINFO|EUID|PPID|SHELLOPTS|UID' > /container.env
 chmod 0644 /etc/cron.d/curation_crontab
