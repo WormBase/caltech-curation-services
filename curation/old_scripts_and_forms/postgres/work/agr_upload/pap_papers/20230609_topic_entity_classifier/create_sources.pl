@@ -142,17 +142,18 @@ unless ($source_id) {
   &createSource($source_type, $source_method, $source_json);
 }
 
-$source_type = 'TBD';
-$source_method = 'script_antibody_data_2';
-$source_id = &getSourceId($source_type, $source_method);
-unless ($source_id) { 
-  my %source_json = %{ dclone (\%source_default) };
-  $source_json{source_type}     = $source_type;
-  $source_json{source_method}   = $source_method;
-  $source_json{description}     = 'valerio daniela script';	# script name here
-  my $source_json = encode_json \%source_json;
-  &createSource($source_type, $source_method, $source_json);
-}
+# had 2 types of string matching data for antibody, but only using one, don't need second type
+# $source_type = 'TBD';
+# $source_method = 'script_antibody_data_2';
+# $source_id = &getSourceId($source_type, $source_method);
+# unless ($source_id) { 
+#   my %source_json = %{ dclone (\%source_default) };
+#   $source_json{source_type}     = $source_type;
+#   $source_json{source_method}   = $source_method;
+#   $source_json{description}     = 'valerio daniela script';	# script name here
+#   my $source_json = encode_json \%source_json;
+#   &createSource($source_type, $source_method, $source_json);
+# }
 
 # for each nnc/svm, we're creating a new source for each datatype
 
