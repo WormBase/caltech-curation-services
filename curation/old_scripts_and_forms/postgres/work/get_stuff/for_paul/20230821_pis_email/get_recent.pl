@@ -1,6 +1,8 @@
 #!/usr/bin/perl -w
 
 # get snail mail for PIs.  2009 09 18
+#
+# modified to get emails and lab codes.  2023 08 21
 
 use strict;
 use diagnostics;
