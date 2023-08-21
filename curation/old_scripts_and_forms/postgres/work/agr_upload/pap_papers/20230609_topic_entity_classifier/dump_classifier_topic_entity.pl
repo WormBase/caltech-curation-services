@@ -9,6 +9,8 @@
 # cur_strdata antibody only has data for the new pipeline, old data was overwritten or lost, only have 1 source now.
 # dump afp_<datatype> data for afp_curator to curator/afp source, afp_author afp to author/afp source, 
 # afp_author ack based on timestamp to author/ACKnowledge source.  2023 08 18
+#
+# account for okta tokens expire after 24 hours.  if % 1000 entries and >23 hours, reset okta token.  2023 08 21
 
 
 # if single json output
@@ -32,6 +34,8 @@ use Encode qw( from_to is_utf8 );
 
 use constant FALSE => \0;
 use constant TRUE => \1;
+
+my $start_time = time;
 
 my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n"; 
 my $result;
@@ -79,7 +83,6 @@ my %premadeComments;
 
 my $errfile = 'dump_classifier_topic_entity.err';
 open (ERR, ">$errfile") or die "Cannot create $errfile : $!";
-
 
 my %strData;
 my %svmData;
@@ -568,9 +571,15 @@ sub getSourceId {
 sub createTag {
   my ($object_json) = @_;
   $tag_counter++;
+  if ($tag_counter < 265534) { return; }	# load failed after first 24 hours, skip these many entries, mostly assuming the order is the same
   if ($tag_counter % 1000 == 0) { 
     my $date = &getSimpleSecDate();
     print qq(counter\t$tag_counter\t$date\n);
+    my $now = time;
+    if ($now - $start_time > 82800) {		# if 23 hours went by, update okta token
+      $okta_token = &generateOktaToken();
+      $start_time = $now;
+    }
   }
   my $url = $baseUrl . 'topic_entity_tag/';
   my $api_json = `curl -X 'POST' $url -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json' --data '$object_json'`;
