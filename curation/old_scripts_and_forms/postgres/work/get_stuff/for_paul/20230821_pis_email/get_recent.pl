@@ -25,23 +25,25 @@ foreach my $field (@fields) {
 }
 
 foreach my $joinkey (sort keys %{ $hash{pis} }) {
-  print "$hash{standardname}{$joinkey}{1}\n";
-  my $address = "";
+  my $name = $hash{standardname}{$joinkey}{1};
+  my @address; my @lab_codes; my @emails;
   if ($hash{pis}{$joinkey}) {
     foreach my $join (sort {$a<=>$b} keys %{ $hash{pis}{$joinkey} }) {
-      $address .= "Lab code: $hash{pis}{$joinkey}{$join}\n"; } }
+      push @lab_codes, $hash{pis}{$joinkey}{$join}; } }
   if ($hash{email}{$joinkey}) {
     foreach my $join (sort {$a<=>$b} keys %{ $hash{email}{$joinkey} }) {
-      $address .= "Email: $hash{email}{$joinkey}{$join}\n"; } }
+      push @emails, $hash{email}{$joinkey}{$join}; } }
   if ($hash{street}{$joinkey}) {
     foreach my $join (sort {$a<=>$b} keys %{ $hash{street}{$joinkey} }) {
-      $address .= "$hash{street}{$joinkey}{$join}\n"; } }
-  if ($hash{city}{$joinkey}{1}) { $address .= "$hash{city}{$joinkey}{1}, "; }
-  if ($hash{state}{$joinkey}{1}) { $address .= "$hash{state}{$joinkey}{1}  "; }
-  if ($hash{post}{$joinkey}{1}) { $address .= "$hash{post}{$joinkey}{1}\n"; }
-  if ($hash{country}{$joinkey}{1}) { $address .= "$hash{country}{$joinkey}{1}\n"; }
-  if ($address) { print $address; }
-  print "\n";
+      push @address, $hash{street}{$joinkey}{$join}; } }
+  if ($hash{city}{$joinkey}{1}) { push @address, $hash{city}{$joinkey}{1}; }
+  if ($hash{state}{$joinkey}{1}) { push @address, $hash{state}{$joinkey}{1}; }
+  if ($hash{post}{$joinkey}{1}) { push @address, $hash{post}{$joinkey}{1}; }
+  if ($hash{country}{$joinkey}{1}) { push @address, $hash{country}{$joinkey}{1}; }
+  my $lab_code = join", ", @lab_codes;
+  my $address = join" | ", @address;
+  my $emails = join"\t", @emails;
+  print qq($name\t$address\t$lab_code\t$emails\n);
 }
 
 
