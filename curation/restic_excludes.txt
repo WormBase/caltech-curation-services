@@ -4,3 +4,4 @@
 /usr/caltech_curation_files/citace/archive/*
 /usr/caltech_curation_files/citace/bin/*
 /usr/caltech_curation_files/citace/citaceAdmin/*
+/usr/caltech_curation_files/WSDump/*
