@@ -40,6 +40,8 @@ our $VERSION	= 1.00;
 # add to err.out : all duplicated WBTransgeneIDs (trp_name) + all duplicated public_names (trp_publicname).  2020 05 04
 #
 # always skip trp_objpap_falsepos when getting data from db.  2022 10 15
+#
+# always dump species, so if no data use 'Caenorhabditis elegans'.  approved by Karen, Chris, Daniela.  2023 08 25
 
 
 
@@ -177,6 +179,7 @@ sub getTransgene {
 #       if ($hash{rescues}{$joinkey}) { &printTag('Rescue', $hash{rescues}{$joinkey}); }
       if ($hash{remark}{$joinkey}) { &printTag('Remark', $hash{remark}{$joinkey}); }
       if ($hash{species}{$joinkey}) { &printTag('Species', $hash{species}{$joinkey}); }
+        else { &printTag('Species', 'Caenorhabditis elegans'); }
       if ($hash{synonym}{$joinkey}) { &printTag('Synonym', $hash{synonym}{$joinkey}); }
 #       if ($hash{driven_by_construct}{$joinkey}) { &printTag('Driven_by_construct', $hash{driven_by_construct}{$joinkey}); }	# removed 2014 07 08
 #       if ($hash{movie}{$joinkey}) { &printTag('Movie', $hash{movie}{$joinkey}); }
