@@ -77,6 +77,12 @@ services:
         SSH_ACEDB_PASSWORD: "${SSH_ACEDB_PASSWORD}"
         SSH_CITACE_PASSWORD: "${SSH_CITACE_PASSWORD}"
         CALTECH_CURATION_FILES_INTERNAL_PATH: "${CALTECH_CURATION_FILES_INTERNAL_PATH}"
+    devices:
+      - /dev/fuse:/dev/fuse:rwm
+    cap_add:
+      - SYS_ADMIN
+    security_opt:
+      - apparmor:unconfined
     environment:
       CALTECH_CURATION_FILES_INTERNAL_PATH: "${CALTECH_CURATION_FILES_INTERNAL_PATH}"
       HOST_NAME: "${HOST_NAME}"
