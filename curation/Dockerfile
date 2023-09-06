@@ -5,7 +5,7 @@ ARG CALTECH_CURATION_FILES_INTERNAL_PATH=/usr/caltech_curation_files
 ARG DEBIAN_FRONTEND=noninteractive
 ARG AWS_ACCESS_KEY_ID=""
 ARG AWS_SECRET_ACCESS_KEY=""
-RUN export DEBIAN_FRONTEND=noninteractive && apt-get update && apt-get install -q -y apache2 vim openssh-server makepasswd zsh sendmail cron git libglib2.0-dev libgtk2.0-dev libreadline-dev build-essential flex-old bison libxmu-dev libcurl4-openssl-dev xauth default-jdk postgresql-client debconf locales rsync jq restic mlocate acl nano emacs-nox csh tmux
+RUN export DEBIAN_FRONTEND=noninteractive && apt-get update && apt-get install -q -y apache2 vim openssh-server makepasswd zsh sendmail cron git libglib2.0-dev libgtk2.0-dev libreadline-dev build-essential flex-old bison libxmu-dev libcurl4-openssl-dev xauth default-jdk postgresql-client debconf locales rsync jq restic mlocate acl nano emacs-nox csh tmux ncftp
 ENV TZ="America/Los_Angeles"
 RUN mkdir -p ${CALTECH_CURATION_FILES_INTERNAL_PATH}
 RUN chmod -R 777 ${CALTECH_CURATION_FILES_INTERNAL_PATH}
