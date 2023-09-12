@@ -8,6 +8,10 @@
 # prioritize mapping based on pmid to abc pmid agrkb, then wbpaper at abc.  
 # output conflicts to screen, later create email to Kimberly"
 # 2023 08 04
+#
+# Ran update with INSERT only on 2023 09 12.  Will allow UPDATE after talking to Kimberly
+# after CONFLICT get fixed at ABC after referencefiles can be merged there.  Still need to
+# add this to crontab.  2023 09 12
 
 
 use strict;
@@ -59,7 +63,7 @@ sub populateFromAbcXrefs {
   #  % cat ref_xref.json | json_pp > ref_xref.json_pp
 
   # UNCOMMENT for live run with latest data
-#   &generateXrefJsonFile();
+  &generateXrefJsonFile();
 
   # my $xref_file_path = 'files/ref_xref.json';
   # my $xref_file_path = '/usr/lib/scripts/pgpopulation/pap_papers/20230322_agr_xrefs/files/ref_xref.json';
@@ -165,7 +169,7 @@ sub populateFromAbcXrefs {
   foreach my $pgcommand (@pgcommands) {
     print qq($pgcommand\n);
   # UNCOMMENT TO POPULATE
-  #   $dbh->do($pgcommand);
+  # $dbh->do($pgcommand);
   } # foreach my $pgcommand (@pgcommands)
 
 } # sub populateFromAbcXrefs
@@ -173,7 +177,8 @@ sub populateFromAbcXrefs {
 sub updateAgrXref {
   my ($joinkey, $agr, $agrOld) = @_;
   print qq(WBPaper$joinkey\t$agr\twas\t$agrOld\n);
-  push @pgcommands, qq(UPDATE pap_identifier SET pap_identifier = '$agr' WHERE joinkey = '$joinkey' AND pap_identifier = '$agr';);
+# UNCOMMENT when updates should process
+#   push @pgcommands, qq(UPDATE pap_identifier SET pap_identifier = '$agr' WHERE joinkey = '$joinkey' AND pap_identifier = '$agr';);
 }
 
 sub createAgrXref {
