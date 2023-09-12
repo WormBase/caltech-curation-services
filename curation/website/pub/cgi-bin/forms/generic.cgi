@@ -132,7 +132,7 @@ sub showIp {
   print "$header\n";		# make beginning of HTML page
   my $action;                   # what user clicked
   unless ($action = $query->param('action')) { $action = 'none'; }
-  print "Your IP is : $host<BR>\n";
+  print "DEV Your IP is : $host<BR>\n";
   print "$footer"; 		# make end of HTML page
 } # sub showIp
 
