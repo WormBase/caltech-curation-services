@@ -70,6 +70,9 @@
 # Can now queryListBySpecies() to show all genes in a species set.  2020 11 18
 #
 # Added XBXL and XBXT for Wen.  2022 11 16
+#
+# After dockerizing on 2023 02 22, the form post needed the full path to the cgi and didn't work
+# without it.  Now it doesn't work with it, so putting it back.  2023 09 14
 
 # http://tazendra.caltech.edu/~azurebrd/cgi-bin/forms/agr_simplemine.cgi
 
@@ -430,9 +433,10 @@ sub showFraqForm {
 #   print qq(Gene mappings to gene identifiers, Tissue-LifeStage, RNAi-Phenotype, Allele-Phenotype, ConciseDescription.<br/><br/>);
 #   print qq(Gene mappings to gene identifiers, ConciseDescription, Mouse/Rat/ZebraFish/Fly/Worm/Yeast Homologs.<br/><br/>);
   print qq(Follow these steps to get information including gene identifier, description, disease association, expression, variants, Interaction and orthologs in other species.<br/><br/>);
+#   print qq(<form method="post" id="form" action="pub/cgi-bin/forms/agr_simplemine.cgi" enctype="multipart/form-data">\n);
 # posting action without path doesn't work here for some reason, but don't know if fuller path will mess with agr reverse proxy.  2023 02 22
-  print qq(<form method="post" id="form" action="pub/cgi-bin/forms/agr_simplemine.cgi" enctype="multipart/form-data">\n);
-#   print qq(<form method="post" id="form" action="agr_simplemine.cgi" enctype="multipart/form-data">\n);
+# posting action with path now doesn't work here, and still don't know if fuller path will mess with agr reverse proxy.  2023 09 14
+  print qq(<form method="post" id="form" action="agr_simplemine.cgi" enctype="multipart/form-data">\n);
   my %species;
 #   $species{'MIX'} = 'Any species';	# added at the end below instead of using a tied hash
   $species{'WB'} = 'Caenorhabditis elegans';
