@@ -101,6 +101,8 @@
 # even though it looks like it an unmatched name that wasn't selected from the ontology dropdown.
 # It seems more trouble than it's worth to clean up the form to remove the field and cleanup the javascript to remove the termid
 # field dependencies.  2021 09 17
+#
+# app_person is a multivalue field, add " around it.  2023 09 14
 
 
 
@@ -2087,7 +2089,7 @@ sub writePgOaAndEmail {		# tacking on email here since need pgids from pg before
     my $obsphenotyperemarkValue   = $fields{'obsphenotyperemark'}{inputvalue}{$i};
     my $obsphenotypepersonalValue = $fields{'obsphenotypepersonal'}{inputvalue}{$i};
     my $unregpaper = $unregpaperOrig; my $wbpaper = $wbpaperOrig; my $paperHist = $paperHistOrig; my $personEvi = ''; 
-    if ($obsphenotypepersonalValue) { $unregpaper = ''; $wbpaper = ''; $paperHist = ''; $personEvi = $person; }
+    if ($obsphenotypepersonalValue) { $unregpaper = ''; $wbpaper = ''; $paperHist = ''; $personEvi = '"' . $person . '"'; }
     if ($obsphenotypetermValue) {
       my $singlemultiFlag = ''; if ($fields{'pertsinglemulti'}{inputvalue}{1}) { $singlemultiFlag = $fields{'pertsinglemulti'}{inputvalue}{1}; }
       if ($singlemultiFlag eq 'pertsingle') {
@@ -2155,7 +2157,7 @@ sub writePgOaAndEmail {		# tacking on email here since need pgids from pg before
     my $notphenotyperemarkValue   = $fields{'notphenotyperemark'}{inputvalue}{$i};
     my $notphenotypepersonalValue = $fields{'notphenotypepersonal'}{inputvalue}{$i};
     my $unregpaper = $unregpaperOrig; my $wbpaper = $wbpaperOrig; my $paperHist = $paperHistOrig; my $personEvi = ''; 
-    if ($notphenotypepersonalValue) { $unregpaper = ''; $wbpaper = ''; $paperHist = ''; $personEvi = $person; }
+    if ($notphenotypepersonalValue) { $unregpaper = ''; $wbpaper = ''; $paperHist = ''; $personEvi = '"' . $person . '"'; }
     if ($notphenotypetermValue) {
       my $singlemultiFlag = ''; if ($fields{'pertsinglemulti'}{inputvalue}{1}) { $singlemultiFlag = $fields{'pertsinglemulti'}{inputvalue}{1}; }
       if ($singlemultiFlag eq 'pertsingle') {
@@ -2227,7 +2229,7 @@ sub writePgOaAndEmail {		# tacking on email here since need pgids from pg before
     my $obssuggestedremarkValue   = $fields{'obssuggestedremark'}{inputvalue}{$i};
     my $obssuggestedpersonalValue = $fields{'obssuggestedpersonal'}{inputvalue}{$i};
     my $unregpaper = $unregpaperOrig; my $wbpaper = $wbpaperOrig; my $paperHist = $paperHistOrig; my $personEvi = ''; 
-    if ($obssuggestedpersonalValue) { $unregpaper = ''; $wbpaper = ''; $paperHist = ''; $personEvi = $person; }
+    if ($obssuggestedpersonalValue) { $unregpaper = ''; $wbpaper = ''; $paperHist = ''; $personEvi = '"' . $person . '"'; }
     if ($obssuggestedtermName || $obssuggesteddefValue || $obssuggestedremarkValue) {
       my $singlemultiFlag = ''; if ($fields{'pertsinglemulti'}{inputvalue}{1}) { $singlemultiFlag = $fields{'pertsinglemulti'}{inputvalue}{1}; }
       if ($singlemultiFlag eq 'pertsingle') {
@@ -2299,7 +2301,7 @@ sub writePgOaAndEmail {		# tacking on email here since need pgids from pg before
     my $notsuggestedremarkValue   = $fields{'notsuggestedremark'}{inputvalue}{$i};
     my $notsuggestedpersonalValue = $fields{'notsuggestedpersonal'}{inputvalue}{$i};
     my $unregpaper = $unregpaperOrig; my $wbpaper = $wbpaperOrig; my $paperHist = $paperHistOrig; my $personEvi = ''; 
-    if ($notsuggestedpersonalValue) { $unregpaper = ''; $wbpaper = ''; $paperHist = ''; $personEvi = $person; }
+    if ($notsuggestedpersonalValue) { $unregpaper = ''; $wbpaper = ''; $paperHist = ''; $personEvi = '"' . $person . '"'; } 
     if ($notsuggestedtermName || $notsuggesteddefValue || $notsuggestedremarkValue) {
       my $singlemultiFlag = ''; if ($fields{'pertsinglemulti'}{inputvalue}{1}) { $singlemultiFlag = $fields{'pertsinglemulti'}{inputvalue}{1}; }
       if ($singlemultiFlag eq 'pertsingle') {
