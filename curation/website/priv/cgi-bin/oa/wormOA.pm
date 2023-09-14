@@ -5718,8 +5718,9 @@ sub getAnyWBPaperTermInfo {
       my $wb_link = "http://wormbase.org/db/misc/paper?name=WBPaper$joinkey;class=Paper";
       $to_print .= "title: <a target=\"new\" href=\"$wb_link\">$title</a><br />\n"; }
   foreach my $pdf (sort keys %{ $pdfs{$joinkey} }) {
-    ($pdf) = $pdf =~ m/\/([^\/]*)$/; my $pdf_link = '/~acedb/daniel/' . $pdf;
-    $to_print .= "pdf: <a target=\"new\" href=\"$pdf_link\">$pdf</a><br />\n"; }
+#     ($pdf) = $pdf =~ m/\/([^\/]*)$/; my $pdf_link = '/~acedb/daniel/' . $pdf;
+#     $to_print .= "pdf: <a target=\"new\" href=\"$pdf_link\">$pdf</a><br />\n"; }
+    $to_print .= "old pdf: $pdf<br />\n"; }
   foreach my $syn (sort keys %{ $ids{$joinkey} }) {
     if ($syn =~ m/^pmid(\d+)/) { my $url = 'http://www.ncbi.nlm.nih.gov/pubmed/' . $1; $syn =~ s/pmid/PMID:/g; $syn = qq(<a href="$url" target="new">$syn</a>); }
       elsif ($syn =~ m/^doi(.*)/) { my $url = 'http://dx.doi.org/' . $1; $syn = qq(<a href="$url" target="new">$syn</a>); }
