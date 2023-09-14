@@ -6,6 +6,9 @@
 
 # See  oa_old_commented_out_code/  for versions change history and commented-out code.
 
+# new database on aws has some different encoding or something, and passes through 
+# so have to strip them out before passing for json conversion.  2023 09 14
+
 
 
 use strict;
@@ -576,6 +579,7 @@ sub jsonFieldQuery {					# json query to make it easier to append values (instea
     push @jsonRows, qq({ $dataRow });
   } # foreach my $joinkey (sort keys %hash)
   my $jsonRows = join",\n", @jsonRows;
+  $jsonRows =~ s///g;
   print qq([\n$jsonRows\n]\n);
 # the following code has extra commas after the final entry in a set, which javascript can parse but perl cannot.  2014 03 28
 #   print "[\n";
