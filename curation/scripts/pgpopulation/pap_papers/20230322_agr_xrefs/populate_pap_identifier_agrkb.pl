@@ -169,7 +169,7 @@ sub populateFromAbcXrefs {
   foreach my $pgcommand (@pgcommands) {
     print qq($pgcommand\n);
   # UNCOMMENT TO POPULATE
-  # $dbh->do($pgcommand);
+    $dbh->do($pgcommand);
   } # foreach my $pgcommand (@pgcommands)
 
 } # sub populateFromAbcXrefs
