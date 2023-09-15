@@ -5,13 +5,13 @@ ARG CALTECH_CURATION_FILES_INTERNAL_PATH=/usr/caltech_curation_files
 ARG DEBIAN_FRONTEND=noninteractive
 ARG AWS_ACCESS_KEY_ID=""
 ARG AWS_SECRET_ACCESS_KEY=""
-RUN export DEBIAN_FRONTEND=noninteractive && apt-get update && apt-get install -q -y apache2 vim openssh-server makepasswd zsh sendmail cron git libglib2.0-dev libgtk2.0-dev libreadline-dev build-essential flex-old bison libxmu-dev libcurl4-openssl-dev xauth default-jdk postgresql-client debconf locales rsync jq restic mlocate acl nano emacs-nox csh tmux ncftp
+RUN export DEBIAN_FRONTEND=noninteractive && apt-get update && apt-get install -q -y apache2 vim openssh-server makepasswd zsh cron git libglib2.0-dev libgtk2.0-dev libreadline-dev build-essential flex-old bison libxmu-dev libcurl4-openssl-dev xauth default-jdk postgresql-client debconf locales rsync jq restic mlocate acl nano emacs-nox csh tmux ncftp
 ENV TZ="America/Los_Angeles"
 RUN mkdir -p ${CALTECH_CURATION_FILES_INTERNAL_PATH}
 RUN chmod -R 777 ${CALTECH_CURATION_FILES_INTERNAL_PATH}
 RUN useradd -rm -d ${CALTECH_CURATION_FILES_INTERNAL_PATH} -s /bin/bash -p $(echo "${SSH_ACEDB_PASSWORD}" | makepasswd --crypt-md5 --clearfrom - | awk '{print $2}') acedb
 RUN useradd -rm -d ${CALTECH_CURATION_FILES_INTERNAL_PATH}/citace -s /bin/bash -p $(echo "${SSH_CITACE_PASSWORD}" | makepasswd --crypt-md5 --clearfrom - | awk '{print $2}') citace
-RUN cpanm install --force DBI Bundle::CPAN Mail::Mailer MIME::Lite Tie::IxHash JSON JSON::XS LWP::Protocol::https LWP Math::SigFigs Email::Send::Gmail Text::CSV_XS Dotenv CGI DBD::Pg Mail::Sendmail Digest::MD5
+RUN cpanm install --force DBI Bundle::CPAN Mail::Mailer MIME::Lite Tie::IxHash JSON JSON::XS LWP::Protocol::https LWP Math::SigFigs Email::Send::Gmail Text::CSV_XS Dotenv CGI DBD::Pg Mail::Sendmail Digest::MD5 Email::Simple Email::Sender Net::SMTP::SSL
 RUN wget https://cpan.metacpan.org/authors/id/L/LD/LDACHARY/Text-Unaccent-1.08.tar.gz && tar xvf Text-Unaccent-1.08.tar.gz && cd Text-Unaccent-1.08 && sed -i 's/int utf16_length = 0;/size_t utf16_length = 0;/;s/int utf16_unaccented_length = 0;/size_t utf16_unaccented_length = 0;/' unac.c && sed -i 's/static int buffer_length;/static size_t buffer_length;/' Unaccent.xs && perl Makefile.PL && make && make test && make install && cd .. && rm -rf Text-Unaccent-1.08*
 RUN a2enmod headers
 RUN a2enmod rewrite

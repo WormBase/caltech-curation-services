@@ -46,10 +46,6 @@ service apache2 start
 service ssh start
 chmod -R 777 ${CALTECH_CURATION_FILES_INTERNAL_PATH}
 
-# set complete host name and configure sendmail
-echo "$(ip -4 -br address | awk '{if (NR!=1) print $3}' | cut -d '/' -f1) ${HOSTNAME} ${HOST_NAME}" >> /etc/hosts
-yes | sendmailconfig
-
 # set up citace user home dir
 mkdir -p "${CALTECH_CURATION_FILES_INTERNAL_PATH}/citace"
 if [[ ! -f /home/citace ]]
@@ -57,9 +53,12 @@ then
   ln -sf "${CALTECH_CURATION_FILES_INTERNAL_PATH}/citace" /home/citace
 fi
 
-declare -p | grep -Ev 'BASHOPTS|BASH_VERSINFO|EUID|PPID|SHELLOPTS|UID' > /container.env
-chmod 0644 /etc/cron.d/curation_crontab
-crontab /etc/cron.d/curation_crontab
-cron
+if [[ "${ENV_STATE}" == "prod" ]]
+then
+  declare -p | grep -Ev 'BASHOPTS|BASH_VERSINFO|EUID|PPID|SHELLOPTS|UID' > /container.env
+  chmod 0644 /etc/cron.d/curation_crontab
+  crontab /etc/cron.d/curation_crontab
+  cron
+fi
 
 tail -f /dev/null
