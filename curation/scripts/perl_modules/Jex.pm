@@ -4,7 +4,12 @@ require Exporter;
 use LWP::Simple;
 use Mail::Mailer;
 
+use Email::Simple;
+use Email::Sender::Simple qw(sendmail);
+use Net::SMTP::SSL;
+
 use Dotenv -load => '/usr/lib/.env';
+
 
 our @ISA	= qw(Exporter);
 our @EXPORT	= qw(untaint filterForPg getDate getHeader printHeader printFooter getPgDate cshlNew caltechOld getHtmlSelectVars getHtmlVar getHtmlVarFree mailer getSimpleSecDate getSimpleDate filterToPrintHtml getOboDate );
@@ -282,7 +287,41 @@ sub getHtmlVarFree {            # get variables from html form and do not untain
   } # else # if ($query->param("$var"))
 } # sub getHtmlVarFree
 
-sub mailer {            	# send non-attachment mail
+sub mailer {                    # send non-attachment mail
+  my ($user, $email, $subject, $body) = @_;
+  $email =~ s/\s+//g;
+  my @recipients = split/,/, $email;
+  my $email_object = Email::Simple->create(
+      header => [
+          From    => $ENV{MAILER_USERNAME},
+          To      => join(', ', @recipients),
+#           To      => $email,				# if one email
+#           Cc      => join(', ', @cc_recipients),	# if cc values
+          Subject => $subject,
+      ],
+      body => $body,
+  );
+  my $smtp = Net::SMTP::SSL->new(
+    'smtp.gmail.com',                       # Gmail SMTP server address
+    Port => 465,                            # Gmail SMTP SSL port
+#     Debug => 1,                             # Enable debugging if needed
+  ) or die "Could not connect to Gmail SMTP server";
+
+  $smtp->auth($ENV{MAILER_USERNAME}, $ENV{MAILER_PASSWORD});
+  $smtp->mail($ENV{MAILER_USERNAME});
+  # $smtp->to(@recipients);                     # might be an alternate way to send
+  $smtp->recipient(@recipients);
+  # $smtp->cc(@cc_recipients);                  # don't send cc here
+  $smtp->data();
+  $smtp->datasend($email_object->as_string);
+  $smtp->dataend();
+  $smtp->quit;
+
+  # sample use
+  # if ( $send_email) { &mailer($user, $email, $subject, $body); }
+} # sub mailer
+
+sub old_tazendra_mailer {            	# send non-attachment mail
   my ($user, $email, $subject, $body) = @_;
   my $command = 'sendmail';
   my $mailer = Mail::Mailer->new($command) ;
