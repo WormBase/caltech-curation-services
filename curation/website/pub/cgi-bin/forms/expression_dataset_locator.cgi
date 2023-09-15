@@ -228,7 +228,8 @@ sub processFile {
     chomp $line;
     $count++;
     my ($dataid, $dataname, $paper, $method, $species, $tissue, $topics, $title, $url) = split/\t/, $line;
-    $line =~ s/$url/<a href="$url">$url<\/a>/;
+    if ($url) {
+      $line =~ s/$url/<a href="$url">$url<\/a>/; }
     $hash{line}{$count} = $line;
     $hash{method}{$method}{$count}++;
     $hash{species}{$species}{$count}++;
