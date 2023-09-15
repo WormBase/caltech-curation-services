@@ -57,9 +57,12 @@ then
   ln -sf "${CALTECH_CURATION_FILES_INTERNAL_PATH}/citace" /home/citace
 fi
 
-declare -p | grep -Ev 'BASHOPTS|BASH_VERSINFO|EUID|PPID|SHELLOPTS|UID' > /container.env
-chmod 0644 /etc/cron.d/curation_crontab
-crontab /etc/cron.d/curation_crontab
-cron
+if [[ "${ENV_STATE}" == "prod" ]]
+then
+  declare -p | grep -Ev 'BASHOPTS|BASH_VERSINFO|EUID|PPID|SHELLOPTS|UID' > /container.env
+  chmod 0644 /etc/cron.d/curation_crontab
+  crontab /etc/cron.d/curation_crontab
+  cron
+fi
 
 tail -f /dev/null

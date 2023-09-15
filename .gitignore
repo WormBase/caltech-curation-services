@@ -2,3 +2,4 @@
 grafana/grafana.ini
 curation_forms/cgi_files/.env
 
+.env.local
