@@ -11,7 +11,7 @@ RUN mkdir -p ${CALTECH_CURATION_FILES_INTERNAL_PATH}
 RUN chmod -R 777 ${CALTECH_CURATION_FILES_INTERNAL_PATH}
 RUN useradd -rm -d ${CALTECH_CURATION_FILES_INTERNAL_PATH} -s /bin/bash -p $(echo "${SSH_ACEDB_PASSWORD}" | makepasswd --crypt-md5 --clearfrom - | awk '{print $2}') acedb
 RUN useradd -rm -d ${CALTECH_CURATION_FILES_INTERNAL_PATH}/citace -s /bin/bash -p $(echo "${SSH_CITACE_PASSWORD}" | makepasswd --crypt-md5 --clearfrom - | awk '{print $2}') citace
-RUN cpanm install --force DBI Bundle::CPAN Mail::Mailer MIME::Lite Tie::IxHash JSON JSON::XS LWP::Protocol::https LWP Math::SigFigs Email::Send::Gmail Text::CSV_XS Dotenv CGI DBD::Pg Mail::Sendmail Digest::MD5 Email::Sender Net::SMTP::SSL
+RUN cpanm install --force DBI Bundle::CPAN Mail::Mailer MIME::Lite Tie::IxHash JSON JSON::XS LWP::Protocol::https LWP Math::SigFigs Email::Send::Gmail Text::CSV_XS Dotenv CGI DBD::Pg Mail::Sendmail Digest::MD5 Email::Simple Email::Sender Net::SMTP::SSL
 RUN wget https://cpan.metacpan.org/authors/id/L/LD/LDACHARY/Text-Unaccent-1.08.tar.gz && tar xvf Text-Unaccent-1.08.tar.gz && cd Text-Unaccent-1.08 && sed -i 's/int utf16_length = 0;/size_t utf16_length = 0;/;s/int utf16_unaccented_length = 0;/size_t utf16_unaccented_length = 0;/' unac.c && sed -i 's/static int buffer_length;/static size_t buffer_length;/' Unaccent.xs && perl Makefile.PL && make && make test && make install && cd .. && rm -rf Text-Unaccent-1.08*
 RUN a2enmod headers
 RUN a2enmod rewrite
