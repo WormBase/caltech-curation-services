@@ -2970,7 +2970,7 @@ sub mailSendmail {
   $smtp->datasend("To: <$email> \n");
   $smtp->datasend("cc: <$cc> \n");
   $smtp->datasend("Subject: $subject\n");
-  $smtp->datasend("Content-Type: text/html; charset=UTF-8 \n\n");
+  $smtp->datasend("Content-Type: text/html; charset=iso-8859-1 \n\n");
   $smtp->datasend($body);
   $smtp->dataend();
   $smtp->quit;
