@@ -982,7 +982,7 @@ sub submit {
           my $email = 'genenames@wormbase.org, draciti@caltech.edu, daniela@wormbase.org';
 #           my $email = 'genenames@wormbase.org';
 #           my $email = 'azurebrd@tazendra.caltech.edu';
-#           my $email = 'closertothewake@gmail.com';
+#           my $email = 'closertothewake@gmail.com, azurebrd@tazendra.caltech.edu';
           $email   .= ", $fields{email}{inputvalue}{1}";
           my $subject = 'Allele-Sequence confirmation';		# subject of mail
           my $body = $messageToUser;					# message to user shown on form
@@ -1264,6 +1264,34 @@ sub getIp {
 # } # sub getUserByIp
 
 sub mailSendmail {
+  my ($user, $email, $subject, $body) = @_;
+  $email =~ s/\s+//g;
+  my @recipients = split/,/, $email;
+#   $cc =~ s/\s+//g;
+#   my @cc_recipients = split/,/, $cc;
+  my $smtp = Net::SMTP::SSL->new(
+    'smtp.gmail.com',                       # Gmail SMTP server address
+    Port => 465,                            # Gmail SMTP SSL port
+    Debug => 1,                             # Enable debugging if needed
+  ) or die "Could not connect to Gmail SMTP server";
+
+  $smtp->auth($ENV{MAILER_USERNAME}, $ENV{MAILER_PASSWORD});
+  $smtp->mail($ENV{MAILER_USERNAME});
+  # $smtp->to(@recipients);                     # might be an alternate way to send
+  $smtp->recipient(@recipients);
+#   $smtp->cc(@cc_recipients);                    # don't send cc
+  $smtp->data();
+  $smtp->datasend("From: <$ENV{MAILER_USERNAME}> \n");
+  $smtp->datasend("To: <$email> \n");
+#   $smtp->datasend("cc: <$cc> \n");
+  $smtp->datasend("Subject: $subject\n");
+  $smtp->datasend("Content-Type: text/html; charset=iso-8859-1 \n\n");
+  $smtp->datasend($body);
+  $smtp->dataend();
+  $smtp->quit;
+} # sub mailSendmail
+
+sub OLDmailSendmail {
   my ($user, $email, $subject, $body) = @_;
   my %mail;
   $mail{from}           = $user;
