@@ -15,6 +15,8 @@
 # add a banner div labeling as development site to front page and submit page
 # use a json perl hash and JSON::encode_json(\%json) to escape characters to pass to names service
 # 2020 06 11
+#
+# ENV_STATE prod now connects to prod nameserver instead of test, as we're almost ready to go live.  2023 09 28
 
 
 use strict;
@@ -95,7 +97,8 @@ sub submit {
   print qq(</FORM>\n);
 
   my $ns_base_url = 'https://test-names.wormbase.org/';
-  if ($host =~ m/tazendra/) { $ns_base_url = 'https://names.wormbase.org/'; }
+#   if ($host =~ m/tazendra/) { $ns_base_url = 'https://names.wormbase.org/'; }
+  if ($ENV{ENV_STATE} eq 'prod') { $ns_base_url = 'https://names.wormbase.org/'; }
 
 #   my $ns_url = 'https://names.wormbase.org/api/entity/' . $datatype . '/' . $objectname;
   my $ns_url = $ns_base_url . 'api/entity/' . $datatype . '/';
