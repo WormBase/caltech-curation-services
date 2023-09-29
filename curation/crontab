@@ -9,51 +9,49 @@ BASH_ENV=/container.env
 
 # # 0 2 * * * python3 /script.pl > /var/log/script.log 2>&1
 
-# Uncomment these when live
-
 # postgres section
-# 0 2 * * tue,wed,thu,fri,sat /usr/lib/scripts/cronjobs/pgdumps/dump_pg.pl
-# 0 3 * * tue,wed,thu,fri,sat /usr/lib/scripts/pgpopulation/two_people/two_lineage/update_twos_in_two_lineage.pl
-# 0 4 * * * /usr/lib/scripts/pgpopulation/cur_curation/cur_nncdata/populate_nnc_result.pl
-# 0 4 * * * /usr/lib/scripts/pgpopulation/cur_curation/cur_strdata/populate_str_result.pl
-# 0 20 * * * /usr/lib/scripts/pgpopulation/obo_oa_ontologies/update_obo_oa_ontologies.pl
-# 0 1 * * * /usr/lib/scripts/pgpopulation/pap_papers/pmid_downloads/get_new_elegans_xml.pl
+0 2 * * tue,wed,thu,fri,sat /usr/lib/scripts/cronjobs/pgdumps/dump_pg.pl
+0 3 * * tue,wed,thu,fri,sat /usr/lib/scripts/pgpopulation/two_people/two_lineage/update_twos_in_two_lineage.pl
+0 4 * * * /usr/lib/scripts/pgpopulation/cur_curation/cur_nncdata/populate_nnc_result.pl
+0 4 * * * /usr/lib/scripts/pgpopulation/cur_curation/cur_strdata/populate_str_result.pl
+0 20 * * * /usr/lib/scripts/pgpopulation/obo_oa_ontologies/update_obo_oa_ontologies.pl
+0 1 * * * /usr/lib/scripts/pgpopulation/pap_papers/pmid_downloads/get_new_elegans_xml.pl
 
 # azurebrd section
-# 0 4 * * * /usr/lib/scripts/cronjobs/update_wormbase_header.pl
-# 0 5 * * sat /usr/lib/scripts/cronjobs/get_worm_lineage.pl
-# 0 5 1 * * /usr/lib/scripts/cronjobs/curation_stats/get_daily_curation_stats.pl
+0 4 * * * /usr/lib/scripts/cronjobs/update_wormbase_header.pl
+0 5 * * sat /usr/lib/scripts/cronjobs/get_worm_lineage.pl
+0 5 1 * * /usr/lib/scripts/cronjobs/curation_stats/get_daily_curation_stats.pl
 
 
 # acedb section
 
 # cecilia
-# 0 2 * * thu /usr/caltech_curation_files/cecilia/citace_upload/wrapper.pl
-# 0 4 * * * /usr/lib/scripts/cronjobs/author_person_possible/get_author_person_possible.pl
-#
+0 2 * * thu /usr/caltech_curation_files/cecilia/citace_upload/wrapper.pl
+0 4 * * * /usr/lib/scripts/cronjobs/author_person_possible/get_author_person_possible.pl
+
 # chris
-# 0 4 * * * /usr/lib/scripts/pgpopulation/pro_process/cronjobs/populate_pro_paperprimarystatus.pl
-# 0 4 * * * /usr/lib/scripts/pgpopulation/interaction/assigning_interaction_ids/assign_interaction_ids.pl
-#
+0 4 * * * /usr/lib/scripts/pgpopulation/pro_process/cronjobs/populate_pro_paperprimarystatus.pl
+0 4 * * * /usr/lib/scripts/pgpopulation/interaction/assigning_interaction_ids/assign_interaction_ids.pl
+
 # daniela
-# 0 2 * * * /usr/lib/scripts/pgpopulation/pic_picture/picture_source/populate_obo_data_pic_picturesource.pl
-# 0 4 * * * /usr/lib/scripts/pgpopulation/exp_exprpattern/cronjobs/transfer_exp_cns_trp/wrapper.pl
-#
+0 2 * * * /usr/lib/scripts/pgpopulation/pic_picture/picture_source/populate_obo_data_pic_picturesource.pl
+0 4 * * * /usr/lib/scripts/pgpopulation/exp_exprpattern/cronjobs/transfer_exp_cns_trp/wrapper.pl
+
 # gary
-# 0 3 * * * /usr/lib/scripts/get_stuff/for_gary/20140908_phn_suggested/phn_suggested_oa.pl
-#
+0 3 * * * /usr/lib/scripts/get_stuff/for_gary/20140908_phn_suggested/phn_suggested_oa.pl
+
 # karen
-# 0 4 * * * /usr/lib/scripts/pgpopulation/transgene/20121004_assign_transgene_IDs/assign_transgene_IDs.pl
-# # 0 4 * * sun /usr/lib/scripts/citace_upload/mop_molecule/dump_molecule_ace.pl
-# # 0 4 * * sun /usr/lib/scripts/citace_upload/transgene/use_package.pl
-# # 0 4 * * sun /usr/lib/scripts/citace_upload/allele_phenotype/use_package.pl
-# # 0 4 * * sun /usr/lib/scripts/citace_upload/process/use_process_package.pl
-# # 0 4 * * sun /usr/lib/scripts/citace_upload/process/use_process_curation_package.pl
-# # 0 4 * * sun /usr/lib/scripts/citace_upload/alle_paper_object/get_paper_object.pl
-#
+0 4 * * * /usr/lib/scripts/pgpopulation/transgene/20121004_assign_transgene_IDs/assign_transgene_IDs.pl
+# 0 4 * * sun /usr/lib/scripts/citace_upload/mop_molecule/dump_molecule_ace.pl
+# 0 4 * * sun /usr/lib/scripts/citace_upload/transgene/use_package.pl
+# 0 4 * * sun /usr/lib/scripts/citace_upload/allele_phenotype/use_package.pl
+# 0 4 * * sun /usr/lib/scripts/citace_upload/process/use_process_package.pl
+# 0 4 * * sun /usr/lib/scripts/citace_upload/process/use_process_curation_package.pl
+# 0 4 * * sun /usr/lib/scripts/citace_upload/alle_paper_object/get_paper_object.pl
+
 # kimberly
-# 0 2 * * tue,wed,thu,fri,sat /usr/lib/scripts/citace_upload/papers/wrapper.pl
-# 0 5 * * tue,wed,thu,fri,sat /usr/lib/scripts/agr_upload/pap_papers/dump_agr_literature.pl
-#
-# wen
-# 0 1 1 * * /usr/lib/scripts/cronjobs/check_apache_simplemine.pl
+0 2 * * tue,wed,thu,fri,sat /usr/lib/scripts/citace_upload/papers/wrapper.pl
+0 5 * * tue,wed,thu,fri,sat /usr/lib/scripts/agr_upload/pap_papers/dump_agr_literature.pl
+
+wen
+0 1 1 * * /usr/lib/scripts/cronjobs/check_apache_simplemine.pl
