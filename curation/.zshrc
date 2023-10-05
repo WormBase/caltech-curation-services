@@ -55,6 +55,8 @@ alias mroe='more'
 alias h='history'
 alias gerp='grep -A10'
 
+alias psqlt='psql -h curation_db -e caltech_curation -U postgres'
+
 # PROMPT="%m-%15<..<%/-%!</home/azurebrd/www/cgi/counter.bin; can counterfile<: "
 PROMPT="dtaz-%15<..<%/-%!: "
 # RRPROMPT="(%m) ugcs %B%T%b%(0?,, [exit %?])"
