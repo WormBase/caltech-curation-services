@@ -306,8 +306,11 @@ sub outputCfpData {
       next;
     }
     foreach my $joinkey (sort keys %{ $cfpData{$datatype} }) {
+      my $negated = FALSE;
+      if ($cfpData{$datatype}{$joinkey}{data}) {
+        if ($cfpData{$datatype}{$joinkey}{data} =~ m/false positive/i) { $negated = TRUE; } }
       my %object;
-      $object{'negated'}                    = FALSE;
+      $object{'negated'}                    = $negated;
       $object{'note'}                       = $cfpData{$datatype}{$joinkey}{data};
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $datatypes{$datatype};
