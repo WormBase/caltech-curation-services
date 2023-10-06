@@ -134,6 +134,18 @@ unless ($source_id) {
   &createSource($source_type, $source_method, $source_json);
 }
 
+$source_type = 'acknowledge_pipeline';
+$source_method = 'ACKnowledge';
+$source_id = &getSourceId($source_type, $source_method);
+unless ($source_id) { 
+  my %source_json = %{ dclone (\%source_default) };
+  $source_json{source_type}     = $source_type;
+  $source_json{source_method}   = $source_method;
+  $source_json{description}     = 'TBD tfp';
+  my $source_json = encode_json \%source_json;
+  &createSource($source_type, $source_method, $source_json);
+}
+
 $source_type = 'string_matching';
 $source_method = 'script_antibody_data';
 $source_id = &getSourceId($source_type, $source_method);
