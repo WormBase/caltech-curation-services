@@ -114,6 +114,8 @@ my %objsCurated;
 # &outputCurStrData();
 # &populateCfpData();
 # &outputCfpData();
+# &populateTfpData();
+# &outputTfpData();	# TODO
 # &populateAfpData();
 # &outputAfpAutData();
 # &outputAfpCurData();
@@ -221,7 +223,7 @@ sub populateAfpData {
       next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
       my $data = ''; my $negated = 0;
       if ($row[1]) { $data = $row[1]; }
-        elsif ($tfpData{$datatype}{$row[0]}) { $negated = 1; }
+        elsif ($tfpData{$datatype}{$row[0]}{data}) { $negated = 1; }
         else { next; }						# skip entry if no author data and no tfp_ data.
       # my $row = join"\t", @row;
       # print qq($datatype\tafp_$datatypesAfpCfp{$datatype}\t$row\n);
@@ -257,14 +259,16 @@ sub populateAfpContributor {
 } }
 
 sub populateTfpData {
+  return if (%tfpData);		# this called for generating tfpdata but also for afpdata, but don't need to read it twice if already has data
   foreach my $datatype (sort keys %datatypesAfpCfp) {
-    $result = $dbh->prepare( "SELECT joinkey, tfp_$datatypesAfpCfp{$datatype} FROM tfp_$datatypesAfpCfp{$datatype}" );
+    $result = $dbh->prepare( "SELECT joinkey, tfp_$datatypesAfpCfp{$datatype}, tfp_timestamp FROM tfp_$datatypesAfpCfp{$datatype}" );
     $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
     while (my @row = $result->fetchrow) {
       next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
       next unless ($row[1]);
       $row[1] =~ s/\n/ /g; $row[1] =~ s/ $//g;
-      $tfpData{$datatype}{$row[0]} = $row[1];
+      $tfpData{$datatype}{$row[0]}{data} = $row[1];
+      $tfpData{$datatype}{$row[0]}{timestamp} = $row[2];
 } } }
 
 # sub populateAfpData_CURATION_STATUS {
