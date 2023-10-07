@@ -115,7 +115,7 @@ my %objsCurated;
 # &populateCfpData();
 # &outputCfpData();
 # &populateTfpData();
-# &outputTfpData();	# TODO
+# &outputTfpData();
 # &populateAfpData();
 # &outputAfpAutData();
 # &outputAfpCurData();
@@ -270,6 +270,39 @@ sub populateTfpData {
       $tfpData{$datatype}{$row[0]}{data} = $row[1];
       $tfpData{$datatype}{$row[0]}{timestamp} = $row[2];
 } } }
+
+sub outputTfpData {
+  my $source_type = 'acknowledge_pipeline';
+  foreach my $datatype (sort keys %tfpData) {
+    unless ($datatypes{$datatype}) { 
+      print ERR qq(no topic for cur_tfpdata $datatype\n); 
+      next;
+    }
+    my $source_method = 'ACKnowledge';
+    my $source_id = &getSourceId($source_type, $source_method);
+    unless ($source_id) {
+      print qq(ERROR no source_id for $source_type and $source_method);
+      return;
+    }
+    foreach my $joinkey (sort keys %{ $tfpData{$datatype} }) {
+      my %object;
+      my $negated = FALSE;  
+      $object{'negated'}                    = $negated;
+      $object{'reference_curie'}            = $wbpToAgr{$joinkey};
+      $object{'topic'}                      = $datatypes{$datatype};
+      $object{'topic_entity_tag_source_id'} = $source_id;
+      $object{'created_by'}                 = 'default_user';
+      $object{'updated_by'}                 = 'default_user';
+      $object{'date_created'}               = $tfpData{$datatype}{$joinkey}{timestamp};
+      $object{'date_updated'}               = $tfpData{$datatype}{$joinkey}{timestamp};
+      if ($output_format eq 'json') {
+        push @output_json, \%object; }
+      else {
+        my $object_json = encode_json \%object;
+        &createTag($object_json); }
+  } }
+}
+
 
 # sub populateAfpData_CURATION_STATUS {
 #   foreach my $datatype (sort keys %chosenDatatypes) {
