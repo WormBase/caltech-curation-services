@@ -90,7 +90,8 @@ sub submit {
     return;
   }
   my $dev_site = '';
-  if ($host !~ m/tazendra/) { $dev_site = '<div style="background-color: red; text-align: center; color: white">development site</div><br/>'; }
+#   if ($host !~ m/tazendra/) { $dev_site = '<div style="background-color: red; text-align: center; color: white">development site</div><br/>'; }
+  if ($ENV{ENV_STATE} ne 'prod') { $dev_site = '<div style="background-color: red; text-align: center; color: white">development site</div><br/>'; }
   print qq($dev_site);
   print qq(<FORM METHOD="GET" ACTION="temp_objects.cgi">);
   print qq(<INPUT TYPE="submit" NAME="action" VALUE="Front Page">\n);
@@ -192,7 +193,8 @@ sub addTempObjectObo {
 
 sub printHtmlMenu {		# show main menu page
   my $dev_site = '';
-  if ($host !~ m/tazendra/) { $dev_site = '<div style="background-color: red; text-align: center; color: white">development site</div><br/>'; }
+#   if ($host !~ m/tazendra/) { $dev_site = '<div style="background-color: red; text-align: center; color: white">development site</div><br/>'; }
+  if ($ENV{ENV_STATE} ne 'prod') { $dev_site = '<div style="background-color: red; text-align: center; color: white">development site</div><br/>'; }
     print <<"    EndOfText";
 <html>
 <head>
