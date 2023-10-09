@@ -97,6 +97,7 @@ my %curData;
 my %cfpData;
 my %tfpData;
 my %afpContributor;
+my %afpLasttouched;
 my %afpAutData;
 my %afpCurData;
 my %oaData;
@@ -216,6 +217,7 @@ sub outputAfpAutData {
 sub populateAfpData {
   &populateTfpData();
   &populateAfpContributor();
+  &populateAfpLasttouched();
   foreach my $datatype (sort keys %datatypesAfpCfp) {
     $result = $dbh->prepare( "SELECT joinkey, afp_$datatypesAfpCfp{$datatype}, afp_timestamp AT TIME ZONE 'UTC', afp_curator, afp_approve, afp_cur_timestamp AT TIME ZONE 'UTC' FROM afp_$datatypesAfpCfp{$datatype}" );
     $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
@@ -257,6 +259,13 @@ sub populateAfpContributor {
     my $who = $row[1]; $who =~ s/two/WBPerson/;
     $afpContributor{$row[0]}{$who}++;
 } }
+
+sub populateAfpLasttouched {
+  $result = $dbh->prepare( "SELECT * FROM afp_lasttouched" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) {
+    next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+    $afpLasttouched{$datatype}{$row[0]} = $row[1]; } }
 
 sub populateTfpData {
   return if (%tfpData);		# this called for generating tfpdata but also for afpdata, but don't need to read it twice if already has data
