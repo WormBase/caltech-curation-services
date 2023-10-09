@@ -22,10 +22,13 @@
 # 0 5 * * sun /home/postgres/work/agr_upload/pap_papers/dump_agr_literature.pl
 # 
 # dockerized 2023 03 15
+#
+# dump after every workday at 5am, gets picked up by abc cronjob every day
+# 0 5 * * tue,wed,thu,fri,sat /usr/lib/scripts/agr_upload/pap_papers/dump_agr_literature.pl
 
 
-# dump every sunday at 5am, gets picked up by abc cronjob at 9am every sunday
-# 0 5 * * sun /usr/lib/scripts/agr_upload/pap_papers/dump_agr_literature.pl
+# dump after every workday at 5am, gets picked up by abc cronjob every day
+# 0 5 * * tue,wed,thu,fri,sat /usr/lib/scripts/agr_upload/pap_papers/dump_agr_literature.pl
 
 
 # WB_false_positive_pmids is aggregation of
