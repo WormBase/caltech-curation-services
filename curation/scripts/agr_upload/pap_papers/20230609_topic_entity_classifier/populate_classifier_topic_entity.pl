@@ -265,7 +265,7 @@ sub populateAfpLasttouched {
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
-    $afpLasttouched{$datatype}{$row[0]} = $row[1]; } }
+    $afpLasttouched{$row[0]} = $row[1]; } }
 
 sub populateTfpData {
   return if (%tfpData);		# this called for generating tfpdata but also for afpdata, but don't need to read it twice if already has data
