@@ -44,6 +44,7 @@ services:
     image: prom/prometheus
     volumes:
       - "./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml"
+      - "${PROMETHEUS_VOLUME}:/prometheus"
     depends_on:
       - postgres_prom_exporter
     networks:
