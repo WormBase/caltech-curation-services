@@ -44,7 +44,7 @@ services:
     image: prom/prometheus
     volumes:
       - "./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml"
-      - "${PROMETHEUS_VOLUME}:/prometheus"
+      - "${VOLUMES_DIR}/prometheus:/prometheus"
     depends_on:
       - postgres_prom_exporter
     networks:
@@ -59,7 +59,7 @@ services:
     ports:
       - "${GRAFANA_PORT}:3000"
     volumes:
-      - "${GRAFANA_VOLUME}:/var/lib/grafana"
+      - "${VOLUMES_DIR}/grafana:/var/lib/grafana"
       - ./grafana/grafana.ini:/etc/grafana/grafana.ini
     depends_on:
       - db
@@ -80,7 +80,7 @@ services:
       - 50000:50000
     container_name: jenkins
     volumes:
-      - /home/ubuntu/jenkins_compose/jenkins_configuration:/var/jenkins_home
+      - "${VOLUMES_DIR}/jenkins:/var/jenkins_home"
       - /var/run/docker.sock:/var/run/docker.sock
 
   curation:
@@ -126,6 +126,7 @@ services:
       - "${SRC_DIR_PATH}/curation/crontab:/etc/cron.d/curation_crontab"
       - "${SSL_CERTIFICATE_DIR}:/etc/ssl_certificate"
       - "${CALTECH_CURATION_FILES_EXTERNAL_PATH}:${CALTECH_CURATION_FILES_INTERNAL_PATH}"
+      - "${VOLUMES_DIR}:/usr/caltech_volumes"
     networks:
       - caltech-curation-network
     hostname: curation
