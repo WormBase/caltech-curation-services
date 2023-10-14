@@ -6,6 +6,7 @@
 
 restic -r ${RESTIC_REPOSITORY}/daily_backups init
 restic -r ${RESTIC_REPOSITORY}/monthly_backups init
+restic -r ${RESTIC_REPOSITORY}/volumes_backups init
 
 updatedb
 
