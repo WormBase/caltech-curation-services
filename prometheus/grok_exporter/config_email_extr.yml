@@ -1,0 +1,37 @@
+global:
+  config_version: 3
+input:
+  type: file
+  path: /grok/log/ntt_extr/email_addr/email_ext_pipeline.log
+  readall: true
+  poll_interval_seconds: 5
+imports:
+- type: grok_patterns
+  dir: ./patterns
+metrics:
+- type: counter
+  name: ntt_extr_email_addr_num_errors 
+  help: Error counter
+  match: '(.*Traceback.*)|(Segmentation fault.*)'
+  labels:
+    logfile: '{{base .logfile}}'
+- type: counter
+  name: ntt_extr_email_addr_num_processed_papers
+  help: Number of WB papers processed by the pipeline
+  match: '.*Loading paper.*'
+  labels:
+    logfile: '{{base .logfile}}'
+- type: counter
+  name: ntt_extr_email_addr_num_extracted_papers
+  help: Number of WB papers with email addresses extracted by the pipeline
+  match: '.*Extracted email address from paper.*'
+  labels:
+    logfile: '{{base .logfile}}'
+- type: counter
+  name: ntt_extr_email_addr_num_successes
+  help: Number of successful runs
+  match: 'Pipeline finished successfully'
+  labels:
+    logfile: '{{base .logfile}}'
+server:
+  port: 9144

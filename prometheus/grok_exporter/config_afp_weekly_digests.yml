@@ -1,0 +1,25 @@
+global:
+  config_version: 3
+input:
+  type: file
+  path: /grok/log/afp/afp_monthly_digest.log
+  readall: true
+  poll_interval_seconds: 5
+imports:
+- type: grok_patterns
+  dir: ./patterns
+metrics:
+- type: counter
+  name: afp_digests_num_errors 
+  help: Number of errors in the weekly email notifications to curators
+  match: '(.*Traceback.*)|(Segmentation fault.*)'
+  labels:
+    logfile: '{{base .logfile}}'
+- type: counter
+  name: afp_digests_num_successes
+  help: Number of successful runs
+  match: 'Pipeline finished successfully'
+  labels:
+    logfile: '{{base .logfile}}'
+server:
+  port: 9144

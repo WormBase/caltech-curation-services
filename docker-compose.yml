@@ -145,6 +145,71 @@ services:
       - "${CALTECH_CURATION_FILES_EXTERNAL_PATH}:${CALTECH_CURATION_FILES_INTERNAL_PATH}"
     network_mode: host
 
+  grok_exporter_email_extr:
+    container_name: grok_exporter_email_extr
+    image: grok_exporter
+    build: prometheus/grok_exporter/
+    #ports:
+    #  - "9144:9144"
+    volumes:
+      - prometheus/grok_exporter/config_email_extr.yml:/grok/config.yml
+      - /var/log/:/grok/log/
+    networks:
+      - caltech-curation-network
+    hostname: grok_exporter_email_extr
+
+  grok_exporter_afp:
+    container_name: grok_exporter_afp
+    image: grok_exporter
+    build: prometheus/grok_exporter/
+    #ports:
+    #  - "9145:9144"
+    volumes:
+      - prometheus/grok_exporter/config_afp.yml:/grok/config.yml
+      - /var/log/:/grok/log/
+    networks:
+      - caltech-curation-network
+    hostname: grok_exporter_afp
+
+  grok_exporter_afp_reminders:
+    container_name: grok_exporter_afp_reminders
+    image: grok_exporter
+    build: prometheus/grok_exporter/
+    #ports:
+    #  - "9147:9144"
+    volumes:
+      - prometheus/grok_exporter/config_afp_reminders.yml:/grok/config.yml
+      - /var/log/:/grok/log/
+    networks:
+      - caltech-curation-network
+    hostname: grok_exporter_afp_reminders
+
+  grok_exporter_afp_digests:
+    container_name: grok_exporter_afp_digests
+    image: grok_exporter
+    build: prometheus/grok_exporter/
+    #ports:
+    #  - "9148:9144"
+    volumes:
+      - prometheus/grok_exporter/config_afp_weekly_digests.yml:/grok/config.yml
+      - /var/log/:/grok/log/
+    networks:
+      - caltech-curation-network
+    hostname: grok_exporter_afp_digests
+
+  grok_exporter_vfp:
+    container_name: grok_exporter_vfp
+    image: grok_exporter
+    build: prometheus/grok_exporter/
+    #ports:
+    #  - "9146:9144"
+    volumes:
+      - prometheus/grok_exporter/config_vfp.yml:/grok/config.yml
+      - /var/log/:/grok/log/
+    networks:
+      - caltech-curation-network
+    hostname: grok_exporter_vfp
+
 networks:
   caltech-curation-network:
     name: caltech-curation-network
