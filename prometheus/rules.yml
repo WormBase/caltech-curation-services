@@ -1,0 +1,60 @@
+groups:
+- name: AllInstances
+  rules:
+  - alert: InstanceDown
+    # Condition for alerting
+    expr: up == 0
+    for: 5m
+    # Annotation - additional informational labels to store more information
+    annotations:
+      title: 'Instance {{ $labels.instance }} down'
+      description: '{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 1 minute.'
+    # Labels - additional labels to be attached to the alert
+    labels:
+      severity: 'critical'
+
+  - alert: EmailExtractionFailure
+    expr: increase(ntt_extr_email_addr_num_errors[1m]) > 0
+    for: 0m
+    annotations:
+      title: 'Email extraction pipeline failed'
+      description: 'Exceptions found in email extraction pipeline'
+    labels:
+      severity: 'critical'
+
+  - alert: AFPPipelineFailure
+    expr: increase(afp_num_errors[1m]) > 0
+    for: 0m
+    annotations:
+      title: 'AFP pipeline failed'
+      description: 'Exceptions found in AFP pipeline'
+    labels:
+      severity: 'critical'
+
+  - alert: AFPDigestsFailure
+    expr: increase(afp_digests_num_errors[1m]) > 0
+    for: 0m
+    annotations:
+      title: 'AFP digests failed'
+      description: 'Exceptions found in AFP digests'
+    labels:
+      severity: 'critical'
+
+  - alert: AFPRemindersFailure
+    expr: increase(afp_reminders_num_errors[1m]) > 0
+    for: 0m
+    annotations:
+      title: 'AFP reminder failed'
+      description: 'Exceptions found in AFP reminders'
+    labels:
+      severity: 'critical'
+
+
+  - alert: VFPFailure
+    expr: increase(vfp_num_errors[1m]) > 0
+    for: 0m
+    annotations:
+      title: 'VFP pipeline failed'
+      description: 'Exceptions found in VFP pipeline'
+    labels:
+      severity: 'critical'
