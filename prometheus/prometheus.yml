@@ -4,6 +4,9 @@ global:
   evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
   # scrape_timeout is set to the global default (10s).
 
+rule_files:
+  - "/etc/prometheus/rules.yml"
+
 # A scrape configuration containing exactly one endpoint to scrape:
 # Here it's Prometheus itself.
 scrape_configs:
@@ -19,3 +22,23 @@ scrape_configs:
   - job_name: 'postgres_exporter'
     static_configs:
     - targets: ['postgres_prom_exporter:9187' ]
+
+  - job_name: 'ntt_extr_email_addr'
+    static_configs:
+      - targets: [ 'grok_exporter_email_extr:9144' ]
+
+  - job_name: 'afp'
+    static_configs:
+      - targets: [ 'grok_exporter_afp:9144' ]
+
+  - job_name: 'vfp'
+    static_configs:
+      - targets: [ 'grok_exporter_vfp:9144' ]
+
+  - job_name: 'afp_reminders'
+    static_configs:
+      - targets: [ 'grok_exporter_afp_reminders:9144' ]
+
+  - job_name: 'afp_digests'
+    static_configs:
+      - targets: [ 'grok_exporter_afp_digests:9144' ]
