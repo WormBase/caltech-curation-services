@@ -153,7 +153,7 @@ services:
     #ports:
     #  - "9144:9144"
     volumes:
-      - prometheus/grok_exporter/config_email_extr.yml:/grok/config.yml
+      - ./prometheus/grok_exporter/config_email_extr.yml:/grok/config.yml
       - /var/log/:/grok/log/
     networks:
       - caltech-curation-network
@@ -166,7 +166,7 @@ services:
     #ports:
     #  - "9145:9144"
     volumes:
-      - prometheus/grok_exporter/config_afp.yml:/grok/config.yml
+      - ./prometheus/grok_exporter/config_afp.yml:/grok/config.yml
       - /var/log/:/grok/log/
     networks:
       - caltech-curation-network
@@ -175,11 +175,11 @@ services:
   grok_exporter_afp_reminders:
     container_name: grok_exporter_afp_reminders
     image: grok_exporter
-    build: prometheus/grok_exporter/
+    build: ./prometheus/grok_exporter/
     #ports:
     #  - "9147:9144"
     volumes:
-      - prometheus/grok_exporter/config_afp_reminders.yml:/grok/config.yml
+      - ./prometheus/grok_exporter/config_afp_reminders.yml:/grok/config.yml
       - /var/log/:/grok/log/
     networks:
       - caltech-curation-network
@@ -188,11 +188,11 @@ services:
   grok_exporter_afp_digests:
     container_name: grok_exporter_afp_digests
     image: grok_exporter
-    build: prometheus/grok_exporter/
+    build: ./prometheus/grok_exporter/
     #ports:
     #  - "9148:9144"
     volumes:
-      - prometheus/grok_exporter/config_afp_weekly_digests.yml:/grok/config.yml
+      - ./prometheus/grok_exporter/config_afp_weekly_digests.yml:/grok/config.yml
       - /var/log/:/grok/log/
     networks:
       - caltech-curation-network
@@ -201,11 +201,11 @@ services:
   grok_exporter_vfp:
     container_name: grok_exporter_vfp
     image: grok_exporter
-    build: prometheus/grok_exporter/
+    build: ./prometheus/grok_exporter/
     #ports:
     #  - "9146:9144"
     volumes:
-      - prometheus/grok_exporter/config_vfp.yml:/grok/config.yml
+      - ./prometheus/grok_exporter/config_vfp.yml:/grok/config.yml
       - /var/log/:/grok/log/
     networks:
       - caltech-curation-network
