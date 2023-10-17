@@ -5,4 +5,6 @@
 mkdir -p /grok/log/afp
 mkdir -p /grok/log/ntt_extr/email_addr
 
+touch /grok/log/ntt_extr/email_addr/email_ext_pipeline.log
+
 ./grok_exporter -config=/grok/config.yml
