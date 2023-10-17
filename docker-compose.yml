@@ -28,6 +28,7 @@ services:
     hostname: curation_db
 
   postgres_prom_exporter:
+    restart: unless-stopped
     image: wrouesnel/postgres_exporter
     environment:
       DATA_SOURCE_URI: curation_db:${PSQL_PORT}?sslmode=disable
@@ -41,6 +42,7 @@ services:
     hostname: postgres_prom_exporter
 
   prometheus:
+    restart: unless-stopped
     image: prom/prometheus
     volumes:
       - "./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml"
@@ -86,6 +88,7 @@ services:
       - /usr/bin/docker:/usr/bin/docker
 
   curation:
+    restart: unless-stopped
     build:
       context: .
       dockerfile: curation/Dockerfile
@@ -148,6 +151,7 @@ services:
     network_mode: host
 
   grok_exporter_email_extr:
+    restart: unless-stopped
     container_name: grok_exporter_email_extr
     image: grok_exporter
     build: prometheus/grok_exporter/
@@ -161,6 +165,7 @@ services:
     hostname: grok_exporter_email_extr
 
   grok_exporter_afp:
+    restart: unless-stopped
     container_name: grok_exporter_afp
     image: grok_exporter
     build: prometheus/grok_exporter/
@@ -174,6 +179,7 @@ services:
     hostname: grok_exporter_afp
 
   grok_exporter_afp_reminders:
+    restart: unless-stopped
     container_name: grok_exporter_afp_reminders
     image: grok_exporter
     build: ./prometheus/grok_exporter/
@@ -187,6 +193,7 @@ services:
     hostname: grok_exporter_afp_reminders
 
   grok_exporter_afp_digests:
+    restart: unless-stopped
     container_name: grok_exporter_afp_digests
     image: grok_exporter
     build: ./prometheus/grok_exporter/
@@ -200,6 +207,7 @@ services:
     hostname: grok_exporter_afp_digests
 
   grok_exporter_vfp:
+    restart: unless-stopped
     container_name: grok_exporter_vfp
     image: grok_exporter
     build: ./prometheus/grok_exporter/
