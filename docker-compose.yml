@@ -56,6 +56,17 @@ services:
       TZ: 'America/Los_Angeles'
     hostname: prometheus
 
+  alertmanager:
+    container_name: alert_manager
+    image: prom/alertmanager
+    #ports:
+    #  - "9093:9093"
+    volumes:
+      - ./prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    networks:
+      - caltech-curation-network
+    hostname: alertmanager
+
   grafana:
     image: grafana/grafana
     restart: unless-stopped
