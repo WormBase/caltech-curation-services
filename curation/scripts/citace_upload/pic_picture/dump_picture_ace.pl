@@ -37,6 +37,10 @@
 #
 # Note that ' are getting converted to &#39;  If we don't want that, we'd have to add a conversion back to '
 # in utf8ToHtml  2021 04 11
+#
+# Print DOI Database entry separate from Mappings.txt
+# Daniela doesn't want URL_constructor from Mappings.txt
+# Article_URL now dumps DOI, getting that from pap_identifier.  2023 10 25
 
 
 use strict;
@@ -165,6 +169,9 @@ while (my @row = $result->fetchrow) {
 foreach my $pgid (keys %{ $theHash{paper} }) { 
   foreach my $entry (@{ $theHash{paper}{$pgid} }) { my $paper = $entry; $paper =~ s/WBPaper//; $temp{$paper}++; } }
 my $paper_joinkeys = join"','", keys %temp; %temp = ();
+$result = $dbh->prepare( "SELECT * FROM pap_identifier WHERE pap_identifier ~ 'doi' AND joinkey IN ('$paper_joinkeys') ;" );
+$result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+while (my @row = $result->fetchrow) { $hash{doi}{$row[0]} = &utf8ToHtml($simpleRemapHashRef, $row[1]); }
 $result = $dbh->prepare( "SELECT * FROM pap_journal WHERE joinkey IN ('$paper_joinkeys') ;" );
 $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
 while (my @row = $result->fetchrow) { $hash{journal}{$row[0]} = &utf8ToHtml($simpleRemapHashRef, $row[1]); }
@@ -250,13 +257,18 @@ foreach my $pgid (sort {$a<=>$b} keys %{ $theHash{name} }) {
             print ERR qq($pgid has process but not permission for WBPaper$joinkey : $journal\n); } }
         if ($mappings{journame}{$journal}) {
             if ($mappings{strippedjourfull}{$journal}) {
-                if ($theHash{urlaccession}{$pgid}[0]) {		# new output line for Daniela  2011 02 22
-                    my ($urlaccession) = &filterAce($theHash{urlaccession}{$pgid}[0]);
-                    $entry .= qq(Article_URL\t"$mappings{strippedjourfull}{$journal}" "id" "$urlaccession"\n); }
-                  elsif ($urlacc{$wbpaper}) {
-                    my ($urlaccession) = &filterAce($urlacc{$wbpaper});
-                    $entry .= qq(Article_URL\t"$mappings{strippedjourfull}{$journal}" "id" "$urlaccession"\n); }
-                  else { print ERR "$pgid no urlaccession for $wbpaper\n"; }
+              if ($hash{doi}{$joinkey}) { 
+                my $doi = $hash{doi}{$joinkey};
+                $doi =~ s/^doi//;
+                $entry .= qq(Article_URL\t"DOI" "id" "$doi"\n); }
+              else { print ERR "$pgid no DOI for $wbpaper\n"; }
+#                 if ($theHash{urlaccession}{$pgid}[0]) {		# new output line for Daniela  2011 02 22	# removed 2023 10 25
+#                     my ($urlaccession) = &filterAce($theHash{urlaccession}{$pgid}[0]);
+#                     $entry .= qq(Article_URL\t"$mappings{strippedjourfull}{$journal}" "id" "$urlaccession"\n); }
+#                   elsif ($urlacc{$wbpaper}) {
+#                     my ($urlaccession) = &filterAce($urlacc{$wbpaper});
+#                     $entry .= qq(Article_URL\t"$mappings{strippedjourfull}{$journal}" "id" "$urlaccession"\n); }
+#                   else { print ERR "$pgid no urlaccession for $wbpaper\n"; }
                 $entry .= qq(Journal_URL\t"$mappings{strippedjourfull}{$journal}"\n); }
               else { print ERR "$pgid no stripped Full Journal Name for $journal\n"; }
             if ($mappings{strippedpubname}{$journal}) { $entry .= qq(Publisher_URL\t"$mappings{strippedpubname}{$journal}"\n); }
@@ -335,10 +347,16 @@ sub readMappings {
     $entry .= "Database : \"$stripped_jourfull\"\n";
     $entry .= "Name\t\"$jourfull\"\n";
     $entry .= "URL\t\"$joururl\"\n";
-    $entry .= "URL_constructor\t\"$arturl\"\n";
+#     $entry .= "URL_constructor\t\"$arturl\"\n";	# Daniela doesn't want these anymore 2023 10 25
     $entry .= "\n";
     $database_entries{$entry}++;
   } # while (my $line = <IN>)
+  my $entry = '';
+  $entry .= "Database : \"DOI\"\n";
+  $entry .= "Name\t\"DOI\"\n";
+  $entry .= "URL_constructor\t\"http:\\/\\/doi.org\\/%s\"\n";
+  $entry .= "\n";
+  $database_entries{$entry}++;
 } # sub readMappings
 
 sub readJournalHasPermission {
