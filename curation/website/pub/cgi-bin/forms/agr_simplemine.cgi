@@ -564,9 +564,20 @@ sub showIp {
 sub agrNew {
   my $title = shift;
   unless ($title) { $title = ''; }      # init title in case blank
-  my $page = get "http://tazendra.caltech.edu/~azurebrd/agr/agrheader/agr_header_footer.html";
-#  $page =~ s/href="\//href="http:\/\/www.wormbase.org\//g;
-#  $page =~ s/src="/src="http:\/\/www.wormbase.org/g;
+  my $url = $ENV{THIS_HOST} . "files/pub/agrheader/agr_header_footer.html";
+  my $version = '6.0.0';			# hardcoded default
+  my $page = get $url;
+  my $version_file = '/usr/caltech_curation_files/pub/wen/agrSimpleMine/sourceFile/version';
+  $/ = undef;
+  open (IN, "<$version_file") or warn "Cannot open : $version_file";
+  my $version_file = <IN>;
+  close (IN) or warn "Cannot close : $version_file";
+  $/ = "\n";
+  if ($version_file =~ m/Version: (.*)\n/) { $version = $1; }
+  $page =~ s/VERSION_PLACEHOLDER/$version/;
+#   my $page = get "http://tazendra.caltech.edu/~azurebrd/agr/agrheader/agr_header_footer.html";
+#   $page =~ s/href="\//href="http:\/\/www.wormbase.org\//g;
+#   $page =~ s/src="/src="http:\/\/www.wormbase.org/g;
   my ($header, $footer) = $page =~ m/^(.*?)\s+DIVIDER\s+(.*?)$/s;  # 2006 11 20    # get this from tazendra's script result.
   $header =~ s/<title>.*?<\/title>/<title>$title<\/title>/g;
   return ($header, $footer);
