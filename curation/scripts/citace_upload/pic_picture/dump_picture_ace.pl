@@ -81,11 +81,13 @@ my $date = &getSimpleDate();
 my $outfile = 'pictures.ace';
 my $outfile2 = 'files/pictures.ace.' . $date;
 my $errfile = 'pictures.err';
+my $errfile2 = 'files/pictures.err.' . $date;
 # my $outfile = 'pictures.ace.' . $date;
 # my $errfile = 'pictures.err.' . $date;
 open (OUT, ">$outfile") or die "Cannot create $outfile : $!";
 open (OU2, ">$outfile2") or die "Cannot create $outfile2 : $!";
 open (ERR, ">$errfile") or die "Cannot create $errfile : $!";
+open (ER2, ">$errfile2") or die "Cannot create $errfile2 : $!";
 
 my %pipeSplit;
 $pipeSplit{'description'}++;
@@ -201,10 +203,11 @@ my %journal_has_permission;                       # dump process (topic) only if
 foreach my $pgid (sort {$a<=>$b} keys %{ $theHash{name} }) {
   next if ($theHash{nodump}{$pgid});
   my $entry = '';
-  if ($theHash{name}{$pgid}[0] =~ m/^\s+/) { print ERR "$pgid $theHash{name}{$pgid}[0] has leading spaces\n"; }
-  if ($theHash{name}{$pgid}[0] =~ m/\s+$/) { print ERR "$pgid $theHash{name}{$pgid}[0] has trailing spaces\n"; }
+  my $err_entry = '';
+  if ($theHash{name}{$pgid}[0] =~ m/^\s+/) { $err_entry .= "$pgid $theHash{name}{$pgid}[0] has leading spaces\n"; }
+  if ($theHash{name}{$pgid}[0] =~ m/\s+$/) { $err_entry .= "$pgid $theHash{name}{$pgid}[0] has trailing spaces\n"; }
   my ($num) = $theHash{name}{$pgid}[0] =~ m/(\d+)/; $num =~ s/^0+//g; 
-  if ($num != $pgid) { print ERR "$pgid $theHash{name}{$pgid}[0] is not the same number\n"; }
+  if ($num != $pgid) { $err_entry .= "$pgid $theHash{name}{$pgid}[0] is not the same number\n"; }
   $entry .= qq(Picture : "$theHash{name}{$pgid}[0]"\n);
 
   # dump out generic simple ace tags
@@ -215,7 +218,7 @@ foreach my $pgid (sort {$a<=>$b} keys %{ $theHash{name} }) {
       if ($data) {
         my $ontology = $field;
         if ($tableToOntology{$field}) { $ontology = $tableToOntology{$field}; }
-        if ($deadObjects{$ontology}{$data}) { print ERR "$theHash{name}{$pgid}[0] has dead $field $data $deadObjects{$ontology}{$data}\n"; }
+        if ($deadObjects{$ontology}{$data}) { $err_entry .= "$theHash{name}{$pgid}[0] has dead $field $data $deadObjects{$ontology}{$data}\n"; }
           else { $entry .= qq($aceTag{$field}\t"$data"\n); } } } }
 
   # this is fairly simplifed, original had different way of separating persons
@@ -246,7 +249,7 @@ foreach my $pgid (sort {$a<=>$b} keys %{ $theHash{name} }) {
     my ($joinkey) = $wbpaper =~ m/WBPaper(\d+)/;
     if ($hash{year}{$joinkey}) { 
         $entry .= qq(Publication_year\t"$hash{year}{$joinkey}"\n); }
-      else { print ERR "$pgid no year for $wbpaper\n"; }
+      else { $err_entry .= "$pgid no year for $wbpaper\n"; }
     if ($hash{journal}{$joinkey}) {
         my $journal = $hash{journal}{$joinkey};
         if ($theHash{process}{$pgid}) {	# dump process if there's a paper with journal, then error message if the journal does not have permission.  2014 12 12
@@ -254,45 +257,50 @@ foreach my $pgid (sort {$a<=>$b} keys %{ $theHash{name} }) {
             ($data) = &filterAce($data);
             $entry .= qq(WBProcess\t"$data"\n); }
           unless ($journal_has_permission{$journal}) {	# only if journal has permission, dump process/topic objects
-            print ERR qq($pgid has process but not permission for WBPaper$joinkey : $journal\n); } }
+            $err_entry .= qq($pgid has process but not permission for WBPaper$joinkey : $journal\n); } }
         if ($mappings{journame}{$journal}) {
             if ($mappings{strippedjourfull}{$journal}) {
               if ($hash{doi}{$joinkey}) { 
                 my $doi = $hash{doi}{$joinkey};
                 $doi =~ s/^doi//;
                 $entry .= qq(Article_URL\t"DOI" "id" "$doi"\n); }
-              else { print ERR "$pgid no DOI for $wbpaper\n"; }
+              else { $err_entry .= "$pgid no DOI for $wbpaper\n"; }
 #                 if ($theHash{urlaccession}{$pgid}[0]) {		# new output line for Daniela  2011 02 22	# removed 2023 10 25
 #                     my ($urlaccession) = &filterAce($theHash{urlaccession}{$pgid}[0]);
 #                     $entry .= qq(Article_URL\t"$mappings{strippedjourfull}{$journal}" "id" "$urlaccession"\n); }
 #                   elsif ($urlacc{$wbpaper}) {
 #                     my ($urlaccession) = &filterAce($urlacc{$wbpaper});
 #                     $entry .= qq(Article_URL\t"$mappings{strippedjourfull}{$journal}" "id" "$urlaccession"\n); }
-#                   else { print ERR "$pgid no urlaccession for $wbpaper\n"; }
+#                   else { $err_entry .= "$pgid no urlaccession for $wbpaper\n"; }
                 $entry .= qq(Journal_URL\t"$mappings{strippedjourfull}{$journal}"\n); }
-              else { print ERR "$pgid no stripped Full Journal Name for $journal\n"; }
+              else { $err_entry .= "$pgid no stripped Full Journal Name for $journal\n"; }
             if ($mappings{strippedpubname}{$journal}) { $entry .= qq(Publisher_URL\t"$mappings{strippedpubname}{$journal}"\n); }
-              else { print ERR "$pgid no stripped Publisher_name journal for $journal\n"; }
+              else { $err_entry .= "$pgid no stripped Publisher_name journal for $journal\n"; }
             if ($mappings{template}{$journal}) {
 #                 my $template = $mappings{template}{$journal};
                 my $template = &utf8ToHtmlWithoutDecode($simpleRemapHashRef, $mappings{template}{$journal});	# Daniela's file does no need to decode utf-8 for some reason
                 $entry .= qq(Template\t"$template"\n); }
-              else { print ERR "$pgid no Template Text journal for $journal\n"; }
+              else { $err_entry .= "$pgid no Template Text journal for $journal\n"; }
           }
-          else { print ERR "$pgid no mapping file entry for $journal in paper $wbpaper\n"; }
+          else { $err_entry .= "$pgid no mapping file entry for $journal in paper $wbpaper\n"; }
       }
-#       else { print ERR "$pgid no journal for $wbpaper\n"; }
+#       else { $err_entry .= "$pgid no journal for $wbpaper\n"; }
   }
   $entry .= "\n";
   print OUT $entry;
   print OU2 $entry;
+  print ERR $err_entry;
+  print ER2 $err_entry;
 } # foreach my $pgid (sort {$a<=>$b} keys %{ $theHash{name} })
 
-foreach my $entry (sort keys %database_entries) { print OUT $entry; }
+foreach my $entry (sort keys %database_entries) { 
+  print OU2 $entry;
+  print OUT $entry; }
 
 close (OUT) or die "Cannot close $outfile : $!";
-close (OU2) or die "Cannot close $outfile : $!";
+close (OU2) or die "Cannot close $outfile2 : $!";
 close (ERR) or die "Cannot close $errfile : $!";
+close (ER2) or die "Cannot close $errfile2 : $!";
 
 
 
