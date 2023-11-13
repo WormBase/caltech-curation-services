@@ -22,6 +22,15 @@ groups:
     labels:
       severity: 'critical'
 
+  - alert: ExpressionClusterFailure
+    expr: increase(ntt_extr_expr_cluster_num_errors[1m]) > 0
+    for: 0m
+    annotations:
+      title: 'Expression cluster pipeline failed'
+      description: 'Exceptions found in expression cluster pipeline'
+    labels:
+      severity: 'critical'
+
   - alert: AFPPipelineFailure
     expr: increase(afp_num_errors[1m]) > 0
     for: 0m

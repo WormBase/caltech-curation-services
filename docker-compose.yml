@@ -176,6 +176,20 @@ services:
       - caltech-curation-network
     hostname: grok_exporter_email_extr
 
+  grok_exporter_expression_cluster:
+    restart: unless-stopped
+    container_name: grok_exporter_expression_cluster
+    image: grok_exporter
+    build: prometheus/grok_exporter/
+    #ports:
+    #  - "9144:9144"
+    volumes:
+      - ./prometheus/grok_exporter/config_expr_cluster.yml:/grok/config.yml
+      - /var/log/:/grok/log/
+    networks:
+      - caltech-curation-network
+    hostname: grok_exporter_email_extr
+
   grok_exporter_afp:
     restart: unless-stopped
     container_name: grok_exporter_afp

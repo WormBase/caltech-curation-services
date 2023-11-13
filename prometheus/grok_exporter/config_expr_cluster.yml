@@ -1,0 +1,37 @@
+global:
+  config_version: 3
+input:
+  type: file
+  path: /grok/log/ntt_extr/expression_cluster/expr-cluster_ext_pipeline.log
+  readall: true
+  poll_interval_seconds: 5
+imports:
+- type: grok_patterns
+  dir: ./patterns
+metrics:
+- type: counter
+  name: ntt_extr_expr_cluster_num_errors
+  help: Error counter
+  match: '(.*Traceback.*)|(Segmentation fault.*)'
+  labels:
+    logfile: '{{base .logfile}}'
+- type: counter
+  name: ntt_extr_expr_cluster_num_processed_papers
+  help: Number of WB papers processed by the pipeline
+  match: '.*Extracting Expression Cluster info from paper.*'
+  labels:
+    logfile: '{{base .logfile}}'
+- type: counter
+  name: ntt_extr_expr_cluster_num_runs_with_data
+  help: Number of runs with extracted data
+  match: '.*Found one or more papers matching search criteria.*'
+  labels:
+    logfile: '{{base .logfile}}'
+- type: counter
+  name: ntt_extr_expr_cluster_num_successes
+  help: Number of successful runs
+  match: 'Finished'
+  labels:
+    logfile: '{{base .logfile}}'
+server:
+  port: 9144

@@ -34,6 +34,10 @@ scrape_configs:
     static_configs:
       - targets: [ 'grok_exporter_email_extr:9144' ]
 
+  - job_name: 'ntt_extr_expr_cluster'
+    static_configs:
+      - targets: [ 'grok_exporter_expr_cluster:9144' ]
+
   - job_name: 'afp'
     static_configs:
       - targets: [ 'grok_exporter_afp:9144' ]
