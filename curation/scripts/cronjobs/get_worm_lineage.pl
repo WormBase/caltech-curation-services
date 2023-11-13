@@ -74,6 +74,7 @@ my %twos;
         $relationship{$parent}{$child}{$relationship}++; $edges{$relationship}{$parent}{$child}++;
         $nodes{$parent}++; $nodes{$child}++;
       }
+
       my %scaling; foreach my $node (sort keys %nodes) { $scaling{$node}++; }
       my %hasChild;
 #       my %edgeClone = clone( %relationship );
@@ -83,6 +84,8 @@ my %twos;
 #   print qq(OUTER FE $one\n);
             foreach my $two (sort keys %{ $edges{$relationship}{$one} }) {
 #   print qq(MIDDLE FE $two\n);
+              if ($one eq $two) {
+                delete $edges{$relationship}{$one}{$two}; }
 # if ($one eq 'two625') { print qq(SCALING ONE $one $scaling{$one}\n); }
 # if ($two eq 'two625') { print qq(SCALING TWO $two $scaling{$two}\n); }
               unless (scalar keys %{ $edges{$relationship}{$two}} > 0) {
