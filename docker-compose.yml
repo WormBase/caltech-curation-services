@@ -53,6 +53,7 @@ services:
       - grok_exporter_email_extr
       - grok_exporter_expression_cluster
       - grok_exporter_antibody
+      - grok_exporter_vfp
     networks:
       - caltech-curation-network
     environment:
