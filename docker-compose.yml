@@ -191,7 +191,7 @@ services:
       - /var/log/:/grok/log/
     networks:
       - caltech-curation-network
-    hostname: grok_exporter_antibody
+    hostname: grok_exporter_expr_cluster
 
   grok_exporter_antibody:
     restart: unless-stopped
