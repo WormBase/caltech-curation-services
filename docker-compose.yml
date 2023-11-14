@@ -50,6 +50,8 @@ services:
       - "${VOLUMES_DIR}/prometheus:/prometheus"
     depends_on:
       - postgres_prom_exporter
+      - grok_exporter_email_extr
+      - grok_exporter_expression_cluster
     networks:
       - caltech-curation-network
     environment:
