@@ -38,6 +38,10 @@ scrape_configs:
     static_configs:
       - targets: [ 'grok_exporter_expr_cluster:9144' ]
 
+  - job_name: 'ntt_extr_antibody'
+    static_configs:
+      - targets: [ 'grok_exporter_antibody:9144' ]
+
   - job_name: 'afp'
     static_configs:
       - targets: [ 'grok_exporter_afp:9144' ]

@@ -52,6 +52,7 @@ services:
       - postgres_prom_exporter
       - grok_exporter_email_extr
       - grok_exporter_expression_cluster
+      - grok_exporter_antibody
     networks:
       - caltech-curation-network
     environment:
@@ -190,7 +191,21 @@ services:
       - /var/log/:/grok/log/
     networks:
       - caltech-curation-network
-    hostname: grok_exporter_email_extr
+    hostname: grok_exporter_antibody
+
+  grok_exporter_antibody:
+    restart: unless-stopped
+    container_name: grok_exporter_antibody
+    image: grok_exporter
+    build: prometheus/grok_exporter/
+    #ports:
+    #  - "9144:9144"
+    volumes:
+      - ./prometheus/grok_exporter/config_antibody.yml:/grok/config.yml
+      - /var/log/:/grok/log/
+    networks:
+      - caltech-curation-network
+    hostname: grok_exporter_antibody
 
   grok_exporter_afp:
     restart: unless-stopped

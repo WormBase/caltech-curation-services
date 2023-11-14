@@ -31,6 +31,15 @@ groups:
     labels:
       severity: 'critical'
 
+  - alert: AntibodyFailure
+    expr: increase(ntt_extr_antibody_num_errors[1m]) > 0
+    for: 0m
+    annotations:
+      title: 'Antibody pipeline failed'
+      description: 'Exceptions found in antibody pipeline'
+    labels:
+      severity: 'critical'
+
   - alert: AFPPipelineFailure
     expr: increase(afp_num_errors[1m]) > 0
     for: 0m
