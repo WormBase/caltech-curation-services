@@ -50,13 +50,13 @@ services:
       - "${VOLUMES_DIR}/prometheus:/prometheus"
     depends_on:
       - postgres_prom_exporter
-      - grok_exporter_email_extr
-      - grok_exporter_expression_cluster
-      - grok_exporter_antibody
-      - grok_exporter_vfp
-      - grok_exporter_afp
-      - grok_exporter_afp_reminders
-      - grok_exporter_afp_digests
+#      - grok_exporter_email_extr
+#      - grok_exporter_expression_cluster
+#      - grok_exporter_antibody
+#      - grok_exporter_vfp
+#      - grok_exporter_afp
+#      - grok_exporter_afp_reminders
+#      - grok_exporter_afp_digests
     networks:
       - caltech-curation-network
     environment:
@@ -266,6 +266,18 @@ services:
     networks:
       - caltech-curation-network
     hostname: grok_exporter_vfp
+
+  reverse_proxy:
+    restart: unless-stopped
+    container_name: reverse_proxy
+    image: nginx:1.21.5
+    volumes:
+      - ./reverse_proxy/nginx.conf:/etc/nginx/nginx.conf
+    networks:
+      - caltech-curation-network
+    hostname: reverse_proxy
+    ports:
+      - "443:443"
 
 networks:
   caltech-curation-network:
