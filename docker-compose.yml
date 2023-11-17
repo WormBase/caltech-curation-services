@@ -281,6 +281,8 @@ services:
     ports:
       - "443:443"
       - "80:80"
+    environment:
+      ENV_STATE: "${ENV_STATE}"
 
 networks:
   caltech-curation-network:
