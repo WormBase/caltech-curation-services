@@ -267,12 +267,15 @@ services:
     hostname: grok_exporter_vfp
 
   reverse_proxy:
+    build:
+      context: .
+      dockerfile: reverse_proxy/Dockerfile
     restart: unless-stopped
     container_name: reverse_proxy
-    image: nginx:1.21.5
     volumes:
+      - "${VOLUMES_DIR}/certbot/conf/:/etc/letsencrypt"
+      - "${VOLUMES_DIR}/certbot/www/:/var/www/certbot/"
       - ./reverse_proxy/nginx.conf:/etc/nginx/nginx.conf
-      - /etc/letsencrypt:/etc/letsencrypt
     networks:
       - caltech-curation-network
     hostname: reverse_proxy
