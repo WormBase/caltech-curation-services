@@ -13,4 +13,6 @@ ADD reverse_proxy/crontab /etc/cron.d/certbot_crontab
 RUN chmod 0644 /etc/cron.d/certbot_crontab
 RUN crontab /etc/cron.d/certbot_crontab
 
-CMD ["nginx", "-g", "daemon off;"]
+ADD reverse_proxy/nginx.conf nginx.conf
+
+CMD ["/bin/bash", "container_startup_setup.sh"]

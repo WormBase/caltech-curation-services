@@ -275,7 +275,6 @@ services:
     volumes:
       - "${VOLUMES_DIR}/certbot/conf/:/etc/letsencrypt"
       - "${VOLUMES_DIR}/certbot/www/:/var/www/html/"
-      - ./reverse_proxy/nginx.conf:/etc/nginx/nginx.conf
     networks:
       - caltech-curation-network
     hostname: reverse_proxy
