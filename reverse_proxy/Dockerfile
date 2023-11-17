@@ -2,7 +2,7 @@ FROM nginx:1.21.5
 
 RUN apt-get update && \
     apt-get install -y \
-        cron \
+        cron certbot \
         && \
     echo '#!/bin/bash\n\ncron && /docker-entrypoint.sh "$@"' >> entrypoint-wrapper.sh && \
     chmod +x /entrypoint-wrapper.sh
