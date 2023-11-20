@@ -152,6 +152,9 @@ services:
       - "${VOLUMES_DIR}:/usr/caltech_volumes"
     networks:
       - caltech-curation-network
+    depends_on:
+      - reverse_proxy
+      - db
     hostname: curation
 
   acedb:
