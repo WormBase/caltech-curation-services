@@ -69,7 +69,8 @@ sub jsonPaper {
       $result = $dbh->prepare( "SELECT * FROM ${type}_$datatype WHERE joinkey = '$paper';" );
       $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
       my @row = $result->fetchrow();
-      $data{$datatype}{$type} = decode('utf-8', $row[1]);
+#       $data{$datatype}{$type} = decode('utf-8', $row[1]);	# causes Wide character failure on paper 00065682
+      $data{$datatype}{$type} = $row[1];
   } }
   $result = $dbh->prepare( "SELECT * FROM cur_nncdata WHERE cur_paper = '$paper';" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
