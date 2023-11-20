@@ -3,7 +3,8 @@ export DOLLAR='$'
 export DEV_STRING=''
 if [[ "${ENV_STATE}" == "dev" ]]
 then
-  export DEV_STRING='-dev'
+  cp nginx_dev.conf /etc/nginx/nginx.conf
+else
+  cp nginx_prod.conf /etc/nginx/nginx.conf
 fi
-envsubst '$DEV_STRING' < nginx.conf > /etc/nginx/nginx.conf
 nginx -g "daemon off;"
