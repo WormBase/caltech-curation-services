@@ -87,7 +87,7 @@ my $header = $response->content;
    $header =~ s/src="\//src="https:\/\/www.wormbase.org\//g;
 # my $footer = get "https://www.wormbase.org/footer";
 $response = $ua->get("https://wormbase.org//footer");
-my $header = $response->content;
+my $footer = $response->content;
    $footer =~ s/href="\//href="https:\/\/www.wormbase.org\//g;
    $footer =~ s/src="\//src="https:\/\/www.wormbase.org\//g;
 
@@ -107,7 +107,7 @@ print OUT "$dependencies";
 close (OUT) or die "Cannot close $outfile : $!";
 
 sub scrapingWay {
-  $page = get "http://www.wormbase.org";
+  my $page = get "http://www.wormbase.org";
   $page =~ s/href="\//href="https:\/\/www.wormbase.org\//g;
   $page =~ s/src="\//src="https:\/\/www.wormbase.org\//g;
   $page =~ s/<div id="top-system-message".*?(<div id="operator-box-wrap">)/$1/s;
