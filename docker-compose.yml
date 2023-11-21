@@ -138,7 +138,6 @@ services:
       ENV_STATE: "${ENV_STATE}"
     ports:
       - "${CURATION_FORMS_PORT}:80"
-      - "${SSL_PORT}:${SSL_PORT}"
       - "${SSH_PORT}:22"
     volumes:
       - "${HTTPD_AUTH_FILE_PATH}:/etc/httpd/passwd/passwords"
@@ -153,6 +152,9 @@ services:
       - "${VOLUMES_DIR}:/usr/caltech_volumes"
     networks:
       - caltech-curation-network
+    depends_on:
+      - reverse_proxy
+      - db
     hostname: curation
 
   acedb:
@@ -266,6 +268,24 @@ services:
     networks:
       - caltech-curation-network
     hostname: grok_exporter_vfp
+
+  reverse_proxy:
+    build:
+      context: .
+      dockerfile: reverse_proxy/Dockerfile
+    restart: unless-stopped
+    container_name: reverse_proxy
+    volumes:
+      - "${VOLUMES_DIR}/certbot/conf/:/etc/letsencrypt"
+      - "${VOLUMES_DIR}/certbot/www/:/var/www/html/"
+    networks:
+      - caltech-curation-network
+    hostname: reverse_proxy
+    ports:
+      - "443:443"
+      - "80:80"
+    environment:
+      ENV_STATE: "${ENV_STATE}"
 
 networks:
   caltech-curation-network:

@@ -1,0 +1,2 @@
+# Auto-renew let's encrypt SSL certificates
+0     *     *     *     *      certbot renew
