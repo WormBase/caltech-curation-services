@@ -121,7 +121,7 @@ my %objsCurated;
 # &outputAfpAutData();
 # &outputAfpCurData();
 # &populateOaData();
-
+# &outputOaData();
 
 
 if ($output_format eq 'json') {
@@ -131,6 +131,38 @@ if ($output_format eq 'json') {
 
 close (ERR) or die "Cannot close $errfile : $!";
 
+
+# TODO - need to figure out how to get curator and timestamp
+sub outputOaData {
+  my $source_type = 'professional_biocurator';
+  my $source_method = 'wormbase_oa';
+  my $source_id = &getSourceId($source_type, $source_method);
+  unless ($source_id) {
+    print qq(ERROR no source_id for $source_type and $source_method);
+    return;
+  }
+#   { "source_type": "professional_biocurator", "source_method": "wormbase_oa", "evidence": "eco_string", "description": "caltech curation tools", "mod_abbreviation": "WB" }
+  foreach my $datatype (sort keys %oaData) {
+    unless ($datatypes{$datatype}) { 
+      print ERR qq(no topic for oaData $datatype\n); 
+      next;
+    }
+    foreach my $joinkey (sort keys %{ $oaData{$datatype} }) {
+      my %object;
+      $object{'negated'}                    = FALSE;
+      $object{'reference_curie'}            = $wbpToAgr{$joinkey};
+      $object{'topic'}                      = $datatypes{$datatype};
+      $object{'topic_entity_tag_source_id'} = $source_id;
+      $object{'created_by'}                 = $oaData{$datatype}{$joinkey}{curator};
+      $object{'updated_by'}                 = $oaData{$datatype}{$joinkey}{curator};
+      $object{'date_created'}               = $oaData{$datatype}{$joinkey}{timestamp};
+      $object{'date_updated'}               = $oaData{$datatype}{$joinkey}{timestamp};
+      if ($output_format eq 'json') {
+        push @output_json, \%object; }
+      else {
+        my $object_json = encode_json \%object;
+        &createTag($object_json); }
+} } }
 
 sub outputAfpCurData {
   my $source_type = 'professional_biocurator';
@@ -473,7 +505,7 @@ sub outputCurNncData {
       my $negated = FALSE;  
       if ($nncData{$datatype}{$joinkey}{result} eq 'NEG') { $negated = TRUE; }
       $object{'negated'}                    = $negated;
-      $object{'confidence_level'}           = $nncData{$datatype}{$joinkey}{result};
+      $object{'confidence_level'}           = uc($nncData{$datatype}{$joinkey}{result});
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $datatypes{$datatype};
       $object{'topic_entity_tag_source_id'} = $source_id;
@@ -524,7 +556,7 @@ sub outputCurSvmData {
       my $negated = FALSE;  
       if ($svmData{$datatype}{$joinkey}{result} eq 'NEG') { $negated = TRUE; }
       $object{'negated'}                    = $negated;
-      $object{'confidence_level'}           = $svmData{$datatype}{$joinkey}{result};
+      $object{'confidence_level'}           = uc($svmData{$datatype}{$joinkey}{result});
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $datatypes{$datatype};
       $object{'topic_entity_tag_source_id'} = $source_id;
@@ -581,7 +613,7 @@ sub outputCurCurData {
       my @notes; my $note = undef;
       if ($curData{$datatype}{$joinkey}{selcomment}) { push @notes, $premadeComments{$curData{$datatype}{$joinkey}{selcomment}}; }
       if ($curData{$datatype}{$joinkey}{txtcomment}) { push @notes, $curData{$datatype}{$joinkey}{txtcomment}; }
-      if (scalar @notes > 1) { $note = join "|", @notes; }
+      if (scalar @notes > 0) { $note = join "|", @notes; }
       $object{'negated'}                    = $negated;
       $object{'note'}                       = $note;
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
@@ -610,7 +642,7 @@ sub populateCurCurData {
     next if ( ($row[4] eq 'notvalidated') || ($row[4] eq '') );                                         # skip entries marked as notvalidated
 # next unless ($row[0] eq '00005199');
 # print qq(@row\n);
-    $row[6] =~ s/\n/ /g; $row[6] =~ s/ $//g;
+    $row[6] =~ s/\n/ /g; $row[6] =~ s/^ //g; $row[6] =~ s/ $//g;
     my $curator = $row[3]; $curator =~ s/two/WBPerson/;
     $curData{$row[1]}{$row[0]}{site}       = $row[2];
     $curData{$row[1]}{$row[0]}{curator}    = $curator;
@@ -725,15 +757,15 @@ sub populateDatatypesAndABC {
   $datatypes{'catalyticact'}       = 'ATP:0000061';
   $datatypes{'chemphen'}           = 'ATP:0000080';
   $datatypes{'envphen'}            = 'ATP:0000080';
-  # $datatypes{'expression_cluster'} = 'no atp, skip';
+  $datatypes{'expression_cluster'} = 'ATP:0000044';
   $datatypes{'expmosaic'}          = 'ATP:0000034';
   $datatypes{'geneint'}            = 'ATP:0000068';
   $datatypes{'geneprod'}           = 'ATP:0000069';
-  $datatypes{'genereg'}            = 'ATP:0000024';
+  $datatypes{'genereg'}            = 'ATP:0000042';
   $datatypes{'genesymbol'}         = 'ATP:0000048';
   $datatypes{'geneticablation'}    = 'ATP:0000032';
   $datatypes{'geneticmosaic'}      = 'ATP:0000034';
-  $datatypes{'humandisease'}       = 'ATP:0000111';
+  $datatypes{'humandisease'}       = 'ATP:0000152';
   $datatypes{'laserablation'}      = 'ATP:0000032';
   $datatypes{'newmutant'}          = 'ATP:0000083';
   $datatypes{'optogenet'}          = 'ATP:0000145';
@@ -742,7 +774,7 @@ sub populateDatatypesAndABC {
   # $datatypes{'picture'}            = 'no atp, skip';
   $datatypes{'rnai'}               = 'ATP:0000082';
   $datatypes{'rnaseq'}             = 'ATP:0000146';
-  # $datatypes{'seqchange'}          = 'no atp, skip';
+  $datatypes{'seqchange'}          = 'ATP:0000056';
   $datatypes{'siteaction'}         = 'ATP:0000033';
   # $datatypes{'strain'}             = 'ATP:0000027     not in WB';
   $datatypes{'structcorr'}         = 'ATP:0000054';
