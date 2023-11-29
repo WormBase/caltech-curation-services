@@ -185,6 +185,7 @@ while (my @row = $result->fetchrow) {
     $source_json{source_type}     = $source_type;
     $source_json{source_method}   = $source_method;
     $source_json{description}     = "TBD nnc $row[0]";
+    $source_json{evidence}        = "ECO:0008025";
     my $source_json = encode_json \%source_json;
     &createSource($source_type, $source_method, $source_json);
   }
@@ -202,6 +203,7 @@ while (my @row = $result->fetchrow) {
     $source_json{source_type}     = $source_type;
     $source_json{source_method}   = $source_method;
     $source_json{description}     = "TBD svm $row[0]";
+    $source_json{evidence}        = "ECO:0008019";
     my $source_json = encode_json \%source_json;
     &createSource($source_type, $source_method, $source_json);
   }
