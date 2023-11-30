@@ -16,6 +16,9 @@
 # Delete pap_identifier AGRKB before populating because we still need to work out how updates should work,
 # for now wipe and reload is straightforward.  With Valerio and Kimberly.  2023 11 30
 
+# 0 4 * * * /usr/lib/scripts/pgpopulation/pap_papers/20230322_agr_xrefs/populate_pap_identifier_agrkb.pl
+
+
 
 use strict;
 use diagnostics;
