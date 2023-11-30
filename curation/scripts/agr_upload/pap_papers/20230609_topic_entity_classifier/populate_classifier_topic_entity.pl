@@ -280,7 +280,15 @@ sub populateAfpData {
         $afpCurData{$datatype}{$row[0]}{curator}   = $curator;
         $afpCurData{$datatype}{$row[0]}{negated}   = $negated;
         $afpCurData{$datatype}{$row[0]}{timestamp} = $row[5]; }
-} } }
+    }
+    foreach my $joinkey (sort keys %afpLasttouched) {
+      unless ($afpAutData{$datatype}{$joinkey}) {
+        $afpAutData{$datatype}{$joinkey}{note}      = "no data entered by author";
+        $afpAutData{$datatype}{$joinkey}{negated}   = 1;	# inferred negative by afp
+        $afpAutData{$datatype}{$joinkey}{source}    = 'afp';
+        $afpAutData{$datatype}{$joinkey}{timestamp} = $afpLasttouched{$joinkey}; }
+    }
+} }
 
 sub populateAfpContributor {
   $result = $dbh->prepare( "SELECT joinkey, afp_contributor FROM afp_contributor" );
@@ -293,11 +301,11 @@ sub populateAfpContributor {
 } }
 
 sub populateAfpLasttouched {
-  $result = $dbh->prepare( "SELECT * FROM afp_lasttouched" );
+  $result = $dbh->prepare( "SELECT * FROM afp_lasttouched WHERE afp_timestamp < '2019-03-22 00:00:01'" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
-    $afpLasttouched{$row[0]} = $row[1]; } }
+    $afpLasttouched{$row[0]} = $row[2]; } }
 
 sub populateTfpData {
   return if (%tfpData);		# this called for generating tfpdata but also for afpdata, but don't need to read it twice if already has data
