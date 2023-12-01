@@ -49,8 +49,8 @@ my $tag_counter = 0;
 my @output_json;
 
 my $mod = 'WB';
-# my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
-my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
+my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
+# my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
 my $okta_token = &generateOktaToken();
 # my $okta_token = 'use_above_when_live';
 
@@ -120,8 +120,8 @@ my %objsCurated;
 # &populateAfpData();
 # &outputAfpAutData();
 # &outputAfpCurData();
-# &populateOaData();
-# &outputOaData();
+&populateOaData();
+&outputOaData();
 
 
 if ($output_format eq 'json') {
@@ -137,6 +137,7 @@ sub outputOaData {
   my $source_type = 'professional_biocurator';
   my $source_method = 'wormbase_oa';
   my $source_id = &getSourceId($source_type, $source_method);
+  my $timestamp = &getPgDate();
   unless ($source_id) {
     print qq(ERROR no source_id for $source_type and $source_method);
     return;
@@ -148,15 +149,16 @@ sub outputOaData {
       next;
     }
     foreach my $joinkey (sort keys %{ $oaData{$datatype} }) {
+      next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
       my %object;
       $object{'negated'}                    = FALSE;
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $datatypes{$datatype};
       $object{'topic_entity_tag_source_id'} = $source_id;
-      $object{'created_by'}                 = $oaData{$datatype}{$joinkey}{curator};
-      $object{'updated_by'}                 = $oaData{$datatype}{$joinkey}{curator};
-      $object{'date_created'}               = $oaData{$datatype}{$joinkey}{timestamp};
-      $object{'date_updated'}               = $oaData{$datatype}{$joinkey}{timestamp};
+      $object{'created_by'}                 = 'default_user';
+      $object{'updated_by'}                 = 'default_user';
+      $object{'date_created'}               = $timestamp;
+      $object{'date_updated'}               = $timestamp;
       if ($output_format eq 'json') {
         push @output_json, \%object; }
       else {
