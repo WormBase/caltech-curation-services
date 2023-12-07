@@ -4460,8 +4460,8 @@ sub getAnyPapspeciesAutocomplete {
 
 sub getAnyWBPaperAutocomplete {
   my ($words) = @_;
-#   my ($matches) = &getAnyWBPaperAutocompleteTaz($words);
-  my ($matches) = &getAnyWBPaperAutocompleteAbc($words);
+  my ($matches) = &getAnyWBPaperAutocompleteTaz($words);
+#   my ($matches) = &getAnyWBPaperAutocompleteAbc($words);
   return $matches;
 } # sub getAnyWBPaperAutocomplete
 
@@ -4849,8 +4849,8 @@ sub getAnyWBInteractionValidValue {
 
 sub getAnyWBPaperValidValue {
   my ($userValue) = @_;
-#   my ($matches) = &getAnyWBPaperValidValueTaz($userValue);
-  my ($matches) = &getAnyWBPaperValidValueAbc($userValue);
+  my ($matches) = &getAnyWBPaperValidValueTaz($userValue);
+#   my ($matches) = &getAnyWBPaperValidValueAbc($userValue);
   return $matches;
 } # sub getAnyWBPaperValidValue
 
