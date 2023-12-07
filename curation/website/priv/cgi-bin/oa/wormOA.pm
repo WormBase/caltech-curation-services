@@ -14,6 +14,7 @@ our $VERSION    = 1.00;
 use strict;
 use diagnostics;
 use LWP::UserAgent;
+use LWP::Simple;
 use helperOA;		# &getPgDate  &getHtmlVar  &pad10Zeros  &pad8Zeros
 use DBI;
 use Dotenv -load => '/usr/lib/.env';
@@ -4459,6 +4460,21 @@ sub getAnyPapspeciesAutocomplete {
 
 sub getAnyWBPaperAutocomplete {
   my ($words) = @_;
+#   my ($matches) = &getAnyWBPaperAutocompleteTaz($words);
+  my ($matches) = &getAnyWBPaperAutocompleteAbc($words);
+  return $matches;
+} # sub getAnyWBPaperAutocomplete
+
+sub getAnyWBPaperAutocompleteAbc {
+  my ($words) = @_;
+  if ($words =~ m/^wbpaper/) { $words =~ s/^wbpaper//; } 		# strip out the leading wbpaper so autocomplete works when editing an entry
+  my $url = 'https://stage-literature-rest.alliancegenome.org/cross_reference/autocomplete_on_id?prefix=WB&return_prefix=false&query=' . $words;
+  my $matches = get $url;
+  return $matches
+} # sub getAnyWBPaperAutocompleteAbc
+
+sub getAnyWBPaperAutocompleteTaz {
+  my ($words) = @_;
   if ($words =~ m/^wbpaper/) { $words =~ s/^wbpaper//; } 		# strip out the leading wbpaper so autocomplete works when editing an entry
   my $max_results = 20; if ($words =~ m/^.{5,}/) { $max_results = 500; }
   my %matches; my $t = tie %matches, "Tie::IxHash";	# sorted hash to filter results
@@ -4478,7 +4494,7 @@ sub getAnyWBPaperAutocomplete {
   }
   if (scalar keys %matches >= $max_results) { $t->Replace($max_results - 1, 'no value', 'more ...'); }
   my $matches = join"\n", keys %matches; return $matches;
-} # sub getAnyWBPaperAutocomplete
+} # sub getAnyWBPaperAutocompleteTaz
 
 sub getAnyWBPersonAutocomplete {
   my ($words) = @_;
@@ -4833,6 +4849,24 @@ sub getAnyWBInteractionValidValue {
 
 sub getAnyWBPaperValidValue {
   my ($userValue) = @_;
+#   my ($matches) = &getAnyWBPaperValidValueTaz($userValue);
+  my ($matches) = &getAnyWBPaperValidValueAbc($userValue);
+  return $matches;
+} # sub getAnyWBPaperValidValue
+
+sub getAnyWBPaperValidValueAbc {
+  my ($userValue) = @_;
+  my $joinkey = 'bad';
+  if ( $userValue =~ m/^WBPaper(\d{8})$/ ) { ($joinkey) = $userValue =~ m/^WBPaper(\d{8})$/; }
+  my $url = 'https://stage-literature-rest.alliancegenome.org/cross_reference/WB:WBPaper' . $joinkey;
+  my $response = '';
+  $response = get $url;
+  if ($response && ($response =~ m/WBPaper$joinkey/)) { return "true"; }
+    else { return "false"; }
+} # sub getAnyWBPaperValidValueAbc
+
+sub getAnyWBPaperValidValueTaz {
+  my ($userValue) = @_;
   my $joinkey = 'bad';
   if ( $userValue =~ m/^WBPaper(\d{8})$/ ) { ($joinkey) = $userValue =~ m/^WBPaper(\d{8})$/; }
   my $result = $dbh->prepare( "SELECT * FROM pap_status WHERE joinkey = '$joinkey';" );
@@ -4840,7 +4874,7 @@ sub getAnyWBPaperValidValue {
   my @row = $result->fetchrow();
   if ($row[0]) { return "true"; } 
   return "false";
-} # sub getAnyWBPaperValidValue
+} # sub getAnyWBPaperValidValueTaz
 
 sub getAnyWBPersonValidValue {
   my ($userValue) = @_;
@@ -5585,9 +5619,21 @@ sub getAnyWBInteractionTermInfo {
 
 sub getAnyWBPaperTermInfo {
   my ($userValue) = @_;
+  my ($matches) = &getAnyWBPaperTermInfoTaz($userValue);
+  my ($additional) = &getAnyWBPaperTermInfoAdditional($userValue);
+  my $to_print = $matches . $additional;
+  my (@data) = split/\n/, $to_print;
+  foreach my $data_line (@data) { $data_line =~ s/^(.*?):/<span style=\"font-weight: bold\">$1 : <\/span>/; }
+  $to_print = join"\n", @data;
+  return $to_print;
+  return $matches . $additional;
+} # sub getAnyWBPaperTermInfo
+
+sub getAnyWBPaperTermInfoTaz {
+  my ($userValue) = @_;
   my ($joinkey) = $userValue =~ m/(\d+)/; my $to_print;
   my %title; my %ids; my %pdfs; my %journal; my %year; my %primary; my %type; my %type_index; my %non_nematode; my $status = ''; my %merged_into;
-  my $result = $dbh->prepare( "SELECT * FROM pap_status WHERE joinkey = '$joinkey' ;" );
+    my $result = $dbh->prepare( "SELECT * FROM pap_status WHERE joinkey = '$joinkey' ;" );
   $result->execute(); 
   while (my @row = $result->fetchrow) {
     if ($row[0]) { $status = $row[1]; } }
@@ -5628,8 +5674,75 @@ sub getAnyWBPaperTermInfo {
   $result = $dbh->prepare( "SELECT * FROM pap_curation_flags WHERE joinkey = '$joinkey' AND pap_curation_flags = 'non_nematode';" );
   $result->execute(); 
   while (my @row = $result->fetchrow) { if ($row[0]) { $non_nematode{$row[0]}{$row[1]}++; } }
+
+  my $paper_url = "$ENV{PAPER_DISPLAY_CGI_HOST}?action=Search+!&data_number=$joinkey";
+  $to_print .= "id: <span style=\"font-weight: bold\"><a href=\"$paper_url\" target=\"new\">WBPaper$joinkey</a></span><br />\n";
+  $to_print .= "name: WBPaper$joinkey<br />\n";
+  if ($title{$joinkey}) {
+      my (@title) = keys %{ $title{$joinkey} };
+      my $title = $title[0];
+      if ($title =~ m/\"/) { $title =~ s/\"/\\\"/g; }
+      if ($title =~ m/\n/) { $title =~ s/\n//g; }
+      my $wb_link = "http://wormbase.org/db/misc/paper?name=WBPaper$joinkey;class=Paper";
+      $to_print .= "title: <a target=\"new\" href=\"$wb_link\">$title</a><br />\n"; }
+  foreach my $pdf (sort keys %{ $pdfs{$joinkey} }) {
+#     ($pdf) = $pdf =~ m/\/([^\/]*)$/; my $pdf_link = '/~acedb/daniel/' . $pdf;
+#     $to_print .= "pdf: <a target=\"new\" href=\"$pdf_link\">$pdf</a><br />\n";
+    $to_print .= "old pdf: $pdf<br />\n"; }
+  foreach my $syn (sort keys %{ $ids{$joinkey} }) {
+    if ($syn =~ m/^pmid(\d+)/) { my $url = 'http://www.ncbi.nlm.nih.gov/pubmed/' . $1; $syn =~ s/pmid/PMID:/g; $syn = qq(<a href="$url" target="new">$syn</a>); }
+      elsif ($syn =~ m/^doi(.*)/) { my $url = 'http://dx.doi.org/' . $1; $syn = qq(<a href="$url" target="new">$syn</a>); }
+      elsif ($syn =~ m/^(AGRKB:.*)/) { my $url = 'https://literature.alliancegenome.org/Biblio/?action=display&referenceCurie=' . $1; $syn = qq(<a href="$url" target="new">$syn</a>); }
+    $to_print .= "synonym: \"$syn\"<br />\n"; }
+  # to link to paper editor
+#   my $query = new CGI;
+#   (my $var, my $curator_two) = &getHtmlVar($query, 'curator_two');
+#   my $url = 'http://tazendra.caltech.edu/~postgres/cgi-bin/paper_editor.cgi?curator_id=' . $curator_two . '&action=Search&data_number=' . $joinkey;
+#   $to_print .= qq(paper_editor : <a href="$url" target="new">edit on tazendra</a><br />\n);
+  foreach my $type (sort keys %{ $type{$joinkey} }) {
+    $to_print .= "type: \"$type\"<br />\n"; }
+  foreach my $primary (sort keys %{ $primary{$joinkey} }) {
+    $to_print .= "primary: \"$primary\"<br />\n"; }
+#   foreach my $non_nematode (sort keys %{ $non_nematode{$joinkey} }) {
+#     $to_print .= "non_nematode: \"$non_nematode\"<br />\n"; }
+  my (@year) = sort keys %{ $year{$joinkey} }; my (@journal) = sort keys %{ $journal{$joinkey} };
+  if (scalar(@year) > 1) { $to_print .= "ERROR : multiple years @year<br />\n"; }
+    elsif (scalar(@year) > 0) { $to_print .= "Year: $year[0]<br />\n"; }
+    else { $to_print .= "Year: BLANK<br />\n"; }
+  my $journal_stuff = '';
+  if (scalar(@journal) > 1) { ($journal_stuff) = "ERROR : multiple journals @journal<br />\n"; }
+    elsif (scalar(@journal) > 0) { ($journal_stuff) = &getAnyWBPaperTermInfoJournalPermission($journal[0]); }
+  $to_print .= $journal_stuff;
+  $to_print .= "<hr>\n";
+
+  return ($to_print);
+} # sub getAnyWBPaperTermInfoTaz
+
+
+sub getAnyWBPaperTermInfoJournalPermission {
+  my ($journal) = (@_);
+  my $to_print = '';
+  my $journal_has_permission = 'No &#10008;';
+  if ($journal) { 
+      $to_print .= "Journal: $journal<br />\n"; 
+      my %journal_has_permission;			# for image_overview below
+      my $infile = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/daniela/picture_curatable/journal_with_permission';
+      # my $infile = '/home/acedb/draciti/picture_curatable/journal_with_permission';
+      open (IN, "$infile") or die "Cannot open $infile : $!";
+      while (my $line = <IN>) { chomp $line; $journal_has_permission{$line}++; }
+      close (IN) or die "Cannot close $infile : $!";
+      if ($journal_has_permission{$journal}) { $journal_has_permission = 'Yes &#10003;'; } }
+    else { $to_print .= "Journal: BLANK<br />\n"; }
+  $to_print .= "Journal_image_permission: $journal_has_permission<br />\n";
+  return $to_print;
+} # sub getAnyWBPaperTermInfoJournalPermission
+
+sub getAnyWBPaperTermInfoAdditional {
+  my ($userValue) = @_;
+  my ($joinkey) = $userValue =~ m/(\d+)/; my $to_print = '';
+
   my %pap_transgene; my %trp_temp;
-  $result = $dbh->prepare( "SELECT * FROM trp_name WHERE trp_name.joinkey IN (SELECT joinkey FROM trp_paper WHERE trp_paper ~ 'WBPaper$joinkey') ;" );	# query from trp_ tables instead of flatfiles
+  my $result = $dbh->prepare( "SELECT * FROM trp_name WHERE trp_name.joinkey IN (SELECT joinkey FROM trp_paper WHERE trp_paper ~ 'WBPaper$joinkey') ;" );	# query from trp_ tables instead of flatfiles
 #   $result = $dbh->prepare( " SELECT trp_name.trp_name, trp_publicname.trp_publicname, trp_synonym.trp_synonym, trp_summary.trp_summary FROM trp_name, trp_publicname, trp_synonym, trp_summary WHERE trp_name.joinkey = trp_publicname.joinkey AND trp_name.joinkey = trp_synonym.joinkey AND trp_name.joinkey = trp_summary.joinkey AND trp_name.joinkey IN (SELECT joinkey FROM trp_paper WHERE trp_paper ~ 'WBPaper$joinkey') ;" );	# this won't work if any of the fields are missing
   $result->execute(); 
   while (my @row = $result->fetchrow) { $trp_temp{trp_name}{$row[0]} = $row[1]; }
@@ -5656,17 +5769,6 @@ sub getAnyWBPaperTermInfo {
     my $cns_data = join"\t", @data; 
     $pap_construct{$joinkey}{$cns_data}++; }
 
-#       if ($row[1] =~ m/WBGene(\d+)/) { my $wbgene = $1; $expr{$joinkey}{$row[0]}{$wbgene}++; $expr_genes{$wbgene}++; }
-#         else { $expr{$joinkey}{$row[0]}{nomatch}++; } } }
-#   my $infile = '/home/acedb/karen/populate_gin_variation/transgene_summary_reference.txt';
-#   open (IN, "$infile") or die "Cannot open $infile : $!";
-#   my $junk = <IN>;
-#   while (my $line = <IN>) {
-#     chomp $line;
-#     next unless ($line =~ m/WBPaper$joinkey/);
-#     my ($transgene, $reference, $summary) = split/\t/, $line;
-#     my $data = "$transgene\t$summary"; $data =~ s/\"//g; $pap_transgene{$joinkey}{$data}++; }
-#   close (IN) or die "Cannot close $infile : $!";
   my %expr; my %expr_genes; my %gene_to_locus;
 #   $result = $dbh->prepare( "SELECT * FROM obo_data_exprpattern WHERE obo_data_exprpattern ~ 'WBPaper$joinkey' ;" );
   $result = $dbh->prepare( " SELECT exp_name.exp_name, exp_gene.exp_gene FROM exp_name, exp_gene WHERE exp_name.joinkey = exp_gene.joinkey AND exp_name.joinkey IN (SELECT joinkey FROM exp_paper WHERE exp_paper ~ 'WBPaper$joinkey') ;" );	# query from exp_ tables instead of obo_
@@ -5707,53 +5809,6 @@ sub getAnyWBPaperTermInfo {
   $result->execute(); 
   while (my @row = $result->fetchrow) { if ($row[0]) { $tinpaperlegocc{$row[0]}++; } }
 
-  my $paper_url = "$ENV{PAPER_DISPLAY_CGI_HOST}?action=Search+!&data_number=$joinkey";
-  $to_print .= "id: <span style=\"font-weight: bold\"><a href=\"$paper_url\" target=\"new\">WBPaper$joinkey</a></span><br />\n";
-  $to_print .= "name: WBPaper$joinkey<br />\n";
-  if ($title{$joinkey}) {
-      my (@title) = keys %{ $title{$joinkey} };
-      my $title = $title[0];
-      if ($title =~ m/\"/) { $title =~ s/\"/\\\"/g; }
-      if ($title =~ m/\n/) { $title =~ s/\n//g; }
-      my $wb_link = "http://wormbase.org/db/misc/paper?name=WBPaper$joinkey;class=Paper";
-      $to_print .= "title: <a target=\"new\" href=\"$wb_link\">$title</a><br />\n"; }
-  foreach my $pdf (sort keys %{ $pdfs{$joinkey} }) {
-#     ($pdf) = $pdf =~ m/\/([^\/]*)$/; my $pdf_link = '/~acedb/daniel/' . $pdf;
-#     $to_print .= "pdf: <a target=\"new\" href=\"$pdf_link\">$pdf</a><br />\n"; }
-    $to_print .= "old pdf: $pdf<br />\n"; }
-  foreach my $syn (sort keys %{ $ids{$joinkey} }) {
-    if ($syn =~ m/^pmid(\d+)/) { my $url = 'http://www.ncbi.nlm.nih.gov/pubmed/' . $1; $syn =~ s/pmid/PMID:/g; $syn = qq(<a href="$url" target="new">$syn</a>); }
-      elsif ($syn =~ m/^doi(.*)/) { my $url = 'http://dx.doi.org/' . $1; $syn = qq(<a href="$url" target="new">$syn</a>); }
-      elsif ($syn =~ m/^(AGRKB:.*)/) { my $url = 'https://literature.alliancegenome.org/Biblio/?action=display&referenceCurie=' . $1; $syn = qq(<a href="$url" target="new">$syn</a>); }
-    $to_print .= "synonym: \"$syn\"<br />\n"; }
-  # to link to paper editor
-#   my $query = new CGI;
-#   (my $var, my $curator_two) = &getHtmlVar($query, 'curator_two');
-#   my $url = 'http://tazendra.caltech.edu/~postgres/cgi-bin/paper_editor.cgi?curator_id=' . $curator_two . '&action=Search&data_number=' . $joinkey;
-#   $to_print .= qq(paper_editor : <a href="$url" target="new">edit on tazendra</a><br />\n);
-  foreach my $type (sort keys %{ $type{$joinkey} }) {
-    $to_print .= "type: \"$type\"<br />\n"; }
-  foreach my $primary (sort keys %{ $primary{$joinkey} }) {
-    $to_print .= "primary: \"$primary\"<br />\n"; }
-  foreach my $non_nematode (sort keys %{ $non_nematode{$joinkey} }) {
-    $to_print .= "non_nematode: \"$non_nematode\"<br />\n"; }
-  my (@year) = sort keys %{ $year{$joinkey} }; my (@journal) = sort keys %{ $journal{$joinkey} };
-  if (scalar(@year) > 1) { $to_print .= "ERROR : multiple years @year<br />\n"; }
-    elsif (scalar(@year) > 0) { $to_print .= "Year: $year[0]<br />\n"; }
-    else { $to_print .= "Year: BLANK<br />\n"; }
-  my $journal_has_permission = 'No &#10008;';
-  if (scalar(@journal) > 1) { $to_print .= "ERROR : multiple journals @journal<br />\n"; }
-    elsif (scalar(@journal) > 0) { 
-      $to_print .= "Journal: $journal[0]<br />\n"; 
-      my %journal_has_permission;			# for image_overview below
-      my $infile = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/daniela/picture_curatable/journal_with_permission';
-      # my $infile = '/home/acedb/draciti/picture_curatable/journal_with_permission';
-      open (IN, "$infile") or die "Cannot open $infile : $!";
-      while (my $line = <IN>) { chomp $line; $journal_has_permission{$line}++; }
-      close (IN) or die "Cannot close $infile : $!";
-      if ($journal_has_permission{$journal[0]}) { $journal_has_permission = 'Yes &#10003;'; } }
-    else { $to_print .= "Journal: BLANK<br />\n"; }
-  $to_print .= "<hr>\n";
   foreach my $transgene (sort keys %{ $pap_transgene{$joinkey}}) { $to_print .= "transgene: $transgene<br />\n"; }
   foreach my $construct (sort keys %{ $pap_construct{$joinkey}}) { $to_print .= "construct: $construct<br />\n"; }
   foreach my $expr (sort keys %{ $expr{$joinkey}}) {
@@ -5765,17 +5820,16 @@ sub getAnyWBPaperTermInfo {
     $to_print .= "$expr_line<br />\n"; }
   if (scalar keys %{ $picturesource{$joinkey} } > 0) {
     $to_print .= qq(image_overview: <a href="$ENV{GENERIC_CGI_HOST}?action=PictureByPaper&paperid=$joinkey" target="new">click to see all images</a><br />\n); }
-  $to_print .= "Journal_image_permission: $journal_has_permission<br />\n";
   foreach my $picturesource (sort keys %{ $picturesource{$joinkey}}) { 	# all this obo data is in one entry, so split and print with <br /> 2010 12 06
     my (@lines) = split/\n/, $picturesource; foreach my $line (@lines) { $to_print .= "$line<br />\n"; } }
   foreach my $wbgene (sort keys %pap_genes) { 
     $to_print .= "gene: WBGene$wbgene"; if ($gene_to_locus{$wbgene}) { $to_print .= " $gene_to_locus{$wbgene}"; } $to_print .= "<br />\n"; }
   foreach my $line (sort keys %tinpaperlegocc) { $to_print .= "legocc : $line<br />\n"; }
-  my (@data) = split/\n/, $to_print;
-  foreach my $data_line (@data) { $data_line =~ s/^(.*?):/<span style=\"font-weight: bold\">$1 : <\/span>/; }
-  $to_print = join"\n", @data;
+#   my (@data) = split/\n/, $to_print;
+#   foreach my $data_line (@data) { $data_line =~ s/^(.*?):/<span style=\"font-weight: bold\">$1 : <\/span>/; }
+#   $to_print = join"\n", @data;
   return $to_print;
-} # sub getAnyWBPaperTermInfo
+} # sub getAnyWBPaperTermInfoAdditional
 
 sub getAnyWBPersonTermInfo {
   my ($userValue) = @_;
