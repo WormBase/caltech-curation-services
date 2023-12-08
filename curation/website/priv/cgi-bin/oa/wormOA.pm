@@ -17,6 +17,7 @@ use LWP::UserAgent;
 use LWP::Simple;
 use helperOA;		# &getPgDate  &getHtmlVar  &pad10Zeros  &pad8Zeros
 use DBI;
+use JSON;
 use Dotenv -load => '/usr/lib/.env';
 
 my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST};port=$ENV{PSQL_PORT}", "$ENV{PSQL_USERNAME}", "$ENV{PSQL_PASSWORD}") or die "Cannot connect to database!\n";
@@ -5620,6 +5621,7 @@ sub getAnyWBInteractionTermInfo {
 sub getAnyWBPaperTermInfo {
   my ($userValue) = @_;
   my ($matches) = &getAnyWBPaperTermInfoTaz($userValue);
+#   my ($matches) = &getAnyWBPaperTermInfoAbc($userValue);
   my ($additional) = &getAnyWBPaperTermInfoAdditional($userValue);
   my $to_print = $matches . $additional;
   my (@data) = split/\n/, $to_print;
@@ -5628,6 +5630,42 @@ sub getAnyWBPaperTermInfo {
   return $to_print;
   return $matches . $additional;
 } # sub getAnyWBPaperTermInfo
+
+sub getAnyWBPaperTermInfoAbc {
+  my ($userValue) = @_;
+  my ($joinkey) = $userValue =~ m/(\d+)/; my $to_print;
+  my $url = 'https://stage-literature-rest.alliancegenome.org/reference/by_cross_reference/WB:WBPaper' . $joinkey;
+  my $content = get $url;
+  unless ($content) { return qq($userValue not found at ABC\n); }
+  my $jsonHash = decode_json( $content );
+  my %jsonHash = %$jsonHash;
+  if ($jsonHash{'title'}) { 
+      my $title = $jsonHash{'title'};
+      if ($title =~ m/\"/) { $title =~ s/\"/\\\"/g; }
+      if ($title =~ m/\n/) { $title =~ s/\n//g; }
+      my $wb_link = "http://wormbase.org/db/misc/paper?name=WBPaper$joinkey;class=Paper";
+      $to_print .= "title: <a target=\"new\" href=\"$wb_link\">$title</a><br />\n";
+      if ($jsonHash{'curie'}) {
+        my $url = 'https://literature.alliancegenome.org/Biblio/?action=display&referenceCurie=' . $jsonHash{'curie'};
+        my $syn = qq(<a href="$url" target="new">$jsonHash{'curie'}</a>);
+        $to_print .= "synonym: \"$syn\"<br />\n"; }
+      if ($jsonHash{'cross_references'}) {
+        foreach my $xref (@{ $jsonHash{'cross_references'} }) {
+          my $curie = $$xref{'curie'};
+          my $url = $$xref{'url'};
+          my $syn = qq($curie);
+          if ($url) { $syn = qq(<a href="$url" target="new">$curie</a>); }
+          $to_print .= "synonym: \"$syn\"<br />\n"; } }
+      if ($jsonHash{'resource_title'}) {
+        my $journal = $jsonHash{'resource_title'};
+        my ($journal_stuff) = &getAnyWBPaperTermInfoJournalPermission($journal);
+        $to_print .= $journal_stuff; }
+      
+      $to_print .= "<hr>\n";
+    }
+    else { return qq($userValue not found at ABC\n); }
+  return $to_print;
+} # sub getAnyWBPaperTermInfoAbc
 
 sub getAnyWBPaperTermInfoTaz {
   my ($userValue) = @_;
