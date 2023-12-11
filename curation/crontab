@@ -52,6 +52,7 @@ BASH_ENV=/container.env
 
 # kimberly
 0 2 * * tue,wed,thu,fri,sat /usr/lib/scripts/citace_upload/papers/wrapper.pl
+0 4 * * * /usr/lib/scripts/pgpopulation/pap_papers/20230322_agr_xrefs/populate_pap_identifier_agrkb.pl
 0 5 * * tue,wed,thu,fri,sat /usr/lib/scripts/agr_upload/pap_papers/dump_agr_literature.pl
 
 # wen

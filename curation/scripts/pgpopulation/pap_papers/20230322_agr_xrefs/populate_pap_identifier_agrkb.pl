@@ -12,6 +12,12 @@
 # Ran update with INSERT only on 2023 09 12.  Will allow UPDATE after talking to Kimberly
 # after CONFLICT get fixed at ABC after referencefiles can be merged there.  Still need to
 # add this to crontab.  2023 09 12
+#
+# Delete pap_identifier AGRKB before populating because we still need to work out how updates should work,
+# for now wipe and reload is straightforward.  With Valerio and Kimberly.  2023 11 30
+
+# 0 4 * * * /usr/lib/scripts/pgpopulation/pap_papers/20230322_agr_xrefs/populate_pap_identifier_agrkb.pl
+
 
 
 use strict;
@@ -43,21 +49,24 @@ my %highestPapIdent;
 
 sub generateOktaToken {
   my $okta_token = `curl -s --request POST --url https://$ENV{OKTA_DOMAIN}/v1/token \    --header 'accept: application/json' \    --header 'cache-control: no-cache' \    --header 'content-type: application/x-www-form-urlencoded' \    --data "grant_type=client_credentials&scope=admin&client_id=$ENV{OKTA_CLIENT_ID}&client_secret=$ENV{OKTA_CLIENT_SECRET}" \      | jq '.access_token' | tr -d '"'`;
+  $okta_token =~ s/\s+//g;
+  print qq(OT $okta_token\n);
   return $okta_token;
 }
 
 sub generateXrefJsonFile {
   my $okta_token = &generateOktaToken();
-  `curl -X 'GET' 'https://stage-literature-rest.alliancegenome.org/bulk_download/references/external_ids/' -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json'  > $xref_file_path`;
+  `curl -X 'GET' 'https://literature-rest.alliancegenome.org/bulk_download/references/external_ids/' -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json'  > $xref_file_path`;
+  print qq(curl -X 'GET' 'https://literature-rest.alliancegenome.org/bulk_download/references/external_ids/' -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json'\n);
 #   `curl -X 'GET' 'https://stage-literature-rest.alliancegenome.org/bulk_download/references/external_ids/' -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json'  > files/ref_xref.json`;
 }
 
 sub populateFromAbcXrefs {
   # this requires getting the most recent cross_references from ABC, needs okta token
   #  %curl -X 'GET' \
-  #    'https://stage-literature-rest.alliancegenome.org/bulk_download/references/external_ids/' \
+  #    'https://literature-rest.alliancegenome.org/bulk_download/references/external_ids/' \
   #    -H 'accept: application/json' \
-  #    -H 'Authorization: Bearer eyJraWQiOiJNX1N0dWxfYlE5cEw1aHdLQ1hmN2hOSjcyYzJLYjl4SjhuYlQ3NjdPQzJzIiwiYWxnIjoiUlMyNTYifQ.eyJ2ZXIiOjEsImp0aSI6IkFULmlQMFp5NG9SYkdKZ0E3ZExnU2dSSmE5ZE45blhvR05VUm5nT2M1dnlBWnMiLCJpc3MiOiJodHRwczovL2Rldi0zMDQ1NjU4Ny5va3RhLmNvbS9vYXV0aDIvZGVmYXVsdCIsImF1ZCI6ImFwaTovL2RlZmF1bHQiLCJpYXQiOjE2NDc2NzQyODUsImV4cCI6MTY0Nzc2MDY4NSwiY2lkIjoiMG9hMWJuMXdqZFppSldhSmU1ZDciLCJ1aWQiOiIwMHUxY3R6dmpnTXBrODdRbTVkNyIsInNjcCI6WyJlbWFpbCIsIm9wZW5pZCJdLCJhdXRoX3RpbWUiOjE2NDc2NzQyODQsInN1YiI6Imp1YW5jYXJsb3NAd29ybWJhc2Uub3JnIn0.HlShhBK1tNyalpYGhDId_LbqaG2541E5yE9ErGWtBKOGtXJvS-ZEDrSM62Xq_0cbL_h85Icj7pWLtPTjcphGngT_9AQMeVMFLuGx9BIUdVhdXWS5uu8VRjhO-WVbHBQOopwUdMCILh9P5vkBax47_dzuwPUlaJboGtgnafNMNqZCJAmPqWpIepmsrjCEHoWRPJxWlor_fXQBvTcBxVWfa7_eN27-0TJP_YPA7rofl1FvVGGUDgornKLJCFbBvte13qgeOsVv8kPlPZHtJ46rV19OZ3LZSmTKFH1cxyviHgB51ACt2qWjDFA8qxiyBBTFyBsnly0ks93ygpsat8qj4Q' \
+  #    -H 'Authorization: Bearer <okta_token>' \
   #    -H 'Content-Type: application/json'  >  ref_xref.json
   # optionally to make more readable version
   #  % cat ref_xref.json | json_pp > ref_xref.json_pp
@@ -67,6 +76,7 @@ sub populateFromAbcXrefs {
 
   # my $xref_file_path = 'files/ref_xref.json';
   # my $xref_file_path = '/usr/lib/scripts/pgpopulation/pap_papers/20230322_agr_xrefs/files/ref_xref.json';
+  print qq($xref_file_path\n);
 
   $/ = undef;
   open (IN, "<$xref_file_path") or die "Cannot open $xref_file_path : $!";
@@ -118,6 +128,9 @@ sub populateFromAbcXrefs {
   foreach my $wbp (sort keys %abcWbps) {
     if ($abcWbps{$wbp} > 1) { print qq(ERR : Too many wbps at ABC $wbp $abcWbps{$wbp}\n); }
   }
+
+  # Delete agrkb from pap_identifier before querying db for data to update.  In the future when doing updates instead of wipe and reload, remove this.
+  $dbh->do( "DELETE FROM pap_identifier WHERE pap_identifier ~ 'AGRKB'" );
 
   my %valid;
   $result = $dbh->prepare( "SELECT * FROM pap_status WHERE pap_status = 'valid'" );

@@ -49,8 +49,8 @@ my $tag_counter = 0;
 my @output_json;
 
 my $mod = 'WB';
-# my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
-my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
+my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
+# my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
 my $okta_token = &generateOktaToken();
 # my $okta_token = 'use_above_when_live';
 
@@ -137,6 +137,7 @@ sub outputOaData {
   my $source_type = 'professional_biocurator';
   my $source_method = 'wormbase_oa';
   my $source_id = &getSourceId($source_type, $source_method);
+  my $timestamp = &getPgDate();
   unless ($source_id) {
     print qq(ERROR no source_id for $source_type and $source_method);
     return;
@@ -148,15 +149,16 @@ sub outputOaData {
       next;
     }
     foreach my $joinkey (sort keys %{ $oaData{$datatype} }) {
+      next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
       my %object;
       $object{'negated'}                    = FALSE;
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $datatypes{$datatype};
       $object{'topic_entity_tag_source_id'} = $source_id;
-      $object{'created_by'}                 = $oaData{$datatype}{$joinkey}{curator};
-      $object{'updated_by'}                 = $oaData{$datatype}{$joinkey}{curator};
-      $object{'date_created'}               = $oaData{$datatype}{$joinkey}{timestamp};
-      $object{'date_updated'}               = $oaData{$datatype}{$joinkey}{timestamp};
+      $object{'created_by'}                 = 'caltech_pipeline';
+      $object{'updated_by'}                 = 'caltech_pipeline';
+      $object{'date_created'}               = $timestamp;
+      $object{'date_updated'}               = $timestamp;
       if ($output_format eq 'json') {
         push @output_json, \%object; }
       else {
@@ -220,7 +222,7 @@ sub outputAfpAutData {
     foreach my $joinkey (sort keys %{ $afpAutData{$datatype} }) {
       my @auts;
       if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
-      if (scalar @auts < 1) { push @auts, 'default_user'; }
+      if (scalar @auts < 1) { push @auts, 'unknown_author'; }
       foreach my $aut (@auts) {
         my %object;
         my $negated = FALSE;
@@ -340,8 +342,8 @@ sub outputTfpData {
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $datatypes{$datatype};
       $object{'topic_entity_tag_source_id'} = $source_id;
-      $object{'created_by'}                 = 'default_user';
-      $object{'updated_by'}                 = 'default_user';
+      $object{'created_by'}                 = 'caltech_pipeline';
+      $object{'updated_by'}                 = 'caltech_pipeline';
       $object{'date_created'}               = $tfpData{$datatype}{$joinkey}{timestamp};
       $object{'date_updated'}               = $tfpData{$datatype}{$joinkey}{timestamp};
       if ($output_format eq 'json') {
@@ -470,8 +472,8 @@ sub outputCurStrData {
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $datatypes{$datatype};
       $object{'topic_entity_tag_source_id'} = $source_id;
-      $object{'created_by'}                 = 'default_user';
-      $object{'updated_by'}                 = 'default_user';
+      $object{'created_by'}                 = 'caltech_pipeline';
+      $object{'updated_by'}                 = 'caltech_pipeline';
       $object{'date_created'}               = $strData{$datatype}{$joinkey}{timestamp};
       $object{'date_updated'}               = $strData{$datatype}{$joinkey}{timestamp};
       if ($output_format eq 'json') {
@@ -517,8 +519,8 @@ sub outputCurNncData {
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $datatypes{$datatype};
       $object{'topic_entity_tag_source_id'} = $source_id;
-      $object{'created_by'}                 = 'default_user';
-      $object{'updated_by'}                 = 'default_user';
+      $object{'created_by'}                 = 'caltech_pipeline';
+      $object{'updated_by'}                 = 'caltech_pipeline';
       $object{'date_created'}               = $nncData{$datatype}{$joinkey}{date};
       $object{'date_updated'}               = $nncData{$datatype}{$joinkey}{date};
       if ($output_format eq 'json') {
@@ -568,8 +570,8 @@ sub outputCurSvmData {
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $datatypes{$datatype};
       $object{'topic_entity_tag_source_id'} = $source_id;
-      $object{'created_by'}                 = 'default_user';
-      $object{'updated_by'}                 = 'default_user';
+      $object{'created_by'}                 = 'caltech_pipeline';
+      $object{'updated_by'}                 = 'caltech_pipeline';
       $object{'date_created'}               = $svmData{$datatype}{$joinkey}{date};
       $object{'date_updated'}               = $svmData{$datatype}{$joinkey}{date};
       if ($output_format eq 'json') {
