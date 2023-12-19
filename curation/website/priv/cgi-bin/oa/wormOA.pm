@@ -5654,8 +5654,14 @@ sub getAnyWBPaperTermInfoAbc {
           my $curie = $$xref{'curie'};
           my $url = $$xref{'url'};
           my $syn = qq($curie);
+          my $is_obs = '';
+          if ($$xref{'is_obsolete'}) { $is_obs = '<span style="color:red">is_obsolete</span>'; }
           if ($url) { $syn = qq(<a href="$url" target="new">$curie</a>); }
-          $to_print .= "synonym: \"$syn\"<br />\n"; } }
+          $to_print .= "synonym: \"$syn\" $is_obs<br />\n"; } }
+      if ($jsonHash{'category'}) {
+          $to_print .= "alliance_category: \"$jsonHash{'category'}\"<br />\n"; }
+      if ($jsonHash{'date_published'}) {
+          $to_print .= "date_published: \"$jsonHash{'date_published'}\"<br />\n"; }
       if ($jsonHash{'resource_title'}) {
         my $journal = $jsonHash{'resource_title'};
         my ($journal_stuff) = &getAnyWBPaperTermInfoJournalPermission($journal);
