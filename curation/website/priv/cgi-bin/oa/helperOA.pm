@@ -2,7 +2,7 @@ package helperOA;
 require Exporter;
 
 use URI::Escape;
-use Encode;
+use Encode qw(decode is_utf8);
 
 our @ISA	= qw(Exporter);
 our @EXPORT	= qw( getPgDate getHtmlVar pad10Zeros pad9Zeros pad8Zeros fromUrlToPostgres );
@@ -103,7 +103,8 @@ sub fromUrlToPostgres {
 #   if ($value =~ m/%23/) { $value =~ s/%23/#/g; }		# convert URL pound to literal
 #   $value = decode_utf8(decodeURIComponent($value));		# use URI::Escape::XS;  didn't help, not installed on tazendra
 #   $value = uri_unescape($value);				# this is happening in updatePostgresTableField
-  $value = decode('utf8', $value);				# decode into utf-8, which postgres is set for (works with °, converts μ to �)
+  if (!is_utf8($value)) {
+    $value = decode('utf8', $value); }				# decode into utf-8, which postgres is set for (works with °, converts μ to �)
   if ($value =~ m/\'/) { $value =~ s/\'/''/g; }			# escape singlequotes
   return $value;
 } # sub fromUrlToPostgres
