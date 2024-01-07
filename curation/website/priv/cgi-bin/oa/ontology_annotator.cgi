@@ -128,7 +128,7 @@ sub deleteByPgids {					# if updating postgres table values, update postgres and
       if ($row[0]) {					# if there is a row for this pgid, as opposed to there being a value, because we want to delete blank '' entries too.  2011 08 31
         my ($isOk) = &updatePostgresByTableJoinkeyNewvalue($table, $origPgid, ''); 
         if ($isOk ne 'OK') { $returnMessage .= $isOk; } } }
-  } # foreach my $origPgid (@idsToDuplicate)
+  } # foreach my $origPgid (@idsToDelete)
   if ($returnMessage) { print $returnMessage; }		# if there are postgres error messages, but this cannot happen because deletes don't throw errors and there are no NULL inserts
     else { print "OK"; }				# delete went OK
 } # sub deleteByPgids
