@@ -25,6 +25,8 @@
 #
 # dump after every workday at 5am, gets picked up by abc cronjob every day
 # 0 5 * * tue,wed,thu,fri,sat /usr/lib/scripts/agr_upload/pap_papers/dump_agr_literature.pl
+#
+# Updated to generate workflowTags as list of ATP values from pap_primary_data only.  Do not have any other workflow tags to generate.  2024 01 08
 
 
 # dump after every workday at 5am, gets picked up by abc cronjob every day
@@ -75,7 +77,7 @@ my $today_date = &getSimpleDate();
 
 # my @normal_tables = qw( status type title journal publisher pages volume year month day abstract editor affiliation fulltext_url contained_in identifier remark erratum_in retraction_in curation_flags author gene species );
 # my @normal_tables = qw( status type title journal publisher pages volume year month day abstract editor affiliation fulltext_url contained_in identifier remark erratum_in retraction_in curation_flags author species );
-my @normal_tables = qw( status type title journal publisher pages volume year month day abstract identifier author );
+my @normal_tables = qw( status type title journal publisher pages volume year month day abstract identifier author primary_data );
 my @not_used_tables = qw( editor affiliation fulltext_url contained_in remark erratum_in retraction_in curation_flags species );
 
 my %indices;
@@ -144,6 +146,7 @@ foreach my $joinkey (sort keys %{ $hash{status} }) {
   $entry{'tags'} = &getTags(\%hash, $joinkey, $referenceId);
   $entry{'crossReferences'} = &getCrossReferences(\%hash, $joinkey);
   $entry{'citation'} = &getCitation(\%hash, $joinkey);
+  $entry{'workflowTags'} = &getWorkflowTags(\%hash, $joinkey);
 # need language?
 
   foreach my $reqTag (@requiredTags) {
@@ -361,6 +364,22 @@ sub getAllianceCategory {
       if ($typeToCategory{$indices{type}{$type}}) { return $typeToCategory{$indices{type}{$type}}; } } }
   return 'Unknown';
 } # sub getAllianceCategory
+
+sub getWorkflowTags {
+  my ($hashRef, $joinkey) = @_;
+  my %hash = %$hashRef;
+  my $table = 'primary_data';
+  my @data;
+  foreach my $order (sort {$a<=>$b} keys %{ $hash{$table}{$joinkey} }) {
+    if ($hash{$table}{$joinkey}{$order}{data}) {
+      my $type = $hash{$table}{$joinkey}{$order}{data};
+      if ($type eq 'primary') { push @data, "ATP:0000103"; }
+        elsif ($type eq 'not_primary') { push @data, "ATP:0000104"; }
+        elsif ($type eq 'not_designated') { push @data, "ATP:0000106"; }
+  } }
+  return \@data;
+} # sub getWorkflowTags
+
 
 #       "enum": ["Research Article","Review Article","Thesis","Book","Other","Preprint","Conference Publication","Personal Communication","Direct Data Submission","Internal Process Reference", "Unknown","Retraction"],
 sub populateTypeToAllianceCategory {
