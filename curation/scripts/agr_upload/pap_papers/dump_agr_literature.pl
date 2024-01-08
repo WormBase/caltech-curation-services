@@ -27,6 +27,7 @@
 # 0 5 * * tue,wed,thu,fri,sat /usr/lib/scripts/agr_upload/pap_papers/dump_agr_literature.pl
 #
 # Updated to generate workflowTags as list of ATP values from pap_primary_data only.  Do not have any other workflow tags to generate.  2024 01 08
+# skip AGRKB from sending to ABC.  2024 01 08
 
 
 # dump after every workday at 5am, gets picked up by abc cronjob every day
@@ -236,6 +237,7 @@ sub getCrossReferences {	# 00000008
       elsif ($identifier =~ m/cgc(.*)/) {
         $cgcs{"CGC:$identifier"}++;
         $filteredXref{"CGC:$identifier"}++; }
+      elsif ($identifier =~ m/AGRKB(.*)/) { 1; }	# skip AGRKB from sending to ABC
       elsif ($identifier =~ m/wbg(.*)/) {
         $wbgs{"WBG:$identifier"}++;
         $filteredXref{"WBG:$identifier"}++; }
