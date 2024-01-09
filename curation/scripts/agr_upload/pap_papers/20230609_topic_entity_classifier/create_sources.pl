@@ -85,7 +85,7 @@ unless ($source_id) {
 }
 
 $source_type = 'professional_biocurator';
-$source_method = 'cfp';
+$source_method = 'curator_first_pass';
 $source_id = &getSourceId($source_type, $source_method);
 unless ($source_id) { 
   my %source_json = %{ dclone (\%source_default) };
@@ -99,7 +99,7 @@ unless ($source_id) {
 }
 
 $source_type = 'professional_biocurator';
-$source_method = 'afp';
+$source_method = 'author_first_pass';
 $source_id = &getSourceId($source_type, $source_method);
 unless ($source_id) { 
   my %source_json = %{ dclone (\%source_default) };
@@ -113,7 +113,7 @@ unless ($source_id) {
 }
 
 $source_type = 'author';
-$source_method = 'afp';
+$source_method = 'author_first_pass';
 $source_id = &getSourceId($source_type, $source_method);
 unless ($source_id) { 
   my %source_json = %{ dclone (\%source_default) };
@@ -127,7 +127,7 @@ unless ($source_id) {
 }
 
 $source_type = 'author';
-$source_method = 'ACKnowledge';
+$source_method = 'ACKnowledge_form';
 $source_id = &getSourceId($source_type, $source_method);
 unless ($source_id) { 
   my %source_json = %{ dclone (\%source_default) };
