@@ -29,8 +29,8 @@ my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST}
 my $result;
 
 my $mod = 'WB';
-# my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
-my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
+my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
+# my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
 my $okta_token = &generateOktaToken();
 # my $okta_token = 'use_above_when_live';
 
@@ -52,8 +52,8 @@ my %source_default = (
   "source_method"    => "wormbase_curation_status",
   "evidence"         => "eco_string",
   "mod_abbreviation" => $mod,
-  "created_by"       => "default_user",
-  "updated_by"       => "default_user"
+  "created_by"       => "00u2ao5gp6tZJ9xXU5d7",
+  "updated_by"       => "00u2ao5gp6tZJ9xXU5d7"
 );
 
 my $source_type = 'professional_biocurator';
@@ -65,6 +65,7 @@ unless ($source_id) {
   $source_json{source_method}   = $source_method;
   $source_json{validation_type} = 'curator';
   $source_json{description}     = 'cur_curdata';
+  $source_json{evidence}        = "ECO:0000302";
   my $source_json = encode_json \%source_json;
   &createSource($source_type, $source_method, $source_json);
 }
@@ -92,6 +93,7 @@ unless ($source_id) {
   $source_json{source_method}   = $source_method;
   $source_json{validation_type} = 'curator';
   $source_json{description}     = 'cfp curator';
+  $source_json{evidence}        = "ECO:0000302";
   my $source_json = encode_json \%source_json;
   &createSource($source_type, $source_method, $source_json);
 }
@@ -105,6 +107,7 @@ unless ($source_id) {
   $source_json{source_method}   = $source_method;
   $source_json{validation_type} = 'curator';
   $source_json{description}     = 'afp curator';
+  $source_json{evidence}        = "ECO:0000302";
   my $source_json = encode_json \%source_json;
   &createSource($source_type, $source_method, $source_json);
 }
@@ -118,6 +121,7 @@ unless ($source_id) {
   $source_json{source_method}   = $source_method;
   $source_json{validation_type} = 'author';
   $source_json{description}     = 'afp author';
+  $source_json{evidence}        = "ECO:0000302";
   my $source_json = encode_json \%source_json;
   &createSource($source_type, $source_method, $source_json);
 }
@@ -131,6 +135,7 @@ unless ($source_id) {
   $source_json{source_method}   = $source_method;
   $source_json{validation_type} = 'author';
   $source_json{description}     = 'ACKnowledge author';
+  $source_json{evidence}        = "ECO:0000302";
   my $source_json = encode_json \%source_json;
   &createSource($source_type, $source_method, $source_json);
 }
