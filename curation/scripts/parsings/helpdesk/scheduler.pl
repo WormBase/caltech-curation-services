@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
 # take a queue of help desk people and print them out from date to date with 14 day increments
 # 2009 01 05
