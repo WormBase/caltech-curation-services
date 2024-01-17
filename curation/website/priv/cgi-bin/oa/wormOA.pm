@@ -24,6 +24,8 @@ my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST}
 
 use Tie::IxHash;
 
+use CGI::Cookie;
+
 
 ### FIELDS ###
 
@@ -6382,6 +6384,12 @@ sub populateWormDatatypeList {
   $datatype_list{"sqf"} = "seq feature";
   $datatype_list{"trp"} = "transgene";
   return \%datatype_list;
+}
+
+sub readSavedCuratorFromCookie {
+  my %cookies = CGI::Cookie->fetch;
+  my $saved_curator = $cookies{'SAVED_CURATOR_ID'} ? $cookies{'SAVED_CURATOR_ID'}->value : '';
+  return $saved_curator;
 }
 
 #sub updateWormCurator {					# update two_curator_ip for this curator and ip

@@ -21,6 +21,8 @@ use Dotenv -load => '/usr/lib/.env';
 my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST};port=$ENV{PSQL_PORT}", "$ENV{PSQL_USERNAME}", "$ENV{PSQL_PASSWORD}") or die "Cannot connect to database!\n";
 use Tie::IxHash;
 
+use CGI::Cookie;
+
 
 ### FIELDS ###
 
@@ -358,6 +360,12 @@ sub showTestLogin {					# show login curators, datatypes, and Login button
   print "</tr>\n";
   print "</table>\n";
 } # sub showTestLogin
+
+sub readSavedCuratorFromCookie {
+  my %cookies = CGI::Cookie->fetch;
+  my $saved_curator = $cookies{'SAVED_CURATOR_ID'} ? $cookies{'SAVED_CURATOR_ID'}->value : '';
+  return $saved_curator;
+}
 
 #sub updateTestCurator {					# update two_curator_ip for this curator and ip
 #  my ($ip, $curator_two) = @_;
