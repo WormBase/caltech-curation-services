@@ -333,7 +333,7 @@ sub firstPage {
   my %cookies = CGI::Cookie->fetch;
   my $saved_curator = $cookies{'SAVED_CURATOR_ID'} ? $cookies{'SAVED_CURATOR_ID'}->value : '';
 
-  print qq(<tr><td valign="top">Name</td><td><select name="select_curator" size="); print scalar keys %curators; print qq(">\n);
+  print qq(<tr><td valign="top">Curator Name</td><td><select name="select_curator" size="); print scalar keys %curators; print qq(">\n);
   foreach my $curator_two (keys %curators) {        # display curators in alphabetical (tied hash) order, if IP matches existing ip record, select it
     if ($saved_curator eq $curator_two) { print "<option value=\"$curator_two\" selected=\"selected\">$curators{$curator_two}</option>\n"; }
     else { print "<option value=\"$curator_two\">$curators{$curator_two}</option>\n"; } }
