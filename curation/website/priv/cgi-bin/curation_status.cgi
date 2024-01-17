@@ -364,16 +364,17 @@ sub firstPage {
 sub updateWormCurator {
     my ($curator_two) = @_;
 
+    my $my_cookie;
     # Retrieve existing cookies
     my %cookies = CGI::Cookie->fetch;
 
     # Check if 'SAVED_CURATOR_ID' cookie exists
     if ($cookies{'SAVED_CURATOR_ID'}) {
-        my $my_cookie = $cookies{'SAVED_CURATOR_ID'};
+        $my_cookie = $cookies{'SAVED_CURATOR_ID'};
         $my_cookie->value($curator_two);
         $my_cookie->expires('+10y');  # Set expiration time
     } else {
-        my $my_cookie = CGI::Cookie->new(-name => 'SAVED_CURATOR_ID', -value => $curator_two);
+        $my_cookie = CGI::Cookie->new(-name => 'SAVED_CURATOR_ID', -value => $curator_two);
         $my_cookie->expires('+10y');  # Set expiration time
         $cookies{'SAVED_CURATOR_ID'} = $my_cookie;
     }
