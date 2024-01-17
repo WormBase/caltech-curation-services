@@ -14,7 +14,7 @@ use Dotenv -load => '/usr/lib/.env';
 
 
 our @ISA	= qw(Exporter);
-our @EXPORT	= qw(untaint filterForPg getDate getHeader printHeader printFooter getPgDate cshlNew caltechOld getHtmlSelectVars getHtmlVar getHtmlVarFree mailer getSimpleSecDate getSimpleDate filterToPrintHtml getOboDate );
+our @EXPORT	= qw(untaint filterForPg getDate getHeader printHeader printFooter getPgDate cshlNew caltechOld getHtmlSelectVars getHtmlVar getHtmlVarFree mailer getSimpleSecDate getSimpleDate filterToPrintHtml getOboDate readSavedCuratorFromCookie readSavedUserFromCookie);
 our $VERSION	= 1.00;
 
 sub getPgDate {                         # begin getPgDate
