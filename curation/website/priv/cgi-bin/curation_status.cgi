@@ -269,12 +269,6 @@ my %premadeComments;	tie %premadeComments, "Tie::IxHash";		# $premadeComments{"p
 my $tdDot = qq(<td align="center" style="border-style: dotted">);
 my $thDot = qq(<th align="center" style="border-style: dotted">);
 
-print "<html><head>";
-print "<script>";
-print "function setCookie(name, value) { var expiry = new Date(); expiry.setTime(expiry.getTime() + 30 * 24 * 3600 * 1000); document.cookie = name + '=' + escape(value) + '; path=/; expires=' + expiry.toGMTString(); }";
-print "function handleSelectChange(selectElement) { var selectedValue = selectElement.value; setCookie('SAVED_CURATOR_ID', selectedValue); }";
-print "</script>";
-print "</head><body>";
 
 &display();
 
@@ -283,6 +277,12 @@ print "</head><body>";
 sub display {
   my $action; 
   &printHeader('Curation Status');
+  print "<html><head>";
+  print "<script>";
+  print "function setCookie(name, value) { var expiry = new Date(); expiry.setFullYear(expiry.getFullYear() +10);; document.cookie = name + '=' + escape(value) + '; path=/; expires=' + expiry.toGMTString(); }";
+  print "function handleSelectChange(selectElement) { var selectedValue = selectElement.value; setCookie('SAVED_CURATOR_ID', selectedValue); }";
+  print "</script>";
+  print "</head><body>";
   &populateDatatypes();
   &populateCurators();
   &populatePremadeComments(); 
