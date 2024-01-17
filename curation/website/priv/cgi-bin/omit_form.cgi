@@ -40,9 +40,9 @@ Content-type: text/html\n\n
   <script type="text/javascript" src="js/jquery.tablesorter.min.js"></script>
   <script type="text/javascript">\$(document).ready(function() { \$("#sortabletable").tablesorter(); } );</script>
   <script>
-      function setCookie(name, value) { var expiry = new Date(); expiry.setFullYear(expiry.getFullYear() +10); document.cookie = name + "=" + escape(value) + "; path=/; expires=" + expiry.toGMTString(); }
-      function saveCuratorIdInCookieFromSelect(selectElement) { var selectedValue = selectElement.value; setCookie("SAVED_CURATOR_ID", selectedValue); }
-    </script>
+    function setCookie(name, value) { var expiry = new Date(); expiry.setFullYear(expiry.getFullYear() +10); document.cookie = name + "=" + escape(value) + "; path=/; expires=" + expiry.toGMTString(); }
+    function saveCuratorIdInCookieFromSelect(selectElement) { var selectedValue = selectElement.value; setCookie("SAVED_CURATOR_ID", selectedValue); }
+  </script>
 </HEAD>
 
 <BODY bgcolor=#aaaaaa text=#000000 link=cccccc alink=eeeeee vlink=bbbbbb>

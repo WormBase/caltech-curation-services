@@ -6297,14 +6297,16 @@ sub loginMod {
 sub loginWorm {						# switch for different login subroutines
   my ($flag, $ip, $curator_two) = @_;			# get the flag, $ip, and optional $curator_two
   if ($flag eq 'showModLogin') { &showWormLogin($ip); }
-  elsif ($flag eq 'updateModCurator') { &updateWormCurator($ip, $curator_two); }
+  #elsif ($flag eq 'updateModCurator') { &updateWormCurator($ip, $curator_two); }
 } # sub loginWorm
 
 sub showWormLogin {					# show login curators, datatypes, and Login button
-  my ($ip) = @_;
-  my $curator_by_ip = '';
-  my $result = $dbh->prepare( "SELECT * FROM two_curator_ip WHERE two_curator_ip = '$ip';" ); $result->execute; my @row = $result->fetchrow;
-  if ($row[0]) { $curator_by_ip = $row[0]; }
+  #my ($ip) = @_;
+  #my $curator_by_ip = '';
+  #my $result = $dbh->prepare( "SELECT * FROM two_curator_ip WHERE two_curator_ip = '$ip';" ); $result->execute; my @row = $result->fetchrow;
+  #if ($row[0]) { $curator_by_ip = $row[0]; }
+  my $saved_curator = &readSavedCuratorFromCookie();
+
   my %curator_list; tie %curator_list, "Tie::IxHash";
 #   $curator_list{"two22"}    = 'Igor Antoshechkin';
   $curator_list{"two1823"}  = 'Juancarlos Chan';
@@ -6340,9 +6342,9 @@ sub showWormLogin {					# show login curators, datatypes, and Login button
 
   print "<table cellpadding=\"4\">\n";
   print "<tr>\n";
-  print "<td valign=\"top\">Name<br /><select name=\"curator_two\" size=" , scalar keys %curator_list , ">\n";
+  print "<td valign=\"top\">Name<br /><select name=\"curator_two\" onChange=\"saveCuratorIdInCookieFromSelect(this)\" size=" , scalar keys %curator_list , ">\n";
   foreach my $curator_two (keys %curator_list) {	# display curators in alphabetical (tied hash) order, if IP matches existing ip record, select it
-    if ($curator_by_ip eq $curator_two) { print "<option value=\"$curator_two\" selected=\"selected\">$curator_list{$curator_two}</option>\n"; }
+    if ($saved_curator eq $curator_two) { print "<option value=\"$curator_two\" selected=\"selected\">$curator_list{$curator_two}</option>\n"; }
     else { print "<option value=\"$curator_two\">$curator_list{$curator_two}</option>\n"; } }
   print "</select></td>\n";
 
@@ -6382,15 +6384,15 @@ sub populateWormDatatypeList {
   return \%datatype_list;
 }
 
-sub updateWormCurator {					# update two_curator_ip for this curator and ip
-  my ($ip, $curator_two) = @_;
-  my $result = $dbh->prepare( "SELECT * FROM two_curator_ip WHERE two_curator_ip = '$ip' AND joinkey = '$curator_two';" );
-  $result->execute;
-  my @row = $result->fetchrow;
-  unless ($row[0]) {
-    $result = $dbh->do( "DELETE FROM two_curator_ip WHERE two_curator_ip = '$ip' ;" );
-    $result = $dbh->do( "INSERT INTO two_curator_ip VALUES ('$curator_two', '$ip')" );
-} } # sub updateWormCurator
+#sub updateWormCurator {					# update two_curator_ip for this curator and ip
+#  my ($ip, $curator_two) = @_;
+#  my $result = $dbh->prepare( "SELECT * FROM two_curator_ip WHERE two_curator_ip = '$ip' AND joinkey = '$curator_two';" );
+#  $result->execute;
+#  my @row = $result->fetchrow;
+#  unless ($row[0]) {
+#    $result = $dbh->do( "DELETE FROM two_curator_ip WHERE two_curator_ip = '$ip' ;" );
+#    $result = $dbh->do( "INSERT INTO two_curator_ip VALUES ('$curator_two', '$ip')" );
+#} } # sub updateWormCurator
 
 ### END LOGIN ###
 
