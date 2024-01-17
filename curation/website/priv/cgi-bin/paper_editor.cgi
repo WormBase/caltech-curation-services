@@ -1891,7 +1891,7 @@ sub search {
 
   ($oop, my $curator_id) = &getHtmlVar($query, 'curator_id');
   unless ($curator_id) { print "ERROR NO CURATOR<br />\n"; return; }
-  &updateCurator($curator_id);
+  #&updateCurator($curator_id);
 
   ($oop, my $number) = &getHtmlVar($query, "data_number");
   if ($number) { 
@@ -2125,7 +2125,7 @@ sub authorGeneDisplay {			# for Karen
   print "<input type=\"hidden\" name=\"which_page\" id=\"which_page\" value=\"authorGeneDisplay\">";
   ($oop, my $curator_id) = &getHtmlVar($query, 'curator_id');
   unless ($curator_id) { print "ERROR NO CURATOR<br />\n"; return; }
-  &updateCurator($curator_id);
+  #&updateCurator($curator_id);
 #   my $who = '';
 #   if ($curator_id eq 'two712') { $who = 'Karen Yook'; }
 #   if ($curator_id eq 'two1843') { $who = 'Kimberly Van Auken'; }
@@ -2209,16 +2209,16 @@ sub padZeros {
 } # sub padZeros
 
 
-sub updateCurator {
-  my ($joinkey) = @_;
-  my $ip = $query->remote_host();
-  my $result = $dbh->prepare( "SELECT * FROM two_curator_ip WHERE two_curator_ip = '$ip' AND joinkey = '$joinkey';" );
-  $result->execute;
-  my @row = $result->fetchrow;
-  unless ($row[0]) {
-    $result = $dbh->do( "DELETE FROM two_curator_ip WHERE two_curator_ip = '$ip' ;" );
-    $result = $dbh->do( "INSERT INTO two_curator_ip VALUES ('$joinkey', '$ip')" );
-    print "IP $ip updated for $joinkey<br />\n"; } }
+#sub updateCurator {
+#  my ($joinkey) = @_;
+#  my $ip = $query->remote_host();
+#  my $result = $dbh->prepare( "SELECT * FROM two_curator_ip WHERE two_curator_ip = '$ip' AND joinkey = '$joinkey';" );
+#  $result->execute;
+#  my @row = $result->fetchrow;
+#  unless ($row[0]) {
+#    $result = $dbh->do( "DELETE FROM two_curator_ip WHERE two_curator_ip = '$ip' ;" );
+#    $result = $dbh->do( "INSERT INTO two_curator_ip VALUES ('$joinkey', '$ip')" );
+#    print "IP $ip updated for $joinkey<br />\n"; } }
 
 sub populateCurators {
 #   my $result = $conn->exec( "SELECT * FROM two_standardname; " );
