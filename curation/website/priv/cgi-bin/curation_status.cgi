@@ -366,7 +366,7 @@ sub updateWormCurator {                                 # update two_curator_ip 
 
   my %cookies = CGI::Cookie->fetch;
   if ($cookies{'SAVED_CURATOR_ID'}) {
-    my $my_cookie = $cookies{'SAVED_CURATOR_ID'}
+    my $my_cookie = $cookies{'SAVED_CURATOR_ID'};
     $my_cookie->value($curator_two);
   } else {
     my $my_cookie = CGI::Cookie->new(-name => 'SAVED_CURATOR_ID', -value => $curator_two);
