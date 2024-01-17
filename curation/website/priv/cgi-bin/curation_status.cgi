@@ -361,19 +361,23 @@ sub firstPage {
   &printFormClose();
 } # sub firstPage
 
-sub updateWormCurator {                                 # update two_curator_ip for this curator and ip
-  my ($curator_two) = @_;
+sub updateWormCurator {
+    my ($curator_two) = @_;
 
-  my %cookies = CGI::Cookie->fetch;
-  if ($cookies{'SAVED_CURATOR_ID'}) {
-    my $my_cookie = $cookies{'SAVED_CURATOR_ID'};
-    $my_cookie->value($curator_two);
-  } else {
-    my $my_cookie = CGI::Cookie->new(-name => 'SAVED_CURATOR_ID', -value => $curator_two);
-  }
-  $my_cookie->expires('+10y');
-  $cookies{'SAVED_CURATOR_ID'} = $my_cookie;
-} # sub updateWormCurator
+    # Retrieve existing cookies
+    my %cookies = CGI::Cookie->fetch;
+
+    # Check if 'SAVED_CURATOR_ID' cookie exists
+    if ($cookies{'SAVED_CURATOR_ID'}) {
+        my $my_cookie = $cookies{'SAVED_CURATOR_ID'};
+        $my_cookie->value($curator_two);
+        $my_cookie->expires('+10y');  # Set expiration time
+    } else {
+        my $my_cookie = CGI::Cookie->new(-name => 'SAVED_CURATOR_ID', -value => $curator_two);
+        $my_cookie->expires('+10y');  # Set expiration time
+        $cookies{'SAVED_CURATOR_ID'} = $my_cookie;
+    }
+}
 
 
 sub printHiddenDatatypeSource {
