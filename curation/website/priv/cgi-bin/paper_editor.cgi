@@ -2381,7 +2381,10 @@ sub printHtmlHeader {
 
     <!-- form-specific js put this last, since it depends on YUI above -->
     <script type="text/javascript" src="javascript/paper_editor.js"></script>
-
+    <script>
+      function setCookie(name, value) { var expiry = new Date(); expiry.setFullYear(expiry.getFullYear() +10); document.cookie = name + "=" + escape(value) + "; path=/; expires=" + expiry.toGMTString(); }
+      function saveCuratorIdInCookieFromSelect(selectElement) { var selectedValue = selectElement.value; setCookie("SAVED_CURATOR_ID", selectedValue); }
+    </script>
   ';
   $header .= "</head>";
   $header .= '<body class="yui-skin-sam">';
