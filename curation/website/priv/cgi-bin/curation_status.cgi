@@ -269,6 +269,13 @@ my %premadeComments;	tie %premadeComments, "Tie::IxHash";		# $premadeComments{"p
 my $tdDot = qq(<td align="center" style="border-style: dotted">);
 my $thDot = qq(<th align="center" style="border-style: dotted">);
 
+print "<html><head>";
+print "<script>";
+print "function setCookie(name, value) { var expiry = new Date(); expiry.setTime(expiry.getTime() + 30 * 24 * 3600 * 1000); document.cookie = name + '=' + escape(value) + '; path=/; expires=' + expiry.toGMTString(); }";
+print "function handleSelectChange(selectElement) { var selectedValue = selectElement.value; setCookie('SAVED_CURATOR_ID', selectedValue); }"
+print "</script>";
+print "</head><body>";
+
 &display();
 
 
@@ -281,7 +288,6 @@ sub display {
   &populatePremadeComments(); 
   &populateDonPosNegOptions(); 
   ($oop, $curator) = &getHtmlVar($query, "select_curator");
-  if ($curator) { &updateWormCurator($curator); }
   ($oop, my $datatypeSourceFormValue) = &getHtmlVar($query, "select_datatypesource");
   if ($datatypeSourceFormValue) { 
     $datatypeSource = $datatypeSourceFormValue;
@@ -333,7 +339,7 @@ sub firstPage {
   my %cookies = CGI::Cookie->fetch;
   my $saved_curator = $cookies{'SAVED_CURATOR_ID'} ? $cookies{'SAVED_CURATOR_ID'}->value : '';
 
-  print qq(<tr><td valign="top">Curator Name</td><td><select name="select_curator" size="); print scalar keys %curators; print qq(">\n);
+  print qq(<tr><td valign="top">Curator Name</td><td><select onchange="handleSelectChange(this)" name="select_curator" size="); print scalar keys %curators; print qq(">\n);
   foreach my $curator_two (keys %curators) {        # display curators in alphabetical (tied hash) order, if IP matches existing ip record, select it
     if ($saved_curator eq $curator_two) { print "<option value=\"$curator_two\" selected=\"selected\">$curators{$curator_two}</option>\n"; }
     else { print "<option value=\"$curator_two\">$curators{$curator_two}</option>\n"; } }
@@ -360,25 +366,6 @@ sub firstPage {
   print qq(</table>\n);
   &printFormClose();
 } # sub firstPage
-
-sub updateWormCurator {
-    my ($curator_two) = @_;
-
-    my $my_cookie;
-    # Retrieve existing cookies
-    my %cookies = CGI::Cookie->fetch;
-
-    # Check if 'SAVED_CURATOR_ID' cookie exists
-    if ($cookies{'SAVED_CURATOR_ID'}) {
-        $my_cookie = $cookies{'SAVED_CURATOR_ID'};
-        $my_cookie->value($curator_two);
-        $my_cookie->expires('+10y');  # Set expiration time
-    } else {
-        $my_cookie = CGI::Cookie->new(-name => 'SAVED_CURATOR_ID', -value => $curator_two);
-        $my_cookie->expires('+10y');  # Set expiration time
-        $cookies{'SAVED_CURATOR_ID'} = $my_cookie;
-    }
-}
 
 
 sub printHiddenDatatypeSource {
