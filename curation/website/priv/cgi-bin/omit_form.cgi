@@ -39,6 +39,10 @@ Content-type: text/html\n\n
   <script type="text/javascript" src="js/jquery-1.9.1.min.js"></script>
   <script type="text/javascript" src="js/jquery.tablesorter.min.js"></script>
   <script type="text/javascript">\$(document).ready(function() { \$("#sortabletable").tablesorter(); } );</script>
+  <script>
+      function setCookie(name, value) { var expiry = new Date(); expiry.setFullYear(expiry.getFullYear() +10); document.cookie = name + "=" + escape(value) + "; path=/; expires=" + expiry.toGMTString(); }
+      function saveCuratorIdInCookieFromSelect(selectElement) { var selectedValue = selectElement.value; setCookie("SAVED_CURATOR_ID", selectedValue); }
+    </script>
 </HEAD>
 
 <BODY bgcolor=#aaaaaa text=#000000 link=cccccc alink=eeeeee vlink=bbbbbb>
@@ -58,8 +62,10 @@ sub process {
   if ($action eq '') { &printLoginPage(); }		# Display login page, first time, no action
   else { 						# Form Button
     ($var, my $curator_id) = &getHtmlVar($query, 'curator_id');
-    if ($curator_id) { &updateCurator($curator_id); }
-      else { &printLoginPage(); return; }
+    if ($curator_id) {
+      #&updateCurator($curator_id);
+      1;
+    } else { &printLoginPage(); return; }
 
     if ($action eq 'Login') {                 &printHtmlMenu();                         }
       elsif ($action eq 'Main Page') {        &printHtmlMenu();                         }
@@ -197,20 +203,18 @@ sub printLoginPage {
   print qq(<TABLE border=0>\n);
 
   &populateCurators();
-  my $ip = $query->remote_host();                               # select curator by IP if IP has already been used
-  my $curator_by_ip = '';
-  my $result = $dbh->prepare( "SELECT * FROM two_curator_ip WHERE two_curator_ip = '$ip';" ); $result->execute; my @row = $result->fetchrow;
-  if ($row[0]) { $curator_by_ip = $row[0]; }
+
+  my $saved_curator = &readSavedCuratorFromCookie();
 
 #   my @curator_list = qw( two1823 two2987 two1 two1843 );	# Marie-Claire and Jane Mendel, removed 2020 03 20
   my @curator_list = qw( two1823 two2987 two1 two12028 two1843 );	# Daniela added, 2020 04 09
   my $select_size = scalar @curator_list + 1;
-  print "<tr><td colspan=\"3\"><b>Select your Name : </b></td><td><select name=\"curator_id\" size=\"$select_size\">\n";
+  print "<tr><td colspan=\"3\"><b>Select your Name : </b></td><td><select name=\"curator_id\" onChange=\"saveCuratorIdInCookieFromSelect(this)\" size=\"$select_size\">\n";
   print "<option value=\"\"></option>\n";
   foreach my $joinkey (@curator_list) {                         # display curators in alphabetical (array) order, if IP matches existing ip record, select it
     my $curator = 0;
     if ($curators{two}{$joinkey}) { $curator = $curators{two}{$joinkey}; }
-    if ($joinkey eq $curator_by_ip) { print "<option value=\"$joinkey\" selected=\"selected\">$curator</option>\n"; }
+    if ($joinkey eq $saved_curator) { print "<option value=\"$joinkey\" selected=\"selected\">$curator</option>\n"; }
       else { print "<option value=\"$joinkey\" >$curator</option>\n"; } }
   print "</select><br/>\n";
   print qq(<INPUT TYPE="submit" NAME="action" VALUE="Login">\n);
@@ -243,17 +247,17 @@ sub populateCurators {
   } # while (my @row = $result->fetchrow)
 } # sub populateCurators
 
-sub updateCurator {
-  my ($joinkey) = @_;
-  my $ip = $query->remote_host();
-  my $result = $dbh->prepare( "SELECT * FROM two_curator_ip WHERE two_curator_ip = '$ip' AND joinkey = '$joinkey';" );
-  $result->execute;
-  my @row = $result->fetchrow;
-  unless ($row[0]) {
-    $result = $dbh->do( "DELETE FROM two_curator_ip WHERE two_curator_ip = '$ip' ;" );
-    $result = $dbh->do( "INSERT INTO two_curator_ip VALUES ('$joinkey', '$ip')" );
+#sub updateCurator {
+#  my ($joinkey) = @_;
+#  my $ip = $query->remote_host();
+#  my $result = $dbh->prepare( "SELECT * FROM two_curator_ip WHERE two_curator_ip = '$ip' AND joinkey = '$joinkey';" );
+#  $result->execute;
+#  my @row = $result->fetchrow;
+#  unless ($row[0]) {
+#    $result = $dbh->do( "DELETE FROM two_curator_ip WHERE two_curator_ip = '$ip' ;" );
+#    $result = $dbh->do( "INSERT INTO two_curator_ip VALUES ('$joinkey', '$ip')" );
 #     print "IP $ip updated for $joinkey<br />\n";
-  } }
+#  } }
 
 
 
