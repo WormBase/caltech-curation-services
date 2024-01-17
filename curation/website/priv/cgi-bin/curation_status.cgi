@@ -214,8 +214,6 @@ use Time::HiRes qw ( time );			# replace time with High Resolution version
 
 use Dotenv -load => '/usr/lib/.env';
 
-use CGI::Cookie;
-
 my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST};port=$ENV{PSQL_PORT}", "$ENV{PSQL_USERNAME}", "$ENV{PSQL_PASSWORD}") or die "Cannot connect to database!\n";
 # my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n";
 my $result;
@@ -277,12 +275,6 @@ my $thDot = qq(<th align="center" style="border-style: dotted">);
 sub display {
   my $action; 
   &printHeader('Curation Status');
-  print "<html><head>";
-  print "<script>";
-  print "function setCookie(name, value) { var expiry = new Date(); expiry.setFullYear(expiry.getFullYear() +10);; document.cookie = name + '=' + escape(value) + '; path=/; expires=' + expiry.toGMTString(); }";
-  print "function handleSelectChange(selectElement) { var selectedValue = selectElement.value; setCookie('SAVED_CURATOR_ID', selectedValue); }";
-  print "</script>";
-  print "</head><body>";
   &populateDatatypes();
   &populateCurators();
   &populatePremadeComments(); 
@@ -336,8 +328,7 @@ sub firstPage {
   #my $result = $dbh->prepare( "SELECT * FROM two_curator_ip WHERE two_curator_ip = '$ip';" ); $result->execute; my @row = $result->fetchrow;
   #if ($row[0]) { $curator_by_ip = $row[0]; }
 
-  my %cookies = CGI::Cookie->fetch;
-  my $saved_curator = $cookies{'SAVED_CURATOR_ID'} ? $cookies{'SAVED_CURATOR_ID'}->value : '';
+  my $saved_curator = &readSavedCuratorFromCookie();
 
   print qq(<tr><td valign="top">Curator Name</td><td><select onchange="handleSelectChange(this)" name="select_curator" size="); print scalar keys %curators; print qq(">\n);
   foreach my $curator_two (keys %curators) {        # display curators in alphabetical (tied hash) order, if IP matches existing ip record, select it
