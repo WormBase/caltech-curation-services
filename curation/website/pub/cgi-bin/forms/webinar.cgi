@@ -196,7 +196,7 @@ sub submit {
   $form_data    .= qq(</table><br/><br/>);
 
     # on any submission action, update the person / email for the user's IP address
-  &updateUserIp( $fields{person}{termidvalue}{1}, $fields{email}{inputvalue}{1} );
+  #&updateUserIp( $fields{person}{termidvalue}{1}, $fields{email}{inputvalue}{1} );
     # if the form has no person id, try to load from postgres by ip address.  removed 2018 10 18 for Chris
 #   unless ($fields{person}{termidvalue}{1}) {
 #     ( $fields{person}{termidvalue}{1}, $fields{person}{inputvalue}{1}, $fields{email}{termidvalue}{1} ) = &getUserByIp(); }
@@ -947,25 +947,25 @@ sub checkIpBlock {
   if ($row[0]) { return 1; } else { return 0; }
 } # sub checkIpBlock
 
-sub updateUserIp {
-  my ($wbperson, $submitter_email) = @_;
-  my $ip = &getIp();
-  my $twonum = $wbperson; $twonum =~ s/WBPerson/two/;
-  $result = $dbh->do( "DELETE FROM two_user_ip WHERE two_user_ip = '$ip' ;" );
-  $result = $dbh->do( "INSERT INTO two_user_ip VALUES ('$twonum', '$ip', '$submitter_email')" ); 
-} # sub updateUserIp
+#sub updateUserIp {
+#  my ($wbperson, $submitter_email) = @_;
+#  my $ip = &getIp();
+#  my $twonum = $wbperson; $twonum =~ s/WBPerson/two/;
+#  $result = $dbh->do( "DELETE FROM two_user_ip WHERE two_user_ip = '$ip' ;" );
+#  $result = $dbh->do( "INSERT INTO two_user_ip VALUES ('$twonum', '$ip', '$submitter_email')" );
+#} # sub updateUserIp
 
-sub getUserByIp {
-  my $ip = &getIp();
-  my $twonum = ''; my $standardname = ''; my $email = ''; my $wbperson = '';
-  $result = $dbh->prepare( "SELECT * FROM two_user_ip WHERE two_user_ip = '$ip';" ); 
-  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; my @row = $result->fetchrow();
-  if ($row[0]) { $twonum = $row[0]; $email = $row[2]; $wbperson = $row[0]; $wbperson =~ s/two/WBPerson/; }
-  $result = $dbh->prepare( "SELECT * FROM two_standardname WHERE joinkey = '$twonum';" );
-  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; my @row = $result->fetchrow();
-  if ($row[2]) { $standardname = $row[2]; }
-  return ($wbperson, $standardname, $email);
-} # sub getUserByIp
+#sub getUserByIp {
+#  my $ip = &getIp();
+#  my $twonum = ''; my $standardname = ''; my $email = ''; my $wbperson = '';
+#  $result = $dbh->prepare( "SELECT * FROM two_user_ip WHERE two_user_ip = '$ip';" );
+#  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; my @row = $result->fetchrow();
+#  if ($row[0]) { $twonum = $row[0]; $email = $row[2]; $wbperson = $row[0]; $wbperson =~ s/two/WBPerson/; }
+#  $result = $dbh->prepare( "SELECT * FROM two_standardname WHERE joinkey = '$twonum';" );
+#  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; my @row = $result->fetchrow();
+#  if ($row[2]) { $standardname = $row[2]; }
+#  return ($wbperson, $standardname, $email);
+#} # sub getUserByIp
 
 sub mailSendmail {
   my ($user, $email, $subject, $body) = @_;
