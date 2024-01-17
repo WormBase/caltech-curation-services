@@ -330,7 +330,7 @@ sub firstPage {
 
   my $saved_curator = &readSavedCuratorFromCookie();
 
-  print qq(<tr><td valign="top">Curator Name</td><td><select onchange="handleSelectChange(this)" name="select_curator" size="); print scalar keys %curators; print qq(">\n);
+  print qq(<tr><td valign="top">Curator Name</td><td><select onchange="saveCuratorIdInCookieFromSelect(this)" name="select_curator" size="); print scalar keys %curators; print qq(">\n);
   foreach my $curator_two (keys %curators) {        # display curators in alphabetical (tied hash) order, if IP matches existing ip record, select it
     if ($saved_curator eq $curator_two) { print "<option value=\"$curator_two\" selected=\"selected\">$curators{$curator_two}</option>\n"; }
     else { print "<option value=\"$curator_two\">$curators{$curator_two}</option>\n"; } }
