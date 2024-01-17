@@ -214,6 +214,8 @@ use Time::HiRes qw ( time );			# replace time with High Resolution version
 
 use Dotenv -load => '/usr/lib/.env';
 
+use CGI::Cookie;
+
 my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST};port=$ENV{PSQL_PORT}", "$ENV{PSQL_USERNAME}", "$ENV{PSQL_PASSWORD}") or die "Cannot connect to database!\n";
 # my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n";
 my $result;
@@ -323,14 +325,17 @@ sub firstPage {
   &printFormOpen();
   print qq(<table border="0">\n);
 
-  my $ip = $query->remote_host();               # get ip address
-  my $curator_by_ip = '';
-  my $result = $dbh->prepare( "SELECT * FROM two_curator_ip WHERE two_curator_ip = '$ip';" ); $result->execute; my @row = $result->fetchrow;
-  if ($row[0]) { $curator_by_ip = $row[0]; }
+  #my $ip = $query->remote_host();               # get ip address
+  #my $curator_by_ip = '';
+  #my $result = $dbh->prepare( "SELECT * FROM two_curator_ip WHERE two_curator_ip = '$ip';" ); $result->execute; my @row = $result->fetchrow;
+  #if ($row[0]) { $curator_by_ip = $row[0]; }
+
+  my %cookies = CGI::Cookie->fetch;
+  my $saved_curator = $cookies{'SAVED_CURATOR_ID'} ? $cookies{'SAVED_CURATOR_ID'}->value : '';
 
   print qq(<tr><td valign="top">Name</td><td><select name="select_curator" size="); print scalar keys %curators; print qq(">\n);
   foreach my $curator_two (keys %curators) {        # display curators in alphabetical (tied hash) order, if IP matches existing ip record, select it
-    if ($curator_by_ip eq $curator_two) { print "<option value=\"$curator_two\" selected=\"selected\">$curators{$curator_two}</option>\n"; }
+    if ($saved_curator eq $curator_two) { print "<option value=\"$curator_two\" selected=\"selected\">$curators{$curator_two}</option>\n"; }
     else { print "<option value=\"$curator_two\">$curators{$curator_two}</option>\n"; } }
   print qq(</select></td></tr>);
 
@@ -358,14 +363,17 @@ sub firstPage {
 
 sub updateWormCurator {                                 # update two_curator_ip for this curator and ip
   my ($curator_two) = @_;
-  my $ip = $query->remote_host();               # get ip address
-  my $result = $dbh->prepare( "SELECT * FROM two_curator_ip WHERE two_curator_ip = '$ip' AND joinkey = '$curator_two';" );
-  $result->execute;
-  my @row = $result->fetchrow;
-  unless ($row[0]) {
-    $result = $dbh->do( "DELETE FROM two_curator_ip WHERE two_curator_ip = '$ip' ;" );
-    $result = $dbh->do( "INSERT INTO two_curator_ip VALUES ('$curator_two', '$ip')" );
-} } # sub updateWormCurator
+
+  my %cookies = CGI::Cookie->fetch;
+  if ($cookies{'SAVED_CURATOR_ID'}) {
+    my $my_cookie = $cookies{'SAVED_CURATOR_ID'}
+    $my_cookie->value($curator_two);
+  } else {
+    my $my_cookie = CGI::Cookie->new(-name => 'SAVED_CURATOR_ID', -value => $curator_two);
+  }
+  $my_cookie->expires('+10y');
+  $cookies{'SAVED_CURATOR_ID'} = $my_cookie;
+} # sub updateWormCurator
 
 
 sub printHiddenDatatypeSource {
