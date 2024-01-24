@@ -23,12 +23,12 @@ my $ref4 = &createReference('ref4');
 my $ref5 = &createReference('ref5');
 my $ref6 = &createReference('ref6');
 
-my $rel1 = &createRelation($ref1, $ref4, 'CommentOn');
-my $rel2 = &createRelation($ref1, $ref5, 'CommentOn');
-my $rel3 = &createRelation($ref1, $ref3, 'ChapterIn');
-my $rel4 = &createRelation($ref2, $ref6, 'ErratumFor');
+my $rel1 = &createRelation($ref1, $ref3, 'CommentOn');
+my $rel2 = &createRelation($ref1, $ref4, 'CommentOn');
+my $rel3 = &createRelation($ref1, $ref5, 'ChapterIn');
+my $rel4 = &createRelation($ref3, $ref2, 'ErratumFor');
 my $rel5 = &createRelation($ref2, $ref4, 'ReprintOf');
-my $rel6 = &createRelation($ref2, $ref3, 'UpdateOf');
+my $rel6 = &createRelation($ref2, $ref6, 'UpdateOf');
 
 
 sub createRelation {
