@@ -21,6 +21,8 @@ use Dotenv -load => '/usr/lib/.env';
 my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST};port=$ENV{PSQL_PORT}", "$ENV{PSQL_USERNAME}", "$ENV{PSQL_PASSWORD}") or die "Cannot connect to database!\n";
 use Tie::IxHash;
 
+use CGI::Cookie;
+
 
 ### FIELDS ###
 
@@ -330,23 +332,25 @@ sub loginMod {
 sub loginTest {						# switch for different login subroutines
   my ($flag, $ip, $curator_two) = @_;			# get the flag, $ip, and optional $curator_two
   if ($flag eq 'showModLogin') { &showTestLogin($ip); }
-  elsif ($flag eq 'updateModCurator') { &updateTestCurator($ip, $curator_two); }
+  #elsif ($flag eq 'updateModCurator') { &updateTestCurator($ip, $curator_two); }
 } # sub loginTest
 
 sub showTestLogin {					# show login curators, datatypes, and Login button
-  my ($ip) = @_;
-  my $curator_by_ip = '';
-  my $result = $dbh->prepare( "SELECT * FROM two_curator_ip WHERE two_curator_ip = '$ip';" ); $result->execute; my @row = $result->fetchrow;
-  if ($row[0]) { $curator_by_ip = $row[0]; }
+  #my ($ip) = @_;
+  #my $curator_by_ip = '';
+  #my $result = $dbh->prepare( "SELECT * FROM two_curator_ip WHERE two_curator_ip = '$ip';" ); $result->execute; my @row = $result->fetchrow;
+  #if ($row[0]) { $curator_by_ip = $row[0]; }
+  my $saved_curator = &readSavedCuratorFromCookie();
+
   my %curator_list; tie %curator_list, "Tie::IxHash";
   $curator_list{"two1823"} = 'Juancarlos Chan';
   $curator_list{"two625"} = 'Paul Sternberg';
 
   print "<table cellpadding=\"4\">\n";
   print "<tr>\n";
-  print "<td valign=\"top\">Name<br /><select name=\"curator_two\" size=" , scalar keys %curator_list , ">\n";
+  print "<td valign=\"top\">Name<br /><select name=\"curator_two\" onChange=\"saveCuratorIdInCookieFromSelect(this)\" size=" , scalar keys %curator_list , ">\n";
   foreach my $curator_two (keys %curator_list) {	# display curators in alphabetical (tied hash) order, if IP matches existing ip record, select it
-    if ($curator_by_ip eq $curator_two) { print "<option value=\"$curator_two\" selected=\"selected\">$curator_list{$curator_two}</option>\n"; }
+    if ($curator_two eq $saved_curator) { print "<option value=\"$curator_two\" selected=\"selected\">$curator_list{$curator_two}</option>\n"; }
     else { print "<option value=\"$curator_two\">$curator_list{$curator_two}</option>\n"; } }
   print "</select></td>\n";
   print "<td valign=\"top\">Data Type<br /><select name=\"datatype\" size=\"10\">\n";
@@ -357,15 +361,21 @@ sub showTestLogin {					# show login curators, datatypes, and Login button
   print "</table>\n";
 } # sub showTestLogin
 
-sub updateTestCurator {					# update two_curator_ip for this curator and ip
-  my ($ip, $curator_two) = @_;
-  my $result = $dbh->prepare( "SELECT * FROM two_curator_ip WHERE two_curator_ip = '$ip' AND joinkey = '$curator_two';" );
-  $result->execute;
-  my @row = $result->fetchrow;
-  unless ($row[0]) {
-    $result = $dbh->do( "DELETE FROM two_curator_ip WHERE two_curator_ip = '$ip' ;" );
-    $result = $dbh->do( "INSERT INTO two_curator_ip VALUES ('$curator_two', '$ip')" );
-} } # sub updateTestCurator
+sub readSavedCuratorFromCookie {
+  my %cookies = CGI::Cookie->fetch;
+  my $saved_curator = $cookies{'SAVED_CURATOR_ID'} ? $cookies{'SAVED_CURATOR_ID'}->value : '';
+  return $saved_curator;
+}
+
+#sub updateTestCurator {					# update two_curator_ip for this curator and ip
+#  my ($ip, $curator_two) = @_;
+#  my $result = $dbh->prepare( "SELECT * FROM two_curator_ip WHERE two_curator_ip = '$ip' AND joinkey = '$curator_two';" );
+#  $result->execute;
+#  my @row = $result->fetchrow;
+#  unless ($row[0]) {
+#    $result = $dbh->do( "DELETE FROM two_curator_ip WHERE two_curator_ip = '$ip' ;" );
+#    $result = $dbh->do( "INSERT INTO two_curator_ip VALUES ('$curator_two', '$ip')" );
+#} } # sub updateTestCurator
 
 ### END LOGIN ###
 

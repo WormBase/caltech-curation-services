@@ -1,17 +1,6 @@
 #!/usr/bin/env perl
 
-# generate topic entity classifiers for Kimberly for ABC  https://agr-jira.atlassian.net/browse/SCRUM-2664  2023 06 09
-#
-# create sources at ABC if they don't already exist.
-# does not handle cur_svmdata nor cur_nncdata until confirmation.  2023 08 15
-#
-# handle second strdata for antibody from Valerio/Daniela pipeline, use for strdata after 2021-06-09
-# handles nnc and svm, although Kimberly has not confirmed.  2023 08 16
-#
-# dockerized, filled in TDB for source_type for str, svm, nnc.  wrote to Valerio and Kimberly about the confirmation questions.  2023 10 04
-
-# ./create_sources.pl
-
+# generate reference to test merging UI for reference_relations
 
 use strict;
 use diagnostics;
@@ -21,6 +10,67 @@ use Encode qw( from_to is_utf8 );
 use Storable qw(dclone);
 use Dotenv -load => '/usr/lib/.env';
 
+my $mod = 'WB';
+# my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
+my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
+my $okta_token = &generateOktaToken();
+# my $okta_token = 'use_above_when_live';
+
+my $ref1 = &createReference('ref1');
+my $ref2 = &createReference('ref2');
+my $ref3 = &createReference('ref3');
+my $ref4 = &createReference('ref4');
+my $ref5 = &createReference('ref5');
+my $ref6 = &createReference('ref6');
+
+my $rel1 = &createRelation($ref1, $ref3, 'CommentOn');
+my $rel2 = &createRelation($ref1, $ref4, 'CommentOn');
+my $rel3 = &createRelation($ref1, $ref5, 'ChapterIn');
+my $rel4 = &createRelation($ref3, $ref2, 'ErratumFor');
+my $rel5 = &createRelation($ref2, $ref4, 'ReprintOf');
+my $rel6 = &createRelation($ref2, $ref6, 'UpdateOf');
+
+
+sub createRelation {
+  my ($from, $to, $type) = @_;
+  my %relation_hash = (
+    reference_curie_from => $from,
+    reference_curie_to => $to,
+    reference_relation_type => $type
+  );
+  my $relation_json = encode_json \%relation_hash;
+  my $url = $baseUrl . 'reference_relation/';
+  my $api_json = `curl -X 'POST' $url -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json' --data '$relation_json'`;
+  $api_json =~ s/"//g;
+  print qq($api_json\n);
+  return $api_json;
+}
+
+sub createReference {
+#   my ($source_type, $source_method, $source_json) = @_;
+  my ($title) = @_;
+  my %reference_hash = ( title => $title, category => 'research_article' );
+  my $reference_json = encode_json \%reference_hash;
+  my $url = $baseUrl . 'reference/';
+  my $api_json = `curl -X 'POST' $url -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json' --data '$reference_json'`;
+  $api_json =~ s/"//g;
+  print qq($api_json\n);
+  return $api_json;
+}
+
+
+sub generateOktaToken {
+#   my $okta_token = `curl -s --request POST --url https://$ENV{OKTA_DOMAIN}/v1/token \    --header 'accept: application/json' \    --header 'cache-control: no-cache' \    --header 'content-type: application/x-www-form-urlencoded' \    --data "grant_type=client_credentials&scope=admin&client_id=$ENV{OKTA_CLIENT_ID}&client_secret=$ENV{OKTA_CLIENT_SECRET}" \      | jq '.access_token' | tr -d '"'`;
+  my $okta_result = `curl -s --request POST --url https://$ENV{OKTA_DOMAIN}/v1/token \    --header 'accept: application/json' \    --header 'cache-control: no-cache' \    --header 'content-type: application/x-www-form-urlencoded' \    --data "grant_type=client_credentials&scope=admin&client_id=$ENV{OKTA_CLIENT_ID}&client_secret=$ENV{OKTA_CLIENT_SECRET}"`;
+  my $hash_ref = decode_json $okta_result;
+  my $okta_token = $$hash_ref{'access_token'};
+#   print $okta_token;
+  return $okta_token;
+}
+
+
+__END__
+
 use constant FALSE => \0;
 use constant TRUE => \1;
 
@@ -28,11 +78,6 @@ my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST}
 # my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n"; 
 my $result;
 
-my $mod = 'WB';
-my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
-# my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
-my $okta_token = &generateOktaToken();
-# my $okta_token = 'use_above_when_live';
 
 
 
@@ -48,40 +93,100 @@ my $okta_token = &generateOktaToken();
 #   "updated_by": "default_user"
 # }';
 my %source_default = (
-  "source_type"      => "professional_biocurator",
-  "source_method"    => "wormbase_curation_status",
-  "evidence"         => "eco_string",
+  "source_type"      => "script",
+  "source_method"    => "paper_editor",
+  "evidence"         => "ECO:0008021",
   "mod_abbreviation" => $mod,
   "created_by"       => "00u2ao5gp6tZJ9xXU5d7",
   "updated_by"       => "00u2ao5gp6tZJ9xXU5d7"
 );
+# 00u2ao5gp6tZJ9xXU5d7 is vanauken@wormbase.org
 
-my $source_type = 'professional_biocurator';
-my $source_method = 'wormbase_curation_status';
+my $source_type = 'script';
+my $source_method = 'paper_editor';
 my $source_id = &getSourceId($source_type, $source_method);
 unless ($source_id) { 
   my %source_json = %{ dclone (\%source_default) };
   $source_json{source_type}     = $source_type;
   $source_json{source_method}   = $source_method;
-  $source_json{validation_type} = 'curator';
-  $source_json{description}     = 'cur_curdata';
-  $source_json{evidence}        = "ECO:0000302";
+#   $source_json{validation_type} = 'curator';
+  $source_json{description}     = 'WormBase script that identifies gene and protein names in PubMed abstracts upon manual inclusion into WormBase using the paper editor.';
   my $source_json = encode_json \%source_json;
   &createSource($source_type, $source_method, $source_json);
+  # e.g. WBPaper00046571
 }
 
-$source_type = 'professional_biocurator';
-$source_method = 'wormbase_oa';
+$source_type = 'script';
+$source_method = 'meeting_abstract_processing';
 $source_id = &getSourceId($source_type, $source_method);
 unless ($source_id) { 
   my %source_json = %{ dclone (\%source_default) };
   $source_json{source_type}     = $source_type;
   $source_json{source_method}   = $source_method;
-  $source_json{validation_type} = 'curation_tools';
-  $source_json{description}     = 'caltech curation tools';
+#   $source_json{validation_type} = 'curation_tools';
+  $source_json{description}     = 'WormBase script that identifies gene and protein names in meeting abstracts upon bulk inclusion into WormBase.';
+  my $source_json = encode_json \%source_json;
+  &createSource($source_type, $source_method, $source_json);
+  # e.g. WBPaper00063872
+}
+
+$source_type = 'script';
+$source_method = 'gene_paper_association_script';
+$source_id = &getSourceId($source_type, $source_method);
+unless ($source_id) { 
+  my %source_json = %{ dclone (\%source_default) };
+  $source_json{source_type}     = $source_type;
+  $source_json{source_method}   = $source_method;
+#   $source_json{validation_type} = 'curator';
+  $source_json{description}     = 'WormBase scripts that identified gene and protein names in abstracts or updated gene identifiers.';
+  my $source_json = encode_json \%source_json;
+  &createSource($source_type, $source_method, $source_json);
+  # e.g. WBPaper00004952, WBPaper00005199
+}
+
+$source_type = 'professional_biocurator';
+$source_method = 'CGC';
+$source_id = &getSourceId($source_type, $source_method);
+unless ($source_id) { 
+  my %source_json = %{ dclone (\%source_default) };
+  $source_json{source_type}     = $source_type;
+  $source_json{source_method}   = $source_method;
+  $source_json{validation_type} = 'curator';
+  $source_json{description}     = 'Manual creation of gene-paper associations that likely came into WormBase via the CGC reference import, but no direct evidence for that is available.';
   $source_json{evidence}        = "ECO:0000302";
   my $source_json = encode_json \%source_json;
   &createSource($source_type, $source_method, $source_json);
+  # e.g. WBPaper00004952, WBPaper00005199, WBPaper00027280
+}
+
+$source_type = 'professional_biocurator';
+$source_method = 'WormBook';
+$source_id = &getSourceId($source_type, $source_method);
+unless ($source_id) { 
+  my %source_json = %{ dclone (\%source_default) };
+  $source_json{source_type}     = $source_type;
+  $source_json{source_method}   = $source_method;
+  $source_json{validation_type} = 'curator';
+  $source_json{description}     = 'Creation of gene-paper associations made during the initial publication of WormBook chapters.';
+  $source_json{evidence}        = "ECO:0000302";
+  my $source_json = encode_json \%source_json;
+  &createSource($source_type, $source_method, $source_json);
+  # e.g. WBPaper00004952, WBPaper00005199, WBPaper00027280
+}
+
+$source_type = 'professional_biocurator';
+$source_method = 'paper_editor';
+$source_id = &getSourceId($source_type, $source_method);
+unless ($source_id) { 
+  my %source_json = %{ dclone (\%source_default) };
+  $source_json{source_type}     = $source_type;
+  $source_json{source_method}   = $source_method;
+  $source_json{validation_type} = 'curator';
+  $source_json{description}     = 'Manual creation of gene-paper associations in the WormBase paper editor.';
+  $source_json{evidence}        = "ECO:0000302";
+  my $source_json = encode_json \%source_json;
+  &createSource($source_type, $source_method, $source_json);
+  # e.g. WBPaper00057043, WBPaper00064676
 }
 
 $source_type = 'professional_biocurator';
@@ -92,24 +197,11 @@ unless ($source_id) {
   $source_json{source_type}     = $source_type;
   $source_json{source_method}   = $source_method;
   $source_json{validation_type} = 'curator';
-  $source_json{description}     = 'cfp curator';
+  $source_json{description}     = 'Manual creation of gene-paper associations in the WormBase curator first pass form.';
   $source_json{evidence}        = "ECO:0000302";
   my $source_json = encode_json \%source_json;
   &createSource($source_type, $source_method, $source_json);
-}
-
-$source_type = 'professional_biocurator';
-$source_method = 'author_first_pass';
-$source_id = &getSourceId($source_type, $source_method);
-unless ($source_id) { 
-  my %source_json = %{ dclone (\%source_default) };
-  $source_json{source_type}     = $source_type;
-  $source_json{source_method}   = $source_method;
-  $source_json{validation_type} = 'curator';
-  $source_json{description}     = 'afp curator';
-  $source_json{evidence}        = "ECO:0000302";
-  my $source_json = encode_json \%source_json;
-  &createSource($source_type, $source_method, $source_json);
+  # e.g. WBPaper00057043, WBPaper00064676
 }
 
 $source_type = 'author';
@@ -120,10 +212,11 @@ unless ($source_id) {
   $source_json{source_type}     = $source_type;
   $source_json{source_method}   = $source_method;
   $source_json{validation_type} = 'author';
-  $source_json{description}     = 'afp author';
+  $source_json{description}     = 'Manual creation of gene-paper associations in the WormBase author first pass form.';
   $source_json{evidence}        = "ECO:0000302";
   my $source_json = encode_json \%source_json;
   &createSource($source_type, $source_method, $source_json);
+  # e.g. WBPaper00057043, WBPaper00064676
 }
 
 $source_type = 'author';
@@ -134,35 +227,13 @@ unless ($source_id) {
   $source_json{source_type}     = $source_type;
   $source_json{source_method}   = $source_method;
   $source_json{validation_type} = 'author';
-  $source_json{description}     = 'ACKnowledge author';
+  $source_json{description}     = 'Author validation and/or data entry from ACKnowledge form.';
   $source_json{evidence}        = "ECO:0000302";
   my $source_json = encode_json \%source_json;
   &createSource($source_type, $source_method, $source_json);
 }
 
-$source_type = 'acknowledge_pipeline';
-$source_method = 'ACKnowledge';
-$source_id = &getSourceId($source_type, $source_method);
-unless ($source_id) { 
-  my %source_json = %{ dclone (\%source_default) };
-  $source_json{source_type}     = $source_type;
-  $source_json{source_method}   = $source_method;
-  $source_json{description}     = 'TBD tfp';
-  my $source_json = encode_json \%source_json;
-  &createSource($source_type, $source_method, $source_json);
-}
 
-$source_type = 'string_matching';
-$source_method = 'script_antibody_data';
-$source_id = &getSourceId($source_type, $source_method);
-unless ($source_id) { 
-  my %source_json = %{ dclone (\%source_default) };
-  $source_json{source_type}     = $source_type;
-  $source_json{source_method}   = $source_method;
-  $source_json{description}     = 'script parsing antibody';	# script name here
-  my $source_json = encode_json \%source_json;
-  &createSource($source_type, $source_method, $source_json);
-}
 
 # had 2 types of string matching data for antibody, but only using one, don't need second type
 # $source_type = 'TBD';

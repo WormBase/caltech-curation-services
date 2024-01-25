@@ -1560,19 +1560,15 @@ sub firstPage {
     # using post instead of get makes a confirmation request when javascript reloads the page after a change.  2010 03 12
   print "<form name='form1' method=\"get\" action=\"person_editor.cgi\">\n";
   print "<table border=0 cellspacing=5>\n";
-  print "<tr><td colspan=\"2\">Select your Name : <select name=\"curator_two\" size=\"1\">\n";
+  print "<tr><td colspan=\"2\">Select your Name : <select name=\"curator_two\" onChange=\"saveCuratorIdInCookieFromSelect(this)\" size=\"1\">\n";
   &populateCurators();
-  my $ip = $query->remote_host();                               # select curator by IP if IP has already been used
-  my $curator_by_ip = '';
-  my $result = $dbh->prepare( "SELECT * FROM two_curator_ip WHERE two_curator_ip = '$ip';" ); 
-  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; my @row = $result->fetchrow;
-  if ($row[0]) { $curator_by_ip = $row[0]; }
+  my $saved_curator = &readSavedCuratorFromCookie();
 #   my @curator_list = ('Juancarlos Chan', 'Cecilia Nakamura');
   my @curator_list = ('two1823', 'two2987', 'two1', 'two12028', 'two2970', 'two712');
   foreach my $joinkey (@curator_list) {                         # display curators in alphabetical (array) order, if IP matches existing ip record, select it
     my $curator = $joinkey;
     if ($curators{two}{$curator}) { $curator = $curators{two}{$curator}; }
-    if ($joinkey eq $curator_by_ip) { print "<option value=\"$joinkey\" selected=\"selected\">$curator</option>\n"; }
+    if ($joinkey eq $saved_curator) { print "<option value=\"$joinkey\" selected=\"selected\">$curator</option>\n"; }
       else { print "<option value=\"$joinkey\" >$curator</option>\n"; } }
   print "</select></td>";
   print "<td colspan=\"2\">Date : $date</td></tr>\n";
@@ -1645,7 +1641,10 @@ sub showEditorText {
 
 sub getCuratorFromForm {
   (my $var, my $curator_two) = &getHtmlVar($query, "curator_two");
-  if ($curator_two) { &updateCurator($curator_two); } else { print "ERROR : No curator chosen, using two1<br />\n"; $curator_two = 'two1'; }
+  if ($curator_two) {
+    #&updateCurator($curator_two);
+    1;
+  } else { print "ERROR : No curator chosen, using two1<br />\n"; $curator_two = 'two1'; }
   print "<input type=\"hidden\" name=\"curator_two\" id=\"curator_two\" value=\"$curator_two\">";
   return $curator_two;
 } # sub getCuratorFromForm
@@ -1657,16 +1656,16 @@ sub populateCurators {
     $curators{two}{$row[0]} = $row[2];
     $curators{std}{$row[2]} = $row[0]; } }
 
-sub updateCurator {
-  my ($joinkey) = @_;
-  my $ip = $query->remote_host();
-  my $result = $dbh->prepare( "SELECT * FROM two_curator_ip WHERE two_curator_ip = '$ip' AND joinkey = '$joinkey';" );
-  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
-  my @row = $result->fetchrow;
-  unless ($row[0]) {
-    $result = $dbh->do( "DELETE FROM two_curator_ip WHERE two_curator_ip = '$ip' ;" );
-    $result = $dbh->do( "INSERT INTO two_curator_ip VALUES ('$joinkey', '$ip')" );
-    print "IP $ip updated for $joinkey<br />\n"; } }
+#sub updateCurator {
+#  my ($joinkey) = @_;
+#  my $ip = $query->remote_host();
+#  my $result = $dbh->prepare( "SELECT * FROM two_curator_ip WHERE two_curator_ip = '$ip' AND joinkey = '$joinkey';" );
+#  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+#  my @row = $result->fetchrow;
+#  unless ($row[0]) {
+#    $result = $dbh->do( "DELETE FROM two_curator_ip WHERE two_curator_ip = '$ip' ;" );
+#    $result = $dbh->do( "INSERT INTO two_curator_ip VALUES ('$joinkey', '$ip')" );
+#    print "IP $ip updated for $joinkey<br />\n"; } }
 
 
 sub padZeros {
@@ -1760,7 +1759,10 @@ sub printHtmlHeader {
 
     <!-- form-specific js put this last, since it depends on YUI above -->
     <script type="text/javascript" src="../javascript/person_editor.js"></script>
-
+    <script>
+      function setCookie(name, value) { var expiry = new Date(); expiry.setFullYear(expiry.getFullYear() +10); document.cookie = name + "=" + escape(value) + "; path=/; expires=" + expiry.toGMTString(); }
+      function saveCuratorIdInCookieFromSelect(selectElement) { var selectedValue = selectElement.value; setCookie("SAVED_CURATOR_ID", selectedValue); }
+    </script>
   );
   $header .= "</head>";
   $header .= '<body class="yui-skin-sam">';
@@ -3097,7 +3099,7 @@ sub search {
 
   ($oop, my $curator_id) = &getHtmlVar($query, 'curator_id');
   unless ($curator_id) { print "ERROR NO CURATOR<br />\n"; return; }
-  &updateCurator($curator_id);
+  #&updateCurator($curator_id);
 
   ($oop, my $number) = &getHtmlVar($query, "data_number");
   if ($number) { 
@@ -3351,7 +3353,7 @@ sub authorGeneDisplay {			# for Karen
   print "<input type=\"hidden\" name=\"which_page\" id=\"which_page\" value=\"authorGeneDisplay\">";
   ($oop, my $curator_id) = &getHtmlVar($query, 'curator_id');
   unless ($curator_id) { print "ERROR NO CURATOR<br />\n"; return; }
-  &updateCurator($curator_id);
+  #&updateCurator($curator_id);
   my $who = '';
   if ($curator_id eq 'two712') { $who = 'Karen Yook'; }
   if ($curator_id eq 'two1843') { $who = 'Kimberly Van Auken'; }
@@ -3434,16 +3436,16 @@ sub padZeros {
 } # sub padZeros
 
 
-sub updateCurator {
-  my ($joinkey) = @_;
-  my $ip = $query->remote_host();
-  my $result = $dbh->prepare( "SELECT * FROM two_curator_ip WHERE two_curator_ip = '$ip' AND joinkey = '$joinkey';" );
-  $result->execute;
-  my @row = $result->fetchrow;
-  unless ($row[0]) {
-    $result = $dbh->do( "DELETE FROM two_curator_ip WHERE two_curator_ip = '$ip' ;" );
-    $result = $dbh->do( "INSERT INTO two_curator_ip VALUES ('$joinkey', '$ip')" );
-    print "IP $ip updated for $joinkey<br />\n"; } }
+#sub updateCurator {
+#  my ($joinkey) = @_;
+#  my $ip = $query->remote_host();
+#  my $result = $dbh->prepare( "SELECT * FROM two_curator_ip WHERE two_curator_ip = '$ip' AND joinkey = '$joinkey';" );
+#  $result->execute;
+#  my @row = $result->fetchrow;
+#  unless ($row[0]) {
+#    $result = $dbh->do( "DELETE FROM two_curator_ip WHERE two_curator_ip = '$ip' ;" );
+#    $result = $dbh->do( "INSERT INTO two_curator_ip VALUES ('$joinkey', '$ip')" );
+#    print "IP $ip updated for $joinkey<br />\n"; } }
 
 sub populateCurators {
 #   my $result = $conn->exec( "SELECT * FROM two_standardname; " );
@@ -5151,9 +5153,12 @@ __END__
 my $result = $conn->exec( "SELECT * FROM one_groups;" );
 while (my @row = $result->fetchrow) {
   if ($row[0]) { 
-    $row[0] =~ s///g;
-    $row[1] =~ s///g;
-    $row[2] =~ s///g;
+    $row[0] =~ s/
+//g;
+    $row[1] =~ s/
+//g;
+    $row[2] =~ s/
+//g;
     print "$row[0]\t$row[1]\t$row[2]\n";
   } # if ($row[0])
 } # while (@row = $result->fetchrow)

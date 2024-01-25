@@ -168,7 +168,7 @@ sub outputOaData {
 
 sub outputAfpCurData {
   my $source_type = 'professional_biocurator';
-  my $source_method = 'afp';
+  my $source_method = 'author_first_pass';
   my $source_id = &getSourceId($source_type, $source_method);
   unless ($source_id) {
     print qq(ERROR no source_id for $source_type and $source_method);
@@ -201,8 +201,8 @@ sub outputAfpCurData {
 
 sub outputAfpAutData {
   my $source_type   = 'author';
-  my $source_method_ack = 'ACKnowledge';
-  my $source_method_afp = 'afp';
+  my $source_method_ack = 'ACKnowledge_form';
+  my $source_method_afp = 'author_first_pass';
   my $source_id_ack = &getSourceId($source_type, $source_method_ack);
   my $source_id_afp = &getSourceId($source_type, $source_method_afp);
   unless ($source_id_ack) {
@@ -268,7 +268,7 @@ sub populateAfpData {
       if ($tsdigits < '20190322') { 
         $afpAutData{$datatype}{$row[0]}{note}      = $data;
         $afpAutData{$datatype}{$row[0]}{negated}   = 0;		# there was no tfp_ data to validate old afp
-        $afpAutData{$datatype}{$row[0]}{source}    = 'afp';
+        $afpAutData{$datatype}{$row[0]}{source}    = 'author_first_pass';
         $afpAutData{$datatype}{$row[0]}{timestamp} = $row[2]; }
       else {
         $afpAutData{$datatype}{$row[0]}{note}      = $data;  
@@ -287,7 +287,7 @@ sub populateAfpData {
       unless ($afpAutData{$datatype}{$joinkey}) {
         $afpAutData{$datatype}{$joinkey}{note}      = "no data entered by author";
         $afpAutData{$datatype}{$joinkey}{negated}   = 1;	# inferred negative by afp
-        $afpAutData{$datatype}{$joinkey}{source}    = 'afp';
+        $afpAutData{$datatype}{$joinkey}{source}    = 'author_first_pass';
         $afpAutData{$datatype}{$joinkey}{timestamp} = $afpLasttouched{$joinkey}; }
     }
 } }
@@ -387,7 +387,7 @@ sub outputTfpData {
 
 sub outputCfpData {
   my $source_type = 'professional_biocurator';
-  my $source_method = 'cfp';
+  my $source_method = 'curator_first_pass';
   my $source_id = &getSourceId($source_type, $source_method);
   unless ($source_id) {
     print qq(ERROR no source_id for $source_type and $source_method);
