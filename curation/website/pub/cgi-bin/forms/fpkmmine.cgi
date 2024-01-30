@@ -7,6 +7,8 @@
 # added filters for strain, life stage, tissue, treatment.  2019 04 19
 #
 # File location of WBGeneName.csv moved.  2020 09 01
+#
+# File input location of gene data was the tazendra path instead of dockerized path.  2024 01 30
 
 # http://tazendra.caltech.edu/~azurebrd/cgi-bin/forms/fpkmmine.cgi
 
@@ -102,7 +104,8 @@ sub populateGeneNameToId {
 
 # my $base_url = 'http://athena.caltech.edu/fragmine/';	# replaced with ftp 2016 06 03
 # my $base_url = 'ftp://caltech.wormbase.org/pub/wormbase/simpleMine/';	# replaced with local files 2016 06 09
-my $files_path = '/home/acedb/wen/simplemine/FPKM/';
+# my $files_path = '/home/acedb/wen/simplemine/FPKM/';
+my $files_path = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/pub/wen/simplemine/FPKM/';
 # my (@filesfull) = <${files_path}/*.csv>;		# get all .csv files for Wen.  2018 02 26
 # my @files; foreach my $file (sort @filesfull) { $file =~ s/$files_path\///; push @files, $file; }
 # my @files = qw( WBGeneName.csv RNAiAllelePheno.csv GeneTissueLifeStage.csv GeneDiseaseHumanOrtholog.csv GeneReference.csv GeneAllele.csv );
