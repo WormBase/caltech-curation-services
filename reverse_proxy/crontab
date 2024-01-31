@@ -1,2 +1,2 @@
 # Auto-renew let's encrypt SSL certificates
-0     *     *     *     *      certbot renew
+0     *     *     *     *      certbot renew && /usr/sbin/nginx -s reload
