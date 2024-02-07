@@ -294,9 +294,12 @@ $result = $dbh->prepare( "SELECT * FROM two_comment LIMIT 5" );
 $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
 while (my @row = $result->fetchrow) {
   if ($row[0]) { 
-    $row[0] =~ s///g;
-    $row[1] =~ s///g;
-    $row[2] =~ s///g;
+    $row[0] =~ s/
+//g;
+    $row[1] =~ s/
+//g;
+    $row[2] =~ s/
+//g;
     print "$row[0]\t$row[1]\t$row[2]\n";
   } # if ($row[0])
 } # while (@row = $result->fetchrow)
@@ -306,7 +309,7 @@ how to set directory to output files at curator / web-accessible
   my $outDir = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . "/pub/citace_upload/karen/";
 
 how to set base url for a form
-  my $baseUrl = $ENV{THIS_HOST} . "pub/cgi-bin/forms";
+  my $baseUrl = $ENV{THIS_HOST_AS_BASE_URL} . "pub/cgi-bin/forms";
 
 how to import modules in dockerized system
   use lib qw(  /usr/lib/scripts/perl_modules/ );                  # for general ace dumping functions

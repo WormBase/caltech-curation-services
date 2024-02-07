@@ -126,7 +126,7 @@ sub getHeader {
 Content-type: text/html\n\n
 
 <HTML>
-<LINK rel="stylesheet" type="text/css" href="$ENV{THIS_HOST}pub/stylesheets/wormbase.css">
+<LINK rel="stylesheet" type="text/css" href="$ENV{THIS_HOST_AS_BASE_URL}pub/stylesheets/wormbase.css">
 
 <HEAD>
 EndOfText
@@ -146,7 +146,7 @@ sub printHeader {
 Content-type: text/html\n\n
 
 <HTML>
-<LINK rel="stylesheet" type="text/css" href="$ENV{THIS_HOST}pub/stylesheets/wormbase.css">
+<LINK rel="stylesheet" type="text/css" href="$ENV{THIS_HOST_AS_BASE_URL}pub/stylesheets/wormbase.css">
 <!--<LINK rel="stylesheet" type="text/css" href="http://tazendra.caltech.edu/~azurebrd/stylesheets/wormbase.css">-->
 <!--<LINK rel="stylesheet" type="text/css" href="http://www.wormbase.org/stylesheets/wormbase.css">-->
 
@@ -174,7 +174,7 @@ sub printFooter {
 sub cshlNew {
   my $title = shift;
   unless ($title) { $title = ''; }	# init title in case blank
-  my $page = get "$ENV{THIS_HOST}files/pub/wormbaseheader/WB_header_footer.html";
+  my $page = get "$ENV{THIS_HOST_AS_BASE_URL}files/pub/wormbaseheader/WB_header_footer.html";
 #   my $page = get "https://caltech-curation.textpressolab.com:4432/files/pub/wormbaseheader/WB_header_footer.html";
 #   my $page = get "http://tazendra.caltech.edu/~azurebrd/sanger/wormbaseheader/WB_header_footer.html";
 #  $page =~ s/href="\//href="http:\/\/www.wormbase.org\//g;
