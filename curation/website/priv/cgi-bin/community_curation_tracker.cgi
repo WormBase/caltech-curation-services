@@ -127,7 +127,7 @@ Content-type: text/html\n\n
 
 <HTML>
 <HEAD>
-<LINK rel="stylesheet" type="text/css" href="${thishost}pub/stylesheets/wormbase.css">
+<LINK rel="stylesheet" type="text/css" href="$ENV{THIS_HOST_AS_BASE_URL}pub/stylesheets/wormbase.css">
 <title>Community Curation Tracker</title>
   <script type="text/javascript" src="js/jquery-1.9.1.min.js"></script>
   <script type="text/javascript" src="js/jquery.tablesorter.min.js"></script>
@@ -710,7 +710,7 @@ sub generateMassEmailFile {
   # my $outfile = '/home/postgres/public_html/cgi-bin/data/community_curation/community_curation_source';
   # print qq(<a target="_blank" href="data/community_curation/community_curation_source">source file</a><br/>);
   my $outfile = $filesPath . 'community_curation_source';
-  print qq(<a target="_blank" href="${thishost}files/priv/community_curation/community_curation_source">source file</a><br/>);
+  print qq(<a target="_blank" href="$ENV{THIS_HOST_AS_BASE_URL}files/priv/community_curation/community_curation_source">source file</a><br/>);
   my ($var, $total_count)          = &getHtmlVar($query, 'total_count');
   open (OUT, ">$outfile") or die "Cannot create $outfile : $!";
   for my $i (1 .. $total_count) { 

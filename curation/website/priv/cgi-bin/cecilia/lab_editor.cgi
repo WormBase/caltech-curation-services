@@ -28,8 +28,8 @@ use Dotenv -load => '/usr/lib/.env';
 my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST};port=$ENV{PSQL_PORT}", "$ENV{PSQL_USERNAME}", "$ENV{PSQL_PASSWORD}") or die "Cannot connect to database!\n";
 my $result;
 
-my $baseUrl = $ENV{THIS_HOST} . "priv/cgi-bin/cecilia";
-my $thishost = $ENV{THIS_HOST};
+my $baseUrl = $ENV{THIS_HOST_AS_BASE_URL} . "priv/cgi-bin/cecilia";
+my $thishost = $ENV{THIS_HOST_AS_BASE_URL};
 
 my $query = new CGI;
 
