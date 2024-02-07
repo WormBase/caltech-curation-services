@@ -43,7 +43,7 @@ my $lines_in_multiline = 10;		# how many extra lines to create
 # my $domain = 'http://tazendra.caltech.edu/';
 # my $cgiPath = '~azurebrd/cgi-bin/forms/person.cgi';
 # my $cgiPath = 'person.cgi';
-my $cgiPath = $ENV{THIS_HOST} . 'pub/cgi-bin/forms/person.cgi';
+my $cgiPath = $ENV{THIS_HOST_AS_BASE_URL} . 'pub/cgi-bin/forms/person.cgi';
 
 my %curators;                           # $curators{two}{two#} = std_name ; $curators{std}{std_name} = two#
 

@@ -31,7 +31,7 @@ my $result;
 
 
 # my $hostfqdn = hostfqdn();
-my $thishost = $ENV{THIS_HOST};
+my $thishost = $ENV{THIS_HOST_AS_BASE_URL};
 
 
 
