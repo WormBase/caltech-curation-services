@@ -579,8 +579,7 @@ sub jsonFieldQuery {					# json query to make it easier to append values (instea
     push @jsonRows, qq({ $dataRow });
   } # foreach my $joinkey (sort keys %hash)
   my $jsonRows = join",\n", @jsonRows;
-  $jsonRows =~ s/
-//g;
+  $jsonRows =~ s///g;
   print qq([\n$jsonRows\n]\n);
 # the following code has extra commas after the final entry in a set, which javascript can parse but perl cannot.  2014 03 28
 #   print "[\n";
