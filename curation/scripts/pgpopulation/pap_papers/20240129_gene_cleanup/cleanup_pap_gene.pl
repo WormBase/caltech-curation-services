@@ -20,8 +20,10 @@ $result = $dbh->prepare( "SELECT * FROM pap_gene WHERE pap_gene = '' AND pap_evi
 $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
 while (my @row = $result->fetchrow) {
   if ($row[0]) { 
-    $row[0] =~ s///g;
-    $row[2] =~ s///g;
+    $row[0] =~ s/
+//g;
+    $row[2] =~ s/
+//g;
     push @pgcommands, qq(INSERT INTO h_pap_gene VALUES ('$row[0]', null, '$row[2]', 'two1843', 'now', null));
     push @pgcommands, qq(DELETE FROM pap_gene WHERE joinkey = '$row[0]' AND pap_order = '$row[2]');
   } # if ($row[0])
@@ -43,7 +45,7 @@ how to set directory to output files at curator / web-accessible
   my $outDir = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . "/pub/citace_upload/karen/";
 
 how to set base url for a form
-  my $baseUrl = $ENV{THIS_HOST} . "pub/cgi-bin/forms";
+  my $baseUrl = $ENV{THIS_HOST_AS_BASE_URL} . "pub/cgi-bin/forms";
 
 how to import modules in dockerized system
   use lib qw(  /usr/lib/scripts/perl_modules/ );                  # for general ace dumping functions

@@ -210,7 +210,7 @@ sub submit {
 #           &deletePg($fields{origip}{inputvalue}{1}, $fields{origtime}{inputvalue}{1});	# if had save files, this would delete
           my $messageToUser = qq(Dear $fields{person}{inputvalue}{1}, you are successfully registered for the following WormBase Webinars.<br/>);
 #           my $updateUrl = 'http://' . $hostfqdn . "/~azurebrd/cgi-bin/forms/webinar.cgi?action=updateRegistration&email=$fields{email}{inputvalue}{1}";
-          my $updateUrl = $ENV{THIS_HOST} . "pub/cgi-bin/forms/webinar.cgi?action=updateRegistration&email=$fields{email}{inputvalue}{1}";
+          my $updateUrl = $ENV{THIS_HOST_AS_BASE_URL} . "pub/cgi-bin/forms/webinar.cgi?action=updateRegistration&email=$fields{email}{inputvalue}{1}";
           $messageToUser .= qq(We will send you virtual meeting information 48 hours before the meeting time.<br/>);
           $messageToUser .= qq(To update your registration choices, click <a href="$updateUrl">here</a>.<br/>);
           print qq($messageToUser<br/>);
@@ -385,7 +385,7 @@ sub registeredCount {
     if ($row[0]) { $count = $row[0]; }
     print qq(<tr>);
     # my $url = 'http://' . $hostfqdn .  "/~azurebrd/cgi-bin/forms/webinar.cgi?action=registeredWebinar&seminar=$j";
-    my $url = $ENV{THIS_HOST} . "pub/cgi-bin/forms/webinar.cgi?action=registeredWebinar&seminar=$j";
+    my $url = $ENV{THIS_HOST_AS_BASE_URL} . "pub/cgi-bin/forms/webinar.cgi?action=registeredWebinar&seminar=$j";
     print qq(<td align="center"><a href="$url">$count</a></td>);
     print qq(<td style="width: 175px; max-width: 175px; min-width: 175px;">$webinars{$j}{'date'}</td>);
     print qq(<td style="width: 100px; max-width: 100px; min-width: 100px;">$webinars{$j}{'time'}</td>);
@@ -892,7 +892,7 @@ sub checkMandatoryFields {
 # <link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/2.7.0/build/autocomplete/assets/skins/sam/autocomplete.css" />
 sub addJavascriptCssToHeader {
   # my $baseUrl = 'https://' . $hostfqdn . "/~azurebrd/cgi-bin/forms";
-  my $baseUrl = $ENV{THIS_HOST} . "pub/cgi-bin/forms";
+  my $baseUrl = $ENV{THIS_HOST_AS_BASE_URL} . "pub/cgi-bin/forms";
   my $extra_stuff = << "EndOfText";
 <link rel="stylesheet" type="text/css" href="$baseUrl/stylesheets/jex.css" />
 <link rel="stylesheet" type="text/css" href="$baseUrl/stylesheets/yui_edited_autocomplete.css" />

@@ -66,7 +66,7 @@ if ($ARGV[0]) {
   else { $printUsage .= qq(Need a server : $subDomains\n); }
 
 # my $baseUrl = '';
-my $baseUrl = 'https://' . $thishost . "/priv/cgi-bin/oa/ontology_annotator.cgi";
+my $baseUrl = $thishost . "/priv/cgi-bin/oa/ontology_annotator.cgi";
 
 
 if ($ARGV[1]) { 

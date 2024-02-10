@@ -564,7 +564,7 @@ sub showIp {
 sub agrNew {
   my $title = shift;
   unless ($title) { $title = ''; }      # init title in case blank
-  my $url = $ENV{THIS_HOST} . "files/pub/agrheader/agr_header_footer.html";
+  my $url = $ENV{THIS_HOST_AS_BASE_URL} . "files/pub/agrheader/agr_header_footer.html";
   my $version = '6.0.0';			# hardcoded default
   my $page = get $url;
   my $version_file = '/usr/caltech_curation_files/pub/wen/agrSimpleMine/sourceFile/version';

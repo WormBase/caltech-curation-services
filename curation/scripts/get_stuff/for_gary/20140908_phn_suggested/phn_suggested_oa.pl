@@ -42,7 +42,7 @@ my $user    = "phn_suggested_oa.pl";
 my $email   = 'garys@caltech.edu, kyook@caltech.edu, cgrove@caltech.edu';
 # my $email   = 'azurebrd@tazendra.caltech.edu';
 if ($body) { 
-  $body       = $ENV{THIS_HOST}. "priv/cgi-bin/new_objects.cgi\n\n" . $body;
+  $body       = $ENV{THIS_HOST_AS_BASE_URL}. "priv/cgi-bin/new_objects.cgi\n\n" . $body;
   # $body       = "http://tazendra.caltech.edu/~postgres/cgi-bin/new_objects.cgi\n\n" . $body;
   &mailer($user, $email, $subject, $body); }
 

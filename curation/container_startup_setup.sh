@@ -22,7 +22,7 @@ echo "export HOST_NAME=${HOST_NAME}" >> /etc/apache2/envvars
 echo "export SSL_PORT=${SSL_PORT}" >> /etc/apache2/envvars
 echo "export API_SERVER=${API_SERVER}" >> /etc/apache2/envvars
 echo "export API_PORT=${API_PORT}" >> /etc/apache2/envvars
-echo "export IP_INSIDE_DOCKER=$(ip -o -f inet addr show | awk '/scope global/ {print $4}')" >> /etc/apache2/envvars
+echo "export IP_INSIDE_DOCKER=$(ip -o -f inet addr show | awk '/scope global/ {print $4}' | cut -d "/" -f 1)" >> /etc/apache2/envvars
 echo "export IP_OUTSIDE_DOCKER=$(nslookup caltech-curation${DEV_STRING}.textpressolab.com | awk '/^Address: / { print $2 }' | head -n1)" >> /etc/apache2/envvars
 # listen on additional ssl port in case it is not the standard one
 if [[ "${SSL_PORT}" -ne "443" ]]
