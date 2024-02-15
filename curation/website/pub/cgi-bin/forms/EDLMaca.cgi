@@ -140,13 +140,13 @@ sub querySpell {
 sub frontPage {
   print "Content-type: text/html\n\n";
 #   my $title = 'Genomic Expression Data Download';
-  my $title = 'Expression Dataset Locator';
-  my ($header, $footer) = &cshlNew($title);
-  print "$header\n";		# make beginning of HTML page
+  my $title = 'Expression Dataset Locator Macaque';
+#   my ($header, $footer) = &cshlNew($title);
+#   print "$header\n";		# make beginning of HTML page
   my $action;                   # what user clicked
   unless ($action = $query->param('action')) { $action = 'none'; }
   &showSpellForm();
-  print "$footer"; 		# make end of HTML page
+#   print "$footer"; 		# make end of HTML page
 } # sub frontPage
 
 
