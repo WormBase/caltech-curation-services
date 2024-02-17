@@ -195,7 +195,7 @@ sub showSpellForm {
   print qq(<br/>\n);
 
 #   print qq(3. Tissue, optionally specify Tissue Specific, Whole Animal, or Both.<br/>\n);
-  print qq(3. Choose Tissue Specificity<br/>\n);
+  print qq(3. Choose Organism Part<br/>\n);
   foreach my $tissue (sort keys %{ $hash{tissue} }) { print qq(<input type="checkbox" name="tissue" value="$tissue"> $tissue<br/>); }
   print qq(<br/>\n);
 
@@ -243,7 +243,9 @@ sub processFile {
     $hash{line}{$count} = $line;
     $hash{method}{$method}{$count}++;
     $hash{species}{$species}{$count}++;
-    $hash{tissue}{$tissue}{$count}++;
+#     $hash{tissue}{$tissue}{$count}++;		# EDLMaca has multiple pipe-separated values, unlike edl.
+    my (@tissues) = split/\|/, $tissue;
+    foreach my $tissue (@tissues) { $hash{tissue}{$tissue}{$count}++; }
 #     if ($topics) { $hash{topics}{$topics}{$count}++; }
 #     $hash{topics}{$topics}{$count}++;
     my (@topics) = split/\|/, $topics;
