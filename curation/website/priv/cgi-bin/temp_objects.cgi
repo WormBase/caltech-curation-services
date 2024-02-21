@@ -1,5 +1,7 @@
 #!/usr/bin/env perl
 
+# Redirect to nameserver
+
 # Create real objects on names service and temp objects in obo_ tables
 
 # Create temp strain and variation objects through the names service via login in through google wormbase.org account.
@@ -17,7 +19,28 @@
 # 2020 06 11
 #
 # ENV_STATE prod now connects to prod nameserver instead of test, as we're almost ready to go live.  2023 09 28
+#
+# Manuel has updated the nameserver to take data and pass it to the nameserver_api.cgi making this form obsolete, 
+# and a defunct library would make it not work in the future anyway.  Retired to redict to the nameserver.  2024 02 21
 
+
+#!/usr/bin/env perl
+
+# Site Map - redirect to this page.
+
+use strict;
+use CGI;
+
+my $q = new CGI;
+
+use Dotenv -load => '/usr/lib/.env';
+
+my $ns_base_url = 'https://test-names.wormbase.org/';
+if ($ENV{ENV_STATE} eq 'prod') { $ns_base_url = 'https://names.wormbase.org/'; }
+
+print $q->redirect( $ns_base_url );
+
+__END__
 
 use strict;
 use CGI;
