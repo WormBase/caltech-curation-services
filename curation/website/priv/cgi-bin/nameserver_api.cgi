@@ -3,6 +3,8 @@
 # CGI to receive nameserver posting data of new objects, replacing new_objects.cgi
 
 # Updated header to have status codes for Manuel.  2024 02 07
+#
+# Comment updated from being added by temp_objects.cgi to being created through nameserver.  2024 02 21
 
 
 use diagnostics;
@@ -80,7 +82,8 @@ sub addTempObjectObo {
 #     print $entry_error; 
     return ($entry_error, 409); }
   my $pgDate = &getPgDate();
-  my $comment = qq(added through temp_objects.cgi, not updated by geneace yet);
+#   my $comment = qq(added through temp_objects.cgi, not updated by geneace yet);
+  my $comment = qq(created at nameserver, not yet updated through nightly dump);
   my $terminfo = qq(id: $objId\nname: "$objName"\ntimestamp: "$pgDate"\ncomment: "$comment");
   $result = $dbh->do( "INSERT INTO obo_name_$datatype VALUES('$objId', '$objName');" );
   $result = $dbh->do( "INSERT INTO obo_data_$datatype VALUES('$objId', '$terminfo');" );
