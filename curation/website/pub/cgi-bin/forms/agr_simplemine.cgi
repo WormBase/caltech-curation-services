@@ -73,6 +73,9 @@
 #
 # After dockerizing on 2023 02 22, the form post needed the full path to the cgi and didn't work
 # without it.  Now it doesn't work with it, so putting it back.  2023 09 14
+#
+# Download static logo image and refer to it based on  ENV{THIS_HOST_AS_BASE_URL}
+# plus relative path, so it works on prod and dev.  2024 02 29
 
 # http://tazendra.caltech.edu/~azurebrd/cgi-bin/forms/agr_simplemine.cgi
 
@@ -575,6 +578,8 @@ sub agrNew {
   $/ = "\n";
   if ($version_file =~ m/Version: (.*)\n/) { $version = $1; }
   $page =~ s/VERSION_PLACEHOLDER/$version/;
+  my $logo_url = $ENV{THIS_HOST_AS_BASE_URL} . "/files/pub/agrheader/alliance_logo_agr.5d74de29913e6faf4e40.png";
+  $page =~ s/LOGO_PLACEHOLDER/$logo_url/;
 #   my $page = get "http://tazendra.caltech.edu/~azurebrd/agr/agrheader/agr_header_footer.html";
 #   $page =~ s/href="\//href="http:\/\/www.wormbase.org\//g;
 #   $page =~ s/src="/src="http:\/\/www.wormbase.org/g;
