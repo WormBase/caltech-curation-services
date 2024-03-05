@@ -50,9 +50,6 @@ my $okta_token = &generateOktaToken();
 #   "updated_by": "default_user"
 # }';
 my %source_default = (
-Is there a default ECO value, or does every source have an explicit one ?  Is there a highest level to default to in case we ever won't have one ?
-# do we want those 2 values to be the default in case we ever don't have something, or something else ?
-# It's more a placeholder to know what fields should exist, but we can get rid of it.
   "source_evidence_assertion"	=> "ATP:0000036",
   "source_method"    		=> "curation_status_form",
   "validation_type"		=> "professional_biocurator",
@@ -64,7 +61,6 @@ Is there a default ECO value, or does every source have an explicit one ?  Is th
   "updated_by"      		=> "00u2ao5gp6tZJ9xXU5d7"
 );
 
-How do we find a new sourceId now, Valerio ?  Before it was based on
 my $source_evidence_assertion = 'ATP:0000035';
 my $source_method = 'ACKnowledge';
 my $data_provider = $mod;
@@ -75,7 +71,7 @@ unless ($source_id) {
   $source_json{source_evidence_assertion}	= $source_evidence_assertion;
   $source_json{source_method}   		= $source_method;
   $source_json{validation_type}			= "author";
-  $source_json{description}			= "Manual association of entities and topics with references by authors using the ACKnowledge form.
+  $source_json{description}			= "Manual association of entities and topics with references by authors using the ACKnowledge form.";
   my $source_json = encode_json \%source_json;
   &createSource($source_json);
 }
@@ -195,7 +191,6 @@ sub createSource {
 }
 
 sub getSourceId {
-What is it going to be ?
   my ($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider) = @_;
   my $url = $baseUrl . 'topic_entity_tag/source/' . $source_evidence_assertion . '/' . $source_method . '/' . $data_provider . '/' . $secondary_data_provider; 
 #   my ($source_type, $source_method) = @_;
