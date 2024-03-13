@@ -2,6 +2,8 @@
 
 # figure out pap identifier patterns that Kimberly cares about here   2024 03 12
 # https://agr-jira.atlassian.net/browse/SCRUM-3662?page=com.atlassian.jira.plugin.system.issuetabpanels%3Aall-tabpanel
+#
+# better WM wm pattern, but eventually won't use anything for WM at ABC.  2024 03 13
 
 
 use strict;
@@ -28,7 +30,9 @@ $result = $dbh->prepare( "SELECT * FROM pap_identifier WHERE joinkey IN (SELECT 
 $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
 while (my @row = $result->fetchrow) {
   if ($row[1] =~ m/wm/) {
-    unless ($row[1] =~ m/^[A-Za-z0-9]{6,13}$/) { print qq(@row\n); }
+#     unless ($row[1] =~ m/^[A-Za-z0-9]{6,13}$/) { print qq(@row\n); }
+    unless ($row[1] =~ m/^\w*wm[0-9]{1,4}[A-Za-z0-9_\-]*[0-9]{1,4}[a-zA-Z]*$/) { print qq(@row\n); }
+# don't know why this fails to match  wm2009ab1174A, but we decided with Ian it was so loose as not to mean anything, and we'll have no restriction on WM xrefs.
   }
 }
 
