@@ -52,17 +52,17 @@ my $tag_counter = 0;
 my @output_json;
 
 my $mod = 'WB';
-my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
-# my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
+# my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
+my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
 my $okta_token = &generateOktaToken();
 # my $okta_token = 'use_above_when_live';
 
 # my @wbpapers = qw( 00004952 00005199 00026609 00030933 00035427 );
-# my @wbpapers = qw( 00004952 00005199 00046571 00057043 00064676 );
+my @wbpapers = qw( 00004952 00005199 00046571 00057043 00064676 );	# SCRUM-3775
 # my @wbpapers = qw( 00046571 );
 # my @wbpapers = qw( 00005199 );
 # my @wbpapers = qw( 00057043 );
-my @wbpapers = qw( 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 00037049 );
+# my @wbpapers = qw( 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 00037049 );
 
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 00037049
