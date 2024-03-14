@@ -11,6 +11,8 @@
 # dockerized, filled in TDB for source_type for str, svm, nnc.  wrote to Valerio and Kimberly about the confirmation questions.  2023 10 04
 #
 # Updated to use new sources that Kimberly and Valerio worked out.  Still needs some new descriptions for each datatype for svm and nnc.  API still needs changes for this to post the data, so untested.  2024 03 05
+#
+# secondary_data_provider is now secondary_data_provider_abbreviation.  2024 03 13
 
 # ./create_sources.pl
 
@@ -50,15 +52,14 @@ my $okta_token = &generateOktaToken();
 #   "updated_by": "default_user"
 # }';
 my %source_default = (
-  "source_evidence_assertion"	=> "ATP:0000036",
-  "source_method"    		=> "curation_status_form",
-  "validation_type"		=> "professional_biocurator",
-  "description"			=> "placeholder",
-
-  "data_provider"		=> $mod,
-  "secondary_data_provider"	=> $mod,
-  "created_by"      		=> "00u2ao5gp6tZJ9xXU5d7",
-  "updated_by"      		=> "00u2ao5gp6tZJ9xXU5d7"
+  "source_evidence_assertion"			=> "ATP:0000036",
+  "source_method"    				=> "curation_status_form",
+  "validation_type"				=> "professional_biocurator",
+  "description"					=> "placeholder",
+  "data_provider"				=> $mod,
+  "secondary_data_provider_abbreviation"	=> $mod,
+  "created_by"      				=> "00u2ao5gp6tZJ9xXU5d7",
+  "updated_by"      				=> "00u2ao5gp6tZJ9xXU5d7"
 );
 
 my $source_evidence_assertion = 'ATP:0000035';
@@ -85,6 +86,19 @@ unless ($source_id) {
   $source_json{source_method}  			= $source_method;
   $source_json{validation_type}			= 'author';
   $source_json{description}    			= 'Manual association of entities and topics with references by authors using the author first pass form.';
+  my $source_json = encode_json \%source_json;
+  &createSource($source_json);
+}
+
+$source_evidence_assertion = 'ATP:0000036';
+$source_method = 'author_first_pass';
+$source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+unless ($source_id) { 
+  my %source_json = %{ dclone (\%source_default) };
+  $source_json{source_evidence_assertion}	= $source_evidence_assertion;
+  $source_json{source_method}   		= $source_method;
+  $source_json{validation_type}			= 'professional_biocurator';
+  $source_json{description}     		= 'Manual association of topics with references by professional biocurators via data type curation using the author first pass form.';
   my $source_json = encode_json \%source_json;
   &createSource($source_json);
 }
