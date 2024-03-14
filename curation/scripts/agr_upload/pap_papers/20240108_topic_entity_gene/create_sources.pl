@@ -37,27 +37,74 @@ my $okta_token = &generateOktaToken();
 # my $okta_token = 'use_above_when_live';
 
 
-
-
-# my $source_json = '{
-#   "source_type": "professional_biocurator",
-#   "source_method": "wormbase_curation_status",
-#   "validation_type": "curator",
-#   "evidence": "eco_string",
-#   "mod_abbreviation": "WB",
-#   "description": "cur_curdata",
-#   "created_by": "default_user",
-#   "updated_by": "default_user"
-# }';
-my %source_default = (
-  "source_type"      => "script",
-  "source_method"    => "paper_editor",
-  "evidence"         => "ECO:0008021",
-  "mod_abbreviation" => $mod,
-  "created_by"       => "00u2ao5gp6tZJ9xXU5d7",
-  "updated_by"       => "00u2ao5gp6tZJ9xXU5d7"
-);
+# old source format
+# my %source_default = (
+#   "source_type"      => "script",
+#   "source_method"    => "paper_editor",
+#   "evidence"         => "ECO:0008021",
+#   "mod_abbreviation" => $mod,
+#   "created_by"       => "00u2ao5gp6tZJ9xXU5d7",
+#   "updated_by"       => "00u2ao5gp6tZJ9xXU5d7"
+# );
 # 00u2ao5gp6tZJ9xXU5d7 is vanauken@wormbase.org
+
+# sources for gene aren't ready, so using a single test source for all entries.  2024 03 14
+my %source_default = (
+  "source_evidence_assertion"                   => "ATP:0000036",
+  "source_method"                               => "test_large_data",
+  "validation_type"                             => "professional_biocurator",
+  "description"                                 => "made up source to test papers with large datasets",
+  "data_provider"                               => $mod,
+  "secondary_data_provider_abbreviation"        => $mod,
+  "created_by"                                  => "00u2ao5gp6tZJ9xXU5d7",
+  "updated_by"                                  => "00u2ao5gp6tZJ9xXU5d7"
+);
+
+my $source_evidence_assertion = 'ATP:0000036';
+my $source_method = 'test_large_data';
+my $data_provider = $mod;
+my $secondary_data_provider = $mod;
+my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+unless ($source_id) {
+  my %source_json = %{ dclone (\%source_default) };
+  my $source_json = encode_json \%source_json;
+  &createSource($source_json);
+}
+
+sub createSource {
+  my ($source_json) = @_;
+  my $url = $baseUrl . 'topic_entity_tag/source';
+  my $api_json = `curl -X 'POST' $url -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json' --data '$source_json'`;
+#   print qq(create $source_json\n);
+#   print qq($api_json\n);
+}
+
+sub getSourceId {
+  my ($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider) = @_;
+  my $url = $baseUrl . 'topic_entity_tag/source/' . $source_evidence_assertion . '/' . $source_method . '/' . $data_provider . '/' . $secondary_data_provider;
+#   my ($source_type, $source_method) = @_;
+#   my $url = $baseUrl . 'topic_entity_tag/source/' . $source_type . '/' . $source_method . '/' . $mod;
+  # print qq($url\n);
+  my $api_json = `curl -X 'GET' $url -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json'`;
+  my $hash_ref = decode_json $api_json;
+  if ($$hash_ref{'topic_entity_tag_source_id'}) {
+    my $source_id = $$hash_ref{'topic_entity_tag_source_id'};
+    # print qq($source_id\n);
+    return $source_id; }
+  else { return ''; }
+}
+
+sub generateOktaToken {
+#   my $okta_token = `curl -s --request POST --url https://$ENV{OKTA_DOMAIN}/v1/token \    --header 'accept: application/json' \    --header 'cache-control: no-cache' \    --header 'content-type: application/x-www-form-urlencoded' \    --data "grant_type=client_credentials&scope=admin&client_id=$ENV{OKTA_CLIENT_ID}&client_secret=$ENV{OKTA_CLIENT_SECRET}" \      | jq '.access_token' | tr -d '"'`;
+  my $okta_result = `curl -s --request POST --url https://$ENV{OKTA_DOMAIN}/v1/token \    --header 'accept: application/json' \    --header 'cache-control: no-cache' \    --header 'content-type: application/x-www-form-urlencoded' \    --data "grant_type=client_credentials&scope=admin&client_id=$ENV{OKTA_CLIENT_ID}&client_secret=$ENV{OKTA_CLIENT_SECRET}"`;
+  my $hash_ref = decode_json $okta_result;
+  my $okta_token = $$hash_ref{'access_token'};
+#   print $okta_token;
+  return $okta_token;
+}
+
+
+__END__
 
 my $source_type = 'script';
 my $source_method = 'paper_editor';
@@ -264,15 +311,6 @@ sub getSourceId {
     # print qq($source_id\n);
     return $source_id; }
   else { return ''; }
-}
-
-sub generateOktaToken {
-#   my $okta_token = `curl -s --request POST --url https://$ENV{OKTA_DOMAIN}/v1/token \    --header 'accept: application/json' \    --header 'cache-control: no-cache' \    --header 'content-type: application/x-www-form-urlencoded' \    --data "grant_type=client_credentials&scope=admin&client_id=$ENV{OKTA_CLIENT_ID}&client_secret=$ENV{OKTA_CLIENT_SECRET}" \      | jq '.access_token' | tr -d '"'`;
-  my $okta_result = `curl -s --request POST --url https://$ENV{OKTA_DOMAIN}/v1/token \    --header 'accept: application/json' \    --header 'cache-control: no-cache' \    --header 'content-type: application/x-www-form-urlencoded' \    --data "grant_type=client_credentials&scope=admin&client_id=$ENV{OKTA_CLIENT_ID}&client_secret=$ENV{OKTA_CLIENT_SECRET}"`;
-  my $hash_ref = decode_json $okta_result;
-  my $okta_token = $$hash_ref{'access_token'};
-#   print $okta_token;
-  return $okta_token;
 }
 
 __END__
