@@ -91,20 +91,17 @@ my $speciesTopic = 'ATP:0000142';	# entity
 my $entityType = 'ATP:0000123';		# species
 my $entity_id_validation = 'alliance';
 
-foreach my $joinkey (@wbpapers) { $chosenPapers{$joinkey}++; }
-# $chosenPapers{all}++;
+# foreach my $joinkey (@wbpapers) { $chosenPapers{$joinkey}++; }
+$chosenPapers{all}++;
 
-&populateAbcXref();
-&populatePapSpecies();
-&outputPapAck();
-&outputPapScript();
-&outputPapEditor();
-&populateTfpSpecies();
-&outputTfpSpecies();
-
-# &populatePapGene();
-# &outputInfOther();
-# &outputCurConf();
+# UNCOMMENT to populate
+# &populateAbcXref();
+# &populatePapSpecies();
+# &outputPapAck();
+# &outputPapScript();
+# &outputPapEditor();
+# &populateTfpSpecies();
+# &outputTfpSpecies();
 
 if ($output_format eq 'json') {
   my $json = encode_json \@output_json;		# for single json file output
@@ -253,87 +250,6 @@ sub outputTfpSpecies {
 } } }
 
 
-# sub outputCurConf{
-#   # old source
-#   # my $source_type = 'professional_biocurator';
-#   # my $source_method = 'paper_editor';
-#   # my $source_id = &getSourceId($source_type, $source_method);
-#   
-#   my $source_evidence_assertion = 'ATP:0000036';
-#   my $source_method = 'test_large_data';
-#   my $data_provider = $mod;
-#   my $secondary_data_provider = $mod;
-#   my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
-#   my $timestamp = &getPgDate();
-#   unless ($source_id) {
-#     print qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
-#     return;
-#   }
-# 
-# #   { "source_type": "professional_biocurator", "source_method": "wormbase_oa", "evidence": "eco_string", "description": "caltech curation tools", "mod_abbreviation": "WB" }
-#   foreach my $joinkey (sort keys %curConf) {
-#     next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
-#     foreach my $gene (sort keys %{ $curConf{$joinkey} }) {
-#       my %object;
-#       $object{'negated'}                    = FALSE;
-#       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
-#       $object{'topic'}                      = $geneTopic;
-#       $object{'entity_type'}                = $entityType;
-#       $object{'entity_source'}              = $entitySource;
-#       $object{'topic_entity_tag_source_id'} = $source_id;
-#       $object{'entity'}                     = "WB:WBGene$gene";
-#       $object{'created_by'}                 = $curConf{$joinkey}{$gene}{curator};
-#       $object{'updated_by'}                 = $curConf{$joinkey}{$gene}{curator};
-#       $object{'date_created'}               = $curConf{$joinkey}{$gene}{timestamp};
-#       $object{'date_updated'}               = $curConf{$joinkey}{$gene}{timestamp};
-#       if ($output_format eq 'json') {
-#         push @output_json, \%object; }
-#       else {
-#         my $object_json = encode_json \%object;
-#         &createTag($object_json); }
-#   } }
-# }
-# 
-# sub outputInfOther {
-#   # my $source_type = 'script';
-#   # my $source_method = 'gene_paper_association_script';
-#   # my $source_id = &getSourceId($source_type, $source_method);
-# 
-#   my $source_evidence_assertion = 'ATP:0000036';
-#   my $source_method = 'test_large_data';
-#   my $data_provider = $mod;
-#   my $secondary_data_provider = $mod;
-#   my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
-#   my $timestamp = &getPgDate();
-#   unless ($source_id) {
-#     print qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
-#     return;
-#   }
-# 
-# #   { "source_type": "professional_biocurator", "source_method": "wormbase_oa", "evidence": "eco_string", "description": "caltech curation tools", "mod_abbreviation": "WB" }
-#   foreach my $joinkey (sort keys %infOther) {
-#     next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
-#     foreach my $gene (sort keys %{ $infOther{$joinkey} }) {
-#       my %object;
-#       $object{'negated'}                    = FALSE;
-#       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
-#       $object{'topic'}                      = $geneTopic;
-#       $object{'entity_type'}                = $entityType;
-#       $object{'entity_source'}              = $entitySource;
-#       $object{'topic_entity_tag_source_id'} = $source_id;
-#       $object{'entity'}                     = "WB:WBGene$gene";
-#       $object{'created_by'}                 = $infOther{$joinkey}{$gene}{curator};
-#       $object{'updated_by'}                 = $infOther{$joinkey}{$gene}{curator};
-#       $object{'date_created'}               = $infOther{$joinkey}{$gene}{timestamp};
-#       $object{'date_updated'}               = $infOther{$joinkey}{$gene}{timestamp};
-#       if ($output_format eq 'json') {
-#         push @output_json, \%object; }
-#       else {
-#         my $object_json = encode_json \%object;
-#         &createTag($object_json); }
-#   } }
-# }
-
 sub populatePapSpecies {
 #  joinkey | pap_species | pap_order | pap_curator | pap_timestamp | pap_evidence
   $result = $dbh->prepare( "SELECT joinkey, pap_species, pap_timestamp, pap_curator, pap_evidence FROM pap_species" );
@@ -377,23 +293,6 @@ sub populateTfpSpecies {
       else {
         print qq(ERR $name in $joinkey not an ncbi taxon ID\n); } }
 } }
-
-# sub populatePapGene {
-#   $result = $dbh->prepare( "SELECT joinkey, pap_gene, pap_timestamp, pap_curator, pap_evidence FROM pap_gene" );
-#   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
-#   while (my @row = $result->fetchrow) {
-#     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
-#     next unless ($row[1]);
-#     my ($joinkey, $gene, $ts, $two, $evi) = @row;
-#     $two =~ s/two/WBPerson/;
-#     $evi =~ s/\n/ /g; $evi =~ s/ $//g;
-#     if ($evi =~ m/Curator_confirmed.*(WBPerson\d+)/) {
-#       $curConf{$joinkey}{$gene}{curator} = $1;
-#       $curConf{$joinkey}{$gene}{timestamp} = $ts; }
-#     elsif ($evi =~ m/Inferred_automatically/) { 	# this has to be more specific later
-#       $infOther{$joinkey}{$gene}{curator} = $two;
-#       $infOther{$joinkey}{$gene}{timestamp} = $ts; }
-# } }
 
 
 
