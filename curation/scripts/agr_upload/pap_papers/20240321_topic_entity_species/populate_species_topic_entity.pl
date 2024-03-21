@@ -72,6 +72,8 @@ my @wbpapers = qw( 00004952 00005199 00046571 00057043 00064676 );	# test specie
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 00037049
 
+# taxon file url  https://purl.obolibrary.org/obo/ncbitaxon.obo
+
 my %datatypesAfpCfp;
 my %datatypes;
 my %entitytypes;
@@ -278,6 +280,20 @@ sub populateTfpSpecies {
   $result = $dbh->prepare( "SELECT * FROM obo_name_ncbitaxonid" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) { $taxonNameToId{$row[1]} = 'NCBITaxon:' . $row[0]; }
+
+  my $taxon_file = '/usr/caltech_curation_files/postgres/agr_upload/pap_papers/20240321_topic_entity_species/ncbitaxon.obo';
+  if (-e $taxon_file) {
+    $/ = "";
+    open (IN, "<$taxon_file") or warn "Cannot open $taxon_file : $!";
+    while (my $para = <IN>) {
+      my ($id, $name) = ('', '');
+      if ($para =~ m/id: (.*)/) { $id = $1; }
+      if ($para =~ m/name: (.*)/) { $name = $1; }
+      $taxonNameToId{$name} = $id;
+    } # while (my $para = <IN>)
+    close (IN) or warn "Cannot close $taxon_file : $!";
+    $/ = "\n"; }
+
 
   my %noTaxon;
   $result = $dbh->prepare( "SELECT joinkey, tfp_species, tfp_timestamp FROM tfp_species" );
