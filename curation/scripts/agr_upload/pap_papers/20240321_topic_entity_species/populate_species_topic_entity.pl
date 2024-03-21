@@ -279,6 +279,7 @@ sub populateTfpSpecies {
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) { $taxonNameToId{$row[1]} = 'NCBITaxon:' . $row[0]; }
 
+  my %noTaxon;
   $result = $dbh->prepare( "SELECT joinkey, tfp_species, tfp_timestamp FROM tfp_species" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
@@ -291,8 +292,14 @@ sub populateTfpSpecies {
         $tfpSpecies{$joinkey}{$taxonNameToId{$name}}{curator} = 'caltech_pipeline';
         $tfpSpecies{$joinkey}{$taxonNameToId{$name}}{timestamp} = $ts; }
       else {
-        print qq(ERR $name in $joinkey not an ncbi taxon ID\n); } }
-} }
+        $noTaxon{$name}++;
+#         print qq(ERR $name in $joinkey not an ncbi taxon ID\n);
+    } }
+  }
+  foreach my $taxon (sort keys %noTaxon) {
+    print qq(NO TAXON $taxon\n);
+  }
+}
 
 
 
