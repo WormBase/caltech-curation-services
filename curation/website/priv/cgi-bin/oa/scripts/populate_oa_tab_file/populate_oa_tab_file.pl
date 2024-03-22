@@ -15,6 +15,9 @@
 # dockerized, but can only post to its own server, not tazendra/mangolassi.  2023 03 13
 #
 # take mangolassi, tazendra, dev, or prod as subdomain parameters, use .env DEV_HOST_NAME or PROD_HOST_NAME as appropriate.  2023 03 20
+#
+# modified to take user pass from .env WEB_PRIV_USER WEB_PRIV_PASSWORD and use  LWP::UserAgent and HTTP::Request::Common 
+# for authentication.  2024 03 21
 
 # usage
 # /usr/lib/priv/cgi-bin/oa/scripts/populate_oa_tab_file/populate_oa_tab_file.pl mangolassi 2987 file
@@ -25,6 +28,8 @@ use Jex;
 use LWP::Simple;
 use URI::Escape;
 use Dotenv -load => '/usr/lib/.env';
+use LWP::UserAgent;
+use HTTP::Request::Common;
 
 my $domain = 'caltech.edu';
 my $path = '~postgres/cgi-bin/oa/ontology_annotator.cgi';
@@ -44,6 +49,12 @@ my $subDomains = join" | ", sort keys %allowedSubdomains;
 # my @allowedSubdomains = qw( mangolassi tazendra );
 # foreach (@allowedSubdomains) { $allowedSubdomains{$_}++; }
 # my $subDomains = join" | ", @allowedSubdomains;
+
+my $user = $ENV{WEB_PRIV_USER};
+my $pass = $ENV{WEB_PRIV_PASSWORD};
+
+my $ua = LWP::UserAgent->new;
+
 
 my %allowedDatatypes;
 my @allowedDatatypes = qw( app cns grg int mop pro prt rna trp );
@@ -100,11 +111,16 @@ foreach my $table (@tables) {
   } # if ($table =~ m/^([a-z]{3})/)
   # my $url = 'http://' . $subdomain . '.caltech.edu/~postgres/cgi-bin/referenceform.cgi?pgcommand=SELECT+*+FROM+' . $table . '&perpage=1&action=Pg+!';
   my $url = 'https://' . $thishost . '/priv/cgi-bin/referenceform.cgi?pgcommand=SELECT+*+FROM+' . $table . '&perpage=1&action=Pg+!';
-  my $page = get $url;
+  my $request = GET $url;
+  $request->authorization_basic($user, $pass);
+  my $response = $ua->request($request);
+  my $page = $response->as_string();
+  # my $page = get $url;		# before needing authentication
   my ($thereAre) = $page =~ m/There are (\d+) results/;
   if ($thereAre == 0) { $hasError .= qq($table has no data in postgres, may not be a valid table\n); }
 } # foreach my $table (@tables)
 if ($hasError) { print $hasError; die; }
+
 
 # /~postgres/cgi-bin/oa/ontology_annotator.cgi?action=updatePostgresTableField&pgid=64&field=falsepositive&newValue=False%20Positive&datatype=pro&curator_two=two1823
 # ontology_annotator.cgi?action=newRow&datatype=rna&curator_two=two2987
@@ -135,8 +151,13 @@ my $nonFatalError = '';
 foreach my $j (0 .. $#lines) {
 #   my $pgid = $pgids[$j];				# getting pgids in batch was timing out for 460
 #   unless ($pgid) { $nonFatalError .= qq(No pgid for inputline from array, skipping $lines[$j]\n); next; }
-  my $url = $baseUrl . '?action=newRow&newRowAmount=1&datatype=' . $datatype . '&curator_two=' . $curator;
-  my $pageNewLine = get $url;
+  my $url = 'https://' . $baseUrl . '?action=newRow&newRowAmount=1&datatype=' . $datatype . '&curator_two=' . $curator;
+  # print qq(URL $url\n);
+  my $request = GET $url;
+  $request->authorization_basic($user, $pass);
+  my $response = $ua->request($request);
+  my $pageNewLine = $response->as_string();
+  # my $pageNewLine = get $url;		# before needing authentication
   my $pgid = '';
   if ($pageNewLine =~ m/OK\t DIVIDER \t([\d,]+)/) { $pgid = $1; }
     else { print "Did not get pgid(s) from $url\n"; die; }
@@ -151,10 +172,15 @@ foreach my $j (0 .. $#lines) {
     my ($field) = $table =~ m/^${datatype}_(\w+)/;
     unless ($field) { $nonFatalError .= qq(No field for postgres table with $datatype, skipping $table\n); next; }
     my $data = &convertDisplayToUrlFormat($data[$i]);
-    my $url = $baseUrl . '?action=updatePostgresTableField&pgid=' . $pgid . '&field=' . $field . '&newValue=' . $data . '&datatype=' . $datatype . '&curator_two=' . $curator;
-#     print "URL $url\n";
-    my $pageUpdate = get $url;
-    unless ($pageUpdate eq 'OK') { $nonFatalError .= qq(Update failed for $pgid changing $table to $data[$i]\n); }
+    my $url = 'https://' . $baseUrl . '?action=updatePostgresTableField&pgid=' . $pgid . '&field=' . $field . '&newValue=' . $data . '&datatype=' . $datatype . '&curator_two=' . $curator;
+    # print "URL $url\n";
+    my $request = GET $url;
+    $request->authorization_basic($user, $pass);
+    my $response = $ua->request($request);
+    my $pageUpdate = $response->status_line();
+    unless ($pageUpdate eq '200 OK') { $nonFatalError .= qq(Update failed for $pgid changing $table to $data[$i]\n); }
+    # my $pageUpdate = get $url;	# before needing authentication
+    # unless ($pageUpdate eq 'OK') { $nonFatalError .= qq(Update failed for $pgid changing $table to $data[$i]\n); }
   } # for my $i (0 .. $#data)
 } # foreach my $line (@lines)
 
