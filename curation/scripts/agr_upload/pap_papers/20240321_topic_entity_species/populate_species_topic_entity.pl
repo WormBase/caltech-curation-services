@@ -281,7 +281,8 @@ sub populateTfpSpecies {
 #   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
 #   while (my @row = $result->fetchrow) { $taxonNameToId{$row[1]} = 'NCBITaxon:' . $row[0]; }
 
-  $result = $dbh->prepare( "SELECT * FROM h_pap_species_index ORDER BY pap_timestamp" );
+  # Kimberly updated the pap_species_index to have all the entries it needs on caltech prod.  2024 03 22
+  $result = $dbh->prepare( "SELECT * FROM pap_species_index ORDER BY pap_timestamp" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) { 
     if ($row[1] && $row[0]) {
@@ -319,6 +320,7 @@ sub populateTfpSpecies {
     } }
   }
 # UNCOMMENT to output species without taxon
+# TODO, if this becomes a cronjob, change this to email Kimberly instead of outputting to screen
 #   foreach my $taxon (sort keys %noTaxon) { print qq(NO TAXON $taxon\n); }
 }
 
