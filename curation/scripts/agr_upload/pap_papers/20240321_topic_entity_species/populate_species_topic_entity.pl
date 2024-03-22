@@ -102,7 +102,7 @@ $chosenPapers{all}++;
 # &outputPapAck();
 # &outputPapScript();
 # &outputPapEditor();
-&populateTfpSpecies();
+# &populateTfpSpecies();
 # &outputTfpSpecies();
 
 if ($output_format eq 'json') {
@@ -277,26 +277,28 @@ sub populatePapSpecies {
 
 sub populateTfpSpecies {
   my %taxonNameToId;
-  $result = $dbh->prepare( "SELECT * FROM obo_name_ncbitaxonid" );
-  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
-  while (my @row = $result->fetchrow) { $taxonNameToId{$row[1]} = 'NCBITaxon:' . $row[0]; }
+#   $result = $dbh->prepare( "SELECT * FROM obo_name_ncbitaxonid" );
+#   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+#   while (my @row = $result->fetchrow) { $taxonNameToId{$row[1]} = 'NCBITaxon:' . $row[0]; }
 
-  $result = $dbh->prepare( "SELECT * FROM pap_species_index" );
+  $result = $dbh->prepare( "SELECT * FROM h_pap_species_index ORDER BY pap_timestamp" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
-  while (my @row = $result->fetchrow) { $taxonNameToId{$row[1]} = 'NCBITaxon:' . $row[0]; }
+  while (my @row = $result->fetchrow) { 
+    if ($row[1] && $row[0]) {
+      $taxonNameToId{$row[1]} = 'NCBITaxon:' . $row[0]; } }
 
-  my $taxon_file = '/usr/caltech_curation_files/postgres/agr_upload/pap_papers/20240321_topic_entity_species/ncbitaxon.obo';
-  if (-e $taxon_file) {
-    $/ = "";
-    open (IN, "<$taxon_file") or warn "Cannot open $taxon_file : $!";
-    while (my $para = <IN>) {
-      my ($id, $name) = ('', '');
-      if ($para =~ m/id: (.*)/) { $id = $1; }
-      if ($para =~ m/name: (.*)/) { $name = $1; }
-      $taxonNameToId{$name} = $id;
-    } # while (my $para = <IN>)
-    close (IN) or warn "Cannot close $taxon_file : $!";
-    $/ = "\n"; }
+#   my $taxon_file = '/usr/caltech_curation_files/postgres/agr_upload/pap_papers/20240321_topic_entity_species/ncbitaxon.obo';
+#   if (-e $taxon_file) {
+#     $/ = "";
+#     open (IN, "<$taxon_file") or warn "Cannot open $taxon_file : $!";
+#     while (my $para = <IN>) {
+#       my ($id, $name) = ('', '');
+#       if ($para =~ m/id: (.*)/) { $id = $1; }
+#       if ($para =~ m/name: (.*)/) { $name = $1; }
+#       $taxonNameToId{$name} = $id;
+#     } # while (my $para = <IN>)
+#     close (IN) or warn "Cannot close $taxon_file : $!";
+#     $/ = "\n"; }
 
 
   my %noTaxon;
