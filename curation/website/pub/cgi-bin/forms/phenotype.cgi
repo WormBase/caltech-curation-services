@@ -2950,7 +2950,7 @@ sub getUserByIp {
 
 sub mailSendmail {
   my ($user, $email, $subject, $body, $cc) = @_;
-  if ($ENV{DEVELOPMENT} == 'true') { $subject = '[dev] ' . $subject; }
+  if ($ENV{DEVELOPMENT} eq 'true') { $subject = '[dev] ' . $subject; }
   $email =~ s/\s+//g;
   my @recipients = split/,/, $email;
   $cc =~ s/\s+//g;
