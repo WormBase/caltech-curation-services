@@ -102,7 +102,7 @@ $chosenPapers{all}++;
 # &outputPapAck();
 # &outputPapScript();
 # &outputPapEditor();
-# &populateTfpSpecies();
+&populateTfpSpecies();
 # &outputTfpSpecies();
 
 if ($output_format eq 'json') {
@@ -281,6 +281,10 @@ sub populateTfpSpecies {
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) { $taxonNameToId{$row[1]} = 'NCBITaxon:' . $row[0]; }
 
+  $result = $dbh->prepare( "SELECT * FROM pap_species_index" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) { $taxonNameToId{$row[1]} = 'NCBITaxon:' . $row[0]; }
+
   my $taxon_file = '/usr/caltech_curation_files/postgres/agr_upload/pap_papers/20240321_topic_entity_species/ncbitaxon.obo';
   if (-e $taxon_file) {
     $/ = "";
@@ -312,9 +316,8 @@ sub populateTfpSpecies {
 #         print qq(ERR $name in $joinkey not an ncbi taxon ID\n);
     } }
   }
-  foreach my $taxon (sort keys %noTaxon) {
-    print qq(NO TAXON $taxon\n);
-  }
+# UNCOMMENT to output species without taxon
+#   foreach my $taxon (sort keys %noTaxon) { print qq(NO TAXON $taxon\n); }
 }
 
 
