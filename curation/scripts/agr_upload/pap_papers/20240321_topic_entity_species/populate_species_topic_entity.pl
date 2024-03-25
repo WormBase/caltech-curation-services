@@ -93,8 +93,8 @@ my $speciesTopic = 'ATP:0000142';	# entity
 my $entityType = 'ATP:0000123';		# species
 my $entity_id_validation = 'alliance';
 
-# foreach my $joinkey (@wbpapers) { $chosenPapers{$joinkey}++; }
-$chosenPapers{all}++;
+foreach my $joinkey (@wbpapers) { $chosenPapers{$joinkey}++; }
+# $chosenPapers{all}++;
 
 # UNCOMMENT to populate
 # &populateAbcXref();
@@ -117,7 +117,7 @@ if ($output_format eq 'json') {
 
 sub outputPapAck {
   my $source_evidence_assertion = 'ATP:0000035';
-  my $source_method = 'ACKnowledge';
+  my $source_method = 'ACKnowledge_form';
   my $data_provider = $mod;
   my $secondary_data_provider = $mod;
   my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
@@ -219,7 +219,7 @@ sub outputPapEditor {
 
 sub outputTfpSpecies {
   my $source_evidence_assertion = 'ECO:0008021';
-  my $source_method = 'ACKnowledge';
+  my $source_method = 'ACKnowledge_pipeline';
   my $data_provider = $mod;
   my $secondary_data_provider = $mod;
   my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
@@ -262,8 +262,9 @@ sub populatePapSpecies {
     my ($joinkey, $taxon, $ts, $two, $evi) = @row;
     $taxon = 'NCBITaxon:' . $taxon;
     $two =~ s/two/WBPerson/;
-    $evi =~ s/\n/ /g; $evi =~ s/ $//g;
-    if ($evi =~ m/Manually_connected.*"(.*)"/) {
+    if ($evi) { $evi =~ s/\n/ /g; $evi =~ s/ $//g; }
+      else { $evi = ''; }
+    if ($evi =~ m/(Manually_connected.*".*")/) {
       $papEditor{$joinkey}{$taxon}{note} = $1;
       $papEditor{$joinkey}{$taxon}{curator} = $two;
       $papEditor{$joinkey}{$taxon}{timestamp} = $ts; }
@@ -312,7 +313,7 @@ sub populateTfpSpecies {
     my (@names) = split(' \| ', $name);
     foreach my $name (@names) {
       if ($taxonNameToId{$name}) {
-        $tfpSpecies{$joinkey}{$taxonNameToId{$name}}{curator} = 'caltech_pipeline';
+        $tfpSpecies{$joinkey}{$taxonNameToId{$name}}{curator} = 'ACKnowledge_pipeline';
         $tfpSpecies{$joinkey}{$taxonNameToId{$name}}{timestamp} = $ts; }
       else {
         $noTaxon{$name}++;

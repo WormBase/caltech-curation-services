@@ -53,7 +53,7 @@ my $okta_token = &generateOktaToken();
 # sources for gene aren't ready, so using a single test source for all entries.  2024 03 14
 my %source_default = (
   "source_evidence_assertion"                   => "ECO:0008021",
-  "source_method"                               => "ACKnowledge",
+  "source_method"                               => "ACKnowledge_pipeline",
   "validation_type"                             => "",
   "description"                                 => "Association of entities with references by the ACKnowledge pipeline that recognizes entity mentions and subsequently filters according to empirically determined methods, e.g. threshold values for species or tf/idf for genes, to associate those entities most likely to be experimentally studied.",
   "data_provider"                               => $mod,
@@ -63,7 +63,7 @@ my %source_default = (
 );
 
 my $source_evidence_assertion = 'ECO:0008021';
-my $source_method = 'ACKnowledge';
+my $source_method = 'ACKnowledge_pipeline';
 my $data_provider = $mod;
 my $secondary_data_provider = $mod;
 my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
@@ -75,7 +75,7 @@ unless ($source_id) {
 }
 
 $source_evidence_assertion = 'ATP:0000035';
-$source_method = 'ACKnowledge';
+$source_method = 'ACKnowledge_form';
 $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
 unless ($source_id) {
   my %source_json = %{ dclone (\%source_default) };

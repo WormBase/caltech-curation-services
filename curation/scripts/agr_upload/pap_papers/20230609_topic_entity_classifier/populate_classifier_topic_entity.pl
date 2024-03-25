@@ -212,7 +212,7 @@ sub outputAfpAutData {
   my $source_id_afp = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
 
   $source_evidence_assertion = 'ATP:0000035';
-  $source_method = 'ACKnowledge';
+  $source_method = 'ACKnowledge_form';
   my $source_id_ack = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
 
   unless ($source_id_ack) {
