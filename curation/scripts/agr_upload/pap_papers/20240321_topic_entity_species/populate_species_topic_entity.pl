@@ -37,6 +37,7 @@ use Jex;
 use Encode qw( from_to is_utf8 );
 use Dotenv -load => '/usr/lib/.env';
 
+
 use constant FALSE => \0;
 use constant TRUE => \1;
 
@@ -46,15 +47,31 @@ my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST}
 # my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n"; 
 my $result;
 
+# my $destination = '4002';
+my $destination = 'stage';
+# my $destination = 'prod';
+
+my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
+if ($destination eq 'stage') {
+  $baseUrl = 'https://stage-literature-rest.alliancegenome.org/'; }
+if ($destination eq 'prod') {
+  $baseUrl = 'https://literature-rest.alliancegenome.org/'; }
+
 my $output_format = 'json';
 # my $output_format = 'api';
 my $tag_counter = 0;
 
+my $logfile = '';
+if ($output_format eq 'api') {
+  my $simpledate = &getSimpleDate;
+  $logfile = 'populate_species_topic_entity.api.' . $destination . '.' . $simpledate;
+  open (LOG, ">$logfile") or die "Cannot create $logfile : $!";
+}
+
 my @output_json;
 
+
 my $mod = 'WB';
-# my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
-my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
 my $okta_token = &generateOktaToken();
 # my $okta_token = 'use_above_when_live';
 
@@ -108,6 +125,10 @@ foreach my $joinkey (@wbpapers) { $chosenPapers{$joinkey}++; }
 if ($output_format eq 'json') {
   my $json = encode_json \@output_json;		# for single json file output
   print qq($json\n);				# for single json file output
+}
+
+if ($output_format eq 'api') {
+  close (LOG) or die "Cannot close $logfile : $!";
 }
 
 # foreach my $oj (@output_json) {
@@ -164,6 +185,8 @@ sub outputPapScript {
     foreach my $taxon (sort keys %{ $papScript{$joinkey} }) {
       my %object;
       $object{'negated'}                    = FALSE;
+# unless ($wbpToAgr{$joinkey}) { print qq(ERROR $joinkey NOT IN wbpToAgr\n); }
+# WBPaper00027303 WBPaper00027314 WBPaper00029014 WBPaper00041926   don't map to AGRKB 2024 03 19
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $speciesTopic;
       $object{'entity_type'}                = $entityType;
@@ -323,6 +346,7 @@ sub populateTfpSpecies {
 # UNCOMMENT to output species without taxon
 # TODO, if this becomes a cronjob, change this to email Kimberly instead of outputting to screen
 #   foreach my $taxon (sort keys %noTaxon) { print qq(NO TAXON $taxon\n); }
+# vanauken@caltech.edu
 }
 
 
@@ -382,8 +406,8 @@ sub createTag {
   my $url = $baseUrl . 'topic_entity_tag/';
 # PUT THIS BACK
   my $api_json = `curl -X 'POST' $url -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json' --data '$object_json'`;
-  print qq(create $object_json\n);
-  print qq($api_json\n);
+  print LOG qq(create $object_json\n);
+  print LOG qq($api_json\n);
 }
 
 
