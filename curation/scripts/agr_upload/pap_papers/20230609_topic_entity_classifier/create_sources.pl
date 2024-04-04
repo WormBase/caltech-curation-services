@@ -63,7 +63,7 @@ my %source_default = (
 );
 
 my $source_evidence_assertion = 'ATP:0000035';
-my $source_method = 'ACKnowledge';
+my $source_method = 'ACKnowledge_form';
 my $data_provider = $mod;
 my $secondary_data_provider = $mod;
 my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);

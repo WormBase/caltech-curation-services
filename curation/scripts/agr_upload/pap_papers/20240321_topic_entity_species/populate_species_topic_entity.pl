@@ -37,6 +37,7 @@ use Jex;
 use Encode qw( from_to is_utf8 );
 use Dotenv -load => '/usr/lib/.env';
 
+
 use constant FALSE => \0;
 use constant TRUE => \1;
 
@@ -46,15 +47,31 @@ my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST}
 # my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n"; 
 my $result;
 
+# my $destination = '4002';
+my $destination = 'stage';
+# my $destination = 'prod';
+
+my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
+if ($destination eq 'stage') {
+  $baseUrl = 'https://stage-literature-rest.alliancegenome.org/'; }
+if ($destination eq 'prod') {
+  $baseUrl = 'https://literature-rest.alliancegenome.org/'; }
+
 my $output_format = 'json';
 # my $output_format = 'api';
 my $tag_counter = 0;
 
+my $logfile = '';
+if ($output_format eq 'api') {
+  my $simpledate = &getSimpleDate;
+  $logfile = 'populate_species_topic_entity.api.' . $destination . '.' . $simpledate;
+  open (LOG, ">$logfile") or die "Cannot create $logfile : $!";
+}
+
 my @output_json;
 
+
 my $mod = 'WB';
-# my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
-my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
 my $okta_token = &generateOktaToken();
 # my $okta_token = 'use_above_when_live';
 
@@ -93,8 +110,8 @@ my $speciesTopic = 'ATP:0000142';	# entity
 my $entityType = 'ATP:0000123';		# species
 my $entity_id_validation = 'alliance';
 
-# foreach my $joinkey (@wbpapers) { $chosenPapers{$joinkey}++; }
-$chosenPapers{all}++;
+foreach my $joinkey (@wbpapers) { $chosenPapers{$joinkey}++; }
+# $chosenPapers{all}++;
 
 # UNCOMMENT to populate
 # &populateAbcXref();
@@ -110,6 +127,10 @@ if ($output_format eq 'json') {
   print qq($json\n);				# for single json file output
 }
 
+if ($output_format eq 'api') {
+  close (LOG) or die "Cannot close $logfile : $!";
+}
+
 # foreach my $oj (@output_json) {
 #   print qq(OJ $oj\n);
 # } 
@@ -117,7 +138,7 @@ if ($output_format eq 'json') {
 
 sub outputPapAck {
   my $source_evidence_assertion = 'ATP:0000035';
-  my $source_method = 'ACKnowledge';
+  my $source_method = 'ACKnowledge_form';
   my $data_provider = $mod;
   my $secondary_data_provider = $mod;
   my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
@@ -164,6 +185,8 @@ sub outputPapScript {
     foreach my $taxon (sort keys %{ $papScript{$joinkey} }) {
       my %object;
       $object{'negated'}                    = FALSE;
+# unless ($wbpToAgr{$joinkey}) { print qq(ERROR $joinkey NOT IN wbpToAgr\n); }
+# WBPaper00027303 WBPaper00027314 WBPaper00029014 WBPaper00041926   don't map to AGRKB 2024 03 19
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $speciesTopic;
       $object{'entity_type'}                = $entityType;
@@ -219,7 +242,7 @@ sub outputPapEditor {
 
 sub outputTfpSpecies {
   my $source_evidence_assertion = 'ECO:0008021';
-  my $source_method = 'ACKnowledge';
+  my $source_method = 'ACKnowledge_pipeline';
   my $data_provider = $mod;
   my $secondary_data_provider = $mod;
   my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
@@ -262,8 +285,9 @@ sub populatePapSpecies {
     my ($joinkey, $taxon, $ts, $two, $evi) = @row;
     $taxon = 'NCBITaxon:' . $taxon;
     $two =~ s/two/WBPerson/;
-    $evi =~ s/\n/ /g; $evi =~ s/ $//g;
-    if ($evi =~ m/Manually_connected.*"(.*)"/) {
+    if ($evi) { $evi =~ s/\n/ /g; $evi =~ s/ $//g; }
+      else { $evi = ''; }
+    if ($evi =~ m/(Manually_connected.*".*")/) {
       $papEditor{$joinkey}{$taxon}{note} = $1;
       $papEditor{$joinkey}{$taxon}{curator} = $two;
       $papEditor{$joinkey}{$taxon}{timestamp} = $ts; }
@@ -277,22 +301,29 @@ sub populatePapSpecies {
 
 sub populateTfpSpecies {
   my %taxonNameToId;
-  $result = $dbh->prepare( "SELECT * FROM obo_name_ncbitaxonid" );
-  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
-  while (my @row = $result->fetchrow) { $taxonNameToId{$row[1]} = 'NCBITaxon:' . $row[0]; }
+#   $result = $dbh->prepare( "SELECT * FROM obo_name_ncbitaxonid" );
+#   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+#   while (my @row = $result->fetchrow) { $taxonNameToId{$row[1]} = 'NCBITaxon:' . $row[0]; }
 
-  my $taxon_file = '/usr/caltech_curation_files/postgres/agr_upload/pap_papers/20240321_topic_entity_species/ncbitaxon.obo';
-  if (-e $taxon_file) {
-    $/ = "";
-    open (IN, "<$taxon_file") or warn "Cannot open $taxon_file : $!";
-    while (my $para = <IN>) {
-      my ($id, $name) = ('', '');
-      if ($para =~ m/id: (.*)/) { $id = $1; }
-      if ($para =~ m/name: (.*)/) { $name = $1; }
-      $taxonNameToId{$name} = $id;
-    } # while (my $para = <IN>)
-    close (IN) or warn "Cannot close $taxon_file : $!";
-    $/ = "\n"; }
+  # Kimberly updated the pap_species_index to have all the entries it needs on caltech prod.  2024 03 22
+  $result = $dbh->prepare( "SELECT * FROM pap_species_index ORDER BY pap_timestamp" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) { 
+    if ($row[1] && $row[0]) {
+      $taxonNameToId{$row[1]} = 'NCBITaxon:' . $row[0]; } }
+
+#   my $taxon_file = '/usr/caltech_curation_files/postgres/agr_upload/pap_papers/20240321_topic_entity_species/ncbitaxon.obo';
+#   if (-e $taxon_file) {
+#     $/ = "";
+#     open (IN, "<$taxon_file") or warn "Cannot open $taxon_file : $!";
+#     while (my $para = <IN>) {
+#       my ($id, $name) = ('', '');
+#       if ($para =~ m/id: (.*)/) { $id = $1; }
+#       if ($para =~ m/name: (.*)/) { $name = $1; }
+#       $taxonNameToId{$name} = $id;
+#     } # while (my $para = <IN>)
+#     close (IN) or warn "Cannot close $taxon_file : $!";
+#     $/ = "\n"; }
 
 
   my %noTaxon;
@@ -305,16 +336,17 @@ sub populateTfpSpecies {
     my (@names) = split(' \| ', $name);
     foreach my $name (@names) {
       if ($taxonNameToId{$name}) {
-        $tfpSpecies{$joinkey}{$taxonNameToId{$name}}{curator} = 'caltech_pipeline';
+        $tfpSpecies{$joinkey}{$taxonNameToId{$name}}{curator} = 'ACKnowledge_pipeline';
         $tfpSpecies{$joinkey}{$taxonNameToId{$name}}{timestamp} = $ts; }
       else {
         $noTaxon{$name}++;
 #         print qq(ERR $name in $joinkey not an ncbi taxon ID\n);
     } }
   }
-  foreach my $taxon (sort keys %noTaxon) {
-    print qq(NO TAXON $taxon\n);
-  }
+# UNCOMMENT to output species without taxon
+# TODO, if this becomes a cronjob, change this to email Kimberly instead of outputting to screen
+#   foreach my $taxon (sort keys %noTaxon) { print qq(NO TAXON $taxon\n); }
+# vanauken@caltech.edu
 }
 
 
@@ -374,8 +406,8 @@ sub createTag {
   my $url = $baseUrl . 'topic_entity_tag/';
 # PUT THIS BACK
   my $api_json = `curl -X 'POST' $url -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json' --data '$object_json'`;
-  print qq(create $object_json\n);
-  print qq($api_json\n);
+  print LOG qq(create $object_json\n);
+  print LOG qq($api_json\n);
 }
 
 

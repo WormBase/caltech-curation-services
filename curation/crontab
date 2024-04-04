@@ -1,9 +1,8 @@
 SHELL=/bin/bash
 BASH_ENV=/container.env
 
-0 0 * * * restic -r ${RESTIC_REPOSITORY}/daily_backups backup /usr/caltech_curation_files --exclude-file=/restic_excludes.txt >> /var/log/restic_daily.log
-0 3 1 * * restic -r ${RESTIC_REPOSITORY}/monthly_backups backup /usr/caltech_curation_files --exclude-file=/restic_excludes.txt >> /var/log/restic_monthly.log
-0 0 * * * restic -r ${RESTIC_REPOSITORY}/volumes_backups backup /usr/caltech_volumes >> /var/log/restic_volumes.log
+0 0 * * * restic -r ${RESTIC_REPOSITORY}/daily_backups backup /usr/caltech_curation_files /usr/lib/.env /etc/httpd/passwd/passwords /usr/caltech_volumes --exclude-file=/restic_excludes.txt >> /var/log/restic_daily.log
+0 3 1 * * restic -r ${RESTIC_REPOSITORY}/monthly_backups backup /usr/caltech_curation_files /usr/lib/.env /etc/httpd/passwd/passwords /usr/caltech_volumes --exclude-file=/restic_excludes.txt >> /var/log/restic_monthly.log
 
 0 1 * * * restic forget -r ${RESTIC_REPOSITORY}/daily_backups --keep-last 30 --prune
 0 4 1 * * restic forget -r ${RESTIC_REPOSITORY}/monthly_backups --keep-last 24 --prune
