@@ -106,7 +106,8 @@
 #
 # previously was writing new submissions at the beginning of the logfile, by reading the whole thing, getting the header, printing
 # the header, the new data, and the old data.  But something about the dockerized system takes special charactes and duplicates them,
-# so instead just opening the file in append mode and sticking it at the end.  2024 04 04
+# so instead just opening the file in append mode and sticking it at the end.
+# Write to separate log files with _<year>.html for each year, for Chris.  2024 04 04
 
 
 
@@ -2436,7 +2437,15 @@ sub writePgOaAndEmail {		# tacking on email here since need pgids from pg before
 #   }
 #   print qq(</table>);
 # UNCOMMENT FOR HISTORY
-  my $outfile = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/pub/cgi-bin/data/phenotype_history.html';
+  my $date = &getSimpleDate();
+  my ($year) = $date =~ m/^(\d{4})/;
+  my $outfile = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/pub/cgi-bin/data/phenotype_history_' . $year . '.html';
+  if (!(-e $outfile)) {
+    open (OUT, ">$outfile") or die "Cannot create $outfile : $!";
+    print OUT qq(<table border="1"><tr><th>ip</th><th>timestamp</th><th>person</th><th>email</th><th>pgid</th><th>paper</th><th>allele</th><th>transgene</th><th>caused_by</th><th>rnai gene</th><th>rnai reagent</th><th>species</th><th>personal</th><th>phenotype</th><th>not</th><th>phenotype remark</th><th>suggested definition</th><th>nature</th><th>func</th><th>penetrance</th><th>heat_sens</th><th>cold_sens</th><th>genotype</th><th>strain</th><th>comment</th></tr>\n);
+    close (OUT) or die "Cannot close $outfile : $!";
+  }
+
   # my $outfile = '/home/azurebrd/public_html/cgi-bin/data/phenotype_history.html';
 # was reading whole file to get headers and add data at the beginning.  Now just appending at the end to avoid replication of weird characters when reading whole file and writing out again
 #   open (IN, "<$outfile") or die "Cannot open $outfile : $!";
