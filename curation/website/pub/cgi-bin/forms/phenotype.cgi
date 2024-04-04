@@ -2954,8 +2954,6 @@ sub getUserByIp {
 } # sub getUserByIp
 
 sub mailSendmail {
-# UNDO
-  return;
   my ($user, $email, $subject, $body, $cc) = @_;
   if ($ENV{DEVELOPMENT} eq 'true') { $subject = '[dev] ' . $subject; }
   $email =~ s/\s+//g;
