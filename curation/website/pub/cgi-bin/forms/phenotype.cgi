@@ -103,6 +103,10 @@
 # field dependencies.  2021 09 17
 #
 # app_person is a multivalue field, add " around it.  2023 09 14
+#
+# previously was writing new submissions at the beginning of the logfile, by reading the whole thing, getting the header, printing
+# the header, the new data, and the old data.  But something about the dockerized system takes special charactes and duplicates them,
+# so instead just opening the file in append mode and sticking it at the end.  2024 04 04
 
 
 
@@ -2434,17 +2438,18 @@ sub writePgOaAndEmail {		# tacking on email here since need pgids from pg before
 # UNCOMMENT FOR HISTORY
   my $outfile = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/pub/cgi-bin/data/phenotype_history.html';
   # my $outfile = '/home/azurebrd/public_html/cgi-bin/data/phenotype_history.html';
-  open (IN, "<$outfile") or die "Cannot open $outfile : $!";
-  my $toOutput = <IN>;					# stuff to beginning of data at top of file
+# was reading whole file to get headers and add data at the beginning.  Now just appending at the end to avoid replication of weird characters when reading whole file and writing out again
+#   open (IN, "<$outfile") or die "Cannot open $outfile : $!";
+#   my $toOutput = <IN>;					# stuff to beginning of data at top of file
+#   while (my $line = <IN>) { $toOutput .= $line; }	# append previous data and rest of html
+#   close (IN) or die "Cannot close $outfile : $!";
+  open (OUT, ">>$outfile") or die "Cannot append to $outfile : $!";
   foreach my $line (@historyAppend) {
     $line =~ s/\t/<\/td><td style ="overflow: hidden; text-overflow:ellipsis; max-width: 500px;">/g; 
     $line = qq(<tr><td>$line</td></tr>\n); 
-    $toOutput .= $line; 				# append data
+    print OUT $line;					# write whole file over again including new data
+#     $toOutput .= $line; 				# append data
   }
-  while (my $line = <IN>) { $toOutput .= $line; }	# append previous data and rest of html
-  close (IN) or die "Cannot close $outfile : $!";
-  open (OUT, ">$outfile") or die "Cannot append to $outfile : $!";
-  print OUT $toOutput;					# write whole file over again including new data
   close (OUT) or die "Cannot close $outfile : $!";
 } # sub writePgOaAndEmail
 
@@ -2949,6 +2954,8 @@ sub getUserByIp {
 } # sub getUserByIp
 
 sub mailSendmail {
+# UNDO
+  return;
   my ($user, $email, $subject, $body, $cc) = @_;
   if ($ENV{DEVELOPMENT} eq 'true') { $subject = '[dev] ' . $subject; }
   $email =~ s/\s+//g;
