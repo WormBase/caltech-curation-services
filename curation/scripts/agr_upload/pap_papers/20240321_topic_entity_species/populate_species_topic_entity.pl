@@ -15,6 +15,12 @@
 # Needs to be modified for gene instead of entity/classifier.  2024 01 08
 #
 # modified for topic entity species.  2024 03 21
+#
+# modified to work with cron by writing output to logfiles.  2024 04 04
+
+
+# cronjob (TODO change when)
+# * * * * * /usr/lib/scripts/agr_upload/pap_papers/20240321_topic_entity_species/populate_species_topic_entity.pl
 
 
 # if single json output
@@ -47,6 +53,14 @@ my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST}
 # my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n"; 
 my $result;
 
+my $outDir = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . "/postgres/agr_upload/pap_papers/20240321_topic_entity_species/cron_files/";
+my $outfile = $outDir . 'test_outfile';
+open (OUT, ">>$outfile") or die "Cannot append to $outfile : $!";
+print OUT qq($start_time\n);
+close (OUT) or die "Cannot close to $outfile : $!";
+
+__END__
+
 # my $destination = '4002';
 my $destination = 'stage';
 # my $destination = 'prod';
@@ -57,15 +71,18 @@ if ($destination eq 'stage') {
 if ($destination eq 'prod') {
   $baseUrl = 'https://literature-rest.alliancegenome.org/'; }
 
-my $output_format = 'json';
-# my $output_format = 'api';
+# my $output_format = 'json';
+my $output_format = 'api';
 my $tag_counter = 0;
 
-my $logfile = '';
+my $logfile = ''; my $jsonfile = '';
+my $simpledate = &getSimpleDate;
 if ($output_format eq 'api') {
-  my $simpledate = &getSimpleDate;
-  $logfile = 'populate_species_topic_entity.api.' . $destination . '.' . $simpledate;
+  $logfile = $outDir . 'populate_species_topic_entity.api.' . $destination . '.' . $simpledate . '.api';
   open (LOG, ">$logfile") or die "Cannot create $logfile : $!";
+} else {
+  $jsonfile = $outDir . 'populate_species_topic_entity.api.' . $destination . '.' . $simpledate . '.json';
+  open (JSON, ">$jsonfile") or die "Cannot create $jsonfile : $!";
 }
 
 my @output_json;
@@ -110,25 +127,27 @@ my $speciesTopic = 'ATP:0000142';	# entity
 my $entityType = 'ATP:0000123';		# species
 my $entity_id_validation = 'alliance';
 
-foreach my $joinkey (@wbpapers) { $chosenPapers{$joinkey}++; }
-# $chosenPapers{all}++;
+# foreach my $joinkey (@wbpapers) { $chosenPapers{$joinkey}++; }
+$chosenPapers{all}++;
 
 # UNCOMMENT to populate
-# &populateAbcXref();
-# &populatePapSpecies();
-# &outputPapAck();
-# &outputPapScript();
-# &outputPapEditor();
-# &populateTfpSpecies();
-# &outputTfpSpecies();
+&populateAbcXref();
+&populatePapSpecies();
+&outputPapAck();
+&outputPapScript();
+&outputPapEditor();
+&populateTfpSpecies();
+&outputTfpSpecies();
 
 if ($output_format eq 'json') {
   my $json = encode_json \@output_json;		# for single json file output
-  print qq($json\n);				# for single json file output
+  print JSON qq($json\n);				# for single json file output
 }
 
 if ($output_format eq 'api') {
   close (LOG) or die "Cannot close $logfile : $!";
+} else {
+  close (JSON) or die "Cannot close $jsonfile : $!";
 }
 
 # foreach my $oj (@output_json) {
@@ -143,6 +162,7 @@ sub outputPapAck {
   my $secondary_data_provider = $mod;
   my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
   unless ($source_id) {
+# TODO  where to send this ?
     print qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
     return;
   }
@@ -177,6 +197,7 @@ sub outputPapScript {
   my $secondary_data_provider = $mod;
   my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
   unless ($source_id) {
+# TODO  where to send this ?
     print qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
     return;
   }
@@ -213,6 +234,7 @@ sub outputPapEditor {
   my $secondary_data_provider = $mod;
   my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
   unless ($source_id) {
+# TODO  where to send this ?
     print qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
     return;
   }
@@ -247,6 +269,7 @@ sub outputTfpSpecies {
   my $secondary_data_provider = $mod;
   my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
   unless ($source_id) {
+# TODO  where to send this ?
     print qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
     return;
   }
@@ -277,7 +300,8 @@ sub outputTfpSpecies {
 
 sub populatePapSpecies {
 #  joinkey | pap_species | pap_order | pap_curator | pap_timestamp | pap_evidence
-  $result = $dbh->prepare( "SELECT joinkey, pap_species, pap_timestamp, pap_curator, pap_evidence FROM pap_species" );
+#   $result = $dbh->prepare( "SELECT joinkey, pap_species, pap_timestamp, pap_curator, pap_evidence FROM pap_species WHERE pap_timestamp > now() - interval '1 week'");
+  $result = $dbh->prepare( "SELECT joinkey, pap_species, pap_timestamp, pap_curator, pap_evidence FROM pap_species WHERE pap_timestamp > now() - interval '2 weeks'");
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
@@ -327,7 +351,8 @@ sub populateTfpSpecies {
 
 
   my %noTaxon;
-  $result = $dbh->prepare( "SELECT joinkey, tfp_species, tfp_timestamp FROM tfp_species" );
+#   $result = $dbh->prepare( "SELECT joinkey, tfp_species, tfp_timestamp FROM tfp_species WHERE tfp_timestamp > now() - interval '1 week'");
+  $result = $dbh->prepare( "SELECT joinkey, tfp_species, tfp_timestamp FROM tfp_species WHERE tfp_timestamp > now() - interval '2 weeks'");
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
@@ -344,6 +369,7 @@ sub populateTfpSpecies {
     } }
   }
 # UNCOMMENT to output species without taxon
+# TODO  where to send this ?
 # TODO, if this becomes a cronjob, change this to email Kimberly instead of outputting to screen
 #   foreach my $taxon (sort keys %noTaxon) { print qq(NO TAXON $taxon\n); }
 # vanauken@caltech.edu
@@ -396,7 +422,7 @@ sub createTag {
   $tag_counter++;
   if ($tag_counter % 1000 == 0) { 
     my $date = &getSimpleSecDate();
-    print qq(counter\t$tag_counter\t$date\n);
+#     print qq(counter\t$tag_counter\t$date\n);
     my $now = time;
     if ($now - $start_time > 82800) {		# if 23 hours went by, update okta token
       $okta_token = &generateOktaToken();
