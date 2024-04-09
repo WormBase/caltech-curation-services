@@ -85,7 +85,7 @@ sub readCvs {
 #   my $obofile = get "http://purl.obolibrary.org/obo/wbphenotype/releases/2019-01-29/wbphenotype-merged.obo";	# updated url 2019 02 27
 #   my $obofile = get "https://www.dropbox.com/s/1glm0lamc78clce/wbphenotype.obo?dl=0";	# updated url 2019 02 28
 #  my $obofile = get "http://tazendra.caltech.edu/~azurebrd/var/work/chris/wbphenotype.obo";	# temp testing 2019 02 28
-  my $obofile = get "https://github.com/obophenotype/c-elegans-phenotype-ontology/raw/vWS288/wbphenotype.obo";
+  my $obofile = get "https://github.com/obophenotype/c-elegans-phenotype-ontology/raw/vWS293/wbphenotype.obo";
   my (@entries) = split/\n\n/, $obofile;
   foreach my $para (@entries) {
     next unless ($para =~ m/id:/);
