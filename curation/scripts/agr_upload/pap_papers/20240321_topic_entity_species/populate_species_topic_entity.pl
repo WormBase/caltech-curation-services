@@ -17,10 +17,17 @@
 # modified for topic entity species.  2024 03 21
 #
 # modified to work with cron by writing output to logfiles.  2024 04 04
+#
+# can test every minute with
+# * * * * * /usr/lib/scripts/agr_upload/pap_papers/20240321_topic_entity_species/populate_species_topic_entity.pl
+# updated to send emails with outreach@wormbase.org email  setting cronjob for live runs, since Kimberly signed off on this.
+# 0 13 * * 6 /usr/lib/scripts/agr_upload/pap_papers/20240321_topic_entity_species/populate_species_topic_entity.pl
+# 2024 09 10
+
 
 
 # cronjob (TODO change when)
-# * * * * * /usr/lib/scripts/agr_upload/pap_papers/20240321_topic_entity_species/populate_species_topic_entity.pl
+# 0 13 * * 6 /usr/lib/scripts/agr_upload/pap_papers/20240321_topic_entity_species/populate_species_topic_entity.pl
 
 
 # if single json output
@@ -54,22 +61,23 @@ my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST}
 my $result;
 
 my $outDir = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . "/postgres/agr_upload/pap_papers/20240321_topic_entity_species/cron_files/";
-my $outfile = $outDir . 'test_outfile';
-open (OUT, ">>$outfile") or die "Cannot append to $outfile : $!";
-print OUT qq($start_time\n);
-close (OUT) or die "Cannot close to $outfile : $!";
-
-__END__
+# my $outfile = $outDir . 'test_outfile';
+# open (OUT, ">>$outfile") or die "Cannot append to $outfile : $!";
+# print OUT qq($start_time\n);
+# close (OUT) or die "Cannot close to $outfile : $!";
 
 # my $destination = '4002';
-my $destination = 'stage';
-# my $destination = 'prod';
+# my $destination = 'stage';
+my $destination = 'prod';
 
 my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
 if ($destination eq 'stage') {
   $baseUrl = 'https://stage-literature-rest.alliancegenome.org/'; }
 if ($destination eq 'prod') {
   $baseUrl = 'https://literature-rest.alliancegenome.org/'; }
+
+if ($ENV{ENV_STATE} ne 'prod') { die; }		# cronjob should only run from caltech prod
+
 
 # my $output_format = 'json';
 my $output_format = 'api';
@@ -86,6 +94,9 @@ if ($output_format eq 'api') {
 }
 
 my @output_json;
+
+my $source_error_body = '';
+my $taxon_error_body = '';
 
 
 my $mod = 'WB';
@@ -154,6 +165,8 @@ if ($output_format eq 'api') {
 #   print qq(OJ $oj\n);
 # } 
 
+&sendErrorEmails();
+
 
 sub outputPapAck {
   my $source_evidence_assertion = 'ATP:0000035';
@@ -162,8 +175,8 @@ sub outputPapAck {
   my $secondary_data_provider = $mod;
   my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
   unless ($source_id) {
-# TODO  where to send this ?
-    print qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    $source_error_body .= qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+#     print qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
     return;
   }
   foreach my $joinkey (sort keys %papAck) {
@@ -197,8 +210,8 @@ sub outputPapScript {
   my $secondary_data_provider = $mod;
   my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
   unless ($source_id) {
-# TODO  where to send this ?
-    print qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    $source_error_body .= qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+#     print qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
     return;
   }
   foreach my $joinkey (sort keys %papScript) {
@@ -234,8 +247,8 @@ sub outputPapEditor {
   my $secondary_data_provider = $mod;
   my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
   unless ($source_id) {
-# TODO  where to send this ?
-    print qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    $source_error_body .= qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+#     print qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
     return;
   }
   foreach my $joinkey (sort keys %papEditor) {
@@ -269,8 +282,8 @@ sub outputTfpSpecies {
   my $secondary_data_provider = $mod;
   my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
   unless ($source_id) {
-# TODO  where to send this ?
-    print qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    $source_error_body .= qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+#     print qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
     return;
   }
   foreach my $joinkey (sort keys %tfpSpecies) {
@@ -368,12 +381,11 @@ sub populateTfpSpecies {
 #         print qq(ERR $name in $joinkey not an ncbi taxon ID\n);
     } }
   }
-# UNCOMMENT to output species without taxon
-# TODO  where to send this ?
-# TODO, if this becomes a cronjob, change this to email Kimberly instead of outputting to screen
-#   foreach my $taxon (sort keys %noTaxon) { print qq(NO TAXON $taxon\n); }
-# vanauken@caltech.edu
-}
+  foreach my $taxon (sort keys %noTaxon) { 
+    $taxon_error_body .= qq(NO TAXON $taxon\n);
+#     print qq(NO TAXON $taxon\n);
+  }
+} # sub populateTfpSpecies
 
 
 
@@ -458,3 +470,48 @@ sub tsToDigits {
   return $tsdigits;
 }
 
+sub sendErrorEmails {
+  my $user = 'populate_species_topic_entity';
+#   my $email = 'azurebrd@tazendra.caltech.edu';
+  my $email = 'vanauken@caltech.edu';
+  my $cc = '';
+  if ($source_error_body) { 
+    my $subject = 'source error populate_species_topic_entity cronjob';
+    my $body = $source_error_body;
+    &mailSendmail($user, $email, $subject, $body, $cc);
+  }
+  if ($taxon_error_body) {
+    my $subject = 'failed taxon mappings populate_species_topic_entity cronjob';
+    my $body = $taxon_error_body;
+    &mailSendmail($user, $email, $subject, $body, $cc);
+  }
+} # sub sendErrorEmails
+
+sub mailSendmail {
+  my ($user, $email, $subject, $body, $cc) = @_;
+  if ($ENV{DEVELOPMENT} eq 'true') { $subject = '[dev] ' . $subject; }
+  $email =~ s/\s+//g;
+  my @recipients = split/,/, $email;
+  $cc =~ s/\s+//g;
+  my @cc_recipients = split/,/, $cc;
+  my $smtp = Net::SMTP::SSL->new(
+    'smtp.gmail.com',                       # Gmail SMTP server address
+    Port => 465,                            # Gmail SMTP SSL port
+#     Debug => 1,                             # Enable debugging if needed
+  ) or die "Could not connect to Gmail SMTP server";
+
+  $smtp->auth($ENV{MAILER_USERNAME}, $ENV{MAILER_PASSWORD});
+  $smtp->mail($ENV{MAILER_USERNAME});
+  # $smtp->to(@recipients);                     # might be an alternate way to send
+  $smtp->recipient(@recipients);
+  $smtp->cc(@cc_recipients);                    # don't send cc
+  $smtp->data();
+  $smtp->datasend("From: <$ENV{MAILER_USERNAME}> \n");
+  $smtp->datasend("To: <$email> \n");
+  if ($cc) { $smtp->datasend("cc: <$cc> \n"); }
+  $smtp->datasend("Subject: $subject\n");
+  $smtp->datasend("Content-Type: text/html; charset=iso-8859-1 \n\n");
+  $smtp->datasend($body);
+  $smtp->dataend();
+  $smtp->quit;
+} # sub mailSendmail
