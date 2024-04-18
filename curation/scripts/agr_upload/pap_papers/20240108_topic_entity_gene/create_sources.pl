@@ -11,6 +11,8 @@
 # dockerized, filled in TDB for source_type for str, svm, nnc.  wrote to Valerio and Kimberly about the confirmation questions.  2023 10 04
 #
 # modified for gene sources instead of general entity sources.  2024 01 08
+#
+# updated to new source data from https://docs.google.com/document/d/1xNnGLb1KO1ONrvTontgC1LTjpUc0JlfxrXWCvR_XIGA/edit  2024 04 18
 
 # ./create_sources.pl
 
@@ -50,23 +52,115 @@ my $okta_token = &generateOktaToken();
 
 # sources for gene aren't ready, so using a single test source for all entries.  2024 03 14
 my %source_default = (
-  "source_evidence_assertion"                   => "ATP:0000036",
-  "source_method"                               => "test_large_data",
-  "validation_type"                             => "professional_biocurator",
-  "description"                                 => "made up source to test papers with large datasets",
+  "source_evidence_assertion"                   => "ECO:0008021",
+  "source_method"                               => "ACKnowledge_pipeline",
+  "validation_type"                             => "",
+  "description"                                 => "Association of entities with references by the ACKnowledge pipeline that recognizes entity mentions and subsequently filters according to empirically determined methods, e.g. threshold values for species or tf/idf for genes, to associate those entities most likely to be experimentally studied.",
   "data_provider"                               => $mod,
   "secondary_data_provider_abbreviation"        => $mod,
   "created_by"                                  => "00u2ao5gp6tZJ9xXU5d7",
   "updated_by"                                  => "00u2ao5gp6tZJ9xXU5d7"
 );
 
-my $source_evidence_assertion = 'ATP:0000036';
-my $source_method = 'test_large_data';
+my $source_evidence_assertion = 'ECO:0008021';
+my $source_method = 'ACKnowledge_pipeline';
 my $data_provider = $mod;
 my $secondary_data_provider = $mod;
 my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
 unless ($source_id) {
   my %source_json = %{ dclone (\%source_default) };
+  delete $source_json{validation_type};
+  my $source_json = encode_json \%source_json;
+  &createSource($source_json);
+}
+
+$source_evidence_assertion = 'ATP:0000035';
+$source_method = 'ACKnowledge_form';
+$source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+unless ($source_id) {
+  my %source_json = %{ dclone (\%source_default) };
+  $source_json{source_evidence_assertion}       = $source_evidence_assertion;
+  $source_json{source_method}                   = $source_method;
+  $source_json{validation_type}                 = 'author';
+  $source_json{description}                     = 'Manual association of entities and topics with references by authors using the ACKnowledge form.';
+  my $source_json = encode_json \%source_json;
+  &createSource($source_json);
+}
+
+$source_evidence_assertion = 'ATP:0000036';
+$source_method = 'genes_curator';
+$source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+unless ($source_id) {
+  my %source_json = %{ dclone (\%source_default) };
+  $source_json{source_evidence_assertion}       = $source_evidence_assertion;
+  $source_json{source_method}                   = $source_method;
+  $source_json{validation_type}                 = 'professional_biocurator';
+  $source_json{description}                     = 'Manual association of genes with references by a curator by a method other than using the Caltech paper editor.  This includes gene-reference associations made by the CGC for which we have curator evidence, gene-reference associations to WormBook chapters, and gene-reference associations made directly into AceDB prior to paper curation in the Caltech postgres database.';
+  my $source_json = encode_json \%source_json;
+  &createSource($source_json);
+}
+
+$source_evidence_assertion = 'ECO:0008021';
+$source_method = 'script_gene_meeting_abstract';
+$source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+unless ($source_id) {
+  my %source_json = %{ dclone (\%source_default) };
+  $source_json{source_evidence_assertion}       = $source_evidence_assertion;
+  $source_json{source_method}                   = $source_method;
+  delete $source_json{validation_type};
+  $source_json{description}                     = 'Scripts that associated genes with meeting abstracts based on mention of a gene in the abstract.';
+  my $source_json = encode_json \%source_json;
+  &createSource($source_json);
+}
+
+$source_evidence_assertion = 'ATP:0000036';
+$source_method = 'paper_editor_genes_curator';
+$source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+unless ($source_id) {
+  my %source_json = %{ dclone (\%source_default) };
+  $source_json{source_evidence_assertion}       = $source_evidence_assertion;
+  $source_json{source_method}                   = $source_method;
+  $source_json{validation_type}                 = 'professional_biocurator';
+  $source_json{description}                     = 'Manual association of genes with references in the WormBase paper editor.';
+  my $source_json = encode_json \%source_json;
+  &createSource($source_json);
+}
+
+$source_evidence_assertion = 'ECO:0008021';
+$source_method = 'paper_editor_genes_script';
+$source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+unless ($source_id) {
+  my %source_json = %{ dclone (\%source_default) };
+  $source_json{source_evidence_assertion}       = $source_evidence_assertion;
+  $source_json{source_method}                   = $source_method;
+  delete $source_json{validation_type};
+  $source_json{description}                     = 'Association of genes mentioned in abstracts with references based on string matching of gene and protein names, and synonyms, upon approval of a reference in the WormBase paper editor.';
+  my $source_json = encode_json \%source_json;
+  &createSource($source_json);
+}
+
+$source_evidence_assertion = 'ECO:0008021';
+$source_method = 'script_gene';
+$source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+unless ($source_id) {
+  my %source_json = %{ dclone (\%source_default) };
+  $source_json{source_evidence_assertion}       = $source_evidence_assertion;
+  $source_json{source_method}                   = $source_method;
+  delete $source_json{validation_type};
+  $source_json{description}                     = 'One of several scripts that associated genes with references based on mention of a gene in a reference abstract or full text.';
+  my $source_json = encode_json \%source_json;
+  &createSource($source_json);
+}
+
+$source_evidence_assertion = 'ECO:0006151';
+$source_method = 'unknown';
+$source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+unless ($source_id) {
+  my %source_json = %{ dclone (\%source_default) };
+  $source_json{source_evidence_assertion}       = $source_evidence_assertion;
+  $source_json{source_method}                   = $source_method;
+  delete $source_json{validation_type};
+  $source_json{description}                     = 'Association of genes with references by an unknown method.  Some of these associations likely came into WormBase when we took over curation of the C. elegans literature from the CGC; others may have been added via bulk upload without corresponding evidence.';
   my $source_json = encode_json \%source_json;
   &createSource($source_json);
 }
