@@ -13,6 +13,10 @@
 # account for okta tokens expire after 24 hours.  if % 1000 entries and >23 hours, reset okta token.  2023 08 21
 #
 # Needs to be modified for gene instead of entity/classifier.  2024 01 08
+#
+# Blind guessing at what to extract, it's very clearly wrong.
+# https://agr-jira.atlassian.net/browse/SCRUM-3271?focusedCommentId=42377
+# 2024 04 18
 
 
 # if single json output
@@ -64,7 +68,8 @@ my $okta_token = &generateOktaToken();
 # my @wbpapers = qw( 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 00037049 );
 # my @wbpapers = qw( 00055090 );
 # my @wbpapers = qw( 00066031 );
-my @wbpapers = qw( 00038491 00055090 );
+# my @wbpapers = qw( 00038491 00055090 );	# papers with lots of genes  2024 03 12
+my @wbpapers = qw( 00003000 00004455 00004952 00005199 00005707 00006103 00006320 00017095 00025176 00027230 00046571 00057043 00063127 00064676 00064771 00065877 00066211 );		# kimberly 2024 04 18 set
 
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 00037049
@@ -101,14 +106,14 @@ if ($output_format eq 'json') {
 # } 
 
 
-sub outputCurConf{
+sub outputCurConf {
   # old source
   # my $source_type = 'professional_biocurator';
   # my $source_method = 'paper_editor';
   # my $source_id = &getSourceId($source_type, $source_method);
   
   my $source_evidence_assertion = 'ATP:0000036';
-  my $source_method = 'test_large_data';
+  my $source_method = 'paper_editor_genes_curator';
   my $data_provider = $mod;
   my $secondary_data_provider = $mod;
   my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
@@ -147,8 +152,8 @@ sub outputInfOther {
   # my $source_method = 'gene_paper_association_script';
   # my $source_id = &getSourceId($source_type, $source_method);
 
-  my $source_evidence_assertion = 'ATP:0000036';
-  my $source_method = 'test_large_data';
+  my $source_evidence_assertion = 'ECO:0008021';
+  my $source_method = 'paper_editor_genes_script';
   my $data_provider = $mod;
   my $secondary_data_provider = $mod;
   my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
@@ -190,13 +195,17 @@ sub populatePapGene {
     next unless ($row[1]);
     my ($joinkey, $gene, $ts, $two, $evi) = @row;
     $two =~ s/two/WBPerson/;
-    $evi =~ s/\n/ /g; $evi =~ s/ $//g;
+    if ($evi) { $evi =~ s/\n/ /g; $evi =~ s/ $//g; }
+      else { $evi = ''; }
     if ($evi =~ m/Curator_confirmed.*(WBPerson\d+)/) {
       $curConf{$joinkey}{$gene}{curator} = $1;
       $curConf{$joinkey}{$gene}{timestamp} = $ts; }
     elsif ($evi =~ m/Inferred_automatically/) { 	# this has to be more specific later
       $infOther{$joinkey}{$gene}{curator} = $two;
       $infOther{$joinkey}{$gene}{timestamp} = $ts; }
+    else {
+      # stuff without evidence
+    }
 } }
 
 
