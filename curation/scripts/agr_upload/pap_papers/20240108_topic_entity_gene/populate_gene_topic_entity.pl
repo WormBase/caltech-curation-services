@@ -86,7 +86,7 @@ my %curConf;
 
 my $geneTopic = 'ATP:0000142';
 my $entityType = 'ATP:0000005';
-my $entitySource = 'alliance';
+my $entity_id_validation = 'alliance';
 
 foreach my $joinkey (@wbpapers) { $chosenPapers{$joinkey}++; }
 # $chosenPapers{all}++;
@@ -132,7 +132,7 @@ sub outputCurConf {
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $geneTopic;
       $object{'entity_type'}                = $entityType;
-      $object{'entity_source'}              = $entitySource;
+      $object{'entity_id_validation'}       = $entity_id_validation;
       $object{'topic_entity_tag_source_id'} = $source_id;
       $object{'entity'}                     = "WB:WBGene$gene";
       $object{'created_by'}                 = $curConf{$joinkey}{$gene}{curator};
@@ -172,7 +172,7 @@ sub outputInfOther {
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $geneTopic;
       $object{'entity_type'}                = $entityType;
-      $object{'entity_source'}              = $entitySource;
+      $object{'entity_id_validation'}       = $entity_id_validation;
       $object{'topic_entity_tag_source_id'} = $source_id;
       $object{'entity'}                     = "WB:WBGene$gene";
       $object{'created_by'}                 = $infOther{$joinkey}{$gene}{curator};
