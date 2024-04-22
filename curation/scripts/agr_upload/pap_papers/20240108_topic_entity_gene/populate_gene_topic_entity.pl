@@ -69,7 +69,7 @@ my $okta_token = &generateOktaToken();
 # my @wbpapers = qw( 00055090 );
 # my @wbpapers = qw( 00066031 );
 # my @wbpapers = qw( 00038491 00055090 );	# papers with lots of genes  2024 03 12
-my @wbpapers = qw( 00003000 00004455 00004952 00005199 00005707 00006103 00006320 00017095 00025176 00027230 00046571 00057043 00063127 00064676 00064771 00065877 00066211 );		# kimberly 2024 04 18 set
+my @wbpapers = qw( 00003000 00004455 00004952 00005199 00005707 00006103 00006320 00017095 00025176 00027230 00044280 00046571 00057043 00063127 00064676 00064771 00065877 00066211 );		# kimberly 2024 04 18 set
 
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 00037049
@@ -78,13 +78,16 @@ my %datatypesAfpCfp;
 my %datatypes;
 my %entitytypes;
 my %wbpToAgr;
+my %geneToTaxon;
+my %papGenePublished;
 
 my %chosenPapers;
 
 my %infOther;
 my %curConf;
 
-my $geneTopic = 'ATP:0000142';
+# my $geneTopic = 'ATP:0000142';
+my $geneTopic = 'ATP:0000005';
 my $entityType = 'ATP:0000005';
 my $entity_id_validation = 'alliance';
 
@@ -92,6 +95,7 @@ foreach my $joinkey (@wbpapers) { $chosenPapers{$joinkey}++; }
 # $chosenPapers{all}++;
 
 &populateAbcXref();
+&populateGeneTaxon();
 &populatePapGene();
 &outputInfOther();
 &outputCurConf();
@@ -135,6 +139,10 @@ sub outputCurConf {
       $object{'entity_id_validation'}       = $entity_id_validation;
       $object{'topic_entity_tag_source_id'} = $source_id;
       $object{'entity'}                     = "WB:WBGene$gene";
+      if ($geneToTaxon{$gene}) {
+        $object{'species'}                  = $geneToTaxon{$gene}; }
+      if ($papGenePublished{$joinkey}{$gene}) {
+        $object{'entity_published_as'}      = $papGenePublished{$joinkey}{$gene}; }
       $object{'created_by'}                 = $curConf{$joinkey}{$gene}{curator};
       $object{'updated_by'}                 = $curConf{$joinkey}{$gene}{curator};
       $object{'date_created'}               = $curConf{$joinkey}{$gene}{timestamp};
@@ -175,6 +183,12 @@ sub outputInfOther {
       $object{'entity_id_validation'}       = $entity_id_validation;
       $object{'topic_entity_tag_source_id'} = $source_id;
       $object{'entity'}                     = "WB:WBGene$gene";
+      if ($geneToTaxon{$gene}) {
+        $object{'species'}                  = $geneToTaxon{$gene}; }
+      if ($papGenePublished{$joinkey}{$gene}) {
+        $object{'entity_published_as'}      = $papGenePublished{$joinkey}{$gene}; }
+      if ($infOther{$joinkey}{$gene}{note}) {
+        $object{'note'}                     = $infOther{$joinkey}{$gene}{note}; }
       $object{'created_by'}                 = $infOther{$joinkey}{$gene}{curator};
       $object{'updated_by'}                 = $infOther{$joinkey}{$gene}{curator};
       $object{'date_created'}               = $infOther{$joinkey}{$gene}{timestamp};
@@ -201,12 +215,34 @@ sub populatePapGene {
       $curConf{$joinkey}{$gene}{curator} = $1;
       $curConf{$joinkey}{$gene}{timestamp} = $ts; }
     elsif ($evi =~ m/Inferred_automatically/) { 	# this has to be more specific later
+      if ($evi =~ m/Inferred_automatically\s+"(Abstract read .*?)"/) {
+        $infOther{$joinkey}{$gene}{note} = $1; }
       $infOther{$joinkey}{$gene}{curator} = $two;
       $infOther{$joinkey}{$gene}{timestamp} = $ts; }
+    elsif ($evi =~ m/Published_as "(.*?)"/) {
+      $papGenePublished{$joinkey}{$gene} = $1; }
     else {
       # stuff without evidence
     }
 } }
+
+
+sub populateGeneTaxon {
+  my %taxonNameToId;
+
+  # Kimberly updated the pap_species_index to have all the entries it needs on caltech prod.  2024 03 22
+  $result = $dbh->prepare( "SELECT * FROM pap_species_index ORDER BY pap_timestamp" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) {
+    if ($row[1] && $row[0]) {
+      $taxonNameToId{$row[1]} = 'NCBITaxon:' . $row[0]; } }
+
+  $result = $dbh->prepare( "SELECT * FROM gin_species;" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 	# only molecules with papers are curated
+  while (my @row = $result->fetchrow) { 
+    next unless ($taxonNameToId{$row[1]});
+    $geneToTaxon{$row[0]} = $taxonNameToId{$row[1]}; }
+} # sub populateGeneTaxon
 
 
 
