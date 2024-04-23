@@ -100,7 +100,7 @@ sub populateFromPg {
 # my $root_url = 'http://svm.textpresso.org/celegans/svm_results/';
 # my $root_url = 'http://celegans.textpressocentral.org/NNClassification/';	# doesn't work because of masked forwarding
 # my $root_url = 'http://textpressocentral.org:9000/NNClassification/';
-my $root_url = 'http://http://textmining.textpresso.org/NNClassification/';
+my $root_url = 'http://textmining.textpresso.org/NNClassification/';
 # print "Display of data from date directories from $root_url<br />\n";
 
 
