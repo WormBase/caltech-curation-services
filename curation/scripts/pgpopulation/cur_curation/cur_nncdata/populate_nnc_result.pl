@@ -35,6 +35,8 @@
 # 0 4 * * * /home/postgres/work/pgpopulation/cur_curation/cur_nncdata/populate_nnc_result.pl
 #
 # Dockerized for crontab, but no longer output to logfile. 2023 03 15
+#
+# Updated url move to http://textmining.textpresso.org/  2024 04 22
 
 # 0 4 * * * /usr/lib/scripts/pgpopulation/cur_curation/cur_nncdata/populate_nnc_result.pl
 
@@ -97,7 +99,8 @@ sub populateFromPg {
 # my $root_url = 'http://131.215.52.209/celegans/svm_results/';
 # my $root_url = 'http://svm.textpresso.org/celegans/svm_results/';
 # my $root_url = 'http://celegans.textpressocentral.org/NNClassification/';	# doesn't work because of masked forwarding
-my $root_url = 'http://textpressocentral.org:9000/NNClassification/';
+# my $root_url = 'http://textpressocentral.org:9000/NNClassification/';
+my $root_url = 'http://http://textmining.textpresso.org/NNClassification/';
 # print "Display of data from date directories from $root_url<br />\n";
 
 
