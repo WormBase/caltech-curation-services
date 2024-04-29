@@ -69,7 +69,7 @@ my $okta_token = &generateOktaToken();
 # my @wbpapers = qw( 00055090 );
 # my @wbpapers = qw( 00066031 );
 # my @wbpapers = qw( 00038491 00055090 );	# papers with lots of genes  2024 03 12
-my @wbpapers = qw( 00003000 00004455 00004952 00005199 00005707 00006103 00006320 00017095 00025176 00027230 00044280 00046571 00057043 00063127 00064676 00064771 00065877 00066211 );		# kimberly 2024 04 18 set
+my @wbpapers = qw( 00003000 00004455 00004952 00005199 00005707 00006103 00006202 00006320 00017095 00025176 00027230 00044280 00046571 00057043 00063127 00064676 00064771 00065877 00066211 );		# kimberly 2024 04 18 set
 
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 00037049
@@ -185,6 +185,7 @@ sub outputInfOther {
       $object{'entity'}                     = "WB:WBGene$gene";
       if ($geneToTaxon{$gene}) {
         $object{'species'}                  = $geneToTaxon{$gene}; }
+# TODO  entity_published_as  and  note are source specific
       if ($papGenePublished{$joinkey}{$gene}) {
         $object{'entity_published_as'}      = $papGenePublished{$joinkey}{$gene}; }
       if ($infOther{$joinkey}{$gene}{note}) {
