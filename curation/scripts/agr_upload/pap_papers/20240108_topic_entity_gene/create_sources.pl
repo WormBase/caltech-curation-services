@@ -87,6 +87,19 @@ unless ($source_id) {
   &createSource($source_json);
 }
 
+$source_evidence_assertion = 'ATP:0000035';
+$source_method = 'author_first_pass';
+$source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+unless ($source_id) {
+  my %source_json = %{ dclone (\%source_default) };
+  $source_json{source_evidence_assertion}       = $source_evidence_assertion;
+  $source_json{source_method}                   = $source_method;
+  $source_json{validation_type}                 = 'author';
+  $source_json{description}                     = 'Manual association of genes with references by authors in the author first pass form.';
+  my $source_json = encode_json \%source_json;
+  &createSource($source_json);
+}
+
 $source_evidence_assertion = 'ATP:0000036';
 $source_method = 'genes_curator';
 $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
