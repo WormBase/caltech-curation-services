@@ -134,7 +134,8 @@ my %papEditor;
 my %papScript;
 my %tfpSpecies;
 
-my $speciesTopic = 'ATP:0000142';	# entity
+# my $speciesTopic = 'ATP:0000142';	# entity
+my $speciesTopic = 'ATP:0000123';	# species	# 2024 04 29
 my $entityType = 'ATP:0000123';		# species
 my $entity_id_validation = 'alliance';
 
