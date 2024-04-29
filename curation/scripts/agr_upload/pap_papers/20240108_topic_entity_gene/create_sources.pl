@@ -323,7 +323,7 @@ unless ($source_id) {
   $source_json{source_type}     = $source_type;
   $source_json{source_method}   = $source_method;
   $source_json{validation_type} = 'author';
-  $source_json{description}     = 'Manual creation of gene-paper associations in the WormBase author first pass form.';
+  $source_json{description}     = 'Manual association of genes with references by authors in the author first pass form or otherwise communicated by authors to a WormBase curator.';
   $source_json{evidence}        = "ECO:0000302";
   my $source_json = encode_json \%source_json;
   &createSource($source_type, $source_method, $source_json);
