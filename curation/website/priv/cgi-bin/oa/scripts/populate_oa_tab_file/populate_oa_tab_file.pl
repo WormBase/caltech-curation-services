@@ -57,7 +57,7 @@ my $ua = LWP::UserAgent->new;
 
 
 my %allowedDatatypes;
-my @allowedDatatypes = qw( app cns grg int mop pro prt rna trp );
+my @allowedDatatypes = qw( app cns grg int mop pic pro prt rna trp );
 foreach (@allowedDatatypes) { $allowedDatatypes{$_}++; }
 
 my %allowedCurators;
