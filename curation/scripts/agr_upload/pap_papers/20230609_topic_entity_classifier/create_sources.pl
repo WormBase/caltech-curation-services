@@ -9,6 +9,10 @@
 # handles nnc and svm, although Kimberly has not confirmed.  2023 08 16
 #
 # dockerized, filled in TDB for source_type for str, svm, nnc.  wrote to Valerio and Kimberly about the confirmation questions.  2023 10 04
+#
+# Updated to use new sources that Kimberly and Valerio worked out.  Still needs some new descriptions for each datatype for svm and nnc.  API still needs changes for this to post the data, so untested.  2024 03 05
+#
+# secondary_data_provider is now secondary_data_provider_abbreviation.  2024 03 13
 
 # ./create_sources.pl
 
@@ -29,8 +33,8 @@ my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST}
 my $result;
 
 my $mod = 'WB';
-my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
-# my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
+# my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
+my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
 my $okta_token = &generateOktaToken();
 # my $okta_token = 'use_above_when_live';
 
@@ -48,177 +52,152 @@ my $okta_token = &generateOktaToken();
 #   "updated_by": "default_user"
 # }';
 my %source_default = (
-  "source_type"      => "professional_biocurator",
-  "source_method"    => "wormbase_curation_status",
-  "evidence"         => "eco_string",
-  "mod_abbreviation" => $mod,
-  "created_by"       => "00u2ao5gp6tZJ9xXU5d7",
-  "updated_by"       => "00u2ao5gp6tZJ9xXU5d7"
+  "source_evidence_assertion"			=> "ATP:0000036",
+  "source_method"    				=> "curation_status_form",
+  "validation_type"				=> "professional_biocurator",
+  "description"					=> "placeholder",
+  "data_provider"				=> $mod,
+  "secondary_data_provider_abbreviation"	=> $mod,
+  "created_by"      				=> "00u2ao5gp6tZJ9xXU5d7",
+  "updated_by"      				=> "00u2ao5gp6tZJ9xXU5d7"
 );
 
-my $source_type = 'professional_biocurator';
-my $source_method = 'wormbase_curation_status';
-my $source_id = &getSourceId($source_type, $source_method);
+my $source_evidence_assertion = 'ATP:0000035';
+my $source_method = 'ACKnowledge_form';
+my $data_provider = $mod;
+my $secondary_data_provider = $mod;
+my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
 unless ($source_id) { 
   my %source_json = %{ dclone (\%source_default) };
-  $source_json{source_type}     = $source_type;
-  $source_json{source_method}   = $source_method;
-  $source_json{validation_type} = 'curator';
-  $source_json{description}     = 'cur_curdata';
-  $source_json{evidence}        = "ECO:0000302";
+  $source_json{source_evidence_assertion}	= $source_evidence_assertion;
+  $source_json{source_method}   		= $source_method;
+  $source_json{validation_type}			= "author";
+  $source_json{description}			= "Manual association of entities and topics with references by authors using the ACKnowledge form.";
   my $source_json = encode_json \%source_json;
-  &createSource($source_type, $source_method, $source_json);
+  &createSource($source_json);
 }
 
-$source_type = 'professional_biocurator';
-$source_method = 'wormbase_oa';
-$source_id = &getSourceId($source_type, $source_method);
+$source_evidence_assertion = 'ATP:0000035';
+$source_method = 'author_first_pass';
+$source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
 unless ($source_id) { 
   my %source_json = %{ dclone (\%source_default) };
-  $source_json{source_type}     = $source_type;
-  $source_json{source_method}   = $source_method;
-  $source_json{validation_type} = 'curation_tools';
-  $source_json{description}     = 'caltech curation tools';
-  $source_json{evidence}        = "ECO:0000302";
+  $source_json{source_evidence_assertion}	= $source_evidence_assertion;
+  $source_json{source_method}  			= $source_method;
+  $source_json{validation_type}			= 'author';
+  $source_json{description}    			= 'Manual association of entities and topics with references by authors using the author first pass form.';
   my $source_json = encode_json \%source_json;
-  &createSource($source_type, $source_method, $source_json);
+  &createSource($source_json);
 }
 
-$source_type = 'professional_biocurator';
+$source_evidence_assertion = 'ATP:0000036';
+$source_method = 'author_first_pass';
+$source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+unless ($source_id) { 
+  my %source_json = %{ dclone (\%source_default) };
+  $source_json{source_evidence_assertion}	= $source_evidence_assertion;
+  $source_json{source_method}   		= $source_method;
+  $source_json{validation_type}			= 'professional_biocurator';
+  $source_json{description}     		= 'Manual association of topics with references by professional biocurators via data type curation using the author first pass form.';
+  my $source_json = encode_json \%source_json;
+  &createSource($source_json);
+}
+
+$source_evidence_assertion = 'ATP:0000036';
+$source_method = 'ontology_annotator';
+$source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+unless ($source_id) { 
+  my %source_json = %{ dclone (\%source_default) };
+  $source_json{source_evidence_assertion}	= $source_evidence_assertion;
+  $source_json{source_method}   		= $source_method;
+  $source_json{validation_type}			= 'professional_biocurator';
+  $source_json{description}     		= 'Manual association of topics with references by professional biocurators via data type curation using the ontology annotator form.';
+  my $source_json = encode_json \%source_json;
+  &createSource($source_json);
+}
+
+$source_evidence_assertion = 'ATP:0000036';
+$source_method = 'curation_status_form';
+$source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+unless ($source_id) { 
+  my %source_json = %{ dclone (\%source_default) };
+  $source_json{source_evidence_assertion}	= $source_evidence_assertion;
+  $source_json{source_method}   		= $source_method;
+  $source_json{validation_type}			= 'professional_biocurator';
+  $source_json{description}     		= 'Manual validation of topic associations with references by professional biocurators using the curation status form.';
+  my $source_json = encode_json \%source_json;
+  &createSource($source_json);
+}
+
+$source_evidence_assertion = 'ATP:0000036';
 $source_method = 'curator_first_pass';
-$source_id = &getSourceId($source_type, $source_method);
+$source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
 unless ($source_id) { 
   my %source_json = %{ dclone (\%source_default) };
-  $source_json{source_type}     = $source_type;
-  $source_json{source_method}   = $source_method;
-  $source_json{validation_type} = 'curator';
-  $source_json{description}     = 'cfp curator';
-  $source_json{evidence}        = "ECO:0000302";
+  $source_json{source_evidence_assertion}	= $source_evidence_assertion;
+  $source_json{source_method}   		= $source_method;
+  $source_json{validation_type}			= 'professional_biocurator';
+  $source_json{description}     		= 'Manual association of topics with references by professional biocurators using the curator first pass form.';
   my $source_json = encode_json \%source_json;
-  &createSource($source_type, $source_method, $source_json);
+  &createSource($source_json);
 }
 
-$source_type = 'professional_biocurator';
-$source_method = 'author_first_pass';
-$source_id = &getSourceId($source_type, $source_method);
+$source_evidence_assertion = 'ECO:0008021';
+$source_method = 'string_matching_antibody';
+$source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
 unless ($source_id) { 
   my %source_json = %{ dclone (\%source_default) };
-  $source_json{source_type}     = $source_type;
-  $source_json{source_method}   = $source_method;
-  $source_json{validation_type} = 'curator';
-  $source_json{description}     = 'afp curator';
-  $source_json{evidence}        = "ECO:0000302";
+  delete $source_json{validation_type};
+  $source_json{source_evidence_assertion}	= $source_evidence_assertion;
+  $source_json{source_method}   		= $source_method;
+  $source_json{description}     		= 'String matching algorithm that identifies relevant words and/or phrases in C. elegans references to identify references describing production and/or use of antibodies.';
   my $source_json = encode_json \%source_json;
-  &createSource($source_type, $source_method, $source_json);
+  &createSource($source_json);
 }
-
-$source_type = 'author';
-$source_method = 'author_first_pass';
-$source_id = &getSourceId($source_type, $source_method);
-unless ($source_id) { 
-  my %source_json = %{ dclone (\%source_default) };
-  $source_json{source_type}     = $source_type;
-  $source_json{source_method}   = $source_method;
-  $source_json{validation_type} = 'author';
-  $source_json{description}     = 'afp author';
-  $source_json{evidence}        = "ECO:0000302";
-  my $source_json = encode_json \%source_json;
-  &createSource($source_type, $source_method, $source_json);
-}
-
-$source_type = 'author';
-$source_method = 'ACKnowledge_form';
-$source_id = &getSourceId($source_type, $source_method);
-unless ($source_id) { 
-  my %source_json = %{ dclone (\%source_default) };
-  $source_json{source_type}     = $source_type;
-  $source_json{source_method}   = $source_method;
-  $source_json{validation_type} = 'author';
-  $source_json{description}     = 'ACKnowledge author';
-  $source_json{evidence}        = "ECO:0000302";
-  my $source_json = encode_json \%source_json;
-  &createSource($source_type, $source_method, $source_json);
-}
-
-$source_type = 'acknowledge_pipeline';
-$source_method = 'ACKnowledge';
-$source_id = &getSourceId($source_type, $source_method);
-unless ($source_id) { 
-  my %source_json = %{ dclone (\%source_default) };
-  $source_json{source_type}     = $source_type;
-  $source_json{source_method}   = $source_method;
-  $source_json{description}     = 'TBD tfp';
-  my $source_json = encode_json \%source_json;
-  &createSource($source_type, $source_method, $source_json);
-}
-
-$source_type = 'string_matching';
-$source_method = 'script_antibody_data';
-$source_id = &getSourceId($source_type, $source_method);
-unless ($source_id) { 
-  my %source_json = %{ dclone (\%source_default) };
-  $source_json{source_type}     = $source_type;
-  $source_json{source_method}   = $source_method;
-  $source_json{description}     = 'script parsing antibody';	# script name here
-  my $source_json = encode_json \%source_json;
-  &createSource($source_type, $source_method, $source_json);
-}
-
-# had 2 types of string matching data for antibody, but only using one, don't need second type
-# $source_type = 'TBD';
-# $source_method = 'script_antibody_data_2';
-# $source_id = &getSourceId($source_type, $source_method);
-# unless ($source_id) { 
-#   my %source_json = %{ dclone (\%source_default) };
-#   $source_json{source_type}     = $source_type;
-#   $source_json{source_method}   = $source_method;
-#   $source_json{description}     = 'valerio daniela script';	# script name here
-#   my $source_json = encode_json \%source_json;
-#   &createSource($source_type, $source_method, $source_json);
-# }
 
 # for each nnc/svm, we're creating a new source for each datatype
-
 $result = $dbh->prepare( "SELECT DISTINCT(cur_datatype) FROM cur_nncdata" );
 $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
 while (my @row = $result->fetchrow) { 
   print qq($row[0]\n);
-  $source_type = 'neural_network';
+  $source_evidence_assertion = 'ECO:0008025';
   $source_method = 'nnc_' . $row[0];
-  $source_id = &getSourceId($source_type, $source_method);
+  $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
   unless ($source_id) { 
     my %source_json = %{ dclone (\%source_default) };
-    $source_json{source_type}     = $source_type;
-    $source_json{source_method}   = $source_method;
-    $source_json{description}     = "TBD nnc $row[0]";
-    $source_json{evidence}        = "ECO:0008025";
+    delete $source_json{validation_type};
+    $source_json{source_evidence_assertion}	= $source_evidence_assertion;
+    $source_json{source_method}   		= $source_method;
+    $source_json{description}     		= 'Neural network document classifier trained on manually validated C. elegans references to identify references describing production and/or use of antibodies.';	# TODO  Kimberly will need to generate individual descriptions for each datatype ?
     my $source_json = encode_json \%source_json;
-    &createSource($source_type, $source_method, $source_json);
+    &createSource($source_json);
   }
 } # while (my @row = $result->fetchrow)
+
+# That happens automatically from the API ?  Or you mean populate from another value ?
 
 $result = $dbh->prepare( "SELECT DISTINCT(cur_datatype) FROM cur_svmdata" );
 $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
 while (my @row = $result->fetchrow) { 
   print qq($row[0]\n);
-  $source_type = 'support_vector_machine';
+  $source_evidence_assertion = 'ECO:0008019';
   $source_method = 'svm_' . $row[0];
-  $source_id = &getSourceId($source_type, $source_method);
+  $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
   unless ($source_id) { 
     my %source_json = %{ dclone (\%source_default) };
-    $source_json{source_type}     = $source_type;
-    $source_json{source_method}   = $source_method;
-    $source_json{description}     = "TBD svm $row[0]";
-    $source_json{evidence}        = "ECO:0008019";
+    delete $source_json{validation_type};
+    $source_json{source_evidence_assertion}	= $source_evidence_assertion;
+    $source_json{source_method}   		= $source_method;
+    $source_json{description}     		= 'Support vector machine document classifier trained on manually validated C. elegans references to identify references that describe production and/or use of antibodies.';	# TODO  Kimberly will need to generate individual descriptions for each datatype ?
     my $source_json = encode_json \%source_json;
-    &createSource($source_type, $source_method, $source_json);
+    &createSource($source_json);
   }
 } # while (my @row = $result->fetchrow)
 
 
 
 sub createSource {
-  my ($source_type, $source_method, $source_json) = @_;
+  my ($source_json) = @_;
   my $url = $baseUrl . 'topic_entity_tag/source';
   my $api_json = `curl -X 'POST' $url -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json' --data '$source_json'`;
 #   print qq(create $source_json\n);
@@ -226,8 +205,10 @@ sub createSource {
 }
 
 sub getSourceId {
-  my ($source_type, $source_method) = @_;
-  my $url = $baseUrl . 'topic_entity_tag/source/' . $source_type . '/' . $source_method . '/' . $mod;
+  my ($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider) = @_;
+  my $url = $baseUrl . 'topic_entity_tag/source/' . $source_evidence_assertion . '/' . $source_method . '/' . $data_provider . '/' . $secondary_data_provider; 
+#   my ($source_type, $source_method) = @_;
+#   my $url = $baseUrl . 'topic_entity_tag/source/' . $source_type . '/' . $source_method . '/' . $mod;
   # print qq($url\n);
   my $api_json = `curl -X 'GET' $url -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json'`;
   my $hash_ref = decode_json $api_json;

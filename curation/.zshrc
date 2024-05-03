@@ -24,6 +24,7 @@ alias noblink='echo -e "\e[2 q"'	# disable blinking cursor in windows terminal
 # swap capslock and backspace with this script
 alias caps='/usr/bin/xmodmap ~/.caps_back'
 
+alias cd.='cd /usr/caltech_curation_files/'
 
 alias cp='cp -i'
 alias mv='mv -i'

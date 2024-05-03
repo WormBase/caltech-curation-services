@@ -1,6 +1,8 @@
 #!/usr/bin/env perl
 
-# sample PG query
+# DELETE these and insert blank to h_pap_gene, for Kimberly.  2024 01 29
+# SELECT * FROM pap_gene WHERE pap_gene = '' AND pap_evidence !~ 'afp' ORDER BY pap_timestamp DESC;
+
 
 use strict;
 use diagnostics;
@@ -12,19 +14,30 @@ my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST}
 # my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n"; 
 my $result;
 
-$result = $dbh->prepare( "SELECT * FROM two_comment LIMIT 5" );
+my @pgcommands;
+
+$result = $dbh->prepare( "SELECT * FROM pap_gene WHERE pap_gene = '' AND pap_evidence !~ 'afp' ORDER BY pap_timestamp DESC;" );
 $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
 while (my @row = $result->fetchrow) {
   if ($row[0]) { 
     $row[0] =~ s/
 //g;
-    $row[1] =~ s/
-//g;
     $row[2] =~ s/
 //g;
-    print "$row[0]\t$row[1]\t$row[2]\n";
+    push @pgcommands, qq(INSERT INTO h_pap_gene VALUES ('$row[0]', null, '$row[2]', 'two1843', 'now', null));
+    push @pgcommands, qq(DELETE FROM pap_gene WHERE joinkey = '$row[0]' AND pap_order = '$row[2]');
   } # if ($row[0])
 } # while (@row = $result->fetchrow)
+
+foreach my $pgcommand (@pgcommands) {
+  print qq($pgcommand\n);
+# UNCOMMENT TO POPULATE
+#   $dbh->do($pgcommand);
+}
+
+__END__
+
+SELECT * FROM pap_gene WHERE pap_gene = '' AND pap_evidence !~ 'afp' ORDER BY pap_timestamp DESC;
 
 __END__
 

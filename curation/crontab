@@ -1,9 +1,8 @@
 SHELL=/bin/bash
 BASH_ENV=/container.env
 
-0 0 * * * restic -r ${RESTIC_REPOSITORY}/daily_backups backup /usr/caltech_curation_files --exclude-file=/restic_excludes.txt >> /var/log/restic_daily.log
-0 3 1 * * restic -r ${RESTIC_REPOSITORY}/monthly_backups backup /usr/caltech_curation_files --exclude-file=/restic_excludes.txt >> /var/log/restic_monthly.log
-0 0 * * * restic -r ${RESTIC_REPOSITORY}/volumes_backups backup /usr/caltech_volumes >> /var/log/restic_volumes.log
+0 0 * * * restic -r ${RESTIC_REPOSITORY}/daily_backups backup /usr/caltech_curation_files /usr/lib/.env /etc/httpd/passwd/passwords /usr/caltech_volumes --exclude-file=/restic_excludes.txt >> /var/log/restic_daily.log
+0 3 1 * * restic -r ${RESTIC_REPOSITORY}/monthly_backups backup /usr/caltech_curation_files /usr/lib/.env /etc/httpd/passwd/passwords /usr/caltech_volumes --exclude-file=/restic_excludes.txt >> /var/log/restic_monthly.log
 
 0 1 * * * restic forget -r ${RESTIC_REPOSITORY}/daily_backups --keep-last 30 --prune
 0 4 1 * * restic forget -r ${RESTIC_REPOSITORY}/monthly_backups --keep-last 24 --prune
@@ -54,6 +53,7 @@ BASH_ENV=/container.env
 0 2 * * tue,wed,thu,fri,sat /usr/lib/scripts/citace_upload/papers/wrapper.pl
 0 4 * * * /usr/lib/scripts/pgpopulation/pap_papers/20230322_agr_xrefs/populate_pap_identifier_agrkb.pl
 0 5 * * tue,wed,thu,fri,sat /usr/lib/scripts/agr_upload/pap_papers/dump_agr_literature.pl
+0 13 * * 6 /usr/lib/scripts/agr_upload/pap_papers/20240321_topic_entity_species/populate_species_topic_entity.pl
 
 # wen
 0 1 1 * * /usr/lib/scripts/cronjobs/check_apache_simplemine.pl

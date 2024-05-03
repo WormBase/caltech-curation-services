@@ -64,7 +64,7 @@ sub firstPage {
   print "<TR><TD ALIGN=\"right\">Delete all files from $path_to_files : </TD>";
   print "<TD><INPUT TYPE=\"submit\" NAME=\"action\" VALUE=\"Delete !\"></TD></TR>\n";
   print "<TR><TD ALIGN=\"right\">Link to reports : </TD>";
-  print qq(<TD><a href="$ENV{THIS_HOST}files/priv/agr_reffile_upload/logs/" target="_blank">Logs</a></TD></TR>\n);
+  print qq(<TD><a href="$ENV{THIS_HOST_AS_BASE_URL}files/priv/agr_reffile_upload/logs/" target="_blank">Logs</a></TD></TR>\n);
   print "</TABLE>\n";
   print "</FORM>\n";
 } # sub ChoosePhenotypeAssay

@@ -978,7 +978,11 @@ sub showTable {
     <script type="text/javascript" src="../javascript/yui/2.7.0/container-min.js"></script> 
 
     <!-- form-specific js -->
-    <script type="text/javascript" src="ontology_annotator.js"></script> 
+    <script type="text/javascript" src="ontology_annotator.js"></script>
+    <script>
+      function setCookie(name, value) { var expiry = new Date(); expiry.setFullYear(expiry.getFullYear() +10); document.cookie = name + "=" + escape(value) + "; path=/; expires=" + expiry.toGMTString(); }
+      function saveCuratorIdInCookieFromSelect(selectElement) { var selectedValue = selectElement.value; setCookie("SAVED_CURATOR_ID", selectedValue); }
+    </script>
 EndOfText
 
   print "</head>\n";
@@ -995,7 +999,12 @@ EndOfText
 
 sub showLogin {								# if there's no curator $action, show a login page
   print "Content-type: text/html\n\n";
-  print "<html>\n<head><title>Ontology Annotator</title></head>\n";
+  print "<html>\n<head><title>Ontology Annotator</title>\n";
+  print "<script>";
+  print "function setCookie(name, value) { var expiry = new Date(); expiry.setFullYear(expiry.getFullYear() +10); document.cookie = name + '=' + escape(value) + '; path=/; expires=' + expiry.toGMTString(); }";
+  print "function saveCuratorIdInCookieFromSelect(selectElement) { var selectedValue = selectElement.value; setCookie('SAVED_CURATOR_ID', selectedValue); }";
+  print "</script>";
+  print "</head>\n";
   print "<body>\n";
   print "<form name='form1' method=\"get\" action=\"ontology_annotator.cgi\">\n";
   my $ip = $query->remote_host(); 					# select curator by IP if IP has already been used

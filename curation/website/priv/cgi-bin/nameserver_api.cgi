@@ -2,6 +2,11 @@
 
 # CGI to receive nameserver posting data of new objects, replacing new_objects.cgi
 
+# Updated header to have status codes for Manuel.  2024 02 07
+#
+# Comment updated from being added by temp_objects.cgi to being created through nameserver.  2024 02 21
+
+
 use diagnostics;
 use strict;
 use Jex;		# printHeader printFooter getHtmlVar getDate getSimpleDate mailer
@@ -16,8 +21,6 @@ my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST}
 
 my $postData = $cgi->param("POSTDATA");
 my $filesPath = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/pub/cgi-bin/data/';
-
-print $cgi->header(-type => "application/json", -charset => "utf-8");
 
 if ($postData) {
 #   print qq(postData\n);
@@ -34,16 +37,18 @@ if ($postData) {
   if ($dataHash{objId}) { $objId = $dataHash{objId}; }
   if ($dataHash{objName}) { $objName = $dataHash{objName}; }
   my @errMessage = ();
-  unless ($objId) { push @errMessage, "Must have an objId value." }
-  unless ($objName) { push @errMessage, "Must have an objName value." }
+  my $status = 201;
+  unless ($objId) { push @errMessage, "Must have an objId value."; $status = 400; }
+  unless ($objName) { push @errMessage, "Must have an objName value."; $status = 400; }
 # print qq(D $datatype\n);
   if ( ($datatype eq 'strain') || ($datatype eq 'variation') ) {
     if (scalar @errMessage < 1) {
-      my $entry_error = &addTempObjectObo($datatype, $objId, $objName); 
+      (my $entry_error, $status) = &addTempObjectObo($datatype, $objId, $objName);
       if ($entry_error) { push @errMessage, $entry_error; }
     }
   } else {
-    push @errMessage, "datatype must be variation or strain."
+    push @errMessage, "datatype must be variation or strain.";
+    $status = 400;
   }
   my $message = join"  ", @errMessage;
   unless ($message) { $message = 'no status message, something probably went wrong'; }
@@ -51,8 +56,17 @@ if ($postData) {
   my %hash = ();
   $hash{message} = $message;
   my $json_message = encode_json( \%hash );
+  if ($status == 201) {      print $cgi->header(-type => "application/json", -charset => "utf-8", -status => "201 Created"); }
+    elsif ($status == 400) { print $cgi->header(-type => "application/json", -charset => "utf-8", -status => "400 Bad Request"); }
+    elsif ($status == 409) { print $cgi->header(-type => "application/json", -charset => "utf-8", -status => "409 Conflict"); }
+    elsif ($status == 500) { print $cgi->header(-type => "application/json", -charset => "utf-8", -status => "500 Internal Server Error"); }
+    else {                   print $cgi->header(-type => "application/json", -charset => "utf-8", -status => "500 Internal Server Error"); }
   print qq($json_message);
 }
+else {
+  print $cgi->header(-type => "application/json", -charset => "utf-8", -status => "400 Bad Request");
+}
+
 
 
 sub addTempObjectObo {
@@ -66,20 +80,21 @@ sub addTempObjectObo {
   if ($row[0]) { $entry_error .= qq($objName already exists associated to $row[0].  ); }
   if ($entry_error) { 
 #     print $entry_error; 
-    return $entry_error; }
+    return ($entry_error, 409); }
   my $pgDate = &getPgDate();
-  my $comment = qq(added through temp_objects.cgi, not updated by geneace yet);
+#   my $comment = qq(added through temp_objects.cgi, not updated by geneace yet);
+  my $comment = qq(created at nameserver, not yet updated through nightly dump);
   my $terminfo = qq(id: $objId\nname: "$objName"\ntimestamp: "$pgDate"\ncomment: "$comment");
   $result = $dbh->do( "INSERT INTO obo_name_$datatype VALUES('$objId', '$objName');" );
   $result = $dbh->do( "INSERT INTO obo_data_$datatype VALUES('$objId', '$terminfo');" );
   my $success_message = "Added $pgDate $objId $objName to obo_name_$datatype and obo_data_$datatype .";
   my $obotempfile = $filesPath . 'obo_tempfile_' . $datatype;
   # my $obotempfile = '/home/azurebrd/public_html/cgi-bin/data/obo_tempfile_' . $datatype;
-  unless (-e $obotempfile) { $entry_error = "ERROR no obo_tempfile_$datatype to write to at $obotempfile . Contact Juancarlos because $objName + $objId got created in the names service, but it's not in tempfile to update postgres"; return $entry_error; }
+  unless (-e $obotempfile) { $entry_error = "ERROR no obo_tempfile_$datatype to write to at $obotempfile . Contact Juancarlos because $objName + $objId got created in the names service, but it's not in tempfile to update postgres"; return ($entry_error, 500); }
   open (OUT, ">>$obotempfile") or die "Cannot append to $obotempfile : $!";
   print OUT qq($objId\t$objName\t$pgDate\t$comment\n);
   close (OUT) or die "Cannot append to $obotempfile : $!";
-  return $success_message;
+  return ($success_message, 201);
 } # sub addTempObjectObo
 
 
@@ -97,6 +112,17 @@ curl -X 'POST' \
 
   -d '{"datatype":"variation","objId":"WBVar03000001","objName":"tempVariation"}'
 
+
+Look at status codes with
+
+curl -X 'POST' 'http://caltech-curation-dev.textpressolab.com/priv/cgi-bin/nameserver_api.cgi'  -u '${USER}:${PWD}' -H 'accept: application/json' -H 'Content-Type: application/json' -d '{"datatype":"strain","objId":"WBStrain00048331"}' -D -
+
+curl -v -X 'POST' \
+  'http://caltech-curation-dev.textpressolab.com/priv/cgi-bin/nameserver_api.cgi' \
+  -u '<user>:<pass>' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{"datatype":"strain","objId":"WBStrain00100001","objName":"tempStrain"}'
 
 
 OR 

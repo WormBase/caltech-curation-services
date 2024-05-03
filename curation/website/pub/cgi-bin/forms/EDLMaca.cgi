@@ -7,9 +7,10 @@
 # Wen only wants html output.  Link to FTP URL.  Topics are optional.  2017 07 26
 # 
 # Dockerized.  2023 09 15
+#
+# Adapted for Macaque for Wen.  2024 02 15
 
-# http://tazendra.caltech.edu/~azurebrd/cgi-bin/forms/expression_dataset_locator.cgi
-# https://caltech-curation.textpressolab.com/pub/cgi-bin/forms/expression_dataset_locator.cgi
+# https://caltech-curation.textpressolab.com/pub/cgi-bin/forms/EDLMaca.cgi
 
 
 
@@ -37,7 +38,7 @@ my $query = new CGI;
 my $host = $query->remote_host();		# get ip address
 
 # my $file_source = '/home/acedb/wen/simplemine/all_SPELL_datasets.csv';
-my $file_source = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} .  '/pub/wen/simplemine/expressionDatasetLocator/all_SPELL_datasets.csv';
+my $file_source = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} .  '/pub/wen/maca/EDLMaca/all_MACA_datasets.csv';
 my %hash;
 my ($dataHeader) = &processFile();
 
@@ -139,13 +140,13 @@ sub querySpell {
 sub frontPage {
   print "Content-type: text/html\n\n";
 #   my $title = 'Genomic Expression Data Download';
-  my $title = 'Expression Dataset Locator';
-  my ($header, $footer) = &cshlNew($title);
-  print "$header\n";		# make beginning of HTML page
+  my $title = 'Expression Dataset Locator Macaque';
+#   my ($header, $footer) = &cshlNew($title);
+#   print "$header\n";		# make beginning of HTML page
   my $action;                   # what user clicked
   unless ($action = $query->param('action')) { $action = 'none'; }
   &showSpellForm();
-  print "$footer"; 		# make end of HTML page
+#   print "$footer"; 		# make end of HTML page
 } # sub frontPage
 
 
@@ -153,16 +154,25 @@ sub showSpellForm {
 #   print qq(<h3>Genomic Expression Data Download</h3><br/>\n);
   print qq(<h3>Expression Dataset Locator</h3><br/>\n);
 
-  print qq(This tool allows browsing and downloading of data from ~7,000 genomic expression analyses published in ~400 nematode research articles. The search may combine specific platforms, species, tissues and research topics. For example, choosing 'RNAseq', 'C. elegans', 'Whole Animal' and 'aging' will return C. elegans RNAseq datasets related to aging, done in whole animals. Not making any selection is equivalent to choosing all. For example, if no "Platform" is specified, results from all platforms will be displayed. Likewise, choosing 'RNAseq' and 'proteomics' will return both RNAseq and proteomics datasets.<br/><br/>);
+  my $maca_header_file = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} .  '/pub/wen/maca/EDLMaca/header';
+  my $maca_header = '';
+  $/ = undef;
+  open (IN, "<$maca_header_file") or warn "Cannot open $maca_header_file : $!";
+  my $maca = <IN>;
+  close (IN) or warn "Cannot close $maca_header_file : $!";
+  
+  print qq($maca<br/><br/>\n);
 
-  print qq(Our complete dataset collection is available for direct <a target="_blank" href="ftp://caltech.wormbase.org/pub/wormbase/spell_download/datasets/AllDatasetsDownload.tgz">download</a>.<br/><br/>);  
+#   print qq(This tool allows browsing and downloading of data from ~7,000 genomic expression analyses published in ~400 nematode research articles. The search may combine specific platforms, species, tissues and research topics. For example, choosing 'RNAseq', 'C. elegans', 'Whole Animal' and 'aging' will return C. elegans RNAseq datasets related to aging, done in whole animals. Not making any selection is equivalent to choosing all. For example, if no "Platform" is specified, results from all platforms will be displayed. Likewise, choosing 'RNAseq' and 'proteomics' will return both RNAseq and proteomics datasets.<br/><br/>);
+# 
+#   print qq(Our complete dataset collection is available for direct <a target="_blank" href="ftp://caltech.wormbase.org/pub/wormbase/spell_download/datasets/AllDatasetsDownload.tgz">download</a>.<br/><br/>);  
 
 #   print qq(This application allows users to browse and download data from ~7,000 genomic expression analysis published in ~400 nematode research articles.<br/><br/>\n);
 #   print qq(The search may combine specific platforms, species, tissues and research topics. For example, by selecting "RNAseq", "C. elegans", "Whole Animal" and "aging", users will find C. elegans RNAseq datasets related to aging, done in whole animals.<br/><br/>\n);
 #   print qq(Not making any selection is equivalent to choosing all. For example, without specifying "Platform", results from all platforms will be displayed. If users choose "RNAseq" and "proteomics", the result will display both RNAseq and proteomics datasets.<br/><br/>\n);
 
 #   print qq(Gene mappings to gene identifiers, Tissue-LifeStage, RNAi-Phenotype, Allele-Phenotype, ConciseDescription.<br/><br/>);
-  print qq(<form method="post" action="expression_dataset_locator.cgi" enctype="multipart/form-data">\n);
+  print qq(<form method="post" action="EDLMaca.cgi" enctype="multipart/form-data">\n);
 
 #   print qq(1. Method, optionally specify one or more methods.<br/>\n);
   print qq(1. Choose platform<br/>\n);
@@ -185,7 +195,7 @@ sub showSpellForm {
   print qq(<br/>\n);
 
 #   print qq(3. Tissue, optionally specify Tissue Specific, Whole Animal, or Both.<br/>\n);
-  print qq(3. Choose Tissue Specificity<br/>\n);
+  print qq(3. Choose Organism Part<br/>\n);
   foreach my $tissue (sort keys %{ $hash{tissue} }) { print qq(<input type="checkbox" name="tissue" value="$tissue"> $tissue<br/>); }
   print qq(<br/>\n);
 
@@ -233,7 +243,9 @@ sub processFile {
     $hash{line}{$count} = $line;
     $hash{method}{$method}{$count}++;
     $hash{species}{$species}{$count}++;
-    $hash{tissue}{$tissue}{$count}++;
+#     $hash{tissue}{$tissue}{$count}++;		# EDLMaca has multiple pipe-separated values, unlike edl.
+    my (@tissues) = split/\|/, $tissue;
+    foreach my $tissue (@tissues) { $hash{tissue}{$tissue}{$count}++; }
 #     if ($topics) { $hash{topics}{$topics}{$count}++; }
 #     $hash{topics}{$topics}{$count}++;
     my (@topics) = split/\|/, $topics;

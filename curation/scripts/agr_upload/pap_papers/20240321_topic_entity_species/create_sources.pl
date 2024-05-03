@@ -12,7 +12,7 @@
 #
 # modified for gene sources instead of general entity sources.  2024 01 08
 #
-# updated to new source data from https://docs.google.com/document/d/1xNnGLb1KO1ONrvTontgC1LTjpUc0JlfxrXWCvR_XIGA/edit  2024 04 18
+# modified for species sources.  2024 03 21
 
 # ./create_sources.pl
 
@@ -87,93 +87,28 @@ unless ($source_id) {
   &createSource($source_json);
 }
 
-$source_evidence_assertion = 'ATP:0000035';
-$source_method = 'author_first_pass';
-$source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
-unless ($source_id) {
-  my %source_json = %{ dclone (\%source_default) };
-  $source_json{source_evidence_assertion}       = $source_evidence_assertion;
-  $source_json{source_method}                   = $source_method;
-  $source_json{validation_type}                 = 'author';
-  $source_json{description}                     = 'Manual association of genes with references by authors in the author first pass form.';
-  my $source_json = encode_json \%source_json;
-  &createSource($source_json);
-}
-
 $source_evidence_assertion = 'ATP:0000036';
-$source_method = 'genes_curator';
+$source_method = 'paper_editor_species';
 $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
 unless ($source_id) {
   my %source_json = %{ dclone (\%source_default) };
   $source_json{source_evidence_assertion}       = $source_evidence_assertion;
   $source_json{source_method}                   = $source_method;
   $source_json{validation_type}                 = 'professional_biocurator';
-  $source_json{description}                     = 'Manual association of genes with references by a curator by a method other than using the Caltech paper editor.  This includes gene-reference associations made by the CGC for which we have curator evidence, gene-reference associations to WormBook chapters, and gene-reference associations made directly into AceDB prior to paper curation in the Caltech postgres database.';
+  $source_json{description}                     = 'Manual association of species with references in the WormBase paper editor.';
   my $source_json = encode_json \%source_json;
   &createSource($source_json);
 }
 
 $source_evidence_assertion = 'ECO:0008021';
-$source_method = 'script_gene_meeting_abstract';
+$source_method = 'script_species';
 $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
 unless ($source_id) {
   my %source_json = %{ dclone (\%source_default) };
   $source_json{source_evidence_assertion}       = $source_evidence_assertion;
   $source_json{source_method}                   = $source_method;
   delete $source_json{validation_type};
-  $source_json{description}                     = 'Scripts that associated genes with meeting abstracts based on mention of a gene in the abstract.';
-  my $source_json = encode_json \%source_json;
-  &createSource($source_json);
-}
-
-$source_evidence_assertion = 'ATP:0000036';
-$source_method = 'paper_editor_genes_curator';
-$source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
-unless ($source_id) {
-  my %source_json = %{ dclone (\%source_default) };
-  $source_json{source_evidence_assertion}       = $source_evidence_assertion;
-  $source_json{source_method}                   = $source_method;
-  $source_json{validation_type}                 = 'professional_biocurator';
-  $source_json{description}                     = 'Manual association of genes with references in the WormBase paper editor.';
-  my $source_json = encode_json \%source_json;
-  &createSource($source_json);
-}
-
-$source_evidence_assertion = 'ECO:0008021';
-$source_method = 'paper_editor_genes_script';
-$source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
-unless ($source_id) {
-  my %source_json = %{ dclone (\%source_default) };
-  $source_json{source_evidence_assertion}       = $source_evidence_assertion;
-  $source_json{source_method}                   = $source_method;
-  delete $source_json{validation_type};
-  $source_json{description}                     = 'Association of genes mentioned in abstracts with references based on string matching of gene and protein names, and synonyms, upon approval of a reference in the WormBase paper editor.';
-  my $source_json = encode_json \%source_json;
-  &createSource($source_json);
-}
-
-$source_evidence_assertion = 'ECO:0008021';
-$source_method = 'script_gene';
-$source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
-unless ($source_id) {
-  my %source_json = %{ dclone (\%source_default) };
-  $source_json{source_evidence_assertion}       = $source_evidence_assertion;
-  $source_json{source_method}                   = $source_method;
-  delete $source_json{validation_type};
-  $source_json{description}                     = 'One of several scripts that associated genes with references based on mention of a gene in a reference abstract or full text.';
-  my $source_json = encode_json \%source_json;
-  &createSource($source_json);
-}
-
-$source_evidence_assertion = 'ECO:0006151';
-$source_method = 'unknown';
-$source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
-unless ($source_id) {
-  my %source_json = %{ dclone (\%source_default) };
-  $source_json{source_evidence_assertion}       = $source_evidence_assertion;
-  $source_json{source_method}                   = $source_method;
-  delete $source_json{validation_type};
-  $source_json{description}                     = 'Association of genes with references by an unknown method.  Some of these associations likely came into WormBase when we took over curation of the C. elegans literature from the CGC; others may have been added via bulk upload without corresponding evidence.';
+  $source_json{description}                     = 'One of several scripts that associated species with references based on mention of a species in a reference abstract or a preexisting association of a gene with a reference.';
   my $source_json = encode_json \%source_json;
   &createSource($source_json);
 }
@@ -323,7 +258,7 @@ unless ($source_id) {
   $source_json{source_type}     = $source_type;
   $source_json{source_method}   = $source_method;
   $source_json{validation_type} = 'author';
-  $source_json{description}     = 'Manual association of genes with references by authors in the author first pass form or otherwise communicated by authors to a WormBase curator.';
+  $source_json{description}     = 'Manual creation of gene-paper associations in the WormBase author first pass form.';
   $source_json{evidence}        = "ECO:0000302";
   my $source_json = encode_json \%source_json;
   &createSource($source_type, $source_method, $source_json);

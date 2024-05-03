@@ -103,6 +103,11 @@
 # field dependencies.  2021 09 17
 #
 # app_person is a multivalue field, add " around it.  2023 09 14
+#
+# previously was writing new submissions at the beginning of the logfile, by reading the whole thing, getting the header, printing
+# the header, the new data, and the old data.  But something about the dockerized system takes special charactes and duplicates them,
+# so instead just opening the file in append mode and sticking it at the end.
+# Write to separate log files with _<year>.html for each year, for Chris.  2024 04 04
 
 
 
@@ -444,7 +449,7 @@ sub personPublication {
         $curation_status   = qq(<a href='phenotype.cgi?action=emailFlagFirstpass&wbpaper=$paper&wbperson=$personId' target='_blank' style='font-weight: bold; text-decoration: underline;'>flag this for phenotype data</a>); }
    if ($relevant eq 'relevant') {
       # my $urlPreexisting  = 'http://' . $hostfqdn .  "/~azurebrd/cgi-bin/forms/phenotype.cgi?action=preexistingData&wbpaper=$paper";
-      my $urlPreexisting  = $thishost . "pub/cgi-bin/forms/phenotype.cgi?action=preexistingData&wbpaper=$paper";
+      my $urlPreexisting  = $ENV{THIS_HOST_AS_BASE_URL} . "pub/cgi-bin/forms/phenotype.cgi?action=preexistingData&wbpaper=$paper";
       my %datatypeLabels; $datatypeLabels{app} = 'Allele-Transgene'; $datatypeLabels{rna} = 'RNAi'; 
       my @curation_status;
       foreach my $datatype (sort keys %datatypeLabels) {
@@ -715,7 +720,7 @@ sub checkPmid {					# only return allele code warning if both checks fail
   if ($row[0]) { $hasData++; }
   if ($hasData) {
     # my $url = 'http://' . $hostfqdn . "/~azurebrd/cgi-bin/forms/phenotype.cgi?action=preexistingData&wbpaper=$wbpaper";
-    my $url = $thishost . "pub/cgi-bin/forms/phenotype.cgi?action=preexistingData&wbpaper=$wbpaper";
+    my $url = $ENV{THIS_HOST_AS_BASE_URL} . "pub/cgi-bin/forms/phenotype.cgi?action=preexistingData&wbpaper=$wbpaper";
     $checkResults = qq(<span style='color: brown'>Notice: The paper you have entered has already been curated for some phenotype data. Please refer to the <a href='$url' target='new' style='font-weight: bold; text-decoration: underline;'>phenotype data summary</a> for this paper. If you believe you have additional phenotype data for this paper, please proceed.</span>); }
   return $checkResults;
 } # sub checkPmid
@@ -1632,8 +1637,8 @@ sub printTrHeader {
   print qq(<tr><td colspan="$colspan" style="font-size: $fontsize;">\n);
   my $header_with_javascript = $header;
   if ($header eq 'Optional') {
-    $header_with_javascript = qq(<span id="optional_down_span" style="display: none;" onmouseover="this.style.cursor='pointer';" onclick="document.getElementById('optional_down_span').style.display='none'; document.getElementById('optional_right_span').style.display=''; document.getElementById('group_1_allelenature').style.display='none'; document.getElementById('group_1_allelefunction').style.display='none'; document.getElementById('group_1_penetrance').style.display='none'; document.getElementById('group_1_tempsens').style.display='none'; document.getElementById('group_1_genotype').style.display='none'; document.getElementById('group_1_strain').style.display='none'; document.getElementById('group_1_comment').style.display='none'; document.getElementById('group_1_linkotherform').style.display='none'; document.getElementById('group_1_optionalexplain').style.display='none';" ><div id="optional_down_image" style="background-position: -40px 0; background-image: url('${thishost}pub/images/triangle_down_plain.png'); height: 20px; width:20px; float: left;" onmouseover="document.getElementById('optional_down_image').style.backgroundImage='url(${thishost}pub/images/triangle_down_reversed.png)';" onmouseout="document.getElementById('optional_down_image').style.backgroundImage='url(${thishost}pub/images/triangle_down_plain.png)';"></div>$header</span>);
-    $header_with_javascript .= qq(<span id="optional_right_span" onmouseover="this.style.cursor='pointer';" onclick="document.getElementById('optional_down_span').style.display=''; document.getElementById('optional_right_span').style.display='none'; document.getElementById('group_1_allelenature').style.display=''; document.getElementById('group_1_allelefunction').style.display=''; document.getElementById('group_1_penetrance').style.display=''; document.getElementById('group_1_tempsens').style.display=''; document.getElementById('group_1_genotype').style.display=''; document.getElementById('group_1_strain').style.display=''; document.getElementById('group_1_comment').style.display=''; document.getElementById('group_1_linkotherform').style.display=''; document.getElementById('group_1_optionalexplain').style.display='';" ><div id="optional_right_image" style="background-position: -40px 0; background-image: url('${thishost}pub/images/triangle_right_plain.png'); height: 20px; width:20px; float: left;" onmouseover="document.getElementById('optional_right_image').style.backgroundImage='url(${thishost}pub/images/triangle_right_reversed.png)';" onmouseout="document.getElementById('optional_right_image').style.backgroundImage='url(${thishost}pub/images/triangle_right_plain.png)';"></div>$header</span>);
+    $header_with_javascript = qq(<span id="optional_down_span" style="display: none;" onmouseover="this.style.cursor='pointer';" onclick="document.getElementById('optional_down_span').style.display='none'; document.getElementById('optional_right_span').style.display=''; document.getElementById('group_1_allelenature').style.display='none'; document.getElementById('group_1_allelefunction').style.display='none'; document.getElementById('group_1_penetrance').style.display='none'; document.getElementById('group_1_tempsens').style.display='none'; document.getElementById('group_1_genotype').style.display='none'; document.getElementById('group_1_strain').style.display='none'; document.getElementById('group_1_comment').style.display='none'; document.getElementById('group_1_linkotherform').style.display='none'; document.getElementById('group_1_optionalexplain').style.display='none';" ><div id="optional_down_image" style="background-position: -40px 0; background-image: url('$ENV{THIS_HOST_AS_BASE_URL}pub/images/triangle_down_plain.png'); height: 20px; width:20px; float: left;" onmouseover="document.getElementById('optional_down_image').style.backgroundImage='url($ENV{THIS_HOST_AS_BASE_URL}pub/images/triangle_down_reversed.png)';" onmouseout="document.getElementById('optional_down_image').style.backgroundImage='url($ENV{THIS_HOST_AS_BASE_URL}pub/images/triangle_down_plain.png)';"></div>$header</span>);
+    $header_with_javascript .= qq(<span id="optional_right_span" onmouseover="this.style.cursor='pointer';" onclick="document.getElementById('optional_down_span').style.display=''; document.getElementById('optional_right_span').style.display='none'; document.getElementById('group_1_allelenature').style.display=''; document.getElementById('group_1_allelefunction').style.display=''; document.getElementById('group_1_penetrance').style.display=''; document.getElementById('group_1_tempsens').style.display=''; document.getElementById('group_1_genotype').style.display=''; document.getElementById('group_1_strain').style.display=''; document.getElementById('group_1_comment').style.display=''; document.getElementById('group_1_linkotherform').style.display=''; document.getElementById('group_1_optionalexplain').style.display='';" ><div id="optional_right_image" style="background-position: -40px 0; background-image: url('$ENV{THIS_HOST_AS_BASE_URL}pub/images/triangle_right_plain.png'); height: 20px; width:20px; float: left;" onmouseover="document.getElementById('optional_right_image').style.backgroundImage='url($ENV{THIS_HOST_AS_BASE_URL}pub/images/triangle_right_reversed.png)';" onmouseout="document.getElementById('optional_right_image').style.backgroundImage='url($ENV{THIS_HOST_AS_BASE_URL}pub/images/triangle_right_plain.png)';"></div>$header</span>);
     # $header_with_javascript = qq(<span id="optional_down_span" style="display: none;" onmouseover="this.style.cursor='pointer';" onclick="document.getElementById('optional_down_span').style.display='none'; document.getElementById('optional_right_span').style.display=''; document.getElementById('group_1_allelenature').style.display='none'; document.getElementById('group_1_allelefunction').style.display='none'; document.getElementById('group_1_penetrance').style.display='none'; document.getElementById('group_1_tempsens').style.display='none'; document.getElementById('group_1_genotype').style.display='none'; document.getElementById('group_1_strain').style.display='none'; document.getElementById('group_1_comment').style.display='none'; document.getElementById('group_1_linkotherform').style.display='none'; document.getElementById('group_1_optionalexplain').style.display='none';" ><div id="optional_down_image" style="background-position: -40px 0; background-image: url('images/triangle_down_plain.png'); height: 20px; width:20px; float: left;" onmouseover="document.getElementById('optional_down_image').style.backgroundImage='url(images/triangle_down_reversed.png)';" onmouseout="document.getElementById('optional_down_image').style.backgroundImage='url(images/triangle_down_plain.png)';"></div>$header</span>);
     # $header_with_javascript .= qq(<span id="optional_right_span" onmouseover="this.style.cursor='pointer';" onclick="document.getElementById('optional_down_span').style.display=''; document.getElementById('optional_right_span').style.display='none'; document.getElementById('group_1_allelenature').style.display=''; document.getElementById('group_1_allelefunction').style.display=''; document.getElementById('group_1_penetrance').style.display=''; document.getElementById('group_1_tempsens').style.display=''; document.getElementById('group_1_genotype').style.display=''; document.getElementById('group_1_strain').style.display=''; document.getElementById('group_1_comment').style.display=''; document.getElementById('group_1_linkotherform').style.display=''; document.getElementById('group_1_optionalexplain').style.display='';" ><div id="optional_right_image" style="background-position: -40px 0; background-image: url('images/triangle_right_plain.png'); height: 20px; width:20px; float: left;" onmouseover="document.getElementById('optional_right_image').style.backgroundImage='url(images/triangle_right_reversed.png)';" onmouseout="document.getElementById('optional_right_image').style.backgroundImage='url(images/triangle_right_plain.png)';"></div>$header</span>);
   } # if ($header eq 'Optional')
@@ -1761,7 +1766,7 @@ sub showForm {
 #   print qq(<div id="clear_term_info" style="position: fixed; z-index: 3; top: 102px; right: 30px";>&#10008;</div>\n);
 #   print qq(<div id="clear_term_info" align="right" onclick="document.getElementById('term_info').innerHTML = '';">clear &#10008;</div>\n);
   # print qq(<div id="clear_term_info" align="right" onclick="document.getElementById('term_info_box').style.display = 'none';"><img id="close_term_info_image" src="images/x_plain.png" onmouseover="document.getElementById('close_term_info_image').src='images/x_reversed.png';" onmouseout="document.getElementById('close_term_info_image').src='images/x_plain.png';"></div>\n);
-  print qq(<div id="clear_term_info" align="right" onclick="document.getElementById('term_info_box').style.display = 'none';"><img id="close_term_info_image" src="${thishost}pub/images/x_plain.png" onmouseover="document.getElementById('close_term_info_image').src='${thishost}pub/images/x_reversed.png';" onmouseout="document.getElementById('close_term_info_image').src='${thishost}pub/images/x_plain.png';"></div>\n);
+  print qq(<div id="clear_term_info" align="right" onclick="document.getElementById('term_info_box').style.display = 'none';"><img id="close_term_info_image" src="$ENV{THIS_HOST_AS_BASE_URL}pub/images/x_plain.png" onmouseover="document.getElementById('close_term_info_image').src='$ENV{THIS_HOST_AS_BASE_URL}pub/images/x_reversed.png';" onmouseout="document.getElementById('close_term_info_image').src='$ENV{THIS_HOST_AS_BASE_URL}pub/images/x_plain.png';"></div>\n);
   print qq(<div id="term_info" style="margin: 5px 5px 5px 5px;">Click on green question marks <span style="color: #06C729; font-weight: bold;">?</span> or start typing in a specific field to see more information here.</div>\n);
   print qq(</div>\n);
   &showEditorActions();
@@ -2417,7 +2422,7 @@ sub writePgOaAndEmail {		# tacking on email here since need pgids from pg before
   my $subject = 'Phenotype confirmation';		# subject of mail
   my $body = $messageToUser;					# message to user shown on form
   # $body .= qq(Click <a href='http://${hostfqdn}/~azurebrd/cgi-bin/forms/phenotype.cgi?action=bogusSubmission&pgidsApp=$newPgidsApp&pgidsRna=$newPgidsRna&ipAddress=$ip' target='_blank' style='font-weight: bold; text-decoration: underline;'>here</a> if you did not submit this data or if you would like to retract this submission.<br/><br/>For internal use.<br/>RNAi IDs $newPgidsRna<br/>Phenotype IDs $newPgidsApp<br/><br/>\n);	# additional link to report false data
-  $body .= qq(Click <a href='${thishost}pub/cgi-bin/forms/phenotype.cgi?action=bogusSubmission&pgidsApp=$newPgidsApp&pgidsRna=$newPgidsRna&ipAddress=$ip' target='_blank' style='font-weight: bold; text-decoration: underline;'>here</a> if you did not submit this data or if you would like to retract this submission.<br/><br/>For internal use.<br/>RNAi IDs $newPgidsRna<br/>Phenotype IDs $newPgidsApp<br/><br/>\n);	# additional link to report false data
+  $body .= qq(Click <a href='$ENV{THIS_HOST_AS_BASE_URL}pub/cgi-bin/forms/phenotype.cgi?action=bogusSubmission&pgidsApp=$newPgidsApp&pgidsRna=$newPgidsRna&ipAddress=$ip' target='_blank' style='font-weight: bold; text-decoration: underline;'>here</a> if you did not submit this data or if you would like to retract this submission.<br/><br/>For internal use.<br/>RNAi IDs $newPgidsRna<br/>Phenotype IDs $newPgidsApp<br/><br/>\n);	# additional link to report false data
   $body .= $form_data;						# form data
 # UNCOMMENT send general emails
   &mailSendmail($user, $email, $subject, $body, $cc);
@@ -2432,19 +2437,28 @@ sub writePgOaAndEmail {		# tacking on email here since need pgids from pg before
 #   }
 #   print qq(</table>);
 # UNCOMMENT FOR HISTORY
-  my $outfile = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/pub/cgi-bin/data/phenotype_history.html';
+  my $date = &getSimpleDate();
+  my ($year) = $date =~ m/^(\d{4})/;
+  my $outfile = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/pub/cgi-bin/data/phenotype_history_' . $year . '.html';
+  if (!(-e $outfile)) {
+    open (OUT, ">$outfile") or die "Cannot create $outfile : $!";
+    print OUT qq(<table border="1"><tr><th>ip</th><th>timestamp</th><th>person</th><th>email</th><th>pgid</th><th>paper</th><th>allele</th><th>transgene</th><th>caused_by</th><th>rnai gene</th><th>rnai reagent</th><th>species</th><th>personal</th><th>phenotype</th><th>not</th><th>phenotype remark</th><th>suggested definition</th><th>nature</th><th>func</th><th>penetrance</th><th>heat_sens</th><th>cold_sens</th><th>genotype</th><th>strain</th><th>comment</th></tr>\n);
+    close (OUT) or die "Cannot close $outfile : $!";
+  }
+
   # my $outfile = '/home/azurebrd/public_html/cgi-bin/data/phenotype_history.html';
-  open (IN, "<$outfile") or die "Cannot open $outfile : $!";
-  my $toOutput = <IN>;					# stuff to beginning of data at top of file
+# was reading whole file to get headers and add data at the beginning.  Now just appending at the end to avoid replication of weird characters when reading whole file and writing out again
+#   open (IN, "<$outfile") or die "Cannot open $outfile : $!";
+#   my $toOutput = <IN>;					# stuff to beginning of data at top of file
+#   while (my $line = <IN>) { $toOutput .= $line; }	# append previous data and rest of html
+#   close (IN) or die "Cannot close $outfile : $!";
+  open (OUT, ">>$outfile") or die "Cannot append to $outfile : $!";
   foreach my $line (@historyAppend) {
     $line =~ s/\t/<\/td><td style ="overflow: hidden; text-overflow:ellipsis; max-width: 500px;">/g; 
     $line = qq(<tr><td>$line</td></tr>\n); 
-    $toOutput .= $line; 				# append data
+    print OUT $line;					# write whole file over again including new data
+#     $toOutput .= $line; 				# append data
   }
-  while (my $line = <IN>) { $toOutput .= $line; }	# append previous data and rest of html
-  close (IN) or die "Cannot close $outfile : $!";
-  open (OUT, ">$outfile") or die "Cannot append to $outfile : $!";
-  print OUT $toOutput;					# write whole file over again including new data
   close (OUT) or die "Cannot close $outfile : $!";
 } # sub writePgOaAndEmail
 
@@ -2950,6 +2964,7 @@ sub getUserByIp {
 
 sub mailSendmail {
   my ($user, $email, $subject, $body, $cc) = @_;
+  if ($ENV{DEVELOPMENT} eq 'true') { $subject = '[dev] ' . $subject; }
   $email =~ s/\s+//g;
   my @recipients = split/,/, $email;
   $cc =~ s/\s+//g;

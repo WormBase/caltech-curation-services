@@ -40,7 +40,7 @@ foreach $_ (@pgpdfs) {
   $_ =~ m|/usr/lib/priv/cgi-bin/(.*)|;
   my $name = $1;			# name of the cgi
   # my $url = "http://tazendra.caltech.edu/~postgres/cgi-bin/" . $name;	# url to it
-  my $url = $ENV{THIS_HOST} . "priv/cgi-bin/" . $name;	# url to it
+  my $url = $ENV{THIS_HOST_AS_BASE_URL} . "priv/cgi-bin/" . $name;	# url to it
   if ($name =~ m/^curation/) { 		# curation forms
     $curation{$name} = $url;
   } elsif ($name eq 'checkout.cgi') {
@@ -134,10 +134,10 @@ foreach my $name (sort keys %curation) {
 } # foreach $_ (sort keys %curation)
 print "<TR>";
 # print "<TD WIDTH=150><A HREF=\"http://tazendra.caltech.edu/~postgres/cgi-bin/oa/ontology_annotator.cgi\">ontology_annotator.cgi</A></TD>";
-print "<TD WIDTH=150><A HREF=\"" . $ENV{THIS_HOST} . "priv/cgi-bin/oa/ontology_annotator.cgi\">ontology_annotator.cgi</A></TD>";
+print "<TD WIDTH=150><A HREF=\"" . $ENV{THIS_HOST_AS_BASE_URL} . "priv/cgi-bin/oa/ontology_annotator.cgi\">ontology_annotator.cgi</A></TD>";
 print "<TD></TD><TD WIDTH=400>Ontology Annotator Form</TD><TD></TD>";
 # print "<TD>http://tazendra.caltech.edu/~postgres/cgi-bin/oa/ontology_annotator.cgi</TD>";
-print "<TD>" . $ENV{THIS_HOST} . "priv/cgi-bin/oa/ontology_annotator.cgi</TD>";
+print "<TD>" . $ENV{THIS_HOST_AS_BASE_URL} . "priv/cgi-bin/oa/ontology_annotator.cgi</TD>";
 print "</TR>\n";
 # print "<TR>";
 # print "<TD WIDTH=150><A HREF=\"http://elbrus.caltech.edu/cgi-bin/igor/rnaitools/rnai_curation\">rnai_curation</A></TD>";
@@ -158,7 +158,7 @@ foreach $_ (@azupdfs) {
   $_ =~ m|/usr/lib/pub/cgi-bin/(.*)|;
   my $name = $1;			# name of the cgi
   # my $url = "http://tazendra.caltech.edu/~azurebrd/cgi-bin/" . $name;	# url to it
-  my $url = $ENV{THIS_HOST} . "pub/cgi-bin/" . $name;	# url to it
+  my $url = $ENV{THIS_HOST_AS_BASE_URL} . "pub/cgi-bin/" . $name;	# url to it
   next if ($name =~ m/pictures\.cgi/);
   if ($name =~ m/^curation/) { 		# curation forms
     $curation{$name} = $url;
@@ -184,7 +184,7 @@ foreach $_ (@formpdfs) {
   $_ =~ m|/usr/lib/pub/cgi-bin/forms/(.*)|;
   my $name = $1;			# name of the cgi
   # my $url = "http://tazendra.caltech.edu/~azurebrd/cgi-bin/forms/" . $name;	# url to it
-  my $url = $ENV{THIS_HOST} . "pub/cgi-bin/forms/" . $name;	# url to it
+  my $url = $ENV{THIS_HOST_AS_BASE_URL} . "pub/cgi-bin/forms/" . $name;	# url to it
   if ($name =~ m/^curation/) { 		# curation forms
     $curation{$name} = $url;
   } else { 				# general forms
@@ -230,7 +230,7 @@ foreach $_ (@cecpdfs) {
   $_ =~ m|/usr/lib/priv/cgi-bin/cecilia/(.*)|;
   my $name = $1;			# name of the cgi
   # my $url = "http://tazendra.caltech.edu/~postgres/cgi-bin/cecilia/" . $name;	# url to it
-  my $url = $ENV{THIS_HOST} . "priv/cgi-bin/cecilia/" . $name;	# url to it
+  my $url = $ENV{THIS_HOST_AS_BASE_URL} . "priv/cgi-bin/cecilia/" . $name;	# url to it
   if ($name =~ m/^curation/) { 		# curation forms
     $curation{$name} = $url;
   } else { 				# general forms

@@ -196,7 +196,7 @@ sub submit {
   $form_data    .= qq(</table><br/><br/>);
 
     # on any submission action, update the person / email for the user's IP address
-  &updateUserIp( $fields{person}{termidvalue}{1}, $fields{email}{inputvalue}{1} );
+  #&updateUserIp( $fields{person}{termidvalue}{1}, $fields{email}{inputvalue}{1} );
     # if the form has no person id, try to load from postgres by ip address.  removed 2018 10 18 for Chris
 #   unless ($fields{person}{termidvalue}{1}) {
 #     ( $fields{person}{termidvalue}{1}, $fields{person}{inputvalue}{1}, $fields{email}{termidvalue}{1} ) = &getUserByIp(); }
@@ -210,7 +210,7 @@ sub submit {
 #           &deletePg($fields{origip}{inputvalue}{1}, $fields{origtime}{inputvalue}{1});	# if had save files, this would delete
           my $messageToUser = qq(Dear $fields{person}{inputvalue}{1}, you are successfully registered for the following WormBase Webinars.<br/>);
 #           my $updateUrl = 'http://' . $hostfqdn . "/~azurebrd/cgi-bin/forms/webinar.cgi?action=updateRegistration&email=$fields{email}{inputvalue}{1}";
-          my $updateUrl = $ENV{THIS_HOST} . "pub/cgi-bin/forms/webinar.cgi?action=updateRegistration&email=$fields{email}{inputvalue}{1}";
+          my $updateUrl = $ENV{THIS_HOST_AS_BASE_URL} . "pub/cgi-bin/forms/webinar.cgi?action=updateRegistration&email=$fields{email}{inputvalue}{1}";
           $messageToUser .= qq(We will send you virtual meeting information 48 hours before the meeting time.<br/>);
           $messageToUser .= qq(To update your registration choices, click <a href="$updateUrl">here</a>.<br/>);
           print qq($messageToUser<br/>);
@@ -385,7 +385,7 @@ sub registeredCount {
     if ($row[0]) { $count = $row[0]; }
     print qq(<tr>);
     # my $url = 'http://' . $hostfqdn .  "/~azurebrd/cgi-bin/forms/webinar.cgi?action=registeredWebinar&seminar=$j";
-    my $url = $ENV{THIS_HOST} . "pub/cgi-bin/forms/webinar.cgi?action=registeredWebinar&seminar=$j";
+    my $url = $ENV{THIS_HOST_AS_BASE_URL} . "pub/cgi-bin/forms/webinar.cgi?action=registeredWebinar&seminar=$j";
     print qq(<td align="center"><a href="$url">$count</a></td>);
     print qq(<td style="width: 175px; max-width: 175px; min-width: 175px;">$webinars{$j}{'date'}</td>);
     print qq(<td style="width: 100px; max-width: 100px; min-width: 100px;">$webinars{$j}{'time'}</td>);
@@ -892,7 +892,7 @@ sub checkMandatoryFields {
 # <link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/2.7.0/build/autocomplete/assets/skins/sam/autocomplete.css" />
 sub addJavascriptCssToHeader {
   # my $baseUrl = 'https://' . $hostfqdn . "/~azurebrd/cgi-bin/forms";
-  my $baseUrl = $ENV{THIS_HOST} . "pub/cgi-bin/forms";
+  my $baseUrl = $ENV{THIS_HOST_AS_BASE_URL} . "pub/cgi-bin/forms";
   my $extra_stuff = << "EndOfText";
 <link rel="stylesheet" type="text/css" href="$baseUrl/stylesheets/jex.css" />
 <link rel="stylesheet" type="text/css" href="$baseUrl/stylesheets/yui_edited_autocomplete.css" />
@@ -947,25 +947,25 @@ sub checkIpBlock {
   if ($row[0]) { return 1; } else { return 0; }
 } # sub checkIpBlock
 
-sub updateUserIp {
-  my ($wbperson, $submitter_email) = @_;
-  my $ip = &getIp();
-  my $twonum = $wbperson; $twonum =~ s/WBPerson/two/;
-  $result = $dbh->do( "DELETE FROM two_user_ip WHERE two_user_ip = '$ip' ;" );
-  $result = $dbh->do( "INSERT INTO two_user_ip VALUES ('$twonum', '$ip', '$submitter_email')" ); 
-} # sub updateUserIp
+#sub updateUserIp {
+#  my ($wbperson, $submitter_email) = @_;
+#  my $ip = &getIp();
+#  my $twonum = $wbperson; $twonum =~ s/WBPerson/two/;
+#  $result = $dbh->do( "DELETE FROM two_user_ip WHERE two_user_ip = '$ip' ;" );
+#  $result = $dbh->do( "INSERT INTO two_user_ip VALUES ('$twonum', '$ip', '$submitter_email')" );
+#} # sub updateUserIp
 
-sub getUserByIp {
-  my $ip = &getIp();
-  my $twonum = ''; my $standardname = ''; my $email = ''; my $wbperson = '';
-  $result = $dbh->prepare( "SELECT * FROM two_user_ip WHERE two_user_ip = '$ip';" ); 
-  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; my @row = $result->fetchrow();
-  if ($row[0]) { $twonum = $row[0]; $email = $row[2]; $wbperson = $row[0]; $wbperson =~ s/two/WBPerson/; }
-  $result = $dbh->prepare( "SELECT * FROM two_standardname WHERE joinkey = '$twonum';" );
-  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; my @row = $result->fetchrow();
-  if ($row[2]) { $standardname = $row[2]; }
-  return ($wbperson, $standardname, $email);
-} # sub getUserByIp
+#sub getUserByIp {
+#  my $ip = &getIp();
+#  my $twonum = ''; my $standardname = ''; my $email = ''; my $wbperson = '';
+#  $result = $dbh->prepare( "SELECT * FROM two_user_ip WHERE two_user_ip = '$ip';" );
+#  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; my @row = $result->fetchrow();
+#  if ($row[0]) { $twonum = $row[0]; $email = $row[2]; $wbperson = $row[0]; $wbperson =~ s/two/WBPerson/; }
+#  $result = $dbh->prepare( "SELECT * FROM two_standardname WHERE joinkey = '$twonum';" );
+#  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; my @row = $result->fetchrow();
+#  if ($row[2]) { $standardname = $row[2]; }
+#  return ($wbperson, $standardname, $email);
+#} # sub getUserByIp
 
 sub mailSendmail {
   my ($user, $email, $subject, $body) = @_;

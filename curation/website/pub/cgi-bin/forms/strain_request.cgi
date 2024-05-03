@@ -33,8 +33,8 @@ my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST}
 # my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n";
 
 # my $hostfqdn = hostfqdn();
-my $thishost = $ENV{THIS_HOST};
-my $baseUrl = $ENV{THIS_HOST} . "pub/cgi-bin/forms";
+my $thishost = $ENV{THIS_HOST_AS_BASE_URL};
+my $baseUrl = $ENV{THIS_HOST_AS_BASE_URL} . "pub/cgi-bin/forms";
 
 my $result;
 
