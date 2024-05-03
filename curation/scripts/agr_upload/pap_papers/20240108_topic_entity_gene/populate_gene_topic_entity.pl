@@ -69,7 +69,8 @@ my $okta_token = &generateOktaToken();
 # my @wbpapers = qw( 00055090 );
 # my @wbpapers = qw( 00066031 );
 # my @wbpapers = qw( 00038491 00055090 );	# papers with lots of genes  2024 03 12
-# my @wbpapers = qw( 00003000 );
+# my @wbpapers = qw( 00003000 );		# cfp
+# my @wbpapers = qw( 00006103 );		# inferred auto note
 my @wbpapers = qw( 00003000 00003823 00004455 00004952 00005199 00005707 00006103 00006202 00006320 00017095 00025176 00027230 00044280 00046571 00057043 00063127 00064676 00064771 00065877 00066211 );		# kimberly 2024 04 18 set
 
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 
@@ -334,7 +335,11 @@ sub populatePapGene {
           $theHash{'ack'}{$joinkey}{$gene}{curator} = $two;
           $theHash{'ack'}{$joinkey}{$gene}{timestamp} = $ts;
           push @{ $theHash{'ack'}{$joinkey}{$gene}{note} }, $1; } }
-      else {
+      elsif ($evi =~ m/Inferred_automatically\s+"(.*?)"/) {
+        $theHash{'infOther'}{$joinkey}{$gene}{curator} = $two;
+        $theHash{'infOther'}{$joinkey}{$gene}{timestamp} = $ts;
+        push @{ $theHash{'infOther'}{$joinkey}{$gene}{note} }, $1; }
+      else {	# this should never happen
         $theHash{'infOther'}{$joinkey}{$gene}{curator} = $two;
         $theHash{'infOther'}{$joinkey}{$gene}{timestamp} = $ts; }
     }
