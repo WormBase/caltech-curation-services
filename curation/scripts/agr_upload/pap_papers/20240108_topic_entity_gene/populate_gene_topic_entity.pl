@@ -253,32 +253,33 @@ sub outputTheHash {
     foreach my $joinkey (sort keys %{ $theHash{$datatype} }) {
       next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
       foreach my $gene (sort keys %{ $theHash{$datatype}{$joinkey} }) {
-        my %object;
-        $object{'negated'}                    = FALSE;
-        $object{'reference_curie'}            = $wbpToAgr{$joinkey};
-        $object{'topic'}                      = $geneTopic;
-        $object{'entity_type'}                = $entityType;
-        $object{'entity_id_validation'}       = $entity_id_validation;
-        $object{'topic_entity_tag_source_id'} = $datatypeToSourceId{$datatype};
-        $object{'entity'}                     = "WB:WBGene$gene";
-        if ($geneToTaxon{$gene}) {
-          $object{'species'}                  = $geneToTaxon{$gene}; }
-        if ( ($datatype eq 'curConfMan') && ($papGenePublished{$joinkey}{$gene}) ) {
-          my $published_as = join' | ', @{ $papGenePublished{$joinkey}{$gene} }; 
-          $object{'entity_published_as'}      = $published_as; }
-        if ($theHash{$datatype}{$joinkey}{$gene}{note}) {
-          my $note = join' | ', @{ $theHash{$datatype}{$joinkey}{$gene}{note} };
-          $object{'note'}                     = $note; }
-        $object{'created_by'}                 = $theHash{$datatype}{$joinkey}{$gene}{curator};
-        $object{'updated_by'}                 = $theHash{$datatype}{$joinkey}{$gene}{curator};
-        $object{'date_created'}               = $theHash{$datatype}{$joinkey}{$gene}{timestamp};
-        $object{'date_updated'}               = $theHash{$datatype}{$joinkey}{$gene}{timestamp};
-        if ($output_format eq 'json') {
-          push @output_json, \%object; }
-        else {
-          my $object_json = encode_json \%object;
-          &createTag($object_json); }
-    } }
+        foreach my $curator (sort keys %{ $theHash{$datatype}{$joinkey}{$gene} }) {
+          my %object;
+          $object{'negated'}                    = FALSE;
+          $object{'reference_curie'}            = $wbpToAgr{$joinkey};
+          $object{'topic'}                      = $geneTopic;
+          $object{'entity_type'}                = $entityType;
+          $object{'entity_id_validation'}       = $entity_id_validation;
+          $object{'topic_entity_tag_source_id'} = $datatypeToSourceId{$datatype};
+          $object{'entity'}                     = "WB:WBGene$gene";
+          if ($geneToTaxon{$gene}) {
+            $object{'species'}                  = $geneToTaxon{$gene}; }
+          if ( ($datatype eq 'curConfMan') && ($papGenePublished{$joinkey}{$gene}) ) {
+            my $published_as = join' | ', @{ $papGenePublished{$joinkey}{$gene} };
+            $object{'entity_published_as'}      = $published_as; }
+          if ($theHash{$datatype}{$joinkey}{$gene}{note}) {
+            my $note = join' | ', @{ $theHash{$datatype}{$joinkey}{$gene}{note} };
+            $object{'note'}                     = $note; }
+          $object{'created_by'}                 = $curator;
+          $object{'updated_by'}                 = $curator;
+          $object{'date_created'}               = $theHash{$datatype}{$joinkey}{$gene}{$curator}{timestamp};
+          $object{'date_updated'}               = $theHash{$datatype}{$joinkey}{$gene}{$curator}{timestamp};
+          if ($output_format eq 'json') {
+            push @output_json, \%object; }
+          else {
+            my $object_json = encode_json \%object;
+            &createTag($object_json); }
+    } } }
 } }
 
 
@@ -303,45 +304,45 @@ sub populatePapGene {
       else { $evi = ''; }
     if ($evi =~ m/Curator_confirmed.*(WBPerson\d+)/) {
       if ($manConn{$joinkey}{$gene}) { 
-        $theHash{'curConfMan'}{$joinkey}{$gene}{curator} = $1;
-        $theHash{'curConfMan'}{$joinkey}{$gene}{timestamp} = $ts; }
+#         $theHash{'curConfMan'}{$joinkey}{$gene}{$1}{curator} = $1;
+        $theHash{'curConfMan'}{$joinkey}{$gene}{$1}{timestamp} = $ts; }
       else {
-        $theHash{'curConfNoMan'}{$joinkey}{$gene}{curator} = $1;
-        $theHash{'curConfNoMan'}{$joinkey}{$gene}{timestamp} = $ts; } }
+#         $theHash{'curConfNoMan'}{$joinkey}{$gene}{$1}{curator} = $1;
+        $theHash{'curConfNoMan'}{$joinkey}{$gene}{$1}{timestamp} = $ts; } }
     elsif ($evi =~ m/Person_evidence.*(WBPerson\d+)/) {
-      $theHash{'perEvi'}{$joinkey}{$gene}{curator} = $1;
-      $theHash{'perEvi'}{$joinkey}{$gene}{timestamp} = $ts; }
+#       $theHash{'perEvi'}{$joinkey}{$gene}{$1}{curator} = $1;
+      $theHash{'perEvi'}{$joinkey}{$gene}{$1}{timestamp} = $ts; }
     elsif ($evi =~ m/Inferred_automatically/) { 	# this has to be more specific later
       if ($evi =~ m/Inferred_automatically\s+"(Abstract read .*?)"/) {
         if ($meetings{$joinkey}) {
-          $theHash{'absReadMeet'}{$joinkey}{$gene}{curator} = $two;
-          $theHash{'absReadMeet'}{$joinkey}{$gene}{timestamp} = $ts;
-          push @{ $theHash{'absReadMeet'}{$joinkey}{$gene}{note} }, $1; }
+#           $theHash{'absReadMeet'}{$joinkey}{$gene}{$two}{curator} = $two;
+          $theHash{'absReadMeet'}{$joinkey}{$gene}{$two}{timestamp} = $ts;
+          push @{ $theHash{'absReadMeet'}{$joinkey}{$gene}{$two}{note} }, $1; }
         else {
-          $theHash{'absReadNoMeet'}{$joinkey}{$gene}{curator} = $two;
-          $theHash{'absReadNoMeet'}{$joinkey}{$gene}{timestamp} = $ts;
-          push @{ $theHash{'absReadNoMeet'}{$joinkey}{$gene}{note} }, $1; } }
+#           $theHash{'absReadNoMeet'}{$joinkey}{$gene}{$two}{curator} = $two;
+          $theHash{'absReadNoMeet'}{$joinkey}{$gene}{$two}{timestamp} = $ts;
+          push @{ $theHash{'absReadNoMeet'}{$joinkey}{$gene}{$two}{note} }, $1; } }
       elsif ($evi =~ m/Inferred_automatically\s+"(from curator first pass .*?)"/) {
-        $theHash{'cfp'}{$joinkey}{$gene}{curator} = $two;
-        $theHash{'cfp'}{$joinkey}{$gene}{timestamp} = $ts;
-        push @{ $theHash{'cfp'}{$joinkey}{$gene}{note} }, $1; }
+#         $theHash{'cfp'}{$joinkey}{$gene}{$two}{curator} = $two;
+        $theHash{'cfp'}{$joinkey}{$gene}{$two}{timestamp} = $ts;
+        push @{ $theHash{'cfp'}{$joinkey}{$gene}{$two}{note} }, $1; }
       elsif ($evi =~ m/Inferred_automatically\s+"(from author first pass .*?)"/) {
         my $tsdigits = &tsToDigits($ts);
         if ($tsdigits < '20190322') {
-          $theHash{'afp'}{$joinkey}{$gene}{curator} = $two;
-          $theHash{'afp'}{$joinkey}{$gene}{timestamp} = $ts;
-          push @{ $theHash{'afp'}{$joinkey}{$gene}{note} }, $1; }
+#           $theHash{'afp'}{$joinkey}{$gene}{$two}{curator} = $two;
+          $theHash{'afp'}{$joinkey}{$gene}{$two}{timestamp} = $ts;
+          push @{ $theHash{'afp'}{$joinkey}{$gene}{$two}{note} }, $1; }
         else {
-          $theHash{'ack'}{$joinkey}{$gene}{curator} = $two;
-          $theHash{'ack'}{$joinkey}{$gene}{timestamp} = $ts;
-          push @{ $theHash{'ack'}{$joinkey}{$gene}{note} }, $1; } }
+#           $theHash{'ack'}{$joinkey}{$gene}{$two}{curator} = $two;
+          $theHash{'ack'}{$joinkey}{$gene}{$two}{timestamp} = $ts;
+          push @{ $theHash{'ack'}{$joinkey}{$gene}{$two}{note} }, $1; } }
       elsif ($evi =~ m/Inferred_automatically\s+"(.*?)"/) {
-        $theHash{'infOther'}{$joinkey}{$gene}{curator} = $two;
-        $theHash{'infOther'}{$joinkey}{$gene}{timestamp} = $ts;
-        push @{ $theHash{'infOther'}{$joinkey}{$gene}{note} }, $1; }
+#         $theHash{'infOther'}{$joinkey}{$gene}{$two}{curator} = $two;
+        $theHash{'infOther'}{$joinkey}{$gene}{$two}{timestamp} = $ts;
+        push @{ $theHash{'infOther'}{$joinkey}{$gene}{$two}{note} }, $1; }
       else {	# this should never happen
-        $theHash{'infOther'}{$joinkey}{$gene}{curator} = $two;
-        $theHash{'infOther'}{$joinkey}{$gene}{timestamp} = $ts; }
+#         $theHash{'infOther'}{$joinkey}{$gene}{$two}{curator} = $two;
+        $theHash{'infOther'}{$joinkey}{$gene}{$two}{timestamp} = $ts; }
     }
     elsif ($evi =~ m/Published_as "(.*?)"/) {
       push @{ $papGenePublished{$joinkey}{$gene} }, $1; }
@@ -350,8 +351,8 @@ sub populatePapGene {
     elsif ($evi =~ m/Author_evidence/) {	# ignore these, should be removed from postgres
       1; }
     else {
-      $theHash{'noEvi'}{$joinkey}{$gene}{curator} = $two;
-      $theHash{'noEvi'}{$joinkey}{$gene}{timestamp} = $ts; }
+#       $theHash{'noEvi'}{$joinkey}{$gene}{$two}{curator} = $two;
+      $theHash{'noEvi'}{$joinkey}{$gene}{$two}{timestamp} = $ts; }
 } }
 
 
