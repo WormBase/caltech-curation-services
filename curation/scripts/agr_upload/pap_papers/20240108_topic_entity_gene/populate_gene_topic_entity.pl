@@ -255,6 +255,7 @@ sub outputTheHash {
       foreach my $gene (sort keys %{ $theHash{$datatype}{$joinkey} }) {
         foreach my $curator (sort keys %{ $theHash{$datatype}{$joinkey}{$gene} }) {
           my %object;
+          $object{'force_insertion'}            = TRUE;
           $object{'negated'}                    = FALSE;
           $object{'reference_curie'}            = $wbpToAgr{$joinkey};
           $object{'topic'}                      = $geneTopic;
