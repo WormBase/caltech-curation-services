@@ -257,6 +257,33 @@ unless ($source_id) {
   &createSource($source_json);
 }
 
+$source_evidence_assertion = 'ECO:0008021';
+$source_method = 'parsing_supplementary_tables_ortholist';
+$source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+unless ($source_id) {
+  my %source_json = %{ dclone (\%source_default) };
+  $source_json{source_evidence_assertion}       = $source_evidence_assertion;
+  $source_json{source_method}                   = $source_method;
+  delete $source_json{validation_type};
+  $source_json{description}                     = 'A one-time pipeline that parsed sequence names in the supplementary tables of two Ortholist papers to match those names to WBGene identifiers.';
+  my $source_json = encode_json \%source_json;
+  &createSource($source_json);
+}
+
+$source_evidence_assertion = 'ECO:0008021';
+$source_method = 'update_of_dead_and_merged_genes_Mary_Ann';
+$source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+unless ($source_id) {
+  my %source_json = %{ dclone (\%source_default) };
+  $source_json{source_evidence_assertion}       = $source_evidence_assertion;
+  $source_json{source_method}                   = $source_method;
+  delete $source_json{validation_type};
+  $source_json{description}                     = 'A one-time pipeline that updated dead genes associated with references.  The updated identifiers list was sourced from Mary Ann Tuli.';
+  my $source_json = encode_json \%source_json;
+  &createSource($source_json);
+}
+
+
 $source_evidence_assertion = 'ECO:0006151';
 $source_method = 'unknown';
 $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
