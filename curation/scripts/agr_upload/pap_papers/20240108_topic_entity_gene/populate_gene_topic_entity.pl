@@ -195,8 +195,8 @@ sub outputTheHash {
           if ( ($datatype eq 'curConfMan') && ($papGenePublished{$joinkey}{$gene}) ) {
             my $published_as = join' | ', @{ $papGenePublished{$joinkey}{$gene} };
             $object{'entity_published_as'}      = $published_as; }
-          if ($theHash{$datatype}{$joinkey}{$gene}{note}) {
-            my $note = join' | ', @{ $theHash{$datatype}{$joinkey}{$gene}{note} };
+          if ($theHash{$datatype}{$joinkey}{$gene}{$curator}{note}) {
+            my $note = join' | ', @{ $theHash{$datatype}{$joinkey}{$gene}{$curator}{note} };
             $object{'note'}                     = $note; }
           $object{'created_by'}                 = $curator;
           $object{'updated_by'}                 = $curator;
