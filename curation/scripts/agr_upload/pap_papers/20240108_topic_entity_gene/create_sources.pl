@@ -95,7 +95,7 @@ unless ($source_id) {
   $source_json{source_evidence_assertion}       = $source_evidence_assertion;
   $source_json{source_method}                   = $source_method;
   $source_json{validation_type}                 = 'author';
-  $source_json{description}                     = 'Manual association of genes with references by authors in the author first pass form.';
+  $source_json{description}                     = 'Manual association of genes with references by authors in the author first pass form or otherwise communicated by authors to a WormBase curator.';
   my $source_json = encode_json \%source_json;
   &createSource($source_json);
 }
@@ -152,18 +152,137 @@ unless ($source_id) {
   &createSource($source_json);
 }
 
+# This source has been replaced by the multiple 8021 sources below
+# $source_evidence_assertion = 'ECO:0008021';
+# $source_method = 'script_gene';
+# $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+# unless ($source_id) {
+#   my %source_json = %{ dclone (\%source_default) };
+#   $source_json{source_evidence_assertion}       = $source_evidence_assertion;
+#   $source_json{source_method}                   = $source_method;
+#   delete $source_json{validation_type};
+#   $source_json{description}                     = 'One of several scripts that associated genes with references based on mention of a gene in a reference abstract or full text.';
+#   my $source_json = encode_json \%source_json;
+#   &createSource($source_json);
+# }
+
 $source_evidence_assertion = 'ECO:0008021';
-$source_method = 'script_gene';
+$source_method = 'update2_gene_cds_script';
 $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
 unless ($source_id) {
   my %source_json = %{ dclone (\%source_default) };
   $source_json{source_evidence_assertion}       = $source_evidence_assertion;
   $source_json{source_method}                   = $source_method;
   delete $source_json{validation_type};
-  $source_json{description}                     = 'One of several scripts that associated genes with references based on mention of a gene in a reference abstract or full text.';
+  $source_json{description}                     = 'A script run in 2006 that associated genes with references based on mention of a gene in a reference.';
   my $source_json = encode_json \%source_json;
   &createSource($source_json);
 }
+
+$source_evidence_assertion = 'ECO:0008021';
+$source_method = 'fix_dead_genes_script';
+$source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+unless ($source_id) {
+  my %source_json = %{ dclone (\%source_default) };
+  $source_json{source_evidence_assertion}       = $source_evidence_assertion;
+  $source_json{source_method}                   = $source_method;
+  delete $source_json{validation_type};
+  $source_json{description}                     = 'A script run in 2010 that updated WBGene identifiers for genes previously associated with a reference but for which the identifier was no longer valid, likely due to a gene merge.';
+  my $source_json = encode_json \%source_json;
+  &createSource($source_json);
+}
+
+$source_evidence_assertion = 'ECO:0008021';
+$source_method = 'update_oldwbgenes_papers_script';
+$source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+unless ($source_id) {
+  my %source_json = %{ dclone (\%source_default) };
+  $source_json{source_evidence_assertion}       = $source_evidence_assertion;
+  $source_json{source_method}                   = $source_method;
+  delete $source_json{validation_type};
+  $source_json{description}                     = 'A script run in 2008 that updated WBGene identifiers for genes previously associated with a reference but for which the identifier was no longer valid, likely due to a gene merge.';
+  my $source_json = encode_json \%source_json;
+  &createSource($source_json);
+}
+
+$source_evidence_assertion = 'ECO:0008021';
+$source_method = 'geneChecker_script';
+$source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+unless ($source_id) {
+  my %source_json = %{ dclone (\%source_default) };
+  $source_json{source_evidence_assertion}       = $source_evidence_assertion;
+  $source_json{source_method}                   = $source_method;
+  delete $source_json{validation_type};
+  $source_json{description}                     = 'A script run by Eimear Kenny to associate genes with references.';
+  my $source_json = encode_json \%source_json;
+  &createSource($source_json);
+}
+
+$source_evidence_assertion = 'ECO:0008021';
+$source_method = 'abstract2aceCGC_script';
+$source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+unless ($source_id) {
+  my %source_json = %{ dclone (\%source_default) };
+  $source_json{source_evidence_assertion}       = $source_evidence_assertion;
+  $source_json{source_method}                   = $source_method;
+  delete $source_json{validation_type};
+  $source_json{description}                     = 'A script run by Eimear Kenny to associate genes with references.';
+  my $source_json = encode_json \%source_json;
+  &createSource($source_json);
+}
+
+$source_evidence_assertion = 'ECO:0008021';
+$source_method = 'abstract2acePMID_script';
+$source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+unless ($source_id) {
+  my %source_json = %{ dclone (\%source_default) };
+  $source_json{source_evidence_assertion}       = $source_evidence_assertion;
+  $source_json{source_method}                   = $source_method;
+  delete $source_json{validation_type};
+  $source_json{description}                     = 'A script run by Eimear Kenny to associate genes with references.';
+  my $source_json = encode_json \%source_json;
+  &createSource($source_json);
+}
+
+$source_evidence_assertion = 'ECO:0008021';
+$source_method = 'automatic_update_merge_script';
+$source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+unless ($source_id) {
+  my %source_json = %{ dclone (\%source_default) };
+  $source_json{source_evidence_assertion}       = $source_evidence_assertion;
+  $source_json{source_method}                   = $source_method;
+  delete $source_json{validation_type};
+  $source_json{description}                     = 'A script run by Eimear Kenny to fix gene-reference associations after gene merges.';
+  my $source_json = encode_json \%source_json;
+  &createSource($source_json);
+}
+
+$source_evidence_assertion = 'ECO:0008021';
+$source_method = 'parsing_supplementary_tables_ortholist';
+$source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+unless ($source_id) {
+  my %source_json = %{ dclone (\%source_default) };
+  $source_json{source_evidence_assertion}       = $source_evidence_assertion;
+  $source_json{source_method}                   = $source_method;
+  delete $source_json{validation_type};
+  $source_json{description}                     = 'A one-time pipeline that parsed sequence names in the supplementary tables of two Ortholist papers to match those names to WBGene identifiers.';
+  my $source_json = encode_json \%source_json;
+  &createSource($source_json);
+}
+
+$source_evidence_assertion = 'ECO:0008021';
+$source_method = 'update_of_dead_and_merged_genes_Mary_Ann';
+$source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+unless ($source_id) {
+  my %source_json = %{ dclone (\%source_default) };
+  $source_json{source_evidence_assertion}       = $source_evidence_assertion;
+  $source_json{source_method}                   = $source_method;
+  delete $source_json{validation_type};
+  $source_json{description}                     = 'A one-time pipeline that updated dead genes associated with references.  The updated identifiers list was sourced from Mary Ann Tuli.';
+  my $source_json = encode_json \%source_json;
+  &createSource($source_json);
+}
+
 
 $source_evidence_assertion = 'ECO:0006151';
 $source_method = 'unknown';

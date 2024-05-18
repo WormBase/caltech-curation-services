@@ -71,7 +71,18 @@ my $okta_token = &generateOktaToken();
 # my @wbpapers = qw( 00038491 00055090 );	# papers with lots of genes  2024 03 12
 # my @wbpapers = qw( 00003000 );		# cfp
 # my @wbpapers = qw( 00006103 );		# inferred auto note
-my @wbpapers = qw( 00003000 00003823 00004455 00004952 00005199 00005707 00006103 00006202 00006320 00017095 00025176 00027230 00044280 00046571 00057043 00063127 00064676 00064771 00065877 00066211 );		# kimberly 2024 04 18 set
+# my @wbpapers = qw( 00005988 );		# abstract2acePMID
+# my @wbpapers = qw( 00013393 );		# abstract2aceCGC
+# my @wbpapers = qw( 00024745 );		# abstract2ace other
+# my @wbpapers = qw( 00006103 );		# fix_dead_genes
+# my @wbpapers = qw( 00000119 );		# geneChecker
+# my @wbpapers = qw( 00003000 );		# update2_gene_cds_script
+# my @wbpapers = qw( 00006103 );		# update_oldwbgenes_papers_script
+# my @wbpapers = qw( 00038491 );		# Table S1 sheet B
+# my @wbpapers = qw( 00000465 );		# update_of_dead_and_merged_genes_Mary_Ann
+# my @wbpapers = qw( 00018874 );		# automatic_update_merge_script
+# my @wbpapers = qw( 00003000 00003823 00004455 00004952 00005199 00005707 00006103 00006202 00006320 00017095 00018874 00025176 00027230 00044280 00046571 00057043 00063127 00064676 00064771 00065877 00066211 );		# kimberly 2024 04 18 set
+my @wbpapers = qw( 00000119 00000465 00003000 00003823 00004455 00004952 00005199 00005707 00005988 00006103 00006202 00006320 00013393 00017095 00024745 00025176 00027230 00038491 00044280 00046571 00057043 00063127 00064676 00064771 00065877 00066211 );		# kimberly 2024 05 13 set
 
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 00037049
@@ -87,7 +98,7 @@ my %papGenePublished;
 
 my %chosenPapers;
 
-my %theHash;;
+my %theHash;
 my %infOther;
 my %curConfMan;
 my %curConfNoMan;
@@ -125,99 +136,6 @@ if ($output_format eq 'json') {
 # } 
 
 
-# sub outputCurConf {
-#   # old source
-#   # my $source_type = 'professional_biocurator';
-#   # my $source_method = 'paper_editor';
-#   # my $source_id = &getSourceId($source_type, $source_method);
-#   
-#   my $source_evidence_assertion = 'ATP:0000036';
-#   my $source_method = 'paper_editor_genes_curator';
-#   my $data_provider = $mod;
-#   my $secondary_data_provider = $mod;
-#   my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
-#   my $timestamp = &getPgDate();
-#   unless ($source_id) {
-#     print qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
-#     return;
-#   }
-# 
-# #   { "source_type": "professional_biocurator", "source_method": "wormbase_oa", "evidence": "eco_string", "description": "caltech curation tools", "mod_abbreviation": "WB" }
-#   foreach my $joinkey (sort keys %curConf) {
-#     next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
-#     foreach my $gene (sort keys %{ $curConf{$joinkey} }) {
-#       my %object;
-#       $object{'negated'}                    = FALSE;
-#       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
-#       $object{'topic'}                      = $geneTopic;
-#       $object{'entity_type'}                = $entityType;
-#       $object{'entity_id_validation'}       = $entity_id_validation;
-#       $object{'topic_entity_tag_source_id'} = $source_id;
-#       $object{'entity'}                     = "WB:WBGene$gene";
-#       if ($geneToTaxon{$gene}) {
-#         $object{'species'}                  = $geneToTaxon{$gene}; }
-#       if ($papGenePublished{$joinkey}{$gene}) {
-#         $object{'entity_published_as'}      = $papGenePublished{$joinkey}{$gene}; }
-#       $object{'created_by'}                 = $curConf{$joinkey}{$gene}{curator};
-#       $object{'updated_by'}                 = $curConf{$joinkey}{$gene}{curator};
-#       $object{'date_created'}               = $curConf{$joinkey}{$gene}{timestamp};
-#       $object{'date_updated'}               = $curConf{$joinkey}{$gene}{timestamp};
-#       if ($output_format eq 'json') {
-#         push @output_json, \%object; }
-#       else {
-#         my $object_json = encode_json \%object;
-#         &createTag($object_json); }
-#   } }
-# }
-# 
-# sub outputInfOther {
-#   # my $source_type = 'script';
-#   # my $source_method = 'gene_paper_association_script';
-#   # my $source_id = &getSourceId($source_type, $source_method);
-# 
-#   my $source_evidence_assertion = 'ECO:0008021';
-#   my $source_method = 'paper_editor_genes_script';
-#   my $data_provider = $mod;
-#   my $secondary_data_provider = $mod;
-#   my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
-#   my $timestamp = &getPgDate();
-#   unless ($source_id) {
-#     print qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
-#     return;
-#   }
-# 
-# #   { "source_type": "professional_biocurator", "source_method": "wormbase_oa", "evidence": "eco_string", "description": "caltech curation tools", "mod_abbreviation": "WB" }
-#   foreach my $joinkey (sort keys %infOther) {
-#     next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
-#     foreach my $gene (sort keys %{ $infOther{$joinkey} }) {
-#       my %object;
-#       $object{'negated'}                    = FALSE;
-#       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
-#       $object{'topic'}                      = $geneTopic;
-#       $object{'entity_type'}                = $entityType;
-#       $object{'entity_id_validation'}       = $entity_id_validation;
-#       $object{'topic_entity_tag_source_id'} = $source_id;
-#       $object{'entity'}                     = "WB:WBGene$gene";
-#       if ($geneToTaxon{$gene}) {
-#         $object{'species'}                  = $geneToTaxon{$gene}; }
-# # TODO  entity_published_as  and  note are source specific
-#       if ($papGenePublished{$joinkey}{$gene}) {
-#         $object{'entity_published_as'}      = $papGenePublished{$joinkey}{$gene}; }
-#       if ($infOther{$joinkey}{$gene}{note}) {
-#         $object{'note'}                     = $infOther{$joinkey}{$gene}{note}; }
-#       $object{'created_by'}                 = $infOther{$joinkey}{$gene}{curator};
-#       $object{'updated_by'}                 = $infOther{$joinkey}{$gene}{curator};
-#       $object{'date_created'}               = $infOther{$joinkey}{$gene}{timestamp};
-#       $object{'date_updated'}               = $infOther{$joinkey}{$gene}{timestamp};
-#       if ($output_format eq 'json') {
-#         push @output_json, \%object; }
-#       else {
-#         my $object_json = encode_json \%object;
-#         &createTag($object_json); }
-#   } }
-# }
-
-
 sub outputTheHash {
   # my $source_type = 'script';
   # my $source_method = 'gene_paper_association_script';
@@ -240,6 +158,15 @@ sub outputTheHash {
       elsif ($datatype eq 'ack')           { $source_evidence_assertion = 'ATP:0000035'; $source_method = 'ACKnowledge_form'; }
       elsif ($datatype eq 'absReadMeet')   { $source_evidence_assertion = 'ECO:0008021'; $source_method = 'script_gene_meeting_abstract'; }
       elsif ($datatype eq 'absReadNoMeet') { $source_evidence_assertion = 'ECO:0008021'; $source_method = 'paper_editor_genes_script'; }
+      elsif ($datatype eq 'abs2aceCgc')    { $source_evidence_assertion = 'ECO:0008021'; $source_method = 'abstract2aceCGC_script'; }
+      elsif ($datatype eq 'abs2acePmid')   { $source_evidence_assertion = 'ECO:0008021'; $source_method = 'abstract2acePMID_script'; }
+      elsif ($datatype eq 'fixDead')       { $source_evidence_assertion = 'ECO:0008021'; $source_method = 'fix_dead_genes_script'; }
+      elsif ($datatype eq 'geneChecker')   { $source_evidence_assertion = 'ECO:0008021'; $source_method = 'geneChecker_script'; }
+      elsif ($datatype eq 'update2gcds')   { $source_evidence_assertion = 'ECO:0008021'; $source_method = 'update2_gene_cds_script'; }
+      elsif ($datatype eq 'updateOldWbg')  { $source_evidence_assertion = 'ECO:0008021'; $source_method = 'update_oldwbgenes_papers_script'; }
+      elsif ($datatype eq 'supTable')      { $source_evidence_assertion = 'ECO:0008021'; $source_method = 'parsing_supplementary_tables_ortholist'; }
+      elsif ($datatype eq 'maryAnnDead')   { $source_evidence_assertion = 'ECO:0008021'; $source_method = 'update_of_dead_and_merged_genes_Mary_Ann'; }
+      elsif ($datatype eq 'autoEimear')    { $source_evidence_assertion = 'ECO:0008021'; $source_method = 'automatic_update_merge_script'; }
     my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
     unless ($source_id) {
       print qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
@@ -255,6 +182,7 @@ sub outputTheHash {
       foreach my $gene (sort keys %{ $theHash{$datatype}{$joinkey} }) {
         foreach my $curator (sort keys %{ $theHash{$datatype}{$joinkey}{$gene} }) {
           my %object;
+          $object{'force_insertion'}            = TRUE;
           $object{'negated'}                    = FALSE;
           $object{'reference_curie'}            = $wbpToAgr{$joinkey};
           $object{'topic'}                      = $geneTopic;
@@ -267,8 +195,8 @@ sub outputTheHash {
           if ( ($datatype eq 'curConfMan') && ($papGenePublished{$joinkey}{$gene}) ) {
             my $published_as = join' | ', @{ $papGenePublished{$joinkey}{$gene} };
             $object{'entity_published_as'}      = $published_as; }
-          if ($theHash{$datatype}{$joinkey}{$gene}{note}) {
-            my $note = join' | ', @{ $theHash{$datatype}{$joinkey}{$gene}{note} };
+          if ($theHash{$datatype}{$joinkey}{$gene}{$curator}{note}) {
+            my $note = join' | ', @{ $theHash{$datatype}{$joinkey}{$gene}{$curator}{note} };
             $object{'note'}                     = $note; }
           $object{'created_by'}                 = $curator;
           $object{'updated_by'}                 = $curator;
@@ -315,33 +243,63 @@ sub populatePapGene {
     elsif ($evi =~ m/Inferred_automatically/) { 	# this has to be more specific later
       if ($evi =~ m/Inferred_automatically\s+"(Abstract read .*?)"/) {
         if ($meetings{$joinkey}) {
-#           $theHash{'absReadMeet'}{$joinkey}{$gene}{$two}{curator} = $two;
           $theHash{'absReadMeet'}{$joinkey}{$gene}{$two}{timestamp} = $ts;
           push @{ $theHash{'absReadMeet'}{$joinkey}{$gene}{$two}{note} }, $1; }
         else {
-#           $theHash{'absReadNoMeet'}{$joinkey}{$gene}{$two}{curator} = $two;
           $theHash{'absReadNoMeet'}{$joinkey}{$gene}{$two}{timestamp} = $ts;
           push @{ $theHash{'absReadNoMeet'}{$joinkey}{$gene}{$two}{note} }, $1; } }
       elsif ($evi =~ m/Inferred_automatically\s+"(from curator first pass .*?)"/) {
-#         $theHash{'cfp'}{$joinkey}{$gene}{$two}{curator} = $two;
         $theHash{'cfp'}{$joinkey}{$gene}{$two}{timestamp} = $ts;
         push @{ $theHash{'cfp'}{$joinkey}{$gene}{$two}{note} }, $1; }
       elsif ($evi =~ m/Inferred_automatically\s+"(from author first pass .*?)"/) {
         my $tsdigits = &tsToDigits($ts);
         if ($tsdigits < '20190322') {
-#           $theHash{'afp'}{$joinkey}{$gene}{$two}{curator} = $two;
           $theHash{'afp'}{$joinkey}{$gene}{$two}{timestamp} = $ts;
           push @{ $theHash{'afp'}{$joinkey}{$gene}{$two}{note} }, $1; }
         else {
-#           $theHash{'ack'}{$joinkey}{$gene}{$two}{curator} = $two;
           $theHash{'ack'}{$joinkey}{$gene}{$two}{timestamp} = $ts;
           push @{ $theHash{'ack'}{$joinkey}{$gene}{$two}{note} }, $1; } }
+      elsif ($evi =~ m/Inferred_automatically\s+"(abstract2aceCGC.pl.*)"/) {
+        $theHash{'abs2aceCgc'}{$joinkey}{$gene}{$two}{timestamp} = $ts;
+        push @{ $theHash{'abs2aceCgc'}{$joinkey}{$gene}{$two}{note} }, $1; }
+      elsif ($evi =~ m/Inferred_automatically\s+"(abstract2acePMID.pl.*)"/) {
+        $theHash{'abs2acePmid'}{$joinkey}{$gene}{$two}{timestamp} = $ts;
+        push @{ $theHash{'abs2acePmid'}{$joinkey}{$gene}{$two}{note} }, $1; }
+      elsif ($evi =~ m/Inferred_automatically\s+"(abstract2ace.*)"/) {
+        $theHash{'absReadMeet'}{$joinkey}{$gene}{$two}{timestamp} = $ts;
+        push @{ $theHash{'absReadMeet'}{$joinkey}{$gene}{$two}{note} }, $1; }
+      elsif ($evi =~ m/Inferred_automatically\s+"(fix_dead_genes.*)"/) {
+        $theHash{'fixDead'}{$joinkey}{$gene}{$two}{timestamp} = $ts;
+        push @{ $theHash{'fixDead'}{$joinkey}{$gene}{$two}{note} }, $1; }
+      elsif ($evi =~ m/Inferred_automatically\s+"(geneChecker.*)"/) {
+        $theHash{'geneChecker'}{$joinkey}{$gene}{$two}{timestamp} = $ts;
+        push @{ $theHash{'geneChecker'}{$joinkey}{$gene}{$two}{note} }, $1; }
+      elsif ($evi =~ m/Inferred_automatically\s+"(.*update2_gene_cds.*)"/) {
+        $theHash{'update2gcds'}{$joinkey}{$gene}{$two}{timestamp} = $ts;
+        push @{ $theHash{'update2gcds'}{$joinkey}{$gene}{$two}{note} }, $1; }
+      elsif ($evi =~ m/Inferred_automatically\s+"(.*update2_gene_cds.*)"/) {
+        $theHash{'update2gcds'}{$joinkey}{$gene}{$two}{timestamp} = $ts;
+        push @{ $theHash{'update2gcds'}{$joinkey}{$gene}{$two}{note} }, $1; }
+      elsif ($evi =~ m/Inferred_automatically\s+"(.*update_oldwbgenes_papers.*)"/) {
+        $theHash{'updateOldWbg'}{$joinkey}{$gene}{$two}{timestamp} = $ts;
+        push @{ $theHash{'updateOldWbg'}{$joinkey}{$gene}{$two}{note} }, $1; }
+      elsif ($evi =~ m/Inferred_automatically\s+"(.*Table S1 sheet B.*)"/) {
+        $theHash{'supTable'}{$joinkey}{$gene}{$two}{timestamp} = $ts;
+        push @{ $theHash{'supTable'}{$joinkey}{$gene}{$two}{note} }, $1; }
+      elsif ($evi =~ m/Inferred_automatically\s+"(.*Table S5 sheet C.*)"/) {
+        $theHash{'supTable'}{$joinkey}{$gene}{$two}{timestamp} = $ts;
+        push @{ $theHash{'supTable'}{$joinkey}{$gene}{$two}{note} }, $1; }
+      elsif ($evi =~ m/Inferred_automatically\s+"(.*Mary Ann Tuli dead and merged gene dump 2006 09 29.*)"/) {
+        $theHash{'maryAnnDead'}{$joinkey}{$gene}{$two}{timestamp} = $ts;
+        push @{ $theHash{'maryAnnDead'}{$joinkey}{$gene}{$two}{note} }, $1; }
+      elsif ($evi =~ m/Inferred_automatically\s+"(.*Eimear Kenny, 02-09-05.*)"/) {
+        $theHash{'autoEimear'}{$joinkey}{$gene}{$two}{timestamp} = $ts;
+        push @{ $theHash{'autoEimear'}{$joinkey}{$gene}{$two}{note} }, $1; }
+
       elsif ($evi =~ m/Inferred_automatically\s+"(.*?)"/) {
-#         $theHash{'infOther'}{$joinkey}{$gene}{$two}{curator} = $two;
         $theHash{'infOther'}{$joinkey}{$gene}{$two}{timestamp} = $ts;
         push @{ $theHash{'infOther'}{$joinkey}{$gene}{$two}{note} }, $1; }
       else {	# this should never happen
-#         $theHash{'infOther'}{$joinkey}{$gene}{$two}{curator} = $two;
         $theHash{'infOther'}{$joinkey}{$gene}{$two}{timestamp} = $ts; }
     }
     elsif ($evi =~ m/Published_as "(.*?)"/) {

@@ -155,6 +155,7 @@ sub outputOaData {
       next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
       my %object;
       $object{'negated'}                    = FALSE;
+      $object{'force_insertion'}            = TRUE;
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $datatypes{$datatype};
       $object{'topic_entity_tag_source_id'} = $source_id;
@@ -190,6 +191,7 @@ sub outputAfpCurData {
       if ($afpCurData{$datatype}{$joinkey}{negated}) { $negated = TRUE; }
       my %object;
       $object{'negated'}                    = $negated;
+      $object{'force_insertion'}            = TRUE;
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $datatypes{$datatype};
       $object{'topic_entity_tag_source_id'} = $source_id;
@@ -242,6 +244,7 @@ sub outputAfpAutData {
         if ($afpAutData{$datatype}{$joinkey}{note}) {
           $object{'note'}                     = $afpAutData{$datatype}{$joinkey}{note}; }
         $object{'negated'}                    = $negated;
+        $object{'force_insertion'}            = TRUE;
         $object{'reference_curie'}            = $wbpToAgr{$joinkey};
         $object{'topic'}                      = $datatypes{$datatype};
         $object{'topic_entity_tag_source_id'} = $source_id;
@@ -419,6 +422,7 @@ sub outputCfpData {
         if ($cfpData{$datatype}{$joinkey}{data} =~ m/false positive/i) { $negated = TRUE; } }
       my %object;
       $object{'negated'}                    = $negated;
+      $object{'force_insertion'}            = TRUE;
       $object{'note'}                       = $cfpData{$datatype}{$joinkey}{data};
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $datatypes{$datatype};
@@ -484,6 +488,7 @@ sub outputCurStrData {
       # my $tsdigits = &tsToDigits($strData{$datatype}{$joinkey}{timestamp});
       # if ($tsdigits > '20190322') { $source_id = $source_id_2; }
       $object{'negated'}                    = FALSE;
+      $object{'force_insertion'}            = TRUE;
       $object{'note'}                       = $strData{$datatype}{$joinkey}{result};
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $datatypes{$datatype};
@@ -534,6 +539,7 @@ sub outputCurNncData {
       my $negated = FALSE;  
       if ($nncData{$datatype}{$joinkey}{result} eq 'NEG') { $negated = TRUE; }
       $object{'negated'}                    = $negated;
+      $object{'force_insertion'}            = TRUE;
       $object{'confidence_level'}           = uc($nncData{$datatype}{$joinkey}{result});
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $datatypes{$datatype};
@@ -587,6 +593,7 @@ sub outputCurSvmData {
       my $negated = FALSE;  
       if ($svmData{$datatype}{$joinkey}{result} eq 'NEG') { $negated = TRUE; }
       $object{'negated'}                    = $negated;
+      $object{'force_insertion'}            = TRUE;
       $object{'confidence_level'}           = uc($svmData{$datatype}{$joinkey}{result});
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $datatypes{$datatype};
@@ -648,6 +655,7 @@ sub outputCurCurData {
       if ($curData{$datatype}{$joinkey}{txtcomment}) { push @notes, $curData{$datatype}{$joinkey}{txtcomment}; }
       if (scalar @notes > 0) { $note = join "|", @notes; }
       $object{'negated'}                    = $negated;
+      $object{'force_insertion'}            = TRUE;
       $object{'note'}                       = $note;
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $datatypes{$datatype};

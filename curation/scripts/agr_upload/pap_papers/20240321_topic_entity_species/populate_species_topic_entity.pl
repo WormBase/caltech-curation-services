@@ -185,6 +185,7 @@ sub outputPapAck {
     foreach my $taxon (sort keys %{ $papAck{$joinkey} }) {
       my %object;
       $object{'negated'}                    = FALSE;
+      $object{'force_insertion'}            = TRUE;
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $speciesTopic;
       $object{'entity_type'}                = $entityType;
@@ -220,6 +221,7 @@ sub outputPapScript {
     foreach my $taxon (sort keys %{ $papScript{$joinkey} }) {
       my %object;
       $object{'negated'}                    = FALSE;
+      $object{'force_insertion'}            = TRUE;
 # unless ($wbpToAgr{$joinkey}) { print qq(ERROR $joinkey NOT IN wbpToAgr\n); }
 # WBPaper00027303 WBPaper00027314 WBPaper00029014 WBPaper00041926   don't map to AGRKB 2024 03 19
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
@@ -257,6 +259,7 @@ sub outputPapEditor {
     foreach my $taxon (sort keys %{ $papEditor{$joinkey} }) {
       my %object;
       $object{'negated'}                    = FALSE;
+      $object{'force_insertion'}            = TRUE;
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $speciesTopic;
       $object{'entity_type'}                = $entityType;
@@ -292,6 +295,7 @@ sub outputTfpSpecies {
     foreach my $taxon (sort keys %{ $tfpSpecies{$joinkey} }) {
       my %object;
       $object{'negated'}                    = FALSE;
+      $object{'force_insertion'}            = TRUE;
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $speciesTopic;
       $object{'entity_type'}                = $entityType;
