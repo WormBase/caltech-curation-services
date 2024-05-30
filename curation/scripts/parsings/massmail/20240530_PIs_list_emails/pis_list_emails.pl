@@ -63,8 +63,8 @@
 #
 # changed for PIs for Madison meeting for Sean Curran.  sent from massmail@mangolassi  2014 05 03
 #
-# changed to generate PIs email list for Paul.  tazendra can no longer send mime attachments and spoof.  dockerized does not have a mail server.  2024 05 30
-
+# changed to generate PIs email list for Paul.  tazendra can no longer send mime attachments and spoof.  dockerized does not have a mail server.
+# only get the latest email for each PI.  2024 05 30
 
 
 
@@ -86,12 +86,13 @@ my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST}
 
 my %emails;
 # my $result = $dbh->prepare( "SELECT * FROM two_email WHERE two_email !~ '. .' ;" );	# to everyone
-my $result = $dbh->prepare( "SELECT * FROM two_email WHERE two_email !~ '. .' AND joinkey IN (SELECT joinkey FROM two_pis WHERE two_pis IS NOT NULL);" );	# to PIs only
+my $result = $dbh->prepare( "SELECT * FROM two_email WHERE two_email !~ '. .' AND joinkey IN (SELECT joinkey FROM two_pis WHERE two_pis IS NOT NULL) ORDER BY two_timestamp;" );	# to PIs only
 $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
 while (my @row = $result->fetchrow) {
   if ($row[0]) { 
     $row[0] =~ s///g; $row[0] =~ s/two//g;
     $emails{$row[0]}{email}{$row[2]}++;
+    $emails{$row[0]}{latest} = $row[2];
   } # if ($row[0])
 } # while (@row = $result->fetchrow)
 
@@ -154,26 +155,36 @@ $send_to{'1823'}++;		# juancarlos chan
 #   unless ( $send_to{$two} ) { delete $emails{$two}; } }
 
 
+my @latest_pi_emails;		# only get the latest email for each PI
 foreach my $twonum (sort { $a<=>$b } keys %emails) { 
   next unless ($emails{$twonum}{passwd});
-  foreach my $email (sort keys %{ $emails{$twonum}{email} }) {
-    my $lower = lc($email);
-    next if ($ignore_for_now{$twonum}{$lower});	# ignore these email addresses that bounced 2010 03 29
-
-    print "$email\n";
-#     print "$twonum E $email PASSWD $emails{$twonum}{passwd}\n";
-# HERE UNCOMMENT TO SEND MIME MESSAGES	2010 04 19
-#     &mimeMessage($email, $twonum, $emails{$twonum}{passwd});
-
-# HERE UNCOMMENT TO SEND ATTACHMENTS
-#     &mimeAttacher($email, $twonum, $emails{$twonum}{passwd});
-# HERE UNCOMMENT TO SEND PLAIN EMAILS
-#     &mail_body($email, $twonum, $emails{$twonum}{passwd});
-# HERE UNCOMMENT TO SEND PLAIN EMAILS with possibly better headers
-#     &mail_simple($email, $twonum, $emails{$twonum}{passwd});	# using this recently 2011 11 10
-  } # foreach my $email (sort keys %{ $emails{$twonum}{email} }) 
+  next unless ($emails{$twonum}{latest});
+  my $latest_email = $emails{$twonum}{latest};
+  my $lower = lc($latest_email);
+#   next if ($ignore_for_now{$twonum}{$lower});	# ignore these email addresses that bounced 2010 03 29
+#   print qq($twonum\t$lower\n);
+  push @latest_pi_emails, $lower;
+  
+#   foreach my $email (sort keys %{ $emails{$twonum}{email} }) {
+#     my $lower = lc($email);
+#     next if ($ignore_for_now{$twonum}{$lower});	# ignore these email addresses that bounced 2010 03 29
+# 
+#     print "$email\n";
+# #     print "$twonum E $email PASSWD $emails{$twonum}{passwd}\n";
+# # HERE UNCOMMENT TO SEND MIME MESSAGES	2010 04 19
+# #     &mimeMessage($email, $twonum, $emails{$twonum}{passwd});
+# 
+# # HERE UNCOMMENT TO SEND ATTACHMENTS
+# #     &mimeAttacher($email, $twonum, $emails{$twonum}{passwd});
+# # HERE UNCOMMENT TO SEND PLAIN EMAILS
+# #     &mail_body($email, $twonum, $emails{$twonum}{passwd});
+# # HERE UNCOMMENT TO SEND PLAIN EMAILS with possibly better headers
+# #     &mail_simple($email, $twonum, $emails{$twonum}{passwd});	# using this recently 2011 11 10
+#   } # foreach my $email (sort keys %{ $emails{$twonum}{email} }) 
 } # foreach my $twonum (sort $a<=>$b keys %emails)
 
+my $latest_pi_emails = join", ", @latest_pi_emails;
+print qq($latest_pi_emails);
 
 __END__
 
