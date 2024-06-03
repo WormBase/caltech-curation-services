@@ -295,14 +295,13 @@ sub populatePapGene {
       elsif ($evi =~ m/Inferred_automatically\s+"(.*Eimear Kenny, 02-09-05.*)"/) {
         $theHash{'autoEimear'}{$joinkey}{$gene}{$two}{timestamp} = $ts;
         push @{ $theHash{'autoEimear'}{$joinkey}{$gene}{$two}{note} }, $1; }
-
       elsif ($evi =~ m/Inferred_automatically\s+"(.*?)"/) {
         $theHash{'infOther'}{$joinkey}{$gene}{$two}{timestamp} = $ts;
         push @{ $theHash{'infOther'}{$joinkey}{$gene}{$two}{note} }, $1; }
       else {	# this should never happen
         $theHash{'infOther'}{$joinkey}{$gene}{$two}{timestamp} = $ts; }
     }
-    elsif ($evi =~ m/Published_as "(.*?)"/) {
+    elsif ($evi =~ m/Published_as\s+"(.*?)"/) {
       push @{ $papGenePublished{$joinkey}{$gene} }, $1; }
     elsif ($evi =~ m/Manually_connected.*"(.*?)"/) {
       $manConn{$joinkey}{$gene} = $1; }
