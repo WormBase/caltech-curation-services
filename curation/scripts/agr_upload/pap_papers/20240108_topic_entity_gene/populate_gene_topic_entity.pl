@@ -81,6 +81,7 @@ my $okta_token = &generateOktaToken();
 # my @wbpapers = qw( 00038491 );		# Table S1 sheet B
 # my @wbpapers = qw( 00000465 );		# update_of_dead_and_merged_genes_Mary_Ann
 # my @wbpapers = qw( 00018874 );		# automatic_update_merge_script
+# my @wbpapers = qw( 00044280 );		# briggsae genes
 # my @wbpapers = qw( 00003000 00003823 00004455 00004952 00005199 00005707 00006103 00006202 00006320 00017095 00018874 00025176 00027230 00044280 00046571 00057043 00063127 00064676 00064771 00065877 00066211 );		# kimberly 2024 04 18 set
 my @wbpapers = qw( 00000119 00000465 00003000 00003823 00004455 00004952 00005199 00005707 00005988 00006103 00006202 00006320 00013393 00017095 00024745 00025176 00027230 00038491 00044280 00046571 00057043 00063127 00064676 00064771 00065877 00066211 );		# kimberly 2024 05 13 set
 
@@ -97,6 +98,7 @@ my %manConn;
 my %papGenePublished;
 
 my %chosenPapers;
+my %ginValidation;
 
 my %theHash;
 my %infOther;
@@ -113,7 +115,6 @@ my %absReadNoMeet;
 # my $geneTopic = 'ATP:0000142';
 my $geneTopic = 'ATP:0000005';
 my $entityType = 'ATP:0000005';
-my $entity_id_validation = 'alliance';
 
 foreach my $joinkey (@wbpapers) { $chosenPapers{$joinkey}++; }
 # $chosenPapers{all}++;
@@ -122,6 +123,7 @@ foreach my $joinkey (@wbpapers) { $chosenPapers{$joinkey}++; }
 &populateMeetings();
 &populateGeneTaxon();
 &populatePapGene();
+&populateGinValidation();
 # &outputInfOther();
 # &outputCurConf();
 &outputTheHash();
@@ -180,6 +182,9 @@ sub outputTheHash {
     foreach my $joinkey (sort keys %{ $theHash{$datatype} }) {
       next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
       foreach my $gene (sort keys %{ $theHash{$datatype}{$joinkey} }) {
+        my $entity_id_validation = 'alliance';
+        if ($ginValidation{$gene}) { $entity_id_validation = $ginValidation{$gene}; }
+          else { print qq(ERROR $gene not in pap_species table\n); }
         foreach my $curator (sort keys %{ $theHash{$datatype}{$joinkey}{$gene} }) {
           my %object;
           $object{'force_insertion'}            = TRUE;
@@ -210,6 +215,13 @@ sub outputTheHash {
     } } }
 } }
 
+sub populateGinValidation {
+  $result = $dbh->prepare( "SELECT * FROM gin_species;" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) {
+    if ($row[1] eq 'Caenorhabditis elegans') { $ginValidation{$row[0]} = 'alliance'; }
+      else { $ginValidation{$row[0]} = 'WB'; } } }
+    
 
 sub populatePapGene {
   $result = $dbh->prepare( "SELECT joinkey, pap_gene, pap_timestamp, pap_curator, pap_evidence FROM pap_gene WHERE pap_evidence ~ 'Manually_connected'" );
