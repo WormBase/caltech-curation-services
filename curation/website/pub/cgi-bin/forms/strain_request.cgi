@@ -15,6 +15,8 @@
 # Updated for strain request for Paul S.
 # Person name can be WBPerson or free text.  All fields are required.  Type of Knockout links to PubMed,
 # so is radio instead of dropdown.  2023 02 21
+#
+# Add  heenam@caltech.edu  to email recepients.  2024 06 11
 
 
 use Jex;			# untaint, getHtmlVar, cshlNew
@@ -1027,7 +1029,8 @@ sub submit {
           my $user = 'strain_request_form@' . $ENV{HOST_NAME};	# who sends mail
 #           my $email = 'azurebrd@tazendra.caltech.edu';
 #           my $email = 'pws@caltech.edu';
-          my $email = 'harald_hutter@sfu.ca, pws@caltech.edu, rougv001@umn.edu';
+#           my $email = 'harald_hutter@sfu.ca, pws@caltech.edu, rougv001@umn.edu';
+          my $email = 'harald_hutter@sfu.ca, pws@caltech.edu, rougv001@umn.edu, heenam@caltech.edu';
 #           my $email = 'cgrove@caltech.edu, maryann.tuli@wormbase.org ';
 #           my $email = 'genenames@wormbase.org, draciti@caltech.edu, daniela@wormbase.org';
 #           my $email = 'genenames@wormbase.org';

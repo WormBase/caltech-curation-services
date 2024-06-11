@@ -13,6 +13,7 @@
 # Getting user by IP is not working because of the reverse proxy at WormBase giving everyone the same IP  2022 02 10
 #
 # Add  heenam@caltech.edu  to email recepients.  2024 05 28
+# heenam should not be on this form.  2024 06 11
 
 
 use Jex;			# untaint, getHtmlVar, cshlNew
@@ -981,8 +982,7 @@ sub submit {
           # my $user = 'allele_sequence_form@' . $hostfqdn;	# who sends mail
           my $user = 'allele_sequence_form@' . $ENV{HOST_NAME};	# who sends mail
 #           my $email = 'cgrove@caltech.edu, maryann.tuli@wormbase.org ';
-#           my $email = 'genenames@wormbase.org, draciti@caltech.edu, daniela@wormbase.org';
-          my $email = 'genenames@wormbase.org, draciti@caltech.edu, daniela@wormbase.org, heenam@caltech.edu';
+          my $email = 'genenames@wormbase.org, draciti@caltech.edu, daniela@wormbase.org';
 #           my $email = 'genenames@wormbase.org';
 #           my $email = 'azurebrd@tazendra.caltech.edu';
 #           my $email = 'closertothewake@gmail.com, azurebrd@tazendra.caltech.edu';
