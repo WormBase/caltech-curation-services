@@ -95,6 +95,11 @@ sub lookupGenes {
   while (my @row = $result->fetchrow()) {
     $output{"WB:WBGene$row[0]"} = $row[1];
   }
+  foreach my $wbgene (@wbgene) {
+    unless ($output{"WB:WBGene$wbgene"}) {
+      $output{"WB:WBGene$wbgene"} = 'not found at WB'; }
+  }
+
   my $json_message = encode_json( \%output );
 #   print qq($json_message\n);
   return $json_message;
@@ -116,7 +121,7 @@ curl -X 'POST' \
   'http://caltech-curation.textpressolab.com/pub/cgi-bin/forms/abc_readonly_api.cgi' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
-  -d '{"datatype":"gene","entities":"let-60|abc-1|WB:WBGene00001234|quack"}'
+  -d '{"datatype":"gene","entities":"let-60|abc-1|WB:WBGeneQUACK|WB:WBGene99901234|WB:WBGene00001234|quack"}'
 
 
 
