@@ -22,6 +22,7 @@ my $cgi = CGI->new;
 my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST};port=$ENV{PSQL_PORT}", "$ENV{PSQL_USERNAME}", "$ENV{PSQL_PASSWORD}") or die "Cannot connect to database!\n";
 
 my $postData = $cgi->param("POSTDATA");
+
 my $filesPath = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/pub/cgi-bin/data/';
 
 my %validDatatypes;
@@ -65,6 +66,9 @@ if ($postData) {
     print qq($json_message); }
   if ($outputMessage) {
     print qq($outputMessage); }
+}
+elsif ($ENV{REQUEST_METHOD} eq 'OPTIONS') {
+  print "Access-Control-Allow-Headers: Content-Type\n\n";
 }
 else {
   print $cgi->header(-type => "application/json", -charset => "utf-8", -status => "400 Bad Request");
