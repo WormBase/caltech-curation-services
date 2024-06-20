@@ -67,6 +67,8 @@
 # DBD::Pg::db do failed: ERROR:  could not open file "/usr/caltech_curation_files/cronjobs/obo_oa_ontologies/geneace/obo_name_laboratory.pg" for reading: No such file or directory
 # The script is ran inside docker and the files are generated at the location inside docker
 # but the postgres copy command cannot see the files.  2023 03 19
+#
+# Add Stavros to email recepients, fix messages in strain email to mention the strain file instead of variation.  2024 06 20
 
 # called by /usr/lib/scripts/pgpopulation/obo_oa_ontologies/update_obo_oa_ontologies.pl
 
@@ -423,10 +425,10 @@ foreach my $gz (@gz) {	# for each .gz file to process from the sanger ftp
         my ($strainid, $pubname, $pgDate, $comment) = split/\t/, $line;
         if ( $strainsInGeneace{nameToId}{$pubname} ) {		# compare strainid-pubname by pubname to different strainid
             my $geneaceVarid = $strainsInGeneace{nameToId}{$pubname};
-            if ($geneaceVarid ne $strainid) { $emailForStrain .= qq($pubname in obo_tempfile_variation says $strainid geneace says $geneaceVarid\n); } }
+            if ($geneaceVarid ne $strainid) { $emailForStrain .= qq($pubname in obo_tempfile_strain says $strainid geneace says $geneaceVarid\n); } }
         if ( $strainsInGeneace{idToName}{$strainid} ) {			# compare strainid-pubname by strainid to different pubname
             my $geneacePubname = $strainsInGeneace{idToName}{$strainid};
-            if ($geneacePubname ne $pubname) { $emailForStrain .= qq($strainid in obo_tempfile_variation says $pubname geneace says $geneacePubname\n); } }
+            if ($geneacePubname ne $pubname) { $emailForStrain .= qq($strainid in obo_tempfile_strain says $pubname geneace says $geneacePubname\n); } }
           else {							# temp strainid not in geneace, add to obo tables from tempfile 
             my $terminfo = qq(id: $strainid\\nname: "$pubname"\\ntimestamp: "$pgDate"\\ncomment: "$comment");
             print DATA qq($strainid\t$terminfo\t$timestamp\n);
@@ -436,13 +438,13 @@ foreach my $gz (@gz) {	# for each .gz file to process from the sanger ftp
       close (IN) or warn "Cannot close $obotempfilestrain : $!";
       if ($emailForStrain) {						# something is inconsitent in obo_tempaname and geneace, email Strain curators
         my $user = 'nightly_geneace.pl';
-        my $email = 'ranjana@wormbase.org, cgrove@caltech.edu';
+        my $email = 'ranjana@wormbase.org, cgrove@caltech.edu, stavros.diamantakis@wormbase.org';
 #         my $email = 'azurebrd@tazendra.caltech.edu';
         my $subject = 'geneace discrepancy with obo_tempfile_strain';
         my $body = $emailForStrain;
         &mailer($user, $email, $subject, $body); }
     } # if (-e $obotempfilestrain)
-  } # if ($datatype eq 'variation')
+  } # if ($datatype eq 'strain')
   if ($datatype eq 'variation') {			# for variations look at obo_tempfile_variation and add any terms not in geneace
     my $emailForKaren = '';
     foreach my $objName (sort keys %tempVar) {
@@ -461,7 +463,7 @@ foreach my $gz (@gz) {	# for each .gz file to process from the sanger ftp
     } # foreach my $objName (sort keys %tempVar)
     if ($emailForKaren) {						# something is inconsitent in obo_tempaname and geneace, email Karen
       my $user = 'nightly_geneace.pl';
-      my $email = 'kyook@wormbase.org';
+      my $email = 'kyook@wormbase.org, stavros.diamantakis@wormbase.org';
 #       my $email = 'azurebrd@tazendra.caltech.edu';
       my $subject = 'geneace discrepancy with obo_tempfile_variation';
       my $body = $emailForKaren;
