@@ -9,7 +9,8 @@
 # Updated to be read only api for ABC.  2024 05 16
 #
 # If no entities, purposely don't return an error, return a blank mapping so the ABC UI updates 
-# the validation with this new mapping of nothing existing.  2024 05 24
+# the validation with this new mapping of nothing existing.
+# Make locus search case insensitive by passing lowercase string and casting column with LOWER.  2024 05 24
 
 
 use diagnostics;
@@ -49,18 +50,19 @@ if ($postData) {
   unless ($validDatatypes{$datatype}) { push @errMessage, "datatype $datatype not allowed."; $status = 400; }
 #   unless ($entities) { push @errMessage, "No entities to lookup."; $status = 400; }	# purposely don't return an error, return a blank mapping so the ABC UI updates the validation with this new mapping of nothing existing.
 
-  if (scalar @errMessage < 1) {
-    if ($datatype eq 'gene') { 
-#       $outputMessage = &lookupGenes('let-60|abc-1|WB:WBGene00001234');
-      $outputMessage = &lookupGenes($entities);
-  } }
-
   if ($status == 200) {      print $cgi->header(-type => "application/json", -charset => "utf-8", -status => "200 OK"); }
     elsif ($status == 201) { print $cgi->header(-type => "application/json", -charset => "utf-8", -status => "201 Created"); }
     elsif ($status == 400) { print $cgi->header(-type => "application/json", -charset => "utf-8", -status => "400 Bad Request"); }
     elsif ($status == 409) { print $cgi->header(-type => "application/json", -charset => "utf-8", -status => "409 Conflict"); }
     elsif ($status == 500) { print $cgi->header(-type => "application/json", -charset => "utf-8", -status => "500 Internal Server Error"); }
     else {                   print $cgi->header(-type => "application/json", -charset => "utf-8", -status => "500 Internal Server Error"); }
+
+  if (scalar @errMessage < 1) {
+    if ($datatype eq 'gene') { 
+#       $outputMessage = &lookupGenes('let-60|abc-1|WB:WBGene00001234');
+      $outputMessage = &lookupGenes($entities);
+  } }
+
   my $errMessages = join"  ", @errMessage;
   if ($errMessages) {
     my %hash = ();
@@ -88,9 +90,10 @@ sub lookupGenes {
       else { push @locus, $gene; }
   }
   my $loci = join"','", @locus;
+  my $lc_loci = lc($loci);
   my $joinkeys = join"','", @wbgene;
   my %output;
-  my $result = $dbh->prepare( "SELECT * FROM gin_locus WHERE gin_locus IN ('$loci');" ); $result->execute;
+  my $result = $dbh->prepare( "SELECT * FROM gin_locus WHERE LOWER(gin_locus) IN ('$lc_loci');" ); $result->execute;
   while (my @row = $result->fetchrow()) {
     $output{"WB:WBGene$row[0]"} = $row[1];
   }
