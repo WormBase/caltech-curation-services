@@ -10,7 +10,8 @@
 #
 # If no entities, purposely don't return an error, return a blank mapping so the ABC UI updates 
 # the validation with this new mapping of nothing existing.
-# Make locus search case insensitive by passing lowercase string and casting column with LOWER.  2024 05 24
+# Make locus search case insensitive by passing lowercase string and casting column with LOWER.
+# curie search by joinkey also case insensitive.  2024 05 24
 
 
 use diagnostics;
@@ -86,7 +87,7 @@ sub lookupGenes {
   foreach my $gene (@genes) {
     $gene =~ s/^\s+//; $gene =~ s/\s+$//;
     next unless $gene;
-    if ($gene =~ m/WB:WBGene(\d+)/) { push @wbgene, $1; }
+    if ($gene =~ m/WB:WBGene(\d+)/i) { push @wbgene, $1; }
       else { push @locus, $gene; }
   }
   my $loci = join"','", @locus;
