@@ -7,6 +7,9 @@
 # Comment updated from being added by temp_objects.cgi to being created through nameserver.  2024 02 21
 #
 # Updated to be read only api for ABC.  2024 05 16
+#
+# If no entities, purposely don't return an error, return a blank mapping so the ABC UI updates 
+# the validation with this new mapping of nothing existing.  2024 05 24
 
 
 use diagnostics;
@@ -44,7 +47,7 @@ if ($postData) {
   my $outputMessage = '';
   my $status = 200;
   unless ($validDatatypes{$datatype}) { push @errMessage, "datatype $datatype not allowed."; $status = 400; }
-  unless ($entities) { push @errMessage, "No entities to lookup."; $status = 400; }
+#   unless ($entities) { push @errMessage, "No entities to lookup."; $status = 400; }	# purposely don't return an error, return a blank mapping so the ABC UI updates the validation with this new mapping of nothing existing.
 
   if (scalar @errMessage < 1) {
     if ($datatype eq 'gene') { 
