@@ -62,14 +62,14 @@ sub queryDataset {
   unless ($outputFormat) { $outputFormat = 'html'; }
   if ($outputFormat eq 'download') {
       print qq(Content-type: application/x-download\n);
-      print qq(Content-Disposition: attachment; filename="simplemine_results.txt"\n\n); }
+      print qq(Content-Disposition: attachment; filename="reagent_help_results.txt"\n\n); }
     elsif ($outputFormat eq 'plain') {
       print "Content-type: text/plain\n\n"; }
     elsif ($outputFormat eq 'html') {
       print "Content-type: text/html\n\n"; }
     else {
       print qq(Content-type: application/x-download\n);
-      print qq(Content-Disposition: attachment; filename="simplemine_results.txt"\n\n); }
+      print qq(Content-Disposition: attachment; filename="reagent_help_results.txt"\n\n); }
   my $output = '';
 #   my $dataHeader = qq(Dataset ID	Dataset Name	WormBase Paper ID	Method	Species	Tissue	Topics	Title	URL);
 
