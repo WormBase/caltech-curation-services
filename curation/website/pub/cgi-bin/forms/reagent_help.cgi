@@ -82,47 +82,129 @@ sub queryDataset {
 #   my @topics                = $query->param('topics');
   ($var, my $filename)        = &getHtmlVar($query, 'filename');
   print qq(QUERIED $filename<br>\n);
+  my ($fileDataHashref) = &processDatafile($filename);
+  my %fileData = %$fileDataHashref;
+  my %lines;
+  my $categoryCount = scalar(@ { $categories{$filename}{fields} });
+  my $wantedCategoryCount = $categoryCount;
   foreach my $field (@ { $categories{$filename}{fields} }) {
     my $fieldtype = $categories{$filename}{field}{$field}{type};
     my $fieldname = $field;
     $fieldname =~ s/\s+//g;
     ($var, my $val)        = &getHtmlVar($query, $fieldname);
     print qq($fieldname\t$val<br>\n);
+    if ($val) {
+      foreach my $lineNumber (sort keys %{ $fileData{$fieldname} }) {
+        my $fieldValue = $fileData{$fieldname}{$lineNumber};
+# print qq(fieldValue $fieldValue Line Number $lineNumber<br>);
+        if ($fieldValue =~ m/$val/) { $lines{$lineNumber}++;
+# print qq(MATCH fieldValue $fieldValue Line Number $lineNumber<br>);
+ }
+      }
+    } else {
+      $wantedCategoryCount--;
+    }
   }
+  my $output = '';
+  my $outputCount = 0;
+  foreach my $lineNumber (sort {$a<=>$b} keys %lines) {
+    if ($lines{$lineNumber} >= $wantedCategoryCount) {
+      $output .= qq($lineNumber $lines{$lineNumber}\n);
+      $output .= qq($fileData{line}{$lineNumber}\n);
+      $outputCount++;
+      if ( ($outputFormat eq 'html') && ($outputCount > 99) ) { 
+        print qq(Results truncated to 100, download data to see the whole set\n);
+        last; }
+    }
+  }
+  if ($outputFormat eq 'html') {
+    $output =~ s|\t|</td><td>|g;
+    $output =~ s|\n|</td></tr>\n<tr><td>|g;
+    $output = qq(<table border="1"><tr><td>$output</td></tr></table>); 
+  }
+  print qq($output\n);
 } # sub queryDataset
+
+sub processDatafile {
+  my ($filename) = @_;
+  my $file_source = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} .  '/pub/wen/simplemine/ReagentHelp/' . $filename;
+# print qq(READ $file_source<br>);
+  open (IN, "<$file_source") or die "Cannot open $file_source : $!";
+  my $header = <IN>;
+  chomp $header;
+  my %fieldToIndex;
+  my %indexToField;
+  my (@fields) = split/\t/, $header;
+  foreach my $i (0 .. $#fields) {
+    my $fieldname = $fields[$i];
+    $fieldname =~ s/\s+//g;
+    $fieldToIndex{$fieldname} = $i;
+    $indexToField{$i} = $fieldname;
+# print qq(FTI $fieldname $i<br>);
+  }
+  my @wanted_indices;
+  foreach my $wantedfield (@ { $categories{$filename}{fields} }) {
+    my $wantedfieldname = $wantedfield;
+    $wantedfieldname =~ s/\s+//g;
+    if ($fieldToIndex{$wantedfieldname}) { push @wanted_indices, $fieldToIndex{$wantedfieldname}; }
+  }
+  my %fileData;
+  my $count = 0;
+  while (my $line = <IN>) {
+    chomp $line;
+    $count++;
+    my (@fields) = split/\t/, $line;
+    foreach my $index (@wanted_indices) {
+      my $fieldname = $indexToField{$index};
+# print qq($index fileData $fieldname $count $fields[$index]<br>);
+      $fileData{$fieldname}{$count} = $fields[$index];
+    } # foreach my $index (@wanted_indices)
+    $fileData{line}{$count} = $line;
+  } # while (my $line = <IN>)
+  return \%fileData;
+}
 
 sub frontPage {
   print "Content-type: text/html\n\n";
   my $title = 'Reagent Help';
   my ($header, $footer) = &cshlNew($title);
-  print "$header\n";		# make beginning of HTML page
+# TODO PUT THIS BACK
+#   print "$header\n";		# make beginning of HTML page
   my $action;                   # what user clicked
   unless ($action = $query->param('action')) { $action = 'none'; }
   &showReagentHelpForm();
-  print "$footer"; 		# make end of HTML page
+# TODO PUT THIS BACK
+#   print "$footer"; 		# make end of HTML page
 } # sub frontPage
 
 sub showReagentHelpForm {
   print qq(<h3>Reagent Help</h3><br/>\n);
 
-#   foreach my $filename (@{ $categories{list} }) {	# sort by list
-  foreach my $filename (sort keys %categories) {
+  foreach my $filename (@{ $categories{list} }) {	# sort by list
+#   foreach my $filename (sort keys %categories) {
+#     next if ($filename eq 'list');
     print qq(<form method="post" action="reagent_help.cgi" enctype="multipart/form-data">\n);
-    print qq(<br><br><h4>$categories{$filename}{title}</h4><br>\n);
+    print qq(<br><br><h4>$categories{$filename}{title}</h4>\n);
+    print qq(<table border="0">);
     foreach my $field (@ { $categories{$filename}{fields} }) {
       my $fieldtype = $categories{$filename}{field}{$field}{type};
       my $fieldname = $field;
       $fieldname =~ s/\s+//g;
       if ($fieldtype eq 'freetext') {
-        print qq($field $fieldname $fieldtype <input name="$fieldname"><br>\n); }
+#         print qq($field $fieldname $fieldtype <input name="$fieldname"><br>\n);
+        print qq(<tr><td>$field</td><td><input name="$fieldname" placeholder="$categories{$filename}{field}{$field}{example}" ></td><td>example: $categories{$filename}{field}{$field}{example}</td>\n);
+      }
       elsif ($fieldtype eq 'dropdown') {
-        print qq($field $fieldname $fieldtype\n);
+#         print qq($field $fieldname $fieldtype\n);
+        print qq(<tr><td>$field</td><td>\n);
         print qq(<select name="$fieldname"><option></option>);
         foreach my $value (@{ $categories{$filename}{field}{$field}{values} }) { print qq(<option>$value</option>); }
-        print qq(</select><br/>);
+        print qq(</select>);
+        print qq(</td></tr>);
       }
       else { 1; }	# this shouldn't happen
     } # foreach my $field (@ { $categories{$filename}{fields} })
+    print qq(</table>);
     print qq(<input type="hidden" name="filename" value="$filename">);
     print qq(<input type="submit" name="action" value="show datasets"><br/>\n);
     print qq(</form>);
@@ -157,6 +239,7 @@ sub processCategoryFile {
     }
   }   
   close (IN) or die "Cannot close $file_source : $!";
+  $/ = "\n";
   return \%categories;
 #   my $header = <IN>;
 #   my $count = 0;
