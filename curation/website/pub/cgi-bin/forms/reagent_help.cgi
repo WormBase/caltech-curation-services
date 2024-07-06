@@ -2,6 +2,7 @@
 
 # Query Reagent data
 #
+# Based on expression_dataset_locator.cgi  2024 07 03
 
 # http://tazendra.caltech.edu/~azurebrd/cgi-bin/forms/reagent_help.cgi
 # https://caltech-curation.textpressolab.com/pub/cgi-bin/forms/reagent_help.cgi
@@ -81,8 +82,8 @@ sub queryDataset {
 #   my @tissues               = $query->param('tissue');
 #   my @topics                = $query->param('topics');
   ($var, my $filename)        = &getHtmlVar($query, 'filename');
-  print qq(QUERIED $filename<br>\n);
-  my ($fileDataHashref) = &processDatafile($filename);
+  print qq(Queried $filename for fields : <br>\n);
+  my ($dataHeader, $fileDataHashref) = &processDatafile($filename);
   my %fileData = %$fileDataHashref;
   my %lines;
   my $categoryCount = scalar(@ { $categories{$filename}{fields} });
@@ -92,24 +93,26 @@ sub queryDataset {
     my $fieldname = $field;
     $fieldname =~ s/\s+//g;
     ($var, my $val)        = &getHtmlVar($query, $fieldname);
-    print qq($fieldname\t$val<br>\n);
+    print qq($fieldname\t:\t$val<br>\n);
     if ($val) {
       foreach my $lineNumber (sort keys %{ $fileData{$fieldname} }) {
         my $fieldValue = $fileData{$fieldname}{$lineNumber};
 # print qq(fieldValue $fieldValue Line Number $lineNumber<br>);
         if ($fieldValue =~ m/$val/) { $lines{$lineNumber}++;
 # print qq(MATCH fieldValue $fieldValue Line Number $lineNumber<br>);
- }
+        }
       }
     } else {
       $wantedCategoryCount--;
     }
   }
+  print qq(<br>\n);
+
   my $output = '';
   my $outputCount = 0;
   foreach my $lineNumber (sort {$a<=>$b} keys %lines) {
     if ($lines{$lineNumber} >= $wantedCategoryCount) {
-      $output .= qq($lineNumber $lines{$lineNumber}\n);
+#       $output .= qq($lineNumber $lines{$lineNumber}\n);
       $output .= qq($fileData{line}{$lineNumber}\n);
       $outputCount++;
       if ( ($outputFormat eq 'html') && ($outputCount > 99) ) { 
@@ -117,6 +120,10 @@ sub queryDataset {
         last; }
     }
   }
+
+  if ($output) { $output = qq($dataHeader\n$output); }
+    else { $output = qq(Your query did not retrieve any result. Please contact help (at) wormbase.org if you think any datasets are missing in our collection.); }
+
   if ($outputFormat eq 'html') {
     $output =~ s|\t|</td><td>|g;
     $output =~ s|\n|</td></tr>\n<tr><td>|g;
@@ -161,7 +168,7 @@ sub processDatafile {
     } # foreach my $index (@wanted_indices)
     $fileData{line}{$count} = $line;
   } # while (my $line = <IN>)
-  return \%fileData;
+  return ($header, \%fileData);
 }
 
 sub frontPage {
