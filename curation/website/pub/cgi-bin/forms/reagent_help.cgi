@@ -103,6 +103,7 @@ sub queryDataset {
   my %lines;
   my $categoryCount = scalar(@ { $categories{$filename}{fields} });
   my $wantedCategoryCount = $categoryCount;
+  my $userFieldCount = 0;		# fields user has entered data for
   foreach my $field (@ { $categories{$filename}{fields} }) {
     my $fieldtype = $categories{$filename}{field}{$field}{type};
     my $fieldname = $field;
@@ -110,6 +111,7 @@ sub queryDataset {
     ($var, my $val)        = &getHtmlVar($query, $fieldname);
     $html_additional_output .= qq($fieldname\t:\t$val<br>\n);
     if ($val) {
+      $userFieldCount++;
       foreach my $lineNumber (sort keys %{ $fileData{$fieldname} }) {
         my $fieldValue = $fileData{$fieldname}{$lineNumber};
 # print qq(fieldValue $fieldValue Line Number $lineNumber<br>);
@@ -125,16 +127,23 @@ sub queryDataset {
 
   my $output = '';
   my $outputCount = 0;
-  foreach my $lineNumber (sort {$a<=>$b} keys %lines) {
-    if ($lines{$lineNumber} >= $wantedCategoryCount) {
-#       $output .= qq($lineNumber $lines{$lineNumber}\n);
+  if ($userFieldCount == 0) {		# if user doesn't want any filtering, use the whole file
+    foreach my $lineNumber (sort {$a<=>$b} keys %{ $fileData{line} }) {
       $output .= qq($fileData{line}{$lineNumber}\n);
       $outputCount++;
       if ( ($outputFormat eq 'html') && ($outputCount > 99) ) { 
         $html_additional_output .= qq(Results truncated to 100, download data to see the whole set\n);
-        last; }
-    }
-  }
+        last; } } }
+  else {
+    foreach my $lineNumber (sort {$a<=>$b} keys %lines) {
+      if ($lines{$lineNumber} >= $wantedCategoryCount) {
+#         $output .= qq($lineNumber $lines{$lineNumber}\n);
+        $output .= qq($fileData{line}{$lineNumber}\n);
+        $outputCount++;
+        if ( ($outputFormat eq 'html') && ($outputCount > 99) ) { 
+          $html_additional_output .= qq(Results truncated to 100, download data to see the whole set\n);
+          last; }
+  } } }
 
   if ($output) { $output = qq($dataHeader\n$output); }
     else { $output = qq(Your query did not retrieve any result. Please contact help (at) wormbase.org if you think any datasets are missing in our collection.); }
