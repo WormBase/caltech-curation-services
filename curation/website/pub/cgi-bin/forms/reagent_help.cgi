@@ -44,15 +44,26 @@ my %categories = %$categoriesHashref;
 
 sub process {                   # see if anything clicked
   my $action;                   # what user clicked
+  my $action_found = 0;
   unless ($action = $query->param('action')) { $action = 'none'; }
-
-  if ($action eq 'show datasets') {                     &queryDataset(); }
-    else { &frontPage(); }
+  foreach my $filename (sort keys %categories) {
+    next if ($filename eq 'list');
+    foreach my $actionType (sort keys %{ $categories{$filename}{buttons} }) {
+      if ($action eq $categories{$filename}{buttons}{$actionType}) {
+        $action_found++;
+        queryDataset($actionType); } } }
+#   if ($action eq 'show datasets') {                     &queryDataset(); }
+  unless ($action_found) { &frontPage(); }
 }
 
+#     print qq(<input type="submit" name="action" value="$categories{$filename}{buttons}{display}">\n);
+#     print qq(<input type="submit" name="action" value="$categories{$filename}{buttons}{download}"><br/>\n);
+
 sub queryDataset {
+  my ($actionType) = @_;					# display or download
+  
 #   my ($geneInput) = @_;					# gene list from form textarea or uploaded file
-  my ($var, $outputFormat)   = &getHtmlVar($query, 'outputFormat');
+#   my ($var, $outputFormat)   = &getHtmlVar($query, 'outputFormat');
 #   ($var, my $possibleheaders)        = &getHtmlVar($query, 'headers');
 #   my @possibleheaders = split/\t/, $possibleheaders;
 #   my @headers;
@@ -60,7 +71,10 @@ sub queryDataset {
 #     ($var, my $headervalue)        = &getHtmlVar($query, $header);
 #     if ($headervalue) { push @headers, $header; } }
 #   unless ($outputFormat) { $outputFormat = 'download'; }
-  unless ($outputFormat) { $outputFormat = 'html'; }
+#   unless ($outputFormat) { $outputFormat = 'html'; }
+
+  my $outputFormat = 'html';
+  if ($actionType eq 'download') { $outputFormat = 'download'; }
   if ($outputFormat eq 'download') {
       print qq(Content-type: application/x-download\n);
       print qq(Content-Disposition: attachment; filename="reagent_help_results.txt"\n\n); }
@@ -71,7 +85,7 @@ sub queryDataset {
     else {
       print qq(Content-type: application/x-download\n);
       print qq(Content-Disposition: attachment; filename="reagent_help_results.txt"\n\n); }
-  my $output = '';
+#   my $output = '';
 #   my $dataHeader = qq(Dataset ID	Dataset Name	WormBase Paper ID	Method	Species	Tissue	Topics	Title	URL);
 
   my $requiredFields = 0;
@@ -81,8 +95,9 @@ sub queryDataset {
 #   my @species               = $query->param('species');
 #   my @tissues               = $query->param('tissue');
 #   my @topics                = $query->param('topics');
-  ($var, my $filename)        = &getHtmlVar($query, 'filename');
-  print qq(Queried $filename for fields : <br>\n);
+  (my $var, my $filename)        = &getHtmlVar($query, 'filename');
+  my $html_additional_output = '';
+  $html_additional_output .= qq(Queried $filename for fields : <br>\n);
   my ($dataHeader, $fileDataHashref) = &processDatafile($filename);
   my %fileData = %$fileDataHashref;
   my %lines;
@@ -93,7 +108,7 @@ sub queryDataset {
     my $fieldname = $field;
     $fieldname =~ s/\s+//g;
     ($var, my $val)        = &getHtmlVar($query, $fieldname);
-    print qq($fieldname\t:\t$val<br>\n);
+    $html_additional_output .= qq($fieldname\t:\t$val<br>\n);
     if ($val) {
       foreach my $lineNumber (sort keys %{ $fileData{$fieldname} }) {
         my $fieldValue = $fileData{$fieldname}{$lineNumber};
@@ -106,7 +121,7 @@ sub queryDataset {
       $wantedCategoryCount--;
     }
   }
-  print qq(<br>\n);
+  $html_additional_output .= qq(<br>\n);
 
   my $output = '';
   my $outputCount = 0;
@@ -116,7 +131,7 @@ sub queryDataset {
       $output .= qq($fileData{line}{$lineNumber}\n);
       $outputCount++;
       if ( ($outputFormat eq 'html') && ($outputCount > 99) ) { 
-        print qq(Results truncated to 100, download data to see the whole set\n);
+        $html_additional_output .= qq(Results truncated to 100, download data to see the whole set\n);
         last; }
     }
   }
@@ -125,6 +140,7 @@ sub queryDataset {
     else { $output = qq(Your query did not retrieve any result. Please contact help (at) wormbase.org if you think any datasets are missing in our collection.); }
 
   if ($outputFormat eq 'html') {
+    print qq($html_additional_output\n);
     $output =~ s|\t|</td><td>|g;
     $output =~ s|\n|</td></tr>\n<tr><td>|g;
     $output = qq(<table border="1"><tr><td>$output</td></tr></table>); 
@@ -213,7 +229,8 @@ sub showReagentHelpForm {
     } # foreach my $field (@ { $categories{$filename}{fields} })
     print qq(</table>);
     print qq(<input type="hidden" name="filename" value="$filename">);
-    print qq(<input type="submit" name="action" value="show datasets"><br/>\n);
+    print qq(<input type="submit" name="action" value="$categories{$filename}{buttons}{display}">\n);
+    print qq(<input type="submit" name="action" value="$categories{$filename}{buttons}{download}"><br/>\n);
     print qq(</form>);
   }
 } # sub showReagentHelpForm
@@ -232,6 +249,11 @@ sub processCategoryFile {
     $line = shift @lines;
     my ($title) = $line =~ m/Title: (.*)$/;
     $categories{$filename}{title} = $title;
+    $line = shift @lines;
+    my ($buttons) = $line =~ m/Buttons: (.*)$/;
+    my (@buttons) = split/\|/, $buttons;
+    $categories{$filename}{buttons}{display} = $buttons[0];
+    $categories{$filename}{buttons}{download} = $buttons[1];
     foreach my $line (@lines) {
       my (@stuff) = split/\|/, $line;
       my $field = shift @stuff;
