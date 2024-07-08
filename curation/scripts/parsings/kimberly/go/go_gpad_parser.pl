@@ -16,6 +16,8 @@
 # get gpi file every time from wormbase ftp, generate wbgene mappings to uniprot from there.  2018 08 30
 #
 # added ComplexPortal assigned by filter until the evidence code issues are sorte out. kmva 2021 12 08
+#
+# gpi file at ftp wasn't working, switched url for Kimberly.  2024 07 08
 
 
 use strict;
@@ -75,7 +77,8 @@ my %dbidToWb;		# uniprot to wbgene
 
 my %tempGpi;		# tempname to uniprot
 my %nameToWbg;		# tempname to wbgene
-my $gpifileUrl = 'ftp://ftp.wormbase.org/pub/wormbase/species/c_elegans/PRJNA13758/annotation/gene_product_info/c_elegans.PRJNA13758.WS277.gene_product_info.gpi.gz';
+# my $gpifileUrl = 'ftp://ftp.wormbase.org/pub/wormbase/species/c_elegans/PRJNA13758/annotation/gene_product_info/c_elegans.PRJNA13758.WS277.gene_product_info.gpi.gz';
+my $gpifileUrl = 'https://downloads.wormbase.org/species/c_elegans/PRJNA13758/annotation/gene_product_info/c_elegans.canonical_bioproject.current.gene_product_info.gpi.gz';
 my $gpifiledata = get $gpifileUrl;
 my (@gpilines) = split/\n/, $gpifiledata;
 foreach my $line (@gpilines) {
