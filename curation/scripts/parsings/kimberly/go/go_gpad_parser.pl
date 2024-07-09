@@ -17,7 +17,7 @@
 #
 # added ComplexPortal assigned by filter until the evidence code issues are sorte out. kmva 2021 12 08
 #
-# gpi file at ftp wasn't working, switched url for Kimberly.  2024 07 08
+# gpi file at ftp wasn't working, switched url for Kimberly.  handle gzip.  2024 07 08
 
 
 use strict;
@@ -76,10 +76,20 @@ my %dbidToWb;		# uniprot to wbgene
 # close (IN) or die "Cannot close $gp2protfile : $!";
 
 my %tempGpi;		# tempname to uniprot
-my %nameToWbg;		# tempname to wbgene
-# my $gpifileUrl = 'ftp://ftp.wormbase.org/pub/wormbase/species/c_elegans/PRJNA13758/annotation/gene_product_info/c_elegans.PRJNA13758.WS277.gene_product_info.gpi.gz';
-my $gpifileUrl = 'https://downloads.wormbase.org/species/c_elegans/PRJNA13758/annotation/gene_product_info/c_elegans.canonical_bioproject.current.gene_product_info.gpi.gz';
-my $gpifiledata = get $gpifileUrl;
+my %nameToWbg;		# tempname to wbgene	
+# my $gpifileUrl = 'ftp://ftp.wormbase.org/pub/wormbase/species/c_elegans/PRJNA13758/annotation/gene_product_info/c_elegans.PRJNA13758.WS277.gene_product_info.gpi.gz';		# broken ftp site that used to work before 2024 07 08
+my $gpifileUrl = 'https://downloads.wormbase.org/species/c_elegans/PRJNA13758/annotation/gene_product_info/c_elegans.canonical_bioproject.current.gene_product_info.gpi.gz';	# canonical location
+# my $gpifiledata = get $gpifileUrl;	# old file at ftp was not gz even though called .gz 
+
+`wget $gpifileUrl`;
+`gunzip -f c_elegans.PRJNA13758.WS277.gene_product_info.gpi.gz`;
+$/ = undef;
+my $infile = 'c_elegans.PRJNA13758.WS277.gene_product_info.gpi';
+open (IN, "<$infile") or die "Cannot open $infile : $!";
+my $gpifiledata = <IN>;
+close (IN) or die "Cannot close $infile : $!";
+$/ = "\n";
+
 my (@gpilines) = split/\n/, $gpifiledata;
 foreach my $line (@gpilines) {
   next unless ($line =~ m/^WB/);
@@ -115,6 +125,7 @@ foreach my $line (@lines) {
 
   my $dbidStripped = $dbid; $dbidStripped =~ s/\-\d//g;
   my $wbgDbid = $dbid;
+# print qq(HERE wbgDbid $wbgDbid dbidStripped $dbidStripped\n);
   if ($dbidToWb{$dbidStripped}) { $wbgDbid = $dbidToWb{$dbidStripped}; }
     else { print ERR qq($dbid doesn't map to WBGene from column 3\n); next; }	# skip to next, don't print it 
 #     else { print ERR qq($dbid doesn't map to WBGene from column 3, line $count\n); next; }	# skip to next, don't print it 
