@@ -97,7 +97,7 @@ sub queryDataset {
 #   my @topics                = $query->param('topics');
   (my $var, my $filename)        = &getHtmlVar($query, 'filename');
   my $html_additional_output = '';
-  $html_additional_output .= qq(Queried $filename for fields : <br>\n);
+#   $html_additional_output .= qq(Queried $filename for fields : <br>\n);	# replaced with count later on
   my ($dataHeader, $fileDataHashref) = &processDatafile($filename);
   my %fileData = %$fileDataHashref;
   my %lines;
@@ -125,30 +125,40 @@ sub queryDataset {
   }
   $html_additional_output .= qq(<br>\n);
 
+  my $max_html_count = 100;
   my $output = '';
   my $outputCount = 0;
   if ($userFieldCount == 0) {		# if user doesn't want any filtering, use the whole file
     foreach my $lineNumber (sort {$a<=>$b} keys %{ $fileData{line} }) {
-      $output .= qq($fileData{line}{$lineNumber}\n);
       $outputCount++;
-      if ( ($outputFormat eq 'html') && ($outputCount > 99) ) { 
-        $html_additional_output .= qq(Results truncated to 100, download data to see the whole set\n);
-        last; } } }
+      if ($outputFormat ne 'html') { 
+        $output .= qq($fileData{line}{$lineNumber}\n); }
+      else {
+        if ($outputCount < $max_html_count) { 
+          $output .= qq($fileData{line}{$lineNumber}\n); }
+        elsif ($outputCount > $max_html_count) { 
+          1; }
+        elsif ($outputCount == $max_html_count) { 
+          $html_additional_output .= qq(Results truncated to 100, download data to see the whole set\n); } } } }
   else {
     foreach my $lineNumber (sort {$a<=>$b} keys %lines) {
       if ($lines{$lineNumber} >= $wantedCategoryCount) {
-#         $output .= qq($lineNumber $lines{$lineNumber}\n);
-        $output .= qq($fileData{line}{$lineNumber}\n);
         $outputCount++;
-        if ( ($outputFormat eq 'html') && ($outputCount > 99) ) { 
-          $html_additional_output .= qq(Results truncated to 100, download data to see the whole set\n);
-          last; }
-  } } }
+        if ($outputFormat ne 'html') { 
+          $output .= qq($fileData{line}{$lineNumber}\n); }
+        else {
+          if ($outputCount < $max_html_count) { 
+            $output .= qq($fileData{line}{$lineNumber}\n); }
+          elsif ($outputCount > $max_html_count) { 
+            1; }
+          elsif ($outputCount == $max_html_count) { 
+            $html_additional_output .= qq(Results truncated to 100, download data to see the whole set\n); } } } } }
 
   if ($output) { $output = qq($dataHeader\n$output); }
     else { $output = qq(Your query did not retrieve any result. Please contact help (at) wormbase.org if you think any datasets are missing in our collection.); }
 
   if ($outputFormat eq 'html') {
+    print qq(Found $outputCount results after querying $filename for fields : <br>\n);
     print qq($html_additional_output\n);
     $output =~ s|\t|</td><td>|g;
     $output =~ s|\n|</td></tr>\n<tr><td>|g;
