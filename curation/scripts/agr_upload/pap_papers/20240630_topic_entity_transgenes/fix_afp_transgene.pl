@@ -15,6 +15,11 @@
 # Some entries could have multiple.   File is broken up in paragraphs with the WBPaper ID, types of matches, and ORIG for original entry.
 #
 # For Kimberly to transfer old afp to abc TET.  Analysis of data first.  2024 06 30
+#
+# Update script to fix afp_transgene data if it has mappings.
+# Convert to acknowledge format   WBTransgene00020977;%;ltSi560 | WBTransgene00014794;%;oxEx1578 | WBTransgene00025194;%;bsSi28 | WBTransgene00001903;%;qIs51
+# but add  | ORIGINAL COMMENT <comment>
+# 2024 07 22
 
 use strict;
 use diagnostics;
@@ -45,6 +50,7 @@ sub populateTrp {
 }
 
 sub populateAfpTransgene {
+  my @pgcommands;
   my $result = $dbh->prepare( "SELECT * FROM afp_transgene WHERE afp_timestamp < '2019-03-22 00:00';" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
@@ -62,22 +68,44 @@ sub populateAfpTransgene {
     foreach my $word (@words) {
       $word =~ s/\s+//g;
       if ($word =~ m/[a-z]+(Ex|Is)\d+/) { 
-          if ($trp{$word}) { $match{"$word - $trp{$word}"}++; }
+#           if ($trp{$word}) { $match{"$word - $trp{$word}"}++; }
+          if ($trp{$word}) { $match{"$trp{$word};%;$word"}++; }
           else { $nomatch{$word}++; } }
         elsif ($word eq 'checked') { 1; }
         else { $bad{$word}++; }
     }
-    my $match = join"\t", sort keys %match;
+    my $match = join" | ", sort keys %match;
     my $nomatch = join"\t", sort keys %nomatch;
     my $bad = join"\t", sort keys %bad;
     print qq($joinkey\n);
-    if ($match) { print qq(YESMATCH $match\n); }
+    if ($match) { 
+      my $newValue = qq($match | ORIGINAL COMMENT $trTextOrig);
+      push @pgcommands, qq(UPDATE afp_transgene SET afp_transgene = '$newValue' WHERE joinkey = '$joinkey');
+      print qq(YESMATCH $match | ORIGINAL COMMENT $trTextOrig\n); }
     if ($nomatch) { print qq(NOMATCH $nomatch\n); }
     if ($bad) { print qq(BAD $bad\n); }
     print qq(ORIG $trTextOrig\n\n);
 #     print qq($joinkey\t$trText\n);
   }
+
+  foreach my $pgcommand (@pgcommands) {
+    print qq( $pgcommand \n);
+# UNCOMMENT TO UPDATE
+#     $dbh->do( $pgcommand );
+  }
 }
+
+__END__
+
+backup tables before running this
+
+touch /usr/caltech_curation_files/postgres/agr_upload/pap_papers/20240630_topic_entity_transgenes/afp_transgene.pg
+chmod 777 /usr/caltech_curation_files/postgres/agr_upload/pap_papers/20240630_topic_entity_transgenes/afp_transgene.pg
+COPY afp_transgene TO '/usr/caltech_curation_files/postgres/agr_upload/pap_papers/20240630_topic_entity_transgenes/afp_transgene.pg';
+
+touch /usr/caltech_curation_files/postgres/agr_upload/pap_papers/20240630_topic_entity_transgenes/afp_transgene_hst.pg
+chmod 777 /usr/caltech_curation_files/postgres/agr_upload/pap_papers/20240630_topic_entity_transgenes/afp_transgene_hst.pg
+COPY afp_transgene_hst TO '/usr/caltech_curation_files/postgres/agr_upload/pap_papers/20240630_topic_entity_transgenes/afp_transgene_hst.pg';
 
 __END__
 
