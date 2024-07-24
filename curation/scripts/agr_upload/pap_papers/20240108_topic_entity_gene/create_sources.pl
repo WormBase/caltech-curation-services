@@ -13,6 +13,8 @@
 # modified for gene sources instead of general entity sources.  2024 01 08
 #
 # updated to new source data from https://docs.google.com/document/d/1xNnGLb1KO1ONrvTontgC1LTjpUc0JlfxrXWCvR_XIGA/edit  2024 04 18
+#
+# new source added by Kimberly on 2024 07 23 for afp_transgene extraction.  2024 07 23
 
 # ./create_sources.pl
 
@@ -33,8 +35,8 @@ my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST}
 my $result;
 
 my $mod = 'WB';
-# my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
-my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
+my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
+# my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
 my $okta_token = &generateOktaToken();
 # my $okta_token = 'use_above_when_live';
 
@@ -293,6 +295,20 @@ unless ($source_id) {
   $source_json{source_method}                   = $source_method;
   delete $source_json{validation_type};
   $source_json{description}                     = 'Association of genes with references by an unknown method.  Some of these associations likely came into WormBase when we took over curation of the C. elegans literature from the CGC; others may have been added via bulk upload without corresponding evidence.';
+  my $source_json = encode_json \%source_json;
+  &createSource($source_json);
+}
+
+# for transgenic alleles from old afp that are getting script mapped to WBTransgene
+$source_evidence_assertion = 'ECO:0008021';
+$source_method = 'free_text_to_entity_id_script';
+$source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+unless ($source_id) {
+  my %source_json = %{ dclone (\%source_default) };
+  $source_json{source_evidence_assertion}       = $source_evidence_assertion;
+  $source_json{source_method}                   = $source_method;
+  delete $source_json{validation_type};
+  $source_json{description}                     = 'Mapping of free text entries in WormBase reference entity flagging tables, e.g. afp_transgene, to valid WormBase entity ids.';
   my $source_json = encode_json \%source_json;
   &createSource($source_json);
 }
