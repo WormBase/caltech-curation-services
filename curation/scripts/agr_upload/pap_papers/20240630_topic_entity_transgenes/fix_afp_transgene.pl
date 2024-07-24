@@ -20,8 +20,6 @@
 # Convert to acknowledge format   WBTransgene00020977;%;ltSi560 | WBTransgene00014794;%;oxEx1578 | WBTransgene00025194;%;bsSi28 | WBTransgene00001903;%;qIs51
 # but add  | ORIGINAL COMMENT <comment>
 # 2024 07 22
-#
-# Updating to just populate the normal afp and ack, but not convert the old afp into WB:WBTransgene yet.  2024 07 23
 
 use strict;
 use diagnostics;
@@ -40,17 +38,8 @@ my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST}
 
 my %trp;
 
-my %theHash;
-my %afpToEmail;
-my %emailToWbperson;
-my %afpContributor;
-
 &populateTrp();
-&populateAfpEmail();
-&populateEmailToWbperson();
 &populateAfpTransgene();
-
-&outputAfpData();
 
 sub populateTrp {
   my $result = $dbh->prepare( "SELECT trp_name, trp_publicname FROM trp_name, trp_publicname WHERE trp_name.joinkey = trp_publicname.joinkey;" );
@@ -60,127 +49,7 @@ sub populateTrp {
   }
 }
 
-sub populateAfpEmail {
-  my $result = $dbh->prepare( "SELECT * FROM afp_email;" );
-  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
-  while (my @row = $result->fetchrow) {
-    $afpToEmail{$row[0]} = $row[1]; 
-  }
-}
-
-sub populateEmailToWbperson {
-  my $result = $dbh->prepare( "SELECT * FROM two_email;" );
-  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
-  while (my @row = $result->fetchrow) {
-    my $lcemail = lc($row[2]);
-    $emailToWbperson{$lcemail} = $row[0]; 
-  }
-}
-
-sub populateAfpContributor {
-  my $result = $dbh->prepare( "SELECT joinkey, afp_contributor FROM afp_contributor" );
-  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
-  while (my @row = $result->fetchrow) {
-#     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
-    next unless ($row[1]);
-    my $who = $row[1]; $who =~ s/two/WBPerson/;
-    $afpContributor{$row[0]}{$who}++;
-} }
-
-
 sub populateAfpTransgene {
-  my $result = $dbh->prepare( "SELECT * FROM afp_transgene WHERE afp_timestamp < '2019-03-22 00:00';" );
-  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
-  while (my @row = $result->fetchrow) {
-    my ($joinkey, $trText, $ts, $curator, $approve, $curts) = @row;
-    my $tsdigits = &tsToDigits($ts);
-    if ($tsdigits < '20190322') {
-      my $email = $afpToEmail{$joinkey};
-      my $lcemail = '';
-      if ($email) { $lcemail = lc($email); }
-      my $wbperson = $emailToWbperson{$lcemail};
-# If there is no text, should this count as a topic without an entity ?
-      if ($wbperson) { 
-#           print qq(YES PERSON for paper : $joinkey\temail : $email\tperson $wbperson\n); 
-          $theHash{'afp'}{$joinkey}{'NOENTITY'}{$wbperson}{timestamp} = $ts;
-          push @{ $theHash{'afp'}{$joinkey}{'NOENTITY'}{$wbperson}{note} }, $trText;
-        }
-        else { 
-          unless ($email) { $email = 'NOEMAIL'; }
-#           print qq(NO PERSON for paper : $joinkey\temail : $email\n);
-        }
-    }
-    else {
-      my (@wbtransgenes) = $trText =~ m/(WBTransgene\d+)/;
-# If there is no text, should this count as a topic without an entity ?
-      my @auts;
-      if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
-      if (scalar @auts < 1) { push @auts, 'unknown_author'; }
-      foreach my $aut (@auts) {
-        foreach my $wbtr (@wbtransgenes) {
-          my $obj = 'WB:' . $wbtr;
-          $theHash{'ack'}{$joinkey}{$obj}{$aut}{timestamp} = $ts;
-          push @{ $theHash{'ack'}{$joinkey}{$obj}{$aut}{note} }, $trText;
-    } } }
-  }
-} # sub populateAfpTransgene
-
-# FIX THIS to do the right thing later
-# sub outputAfpData {
-#   my $data_provider = $mod;
-#   my $secondary_data_provider = $mod;
-#   my $source_evidence_assertion = 'ATP:0000035';
-#   my $source_method = 'author_first_pass';
-#   my $source_id_afp = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
-# 
-#   $source_evidence_assertion = 'ATP:0000035';
-#   $source_method = 'ACKnowledge_form';
-#   my $source_id_ack = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
-# 
-#   unless ($source_id_ack) {
-#     print qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
-#     return;
-#   }
-#   unless ($source_id_afp) {
-#     print qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
-#     return;
-#   }
-# #   { "source_type": "professional_biocurator", "source_method": "wormbase_curation_status", "evidence": "eco_string", "description": "cur_curdata", "mod_abbreviation": "WB" }
-#   foreach my $datatype (sort keys %afpAutData) {
-#     unless ($datatypes{$datatype}) {
-#       print ERR qq(no topic for afpAutData $datatype\n);
-#       next;
-#     }
-#     foreach my $joinkey (sort keys %{ $afpAutData{$datatype} }) {
-#       my @auts;
-#       if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
-#       if (scalar @auts < 1) { push @auts, 'unknown_author'; }
-#       foreach my $aut (@auts) {
-#         my %object;
-#         my $negated = FALSE;
-#         if ($afpAutData{$datatype}{$joinkey}{negated}) { $negated = TRUE; }
-#         my $source_id = $source_id_afp;
-#         if ($afpAutData{$datatype}{$joinkey}{source} eq 'ack') { $source_id = $source_id_ack; }
-#         if ($afpAutData{$datatype}{$joinkey}{note}) {
-#           $object{'note'}                     = $afpAutData{$datatype}{$joinkey}{note}; }
-#         $object{'negated'}                    = $negated;
-#         $object{'force_insertion'}            = TRUE;
-#         $object{'reference_curie'}            = $wbpToAgr{$joinkey};
-#         $object{'topic'}                      = $datatypes{$datatype};
-#         $object{'topic_entity_tag_source_id'} = $source_id;
-#         $object{'created_by'}                 = $aut;
-#         $object{'updated_by'}                 = $aut;
-#         $object{'date_created'}               = $afpAutData{$datatype}{$joinkey}{timestamp};
-#         $object{'date_updated'}               = $afpAutData{$datatype}{$joinkey}{timestamp};
-#         # $object{'datatype'}                 = $datatype;              # for debugging
-#         if ($output_format eq 'json') {
-#           push @output_json, \%object; }
-#         else {
-#           my $object_json = encode_json \%object;
-#           &createTag($object_json); }
-# } } } }
-
-sub populateAfpTransgeneOldAfp {
   my @pgcommands;
   my $result = $dbh->prepare( "SELECT * FROM afp_transgene WHERE afp_timestamp < '2019-03-22 00:00';" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
@@ -188,7 +57,6 @@ sub populateAfpTransgeneOldAfp {
     my ($joinkey, $trText, $ts, $curator, $approve, $curts) = @row;
 #     print qq($joinkey\t$trText\n);
     my $trTextOrig = $trText;
-#     unless (is_utf8($trTextOrig)) { from_to($trTextOrig, "iso-8859-1", "utf8"); }
     $trText =~ s/\[[^\]]*\]//g;
     $trText =~ s/~~/ /g;
     $trText =~ s/\s+/ /g;
@@ -211,8 +79,8 @@ sub populateAfpTransgeneOldAfp {
     my $bad = join"\t", sort keys %bad;
     print qq($joinkey\n);
     if ($match) { 
-#       my $newValue = qq($match | ORIGINAL COMMENT $trTextOrig);
-#       push @pgcommands, qq(UPDATE afp_transgene SET afp_transgene = '$newValue' WHERE joinkey = '$joinkey');
+      my $newValue = qq($match | ORIGINAL COMMENT $trTextOrig);
+      push @pgcommands, qq(UPDATE afp_transgene SET afp_transgene = '$newValue' WHERE joinkey = '$joinkey');
       print qq(YESMATCH $match | ORIGINAL COMMENT $trTextOrig\n); }
     if ($nomatch) { print qq(NOMATCH $nomatch\n); }
     if ($bad) { print qq(BAD $bad\n); }
@@ -220,19 +88,11 @@ sub populateAfpTransgeneOldAfp {
 #     print qq($joinkey\t$trText\n);
   }
 
-# no longer going to update postgres, instead will send afp data as-is without entity as afp, and send again each entity as script extract entities.
-#   foreach my $pgcommand (@pgcommands) {
-#     print qq( $pgcommand \n);
+  foreach my $pgcommand (@pgcommands) {
+    print qq( $pgcommand \n);
 # UNCOMMENT TO UPDATE
 #     $dbh->do( $pgcommand );
-#   }
-}
-
-sub tsToDigits {
-  my $timestamp = shift;
-  my $tsdigits = '';
-  if ($timestamp =~ m/^(\d{4})\-(\d{2})\-(\d{2})/) { $tsdigits = $1 . $2 . $3; }
-  return $tsdigits;
+  }
 }
 
 __END__
