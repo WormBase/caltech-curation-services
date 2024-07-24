@@ -30,6 +30,7 @@
 # skip AGRKB from sending to ABC.  2024 01 08
 #
 # no longer outputting primary_data values as ATP into  workflowTags  instead output as string into  MODReferenceTypes.  2024 07 24
+# rename strings from WB strings to some other strings, but they don't really make sense, so asking curators in ticket.  2024 07 24 
 
 
 # dump after every workday at 5am, gets picked up by abc cronjob every day
@@ -384,7 +385,9 @@ sub getWorkflowTags {
   foreach my $order (sort {$a<=>$b} keys %{ $hash{$table}{$joinkey} }) {
     if ($hash{$table}{$joinkey}{$order}{data}) {
       my $type = $hash{$table}{$joinkey}{$order}{data};
-      push @data, $type;
+      if ($type eq 'primary') { push @data, "experimental"; }
+        elsif ($type eq 'not_primary') { push @data, "non-experimental"; }
+        elsif ($type eq 'not_designated') { push @data, "not_designated"; }
 #       if ($type eq 'primary') { push @data, "ATP:0000103"; }
 #         elsif ($type eq 'not_primary') { push @data, "ATP:0000104"; }
 #         elsif ($type eq 'not_designated') { push @data, "ATP:0000106"; }
