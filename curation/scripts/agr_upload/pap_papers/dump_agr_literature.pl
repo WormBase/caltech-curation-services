@@ -28,6 +28,8 @@
 #
 # Updated to generate workflowTags as list of ATP values from pap_primary_data only.  Do not have any other workflow tags to generate.  2024 01 08
 # skip AGRKB from sending to ABC.  2024 01 08
+#
+# no longer outputting primary_data values as ATP into  workflowTags  instead output as string into  MODReferenceTypes.  2024 07 24
 
 
 # dump after every workday at 5am, gets picked up by abc cronjob every day
@@ -147,7 +149,7 @@ foreach my $joinkey (sort keys %{ $hash{status} }) {
   $entry{'tags'} = &getTags(\%hash, $joinkey, $referenceId);
   $entry{'crossReferences'} = &getCrossReferences(\%hash, $joinkey);
   $entry{'citation'} = &getCitation(\%hash, $joinkey);
-  $entry{'workflowTags'} = &getWorkflowTags(\%hash, $joinkey);
+#   $entry{'workflowTags'} = &getWorkflowTags(\%hash, $joinkey);	# no longer outputting these values as ATP into  workflowTags  instead output as string into  MODReferenceTypes
 # need language?
 
   foreach my $reqTag (@requiredTags) {
@@ -353,6 +355,12 @@ sub getMODReferenceTypes {	# 00061299
         $entry{'source'} = 'WB';
         push @data, \%entry;
   } } }
+  my (@primary_data) = &getWorkflowTags(\%hash, $joinkey);
+  foreach my $val (@primary_data) {
+    my %entry;
+    $entry{'referenceType'} = $$val[0];
+    $entry{'source'} = 'WB';
+    push @data, \%entry; }
   return \@data;
 } # sub MODReferenceTypes
 
@@ -367,6 +375,7 @@ sub getAllianceCategory {
   return 'Unknown';
 } # sub getAllianceCategory
 
+# no longer outputting these values as ATP into  workflowTags  instead output as string into  MODReferenceTypes
 sub getWorkflowTags {
   my ($hashRef, $joinkey) = @_;
   my %hash = %$hashRef;
@@ -375,9 +384,10 @@ sub getWorkflowTags {
   foreach my $order (sort {$a<=>$b} keys %{ $hash{$table}{$joinkey} }) {
     if ($hash{$table}{$joinkey}{$order}{data}) {
       my $type = $hash{$table}{$joinkey}{$order}{data};
-      if ($type eq 'primary') { push @data, "ATP:0000103"; }
-        elsif ($type eq 'not_primary') { push @data, "ATP:0000104"; }
-        elsif ($type eq 'not_designated') { push @data, "ATP:0000106"; }
+      push @data, $type;
+#       if ($type eq 'primary') { push @data, "ATP:0000103"; }
+#         elsif ($type eq 'not_primary') { push @data, "ATP:0000104"; }
+#         elsif ($type eq 'not_designated') { push @data, "ATP:0000106"; }
   } }
   return \@data;
 } # sub getWorkflowTags
