@@ -807,7 +807,7 @@ sub populateDatatypesAndABC {
   delete $datatypesAfpCfp{'genesymbol'};                # has svm but no afp / cfp      # added 2021 01 25
   delete $datatypesAfpCfp{'transporter'};               # has svm but no afp / cfp      # added 2021 01 25
   
-  $datatypes{'antibody'}           = 'ATP:0000131';
+  $datatypes{'antibody'}           = 'ATP:0000096';
   $datatypes{'blastomere'}         = 'ATP:0000143';
   $datatypes{'catalyticact'}       = 'ATP:0000061';
   $datatypes{'chemphen'}           = 'ATP:0000080';
