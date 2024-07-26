@@ -22,6 +22,8 @@
 # 2024 07 22
 #
 # Updating to just populate the normal afp and ack, but not convert the old afp into WB:WBTransgene yet.  2024 07 24
+#
+# Derive merged papers from pap_identifier.  2024 07 26
 
 use strict;
 use diagnostics;
@@ -58,9 +60,11 @@ my %emailToWbperson;
 my %afpContributor;
 my %wbpToAgr;
 my %papValid;
+my %papMerge;
 
 &populateAbcXref();
 &populatePapValid();
+&populatePapMerge(); 
 &populateTrp();
 &populateAfpEmail();
 &populateEmailToWbperson();
@@ -110,6 +114,14 @@ sub populateAfpContributor {
     $afpContributor{$row[0]}{$who}++;
 } }
 
+sub deriveValidPap {
+  my ($joinkey) = @_;
+  if ($papValid{$joinkey}) { return $joinkey; }
+    elsif ($papMerge{$joinkey}) {
+      ($joinkey) = &deriveValidPap($papMerge{$joinkey});
+      return $joinkey; }
+    else { return 'NOTVALID'; }
+} # sub deriveValidPap
 
 sub populateAfpTransgene {
 #   my $result = $dbh->prepare( "SELECT * FROM afp_transgene WHERE afp_timestamp < '2019-03-22 00:00';" );
@@ -117,6 +129,7 @@ sub populateAfpTransgene {
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     my ($joinkey, $trText, $ts, $curator, $approve, $curts) = @row;
+    ($joinkey) = &deriveValidPap($joinkey);
     next unless $papValid{$joinkey};
     next unless $trText;
     my $tsdigits = &tsToDigits($ts);
@@ -148,7 +161,6 @@ sub populateAfpTransgene {
   }
 } # sub populateAfpTransgene
 
-# FIX THIS to do the right thing later
 sub outputAfpData {
   my $data_provider = $mod;
   my $secondary_data_provider = $mod;
@@ -302,6 +314,13 @@ sub populatePapValid {
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) { 
     $papValid{$row[0]}++; }
+}
+
+sub populatePapMerge {
+  $result = $dbh->prepare( "SELECT * FROM pap_identifier WHERE pap_identifier ~ '^[0-9]{8}\$';" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) { 
+    $papMerge{$row[1]} = $row[0]; }
 }
 
 sub populateAbcXref {
