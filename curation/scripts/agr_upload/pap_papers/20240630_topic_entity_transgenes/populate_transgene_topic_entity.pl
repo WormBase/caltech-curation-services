@@ -24,6 +24,8 @@
 # Updating to just populate the normal afp and ack, but not convert the old afp into WB:WBTransgene yet.  2024 07 24
 #
 # Derive merged papers from pap_identifier.  2024 07 26
+#
+# Was only grabbing the first transgene from ACK note, now grabbing all.  2024 07 29
 
 use strict;
 use diagnostics;
@@ -48,8 +50,8 @@ my $tag_counter = 0;
 my @output_json;
 
 my $mod = 'WB';
-# my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
-my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
+my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
+# my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
 my $okta_token = &generateOktaToken();
 
 my %trp;
@@ -148,7 +150,7 @@ sub populateAfpTransgene {
       push @{ $theHash{'afp'}{$joinkey}{'NOENTITY'}{$wbperson}{note} }, $trText;
     }
     else {
-      my (@wbtransgenes) = $trText =~ m/(WBTransgene\d+)/;
+      my (@wbtransgenes) = $trText =~ m/(WBTransgene\d+)/g;
       my @auts;
       if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
       if (scalar @auts < 1) { push @auts, 'unknown_author'; }
