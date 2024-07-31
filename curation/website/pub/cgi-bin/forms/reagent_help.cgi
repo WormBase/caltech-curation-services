@@ -3,6 +3,8 @@
 # Query Reagent data
 #
 # Based on expression_dataset_locator.cgi  2024 07 03
+#
+# Read WBGeneName.csv to get %geneNameToId mappings.  CategoryHeader.txt now has field that are 'Gene Search example'.  2024 07 30
 
 # http://tazendra.caltech.edu/~azurebrd/cgi-bin/forms/reagent_help.cgi
 # https://caltech-curation.textpressolab.com/pub/cgi-bin/forms/reagent_help.cgi
@@ -37,6 +39,10 @@ my $host = $query->remote_host();		# get ip address
 # my $file_category = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} .  '/pub/wen/simplemine/ReagentHelp/CategoryHeader.csv';
 my %hash;
 # my ($dataHeader) = &processFile();
+ 
+my %geneNameToId;
+&processGeneNameToId(); 
+
 my ($categoriesHashref) = &processCategoryFile();
 my %categories = %$categoriesHashref;
 
@@ -108,15 +114,24 @@ sub queryDataset {
     my $fieldtype = $categories{$filename}{field}{$field}{type};
     my $fieldname = $field;
     $fieldname =~ s/\s+//g;
-    ($var, my $val)        = &getHtmlVar($query, $fieldname);
-    $html_additional_output .= qq($fieldname\t:\t$val<br>\n);
-    if ($val) {
+    ($var, my $userval)      = &getHtmlVar($query, $fieldname);
+    unless ($userval) { $userval = ''; }
+    $html_additional_output .= qq($fieldname\t:\t$userval<br>\n);
+    if ($userval) {
+      my @vals = ();
+      if ($fieldtype eq 'genesearch') {		# convert user string to a WBGene
+        (@vals) = sort keys %{ $geneNameToId{$userval} }; }
+      else { 
+        push @vals, $userval; }
       $userFieldCount++;
       foreach my $lineNumber (sort keys %{ $fileData{$fieldname} }) {
         my $fieldValue = $fileData{$fieldname}{$lineNumber};
 # print qq(fieldValue $fieldValue Line Number $lineNumber<br>);
-        if ($fieldValue =~ m/$val/) { $lines{$lineNumber}++;
+        foreach my $val (@vals) {
+          if ($fieldValue =~ m/$val/) {
+            $lines{$lineNumber}++;
 # print qq(MATCH fieldValue $fieldValue Line Number $lineNumber<br>);
+          }
         }
       }
     } else {
@@ -232,7 +247,7 @@ sub showReagentHelpForm {
       my $fieldtype = $categories{$filename}{field}{$field}{type};
       my $fieldname = $field;
       $fieldname =~ s/\s+//g;
-      if ($fieldtype eq 'freetext') {
+      if ( ($fieldtype eq 'freetext') || ($fieldtype eq 'genesearch') ) {
 #         print qq($field $fieldname $fieldtype <input name="$fieldname"><br>\n);
         print qq(<tr><td>$field</td><td><input name="$fieldname" placeholder="$categories{$filename}{field}{$field}{example}" ></td><td>example: $categories{$filename}{field}{$field}{example}</td>\n);
       }
@@ -253,7 +268,24 @@ sub showReagentHelpForm {
     print qq(</form>);
   }
 } # sub showReagentHelpForm
-
+ 
+sub processGeneNameToId {
+  my $file_source = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} .  '/pub/wen/simplemine/ReagentHelp/WBGeneName.csv';
+  open (IN, "<$file_source") or die "Cannot open $file_source : $!";
+  while (my $line = <IN>) {
+    chomp $line;
+    my ($wbgene, @rest) = split/\t/, $line;
+    my $lcwbgene = lc($wbgene);
+    $geneNameToId{$lcwbgene}{$wbgene}++;
+    foreach my $category (@rest) {
+      my (@indNames) = split/,/, $category;
+      foreach my $name (@indNames) {
+        $name =~ s/^\s+//; $name =~ s/\s+$//;
+        unless ($name eq 'N.A.') {
+          my $lcname = lc($name);
+          $geneNameToId{$lcname}{$wbgene}++; } } } }
+  close (IN) or die "Cannot close $file_source : $!";
+} # sub processGeneNameToId
 
 sub processCategoryFile {
   my $file_source = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} .  '/pub/wen/simplemine/ReagentHelp/CategoryHeader.txt';
@@ -279,6 +311,9 @@ sub processCategoryFile {
       push @{ $categories{$filename}{fields} }, $field;
       if ($stuff[0] =~ m/Free Text example: (.*)$/) { 
         $categories{$filename}{field}{$field}{type} = 'freetext';
+        $categories{$filename}{field}{$field}{example} = $1; }
+      elsif ($stuff[0] =~ m/Gene Search example: (.*)$/) { 
+        $categories{$filename}{field}{$field}{type} = 'genesearch';
         $categories{$filename}{field}{$field}{example} = $1; }
       else {
         $categories{$filename}{field}{$field}{type} = 'dropdown';
