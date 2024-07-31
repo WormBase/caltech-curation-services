@@ -17,6 +17,8 @@
 # Blind guessing at what to extract, it's very clearly wrong.
 # https://agr-jira.atlassian.net/browse/SCRUM-3271?focusedCommentId=42377
 # 2024 04 18
+#
+# Derive merged papers from pap_identifier.  2024 07 26
 
 
 # if single json output
@@ -55,8 +57,8 @@ my $tag_counter = 0;
 my @output_json;
 
 my $mod = 'WB';
-# my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
-my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
+my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
+# my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
 my $okta_token = &generateOktaToken();
 # my $okta_token = 'use_above_when_live';
 
@@ -92,10 +94,13 @@ my %datatypesAfpCfp;
 my %datatypes;
 my %entitytypes;
 my %wbpToAgr;
+my %papValid;
+my %papMerge;
 my %meetings;
 my %geneToTaxon;
 my %manConn;
 my %papGenePublished;
+
 
 my %chosenPapers;
 my %ginValidation;
@@ -119,7 +124,10 @@ my $entityType = 'ATP:0000005';
 foreach my $joinkey (@wbpapers) { $chosenPapers{$joinkey}++; }
 # $chosenPapers{all}++;
 
+
 &populateAbcXref();
+&populatePapValid();
+&populatePapMerge();
 &populateMeetings();
 &populateGeneTaxon();
 &populatePapGene();
@@ -181,6 +189,8 @@ sub outputTheHash {
   foreach my $datatype (sort keys %theHash) {
     foreach my $joinkey (sort keys %{ $theHash{$datatype} }) {
       next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
+      my ($actual_joinkey) = &deriveValidPap($joinkey);
+      next unless $papValid{$actual_joinkey};
       foreach my $gene (sort keys %{ $theHash{$datatype}{$joinkey} }) {
         my $entity_id_validation = 'alliance';
         if ($ginValidation{$gene}) { $entity_id_validation = $ginValidation{$gene}; }
@@ -189,7 +199,7 @@ sub outputTheHash {
           my %object;
           $object{'force_insertion'}            = TRUE;
           $object{'negated'}                    = FALSE;
-          $object{'reference_curie'}            = $wbpToAgr{$joinkey};
+          $object{'reference_curie'}            = $wbpToAgr{$actual_joinkey};
           $object{'topic'}                      = $geneTopic;
           $object{'entity_type'}                = $entityType;
           $object{'entity_id_validation'}       = $entity_id_validation;
@@ -351,6 +361,29 @@ sub populateMeetings {
     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
     $meetings{$row[0]}++; }
 } # sub populateAbcXref
+
+sub deriveValidPap {
+  my ($joinkey) = @_;
+  if ($papValid{$joinkey}) { return $joinkey; }
+    elsif ($papMerge{$joinkey}) {
+      ($joinkey) = &deriveValidPap($papMerge{$joinkey});
+      return $joinkey; }
+    else { return 'NOTVALID'; }
+} # sub deriveValidPap
+
+sub populatePapValid {
+  $result = $dbh->prepare( "SELECT * FROM pap_status WHERE pap_status = 'valid';" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) {
+    $papValid{$row[0]}++; }
+}
+
+sub populatePapMerge {
+  $result = $dbh->prepare( "SELECT * FROM pap_identifier WHERE pap_identifier ~ '^[0-9]{8}\$';" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) {
+    $papMerge{$row[1]} = $row[0]; }
+}
 
 sub populateAbcXref {
   $result = $dbh->prepare( "SELECT * FROM pap_identifier WHERE pap_identifier ~ 'AGRKB';" );

@@ -21,7 +21,11 @@
 # but add  | ORIGINAL COMMENT <comment>
 # 2024 07 22
 #
-# Updating to just populate the normal afp and ack, but not convert the old afp into WB:WBTransgene yet.  2024 07 23
+# Updating to just populate the normal afp and ack, but not convert the old afp into WB:WBTransgene yet.  2024 07 24
+#
+# Derive merged papers from pap_identifier.  2024 07 26
+#
+# Was only grabbing the first transgene from ACK note, now grabbing all.  2024 07 29
 
 use strict;
 use diagnostics;
@@ -37,6 +41,18 @@ use constant TRUE => \1;
 my $start_time = time;
 
 my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST};port=$ENV{PSQL_PORT}", "$ENV{PSQL_USERNAME}", "$ENV{PSQL_PASSWORD}") or die "Cannot connect to database!\n";
+my $result;
+
+my $output_format = 'json';
+# my $output_format = 'api';
+my $tag_counter = 0;
+
+my @output_json;
+
+my $mod = 'WB';
+my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
+# my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
+my $okta_token = &generateOktaToken();
 
 my %trp;
 
@@ -44,13 +60,26 @@ my %theHash;
 my %afpToEmail;
 my %emailToWbperson;
 my %afpContributor;
+my %wbpToAgr;
+my %papValid;
+my %papMerge;
 
+&populateAbcXref();
+&populatePapValid();
+&populatePapMerge(); 
 &populateTrp();
 &populateAfpEmail();
 &populateEmailToWbperson();
+&populateAfpContributor();
 &populateAfpTransgene();
 
 &outputAfpData();
+
+if ($output_format eq 'json') {
+  my $json = encode_json \@output_json;         # for single json file output
+  print qq($json\n);                            # for single json file output
+}
+
 
 sub populateTrp {
   my $result = $dbh->prepare( "SELECT trp_name, trp_publicname FROM trp_name, trp_publicname WHERE trp_name.joinkey = trp_publicname.joinkey;" );
@@ -87,32 +116,41 @@ sub populateAfpContributor {
     $afpContributor{$row[0]}{$who}++;
 } }
 
+sub deriveValidPap {
+  my ($joinkey) = @_;
+  if ($papValid{$joinkey}) { return $joinkey; }
+    elsif ($papMerge{$joinkey}) {
+      ($joinkey) = &deriveValidPap($papMerge{$joinkey});
+      return $joinkey; }
+    else { return 'NOTVALID'; }
+} # sub deriveValidPap
 
 sub populateAfpTransgene {
-  my $result = $dbh->prepare( "SELECT * FROM afp_transgene WHERE afp_timestamp < '2019-03-22 00:00';" );
+#   my $result = $dbh->prepare( "SELECT * FROM afp_transgene WHERE afp_timestamp < '2019-03-22 00:00';" );
+  my $result = $dbh->prepare( "SELECT * FROM afp_transgene;" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     my ($joinkey, $trText, $ts, $curator, $approve, $curts) = @row;
+    ($joinkey) = &deriveValidPap($joinkey);
+    next unless $papValid{$joinkey};
+    next unless $trText;
     my $tsdigits = &tsToDigits($ts);
     if ($tsdigits < '20190322') {
       my $email = $afpToEmail{$joinkey};
       my $lcemail = '';
       if ($email) { $lcemail = lc($email); }
-      my $wbperson = $emailToWbperson{$lcemail};
-# If there is no text, should this count as a topic without an entity ?
-      if ($wbperson) { 
-#           print qq(YES PERSON for paper : $joinkey\temail : $email\tperson $wbperson\n); 
-          $theHash{'afp'}{$joinkey}{'NOENTITY'}{$wbperson}{timestamp} = $ts;
-          push @{ $theHash{'afp'}{$joinkey}{'NOENTITY'}{$wbperson}{note} }, $trText;
-        }
-        else { 
-          unless ($email) { $email = 'NOEMAIL'; }
-#           print qq(NO PERSON for paper : $joinkey\temail : $email\n);
-        }
+      my $wbperson = 'unknown_author';
+      if ($emailToWbperson{$lcemail}) { $wbperson = $emailToWbperson{$lcemail}; }
+#       if ($wbperson) { 
+#         print qq(YES PERSON for paper : $joinkey\temail : $email\tperson $wbperson\n); }
+#       else { 
+#         unless ($email) { $email = 'NOEMAIL'; }
+#         print qq(NO PERSON for paper : $joinkey\temail : $email\n); }
+      $theHash{'afp'}{$joinkey}{'NOENTITY'}{$wbperson}{timestamp} = $ts;
+      push @{ $theHash{'afp'}{$joinkey}{'NOENTITY'}{$wbperson}{note} }, $trText;
     }
     else {
-      my (@wbtransgenes) = $trText =~ m/(WBTransgene\d+)/;
-# If there is no text, should this count as a topic without an entity ?
+      my (@wbtransgenes) = $trText =~ m/(WBTransgene\d+)/g;
       my @auts;
       if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
       if (scalar @auts < 1) { push @auts, 'unknown_author'; }
@@ -125,27 +163,68 @@ sub populateAfpTransgene {
   }
 } # sub populateAfpTransgene
 
-# FIX THIS to do the right thing later
-# sub outputAfpData {
-#   my $data_provider = $mod;
-#   my $secondary_data_provider = $mod;
-#   my $source_evidence_assertion = 'ATP:0000035';
-#   my $source_method = 'author_first_pass';
-#   my $source_id_afp = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
-# 
-#   $source_evidence_assertion = 'ATP:0000035';
-#   $source_method = 'ACKnowledge_form';
-#   my $source_id_ack = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
-# 
-#   unless ($source_id_ack) {
-#     print qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
-#     return;
-#   }
-#   unless ($source_id_afp) {
-#     print qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
-#     return;
-#   }
-# #   { "source_type": "professional_biocurator", "source_method": "wormbase_curation_status", "evidence": "eco_string", "description": "cur_curdata", "mod_abbreviation": "WB" }
+sub outputAfpData {
+  my $data_provider = $mod;
+  my $secondary_data_provider = $mod;
+  my $source_evidence_assertion = 'ATP:0000035';
+  my $source_method = 'author_first_pass';
+  my $source_id_afp = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+
+  $source_evidence_assertion = 'ATP:0000035';
+  $source_method = 'ACKnowledge_form';
+  my $source_id_ack = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+
+  unless ($source_id_ack) {
+    print STDERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    return;
+  }
+  unless ($source_id_afp) {
+    print STDERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    return;
+  }
+
+  foreach my $datatype (sort keys %theHash) {
+    foreach my $joinkey (sort keys %{ $theHash{$datatype} }) {
+      unless ($wbpToAgr{$joinkey}) { print STDERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
+#       next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
+      foreach my $obj (sort keys %{ $theHash{$datatype}{$joinkey} }) {
+        foreach my $curator (sort keys %{ $theHash{$datatype}{$joinkey}{$obj} }) {
+          my %object;
+          $object{'topic_entity_tag_source_id'}   = $source_id_ack;
+          if ($datatype eq 'afp') {
+            $object{'topic_entity_tag_source_id'} = $source_id_afp; }
+          $object{'force_insertion'}              = TRUE;
+          $object{'negated'}                      = FALSE;
+          $object{'reference_curie'}              = $wbpToAgr{$joinkey};
+#           $object{'wbpaper_id'}                   = $joinkey;		# for debugging
+          $object{'topic'}                        = 'ATP:0000110';
+
+          $object{'entity_type'}                  = 'ATP:0000110';
+          $object{'entity_id_validation'}         = 'alliance';
+          $object{'entity'}                       = $obj;
+          $object{'species'}                      = 'NCBITaxon:6239';
+          if ($obj eq 'NOENTITY') {
+            delete $object{'entity_type'};
+            delete $object{'entity_id_validation'};
+            delete $object{'entity'};
+            delete $object{'species'}; }
+
+          if ($theHash{$datatype}{$joinkey}{$obj}{$curator}{note}) {
+            my $note = join' | ', @{ $theHash{$datatype}{$joinkey}{$obj}{$curator}{note} };
+            $object{'note'}                     = $note; }
+          $object{'created_by'}                 = $curator;
+          $object{'updated_by'}                 = $curator;
+          $object{'date_created'}               = $theHash{$datatype}{$joinkey}{$obj}{$curator}{timestamp};
+          $object{'date_updated'}               = $theHash{$datatype}{$joinkey}{$obj}{$curator}{timestamp};
+          if ($output_format eq 'json') {
+            push @output_json, \%object; }
+          else {
+            my $object_json = encode_json \%object;
+            &createTag($object_json); }
+  } } } }
+
+
+#   { "source_type": "professional_biocurator", "source_method": "wormbase_curation_status", "evidence": "eco_string", "description": "cur_curdata", "mod_abbreviation": "WB" }
 #   foreach my $datatype (sort keys %afpAutData) {
 #     unless ($datatypes{$datatype}) {
 #       print ERR qq(no topic for afpAutData $datatype\n);
@@ -178,7 +257,84 @@ sub populateAfpTransgene {
 #         else {
 #           my $object_json = encode_json \%object;
 #           &createTag($object_json); }
-# } } } }
+#   } } }
+}
+
+
+sub tsToDigits {
+  my $timestamp = shift;
+  my $tsdigits = '';
+  if ($timestamp =~ m/^(\d{4})\-(\d{2})\-(\d{2})/) { $tsdigits = $1 . $2 . $3; }
+  return $tsdigits;
+}
+
+sub generateOktaToken {
+#   my $okta_token = `curl -s --request POST --url https://$ENV{OKTA_DOMAIN}/v1/token \    --header 'accept: application/json' \    --header 'cache-control: no-cache' \    --header 'content-type: application/x-www-form-urlencoded' \    --data "grant_type=client_credentials&scope=admin&client_id=$ENV{OKTA_CLIENT_ID}&client_secret=$ENV{OKTA_CLIENT_SECRET}" \      | jq '.access_token' | tr -d '"'`;
+  my $okta_result = `curl -s --request POST --url https://$ENV{OKTA_DOMAIN}/v1/token \    --header 'accept: application/json' \    --header 'cache-control: no-cache' \    --header 'content-type: application/x-www-form-urlencoded' \    --data "grant_type=client_credentials&scope=admin&client_id=$ENV{OKTA_CLIENT_ID}&client_secret=$ENV{OKTA_CLIENT_SECRET}"`;
+  my $hash_ref = decode_json $okta_result;
+  my $okta_token = $$hash_ref{'access_token'};
+#   print $okta_token;
+  return $okta_token;
+}
+
+sub createTag {
+  my ($object_json) = @_;
+  $tag_counter++;
+  if ($tag_counter % 1000 == 0) {
+    my $date = &getSimpleSecDate();
+    print qq(counter\t$tag_counter\t$date\n);
+    my $now = time;
+    if ($now - $start_time > 82800) {           # if 23 hours went by, update okta token
+      $okta_token = &generateOktaToken();
+      $start_time = $now;
+    }
+  }
+  my $url = $baseUrl . 'topic_entity_tag/';
+# PUT THIS BACK
+  my $api_json = `curl -X 'POST' $url -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json' --data '$object_json'`;
+  print qq(create $object_json\n);
+  print qq($api_json\n);
+}
+
+sub getSourceId {
+  my ($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider) = @_;
+  my $url = $baseUrl . 'topic_entity_tag/source/' . $source_evidence_assertion . '/' . $source_method . '/' . $data_provider . '/' . $secondary_data_provider;
+#   my ($source_type, $source_method) = @_;
+#   my $url = $baseUrl . 'topic_entity_tag/source/' . $source_type . '/' . $source_method . '/' . $mod;
+  # print qq($url\n);
+  my $api_json = `curl -X 'GET' $url -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json'`;
+  my $hash_ref = decode_json $api_json;
+  if ($$hash_ref{'topic_entity_tag_source_id'}) {
+    my $source_id = $$hash_ref{'topic_entity_tag_source_id'};
+    # print qq($source_id\n);
+    return $source_id; }
+  else { return ''; }
+}
+
+sub populatePapValid {
+  $result = $dbh->prepare( "SELECT * FROM pap_status WHERE pap_status = 'valid';" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) { 
+    $papValid{$row[0]}++; }
+}
+
+sub populatePapMerge {
+  $result = $dbh->prepare( "SELECT * FROM pap_identifier WHERE pap_identifier ~ '^[0-9]{8}\$';" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) { 
+    $papMerge{$row[1]} = $row[0]; }
+}
+
+sub populateAbcXref {
+  $result = $dbh->prepare( "SELECT * FROM pap_identifier WHERE pap_identifier ~ 'AGRKB';" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) { 
+#     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+    $wbpToAgr{$row[0]} = $row[1]; }
+} # sub populateAbcXref
+
+
+__END__
 
 sub populateAfpTransgeneOldAfp {
   my @pgcommands;
@@ -227,15 +383,6 @@ sub populateAfpTransgeneOldAfp {
 #     $dbh->do( $pgcommand );
 #   }
 }
-
-sub tsToDigits {
-  my $timestamp = shift;
-  my $tsdigits = '';
-  if ($timestamp =~ m/^(\d{4})\-(\d{2})\-(\d{2})/) { $tsdigits = $1 . $2 . $3; }
-  return $tsdigits;
-}
-
-__END__
 
 backup tables before running this
 
@@ -599,14 +746,6 @@ sub populateMeetings {
   while (my @row = $result->fetchrow) { 
     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
     $meetings{$row[0]}++; }
-} # sub populateAbcXref
-
-sub populateAbcXref {
-  $result = $dbh->prepare( "SELECT * FROM pap_identifier WHERE pap_identifier ~ 'AGRKB';" );
-  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
-  while (my @row = $result->fetchrow) { 
-    next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
-    $wbpToAgr{$row[0]} = $row[1]; }
 } # sub populateAbcXref
 
 
