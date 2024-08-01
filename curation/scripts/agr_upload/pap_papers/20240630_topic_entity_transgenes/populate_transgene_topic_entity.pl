@@ -26,6 +26,9 @@
 # Derive merged papers from pap_identifier.  2024 07 26
 #
 # Was only grabbing the first transgene from ACK note, now grabbing all.  2024 07 29
+#
+# Extract word strings to WBTransgene from afp and send to API.  2024 07 31
+
 
 use strict;
 use diagnostics;
@@ -148,6 +151,22 @@ sub populateAfpTransgene {
 #         print qq(NO PERSON for paper : $joinkey\temail : $email\n); }
       $theHash{'afp'}{$joinkey}{'NOENTITY'}{$wbperson}{timestamp} = $ts;
       push @{ $theHash{'afp'}{$joinkey}{'NOENTITY'}{$wbperson}{note} }, $trText;
+
+      $trText =~ s/\[[^\]]*\]//g;
+      $trText =~ s/~~/ /g;
+      $trText =~ s/\s+/ /g;
+      $trText =~ s/[^A-Za-z0-9 ]//g;
+      my (@words) = split/\s+/, $trText;
+      my %match;
+      foreach my $word (@words) {
+        $word =~ s/\s+//g;
+        if ($word =~ m/[a-z]+(Ex|Is)\d+/) { 
+          if ($trp{$word}) { 
+            my $obj = 'WB:' . $trp{$word};
+            $theHash{'afpx'}{$joinkey}{$obj}{$wbperson}{timestamp} = $ts;
+            $theHash{'afpx'}{$joinkey}{$obj}{$wbperson}{published_as} = $word;
+            push @{ $theHash{'afpx'}{$joinkey}{$obj}{$wbperson}{note} }, $trText;
+      } } }
     }
     else {
       my (@wbtransgenes) = $trText =~ m/(WBTransgene\d+)/g;
@@ -170,6 +189,11 @@ sub outputAfpData {
   my $source_method = 'author_first_pass';
   my $source_id_afp = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
 
+  unless ($source_id_afp) {
+    print STDERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    return;
+  }
+
   $source_evidence_assertion = 'ATP:0000035';
   $source_method = 'ACKnowledge_form';
   my $source_id_ack = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
@@ -178,7 +202,12 @@ sub outputAfpData {
     print STDERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
     return;
   }
-  unless ($source_id_afp) {
+
+  $source_evidence_assertion = 'ECO:0008021';
+  $source_method = 'free_text_to_entity_id_script';
+  my $source_id_afpx = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+
+  unless ($source_id_afpx) {
     print STDERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
     return;
   }
@@ -193,6 +222,9 @@ sub outputAfpData {
           $object{'topic_entity_tag_source_id'}   = $source_id_ack;
           if ($datatype eq 'afp') {
             $object{'topic_entity_tag_source_id'} = $source_id_afp; }
+          if ($datatype eq 'afpx') {
+            $object{'entity_published_as'}	  = $theHash{$datatype}{$joinkey}{$obj}{$curator}{published_as};
+            $object{'topic_entity_tag_source_id'} = $source_id_afpx; }
           $object{'force_insertion'}              = TRUE;
           $object{'negated'}                      = FALSE;
           $object{'reference_curie'}              = $wbpToAgr{$joinkey};
