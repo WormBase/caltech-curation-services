@@ -5,6 +5,8 @@
 # Based on expression_dataset_locator.cgi  2024 07 03
 #
 # Read WBGeneName.csv to get %geneNameToId mappings.  CategoryHeader.txt now has field that are 'Gene Search example'.  2024 07 30
+#
+# Wen switched to the smaller GeneName.csv  Also convert user input to lowercase to make case insensitive, for gene search fields.  2024 07 31
 
 # http://tazendra.caltech.edu/~azurebrd/cgi-bin/forms/reagent_help.cgi
 # https://caltech-curation.textpressolab.com/pub/cgi-bin/forms/reagent_help.cgi
@@ -120,7 +122,8 @@ sub queryDataset {
     if ($userval) {
       my @vals = ();
       if ($fieldtype eq 'genesearch') {		# convert user string to a WBGene
-        (@vals) = sort keys %{ $geneNameToId{$userval} }; }
+        my $lcuserval = lc($userval);
+        (@vals) = sort keys %{ $geneNameToId{$lcuserval} }; }
       else { 
         push @vals, $userval; }
       $userFieldCount++;
@@ -270,7 +273,7 @@ sub showReagentHelpForm {
 } # sub showReagentHelpForm
  
 sub processGeneNameToId {
-  my $file_source = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} .  '/pub/wen/simplemine/ReagentHelp/WBGeneName.csv';
+  my $file_source = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} .  '/pub/wen/simplemine/ReagentHelp/GeneName.csv';
   open (IN, "<$file_source") or die "Cannot open $file_source : $!";
   while (my $line = <IN>) {
     chomp $line;
