@@ -28,7 +28,8 @@
 # Was only grabbing the first transgene from ACK note, now grabbing all.  2024 07 29
 #
 # Extract word strings to WBTransgene from afp and send to API.  2024 07 31
-
+#
+# for extracted afp curies, don't add published_as, don't add note, use current timestamp, use 'caltech_pipeline' for who did it.  2024 08 01
 
 use strict;
 use diagnostics;
@@ -51,6 +52,8 @@ my $output_format = 'json';
 my $tag_counter = 0;
 
 my @output_json;
+
+my $pgDate = &getPgDate();
 
 my $mod = 'WB';
 my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
@@ -163,9 +166,10 @@ sub populateAfpTransgene {
         if ($word =~ m/[a-z]+(Ex|Is)\d+/) { 
           if ($trp{$word}) { 
             my $obj = 'WB:' . $trp{$word};
-            $theHash{'afpx'}{$joinkey}{$obj}{$wbperson}{timestamp} = $ts;
-            $theHash{'afpx'}{$joinkey}{$obj}{$wbperson}{published_as} = $word;
-            push @{ $theHash{'afpx'}{$joinkey}{$obj}{$wbperson}{note} }, $trText;
+            $theHash{'afpx'}{$joinkey}{$obj}{'caltech_pipeline'}{timestamp} = $pgDate;	# use caltech_pipeline and current date
+#             $theHash{'afpx'}{$joinkey}{$obj}{$wbperson}{timestamp} = $ts;		# don't use wbperson, use caltech_pipeline
+#             $theHash{'afpx'}{$joinkey}{$obj}{$wbperson}{published_as} = $word;	# don't get published_as 2024 08 01
+#             push @{ $theHash{'afpx'}{$joinkey}{$obj}{$wbperson}{note} }, $trText;	# don't get note 2024 08 01
       } } }
     }
     else {
