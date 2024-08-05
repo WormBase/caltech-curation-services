@@ -16,6 +16,8 @@
 #
 # Only send note field if there's text to send.
 # Derive merged papers from pap_identifier.  2024 07 26
+#
+# negated data from afp_lasttouched only for afp time period.  2024 08 05
 
 
 
@@ -307,6 +309,8 @@ sub populateAfpData {
     }
     foreach my $joinkey (sort keys %afpLasttouched) {
       unless ($afpAutData{$datatype}{$joinkey}) {
+        my $tsdigits = &tsToDigits($afpLasttouched{$joinkey});
+        next unless ($tsdigits < '20190322');
         $afpAutData{$datatype}{$joinkey}{note}      = "no data entered by author";
         $afpAutData{$datatype}{$joinkey}{negated}   = 1;	# inferred negative by afp
         $afpAutData{$datatype}{$joinkey}{source}    = 'author_first_pass';

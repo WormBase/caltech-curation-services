@@ -173,6 +173,7 @@ sub populateAfpTransgene {
       } } }
     }
     else {
+# TODO  unless afp_lasttouched  skip / next.
       my (@wbtransgenes) = $trText =~ m/(WBTransgene\d+)/g;
       my @auts;
       if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
@@ -185,6 +186,10 @@ sub populateAfpTransgene {
     } } }
   }
 } # sub populateAfpTransgene
+
+# TODO
+# if there is afp_lasttouched + afp_transgene is empty + afp_othertransgene = '[{"id":1,"name":""}]'
+# then created negated topic only (need details)
 
 sub outputAfpData {
   my $data_provider = $mod;
