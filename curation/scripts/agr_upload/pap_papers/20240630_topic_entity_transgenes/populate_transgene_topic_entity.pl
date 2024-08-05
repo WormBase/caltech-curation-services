@@ -31,6 +31,11 @@
 #
 # for extracted afp curies, don't add published_as, don't add note, use current timestamp, use 'caltech_pipeline' for who did it.  2024 08 01
 
+
+# If reloading, maybe drop all topics
+# SELECT * FROM topic_entity_tag WHERE topic = 'ATP:0000110'
+
+
 use strict;
 use diagnostics;
 use DBI;
