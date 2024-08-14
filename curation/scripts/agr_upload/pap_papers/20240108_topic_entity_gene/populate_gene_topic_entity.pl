@@ -21,6 +21,21 @@
 # Derive merged papers from pap_identifier.  2024 07 26
 
 
+
+# If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
+
+# delete command
+# DELETE FROM topic_entity_tag WHERE topic = 'ATP:0000005' AND topic_entity_tag_source_id IN ( SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE secondary_data_provider_id = ( SELECT mod_id FROM mod WHERE abbreviation = 'WB' ));
+
+# select command if wanting to check
+# SELECT * FROM topic_entity_tag WHERE topic = 'ATP:0000005' AND topic_entity_tag_source_id IN (
+#   SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE secondary_data_provider_id = (
+#   SELECT mod_id FROM mod WHERE abbreviation = 'WB' ));
+
+# TODO : output error log
+
+
+
 # if single json output
 # ./populate_gene_topic_entity.pl | json_pp
 
