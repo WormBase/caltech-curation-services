@@ -30,10 +30,20 @@
 # Extract word strings to WBTransgene from afp and send to API.  2024 07 31
 #
 # for extracted afp curies, don't add published_as, don't add note, use current timestamp, use 'caltech_pipeline' for who did it.  2024 08 01
+#
+# skip ACK data that doesn't have an afp_lasttouched entry.  map trp_name to trp_species to obo_name_ncbitaxonid to derive species.
+# if ACK has afp_contributor use that timestamp, otherwise afp_transgene timestamp.  generate sql for deleting data for this script.  2024 08 14
 
 
-# If reloading, maybe drop all topics
-# SELECT * FROM topic_entity_tag WHERE topic = 'ATP:0000110'
+# If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
+
+# delete command
+# DELETE FROM topic_entity_tag WHERE topic = 'ATP:0000110' AND topic_entity_tag_source_id IN ( SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE secondary_data_provider_id = ( SELECT mod_id FROM mod WHERE abbreviation = 'WB' ));
+
+# select command if wanting to check
+# SELECT * FROM topic_entity_tag WHERE topic = 'ATP:0000110' AND topic_entity_tag_source_id IN (
+#   SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE secondary_data_provider_id = (
+#   SELECT mod_id FROM mod WHERE abbreviation = 'WB' ));
 
 
 use strict;
@@ -66,11 +76,14 @@ my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
 my $okta_token = &generateOktaToken();
 
 my %trp;
+my %trpTaxon;
 
 my %theHash;
 my %afpToEmail;
 my %emailToWbperson;
 my %afpContributor;
+my %afpLasttouched;
+my %afpOthertransgene;
 my %wbpToAgr;
 my %papValid;
 my %papMerge;
@@ -83,6 +96,8 @@ my %papMerge;
 &populateEmailToWbperson();
 &populateAfpContributor();
 &populateAfpTransgene();
+&populateAfpLasttouched();
+&populateAfpOthertransgene();
 
 &outputAfpData();
 
@@ -98,7 +113,20 @@ sub populateTrp {
   while (my @row = $result->fetchrow) {
     $trp{$row[1]} = $row[0];
   }
-}
+
+  my %speciesToTaxon;
+  $result = $dbh->prepare( " SELECT * FROM obo_name_ncbitaxonid WHERE obo_name_ncbitaxonid IN ( SELECT DISTINCT(trp_species) FROM trp_species ); " );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) {
+    $speciesToTaxon{$row[1]} = 'NCBITaxon:' . $row[0];
+  }
+
+  $result = $dbh->prepare( "SELECT trp_name, trp_species FROM trp_name, trp_species WHERE trp_name.joinkey = trp_species.joinkey;" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) {
+    $trpTaxon{"WB:$row[0]"} = $speciesToTaxon{$row[1]};
+  }
+} # sub populateTrp
 
 sub populateAfpEmail {
   my $result = $dbh->prepare( "SELECT * FROM afp_email;" );
@@ -118,13 +146,33 @@ sub populateEmailToWbperson {
 }
 
 sub populateAfpContributor {
-  my $result = $dbh->prepare( "SELECT joinkey, afp_contributor FROM afp_contributor" );
+  my $result = $dbh->prepare( "SELECT joinkey, afp_contributor, afp_timestamp FROM afp_contributor ORDER BY afp_timestamp" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
 #     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
     next unless ($row[1]);
     my $who = $row[1]; $who =~ s/two/WBPerson/;
-    $afpContributor{$row[0]}{$who}++;
+    $afpContributor{$row[0]}{$who} = $row[2];
+} }
+
+sub populateAfpLasttouched {
+  my $result = $dbh->prepare( "SELECT joinkey, afp_lasttouched FROM afp_lasttouched" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) {
+#     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+    next unless ($row[1]);
+    my $who = $row[1]; $who =~ s/two/WBPerson/;
+    $afpLasttouched{$row[0]} = $row[1];
+} }
+
+sub populateAfpOthertransgene {
+  my $result = $dbh->prepare( "SELECT joinkey, afp_othertransgene FROM afp_othertransgene" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) {
+#     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+    next unless ($row[1]);
+    my $who = $row[1]; $who =~ s/two/WBPerson/;
+    $afpOthertransgene{$row[0]} = $row[1];
 } }
 
 sub deriveValidPap {
@@ -178,7 +226,7 @@ sub populateAfpTransgene {
       } } }
     }
     else {
-# TODO  unless afp_lasttouched  skip / next.
+      next unless ($afpLasttouched{$joinkey});
       my (@wbtransgenes) = $trText =~ m/(WBTransgene\d+)/g;
       my @auts;
       if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
@@ -186,7 +234,10 @@ sub populateAfpTransgene {
       foreach my $aut (@auts) {
         foreach my $wbtr (@wbtransgenes) {
           my $obj = 'WB:' . $wbtr;
-          $theHash{'ack'}{$joinkey}{$obj}{$aut}{timestamp} = $ts;
+          if ($afpContributor{$joinkey}{$aut}) {
+            $theHash{'ack'}{$joinkey}{$obj}{$aut}{timestamp} = $afpContributor{$joinkey}{$aut}; }
+          else {
+            $theHash{'ack'}{$joinkey}{$obj}{$aut}{timestamp} = $ts; }
           push @{ $theHash{'ack'}{$joinkey}{$obj}{$aut}{note} }, $trText;
     } } }
   }
@@ -194,7 +245,15 @@ sub populateAfpTransgene {
 
 # TODO
 # if there is afp_lasttouched + afp_transgene is empty + afp_othertransgene = '[{"id":1,"name":""}]'
-# then created negated topic only (need details)
+# then created negated topic only
+
+# if there is afp_lasttouched + afp_transgene is empty + NO afp_othertransgene
+# then created negated topic only
+
+# check tfp_transgene - if empty, make negated, if data, send the data.  source ECO:0008021 + ACKnoweldge_pipeline
+
+# output an error log if running against API.
+
 
 sub outputAfpData {
   my $data_provider = $mod;
@@ -248,7 +307,10 @@ sub outputAfpData {
           $object{'entity_type'}                  = 'ATP:0000110';
           $object{'entity_id_validation'}         = 'alliance';
           $object{'entity'}                       = $obj;
+#           unless ($trpTaxon{$obj}) { print qq($obj not in taxon list\n); }	# TODO need to get response on how to handle these
           $object{'species'}                      = 'NCBITaxon:6239';
+          if ($trpTaxon{$obj}) { 
+            $object{'species'}                    = $trpTaxon{$obj}; }
           if ($obj eq 'NOENTITY') {
             delete $object{'entity_type'};
             delete $object{'entity_id_validation'};
