@@ -35,6 +35,9 @@
 # if ACK has afp_contributor use that timestamp, otherwise afp_transgene timestamp.  generate sql for deleting data for this script.  2024 08 14
 #
 # process negatives for old afp and ack, but not sending to abc yet.  have a few questions on ticket.  2024 08 15
+#
+# If no taxon in OA, default to 6239, that's what wb does for acedb.
+# In processing negatives, derived valid wbpaper, and if invalid skip.  2024 08 16
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -288,6 +291,8 @@ sub outputNegData {
 
 
   foreach my $joinkey (sort keys %afpLasttouched) {
+    ($joinkey) = &deriveValidPap($joinkey);
+    next unless $papValid{$joinkey};
     unless ($wbpToAgr{$joinkey}) { print STDERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
     my %object;
     $object{'force_insertion'}              = TRUE;
@@ -390,9 +395,8 @@ sub outputAfpData {
           $object{'entity_type'}                  = 'ATP:0000110';
           $object{'entity_id_validation'}         = 'alliance';
           $object{'entity'}                       = $obj;
-#           unless ($trpTaxon{$obj}) { print qq($obj not in taxon list\n); }	# TODO need to get response on how to handle these
           $object{'species'}                      = 'NCBITaxon:6239';
-          if ($trpTaxon{$obj}) { 
+          if ($trpTaxon{$obj}) { 			# if there's a trp taxon, go with that value instead of default
             $object{'species'}                    = $trpTaxon{$obj}; }
           if ($obj eq 'NOENTITY') {
             delete $object{'entity_type'};
