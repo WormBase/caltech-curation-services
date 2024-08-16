@@ -33,6 +33,8 @@
 #
 # skip ACK data that doesn't have an afp_lasttouched entry.  map trp_name to trp_species to obo_name_ncbitaxonid to derive species.
 # if ACK has afp_contributor use that timestamp, otherwise afp_transgene timestamp.  generate sql for deleting data for this script.  2024 08 14
+#
+# process negatives for old afp and ack, but not sending to abc yet.  have a few questions on ticket.  2024 08 15
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -84,9 +86,12 @@ my %emailToWbperson;
 my %afpContributor;
 my %afpLasttouched;
 my %afpOthertransgene;
+my %afpTransgene;
 my %wbpToAgr;
 my %papValid;
 my %papMerge;
+my %afpNeg;
+my %ackNeg;
 
 &populateAbcXref();
 &populatePapValid();
@@ -100,6 +105,7 @@ my %papMerge;
 &populateAfpOthertransgene();
 
 &outputAfpData();
+&outputNegData();
 
 if ($output_format eq 'json') {
   my $json = encode_json \@output_json;         # for single json file output
@@ -191,6 +197,8 @@ sub populateAfpTransgene {
   while (my @row = $result->fetchrow) {
     my ($joinkey, $trText, $ts, $curator, $approve, $curts) = @row;
     ($joinkey) = &deriveValidPap($joinkey);
+    $afpTransgene{$joinkey}{data} = $trText;
+    $afpTransgene{$joinkey}{timestamp} = $ts;
     next unless $papValid{$joinkey};
     next unless $trText;
     my $tsdigits = &tsToDigits($ts);
@@ -243,17 +251,91 @@ sub populateAfpTransgene {
   }
 } # sub populateAfpTransgene
 
+# Done but not tested
+# # ack
+# # if there is afp_lasttouched + afp_transgene is empty + afp_othertransgene = '[{"id":1,"name":""}]'
+# # then created negated topic only
+# 
+# # old afp
+# # if there is afp_lasttouched + NO afp_transgene + NO afp_othertransgene
+# # then created negated topic only
+
 # TODO
-# if there is afp_lasttouched + afp_transgene is empty + afp_othertransgene = '[{"id":1,"name":""}]'
-# then created negated topic only
-
-# if there is afp_lasttouched + afp_transgene is empty + NO afp_othertransgene
-# then created negated topic only
-
 # check tfp_transgene - if empty, make negated, if data, send the data.  source ECO:0008021 + ACKnoweldge_pipeline
 
 # output an error log if running against API.
 
+
+sub outputNegData {
+  my $data_provider = $mod;
+  my $secondary_data_provider = $mod;
+  my $source_evidence_assertion = 'ATP:0000035';
+  my $source_method = 'author_first_pass';
+  my $source_id_afp = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+  unless ($source_id_afp) {
+    print STDERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    return;
+  }
+
+  $source_evidence_assertion = 'ATP:0000035';
+  $source_method = 'ACKnowledge_form';
+  my $source_id_ack = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+  unless ($source_id_ack) {
+    print STDERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    return;
+  }
+
+
+  foreach my $joinkey (sort keys %afpLasttouched) {
+    unless ($wbpToAgr{$joinkey}) { print STDERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
+    my %object;
+    $object{'force_insertion'}              = TRUE;
+    $object{'negated'}                      = TRUE;
+    $object{'reference_curie'}              = $wbpToAgr{$joinkey};
+#     $object{'wbpaper_id'}                   = $joinkey;		# for debugging
+    $object{'topic'}                        = 'ATP:0000110';
+    if ( (!exists $afpTransgene{$joinkey}) && (!exists $afpOthertransgene{$joinkey}) ) {
+      my $email = $afpToEmail{$joinkey};
+      my $lcemail = '';
+      if ($email) { $lcemail = lc($email); }
+      my $wbperson = 'unknown_author';
+      if ($emailToWbperson{$lcemail}) { $wbperson = $emailToWbperson{$lcemail}; }
+#       $object{'BLAH'}  		      = 'afp';
+      $object{'created_by'}  		      = $wbperson;
+      $object{'updated_by'}  		      = $wbperson;
+# TODO
+# date stuff doesn't make sense in notes
+      $object{'topic_entity_tag_source_id'}   = $source_id_afp;
+      if ($output_format eq 'json') {
+        push @output_json, \%object; }
+      else {
+        my $object_json = encode_json \%object;
+        &createTag($object_json); }
+      }
+    elsif ( ($afpTransgene{$joinkey}{data} eq '') && ($afpOthertransgene{$joinkey} eq '[{"id":1,"name":""}]') ) {
+      $object{'topic_entity_tag_source_id'}   = $source_id_ack;
+      my @auts;
+      if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
+      if (scalar @auts < 1) { push @auts, 'unknown_author'; }
+      foreach my $aut (@auts) {
+        $object{'created_by'}   = $aut;
+        $object{'updated_by'}   = $aut;
+#         $object{'BLAH'}  		      = 'ACK';
+        if ($afpContributor{$joinkey}{$aut}) {
+          $object{'date_updated'} = $afpContributor{$joinkey}{$aut};
+          $object{'date_created'} = $afpContributor{$joinkey}{$aut}; }
+        else {
+          $object{'date_updated'} = $afpTransgene{$joinkey}{timestamp};
+          $object{'date_created'} = $afpTransgene{$joinkey}{timestamp}; }
+        if ($output_format eq 'json') {
+          push @output_json, \%object; }
+        else {
+          my $object_json = encode_json \%object;
+          &createTag($object_json); }
+      }
+    }
+  }
+} # sub outputNegData
 
 sub outputAfpData {
   my $data_provider = $mod;
