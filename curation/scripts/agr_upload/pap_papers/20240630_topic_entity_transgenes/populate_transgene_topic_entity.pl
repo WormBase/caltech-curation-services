@@ -37,7 +37,8 @@
 # process negatives for old afp and ack, but not sending to abc yet.  have a few questions on ticket.  2024 08 15
 #
 # If no taxon in OA, default to 6239, that's what wb does for acedb.
-# In processing negatives, derived valid wbpaper, and if invalid skip.  2024 08 16
+# In processing negatives, derived valid wbpaper, and if invalid skip.
+# Output tfp data for ABC.  2024 08 16
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -90,6 +91,7 @@ my %afpContributor;
 my %afpLasttouched;
 my %afpOthertransgene;
 my %afpTransgene;
+my %tfpTransgene;
 my %wbpToAgr;
 my %papValid;
 my %papMerge;
@@ -106,9 +108,11 @@ my %ackNeg;
 &populateAfpTransgene();
 &populateAfpLasttouched();
 &populateAfpOthertransgene();
+&populateTfpTransgene();
 
 &outputAfpData();
 &outputNegData();
+&outputTfpData();
 
 if ($output_format eq 'json') {
   my $json = encode_json \@output_json;         # for single json file output
@@ -194,6 +198,16 @@ sub deriveValidPap {
     else { return 'NOTVALID'; }
 } # sub deriveValidPap
 
+sub populateTfpTransgene {
+  my $result = $dbh->prepare( "SELECT * FROM tfp_transgene;" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) {
+    my ($joinkey, $trText, $ts) = @row;
+    ($joinkey) = &deriveValidPap($joinkey);
+    next unless $papValid{$joinkey};
+    $tfpTransgene{$joinkey}{data} = $trText;
+    $tfpTransgene{$joinkey}{timestamp} = $ts; } }
+
 sub populateAfpTransgene {
 #   my $result = $dbh->prepare( "SELECT * FROM afp_transgene WHERE afp_timestamp < '2019-03-22 00:00';" );
   my $result = $dbh->prepare( "SELECT * FROM afp_transgene;" );
@@ -263,10 +277,10 @@ sub populateAfpTransgene {
 # # old afp
 # # if there is afp_lasttouched + NO afp_transgene + NO afp_othertransgene
 # # then created negated topic only
+#
+# # check tfp_transgene - if empty, make negated, if data, send the data.  source ECO:0008021 + ACKnoweldge_pipeline
 
 # TODO
-# check tfp_transgene - if empty, make negated, if data, send the data.  source ECO:0008021 + ACKnoweldge_pipeline
-
 # output an error log if running against API.
 
 
@@ -342,6 +356,58 @@ sub outputNegData {
     }
   }
 } # sub outputNegData
+
+sub outputTfpData {
+  my $data_provider = $mod;
+  my $secondary_data_provider = $mod;
+  my $source_evidence_assertion = 'ECO:0008021';
+  my $source_method = 'ACKnowledge_pipeline';
+  my $source_id_tfp = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+  unless ($source_id_tfp) {
+    print STDERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    return;
+  }
+  foreach my $joinkey (sort keys %tfpTransgene) {
+    unless ($wbpToAgr{$joinkey}) { print STDERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
+    my $data = $tfpTransgene{$joinkey}{data};
+    my %object;
+    $object{'topic_entity_tag_source_id'}   = $source_id_tfp;
+    $object{'force_insertion'}              = TRUE;
+    $object{'negated'}                      = FALSE;
+    $object{'reference_curie'}              = $wbpToAgr{$joinkey};
+#     $object{'wbpaper_id'}                   = $joinkey;		# for debugging
+    $object{'date_updated'}		    = $tfpTransgene{$joinkey}{timestamp};
+    $object{'date_created'}		    = $tfpTransgene{$joinkey}{timestamp};
+    $object{'created_by'}                   = 'ACKnowledge_pipeline';
+    $object{'updated_by'}                   = 'ACKnowledge_pipeline';
+    $object{'topic'}                        = 'ATP:0000110';
+    if ($data eq '') {
+      $object{'negated'}                    = TRUE;
+#       $object{'BLAH'}                       = 'TFP neg';
+      if ($output_format eq 'json') {
+        push @output_json, \%object; }
+      else {
+        my $object_json = encode_json \%object;
+        &createTag($object_json); } }
+    else {
+      my (@wbtransgenes) = $data =~ m/(WBTransgene\d+)/g;
+      foreach my $wbtr (@wbtransgenes) {
+        my $obj = 'WB:' . $wbtr;
+#         $object{'BLAH'}                      = 'TFP yes';
+        $object{'entity_type'}               = 'ATP:0000110';
+        $object{'entity_id_validation'}      = 'alliance';
+        $object{'entity'}                    = $obj;
+        $object{'species'}                   = 'NCBITaxon:6239';
+        if ($trpTaxon{$obj}) { 		     # if there's a trp taxon, go with that value instead of default
+          $object{'species'}                 = $trpTaxon{$obj}; }
+        if ($output_format eq 'json') {
+          push @output_json, \%object; }
+        else {
+          my $object_json = encode_json \%object;
+          &createTag($object_json); }
+    } }
+  }
+} # sub outputTfpData
 
 sub outputAfpData {
   my $data_provider = $mod;
