@@ -147,7 +147,8 @@ sub populateEmailToWbperson {
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     my $lcemail = lc($row[2]);
-    $emailToWbperson{$lcemail} = $row[0]; 
+    my $who = $row[0]; $who =~ s/two/WBPerson/;
+    $emailToWbperson{$lcemail} = $who; 
   }
 }
 
