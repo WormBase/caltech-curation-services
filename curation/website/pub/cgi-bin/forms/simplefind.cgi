@@ -9,9 +9,10 @@
 # Wen switched to the smaller GeneName.csv  Also convert user input to lowercase to make case insensitive, for gene search fields.  2024 07 31
 #
 # Renamed from reagent_help to simple_find for Wen and Paul S.  2024 08 15
+#
+# Renamed to simplefind for consistency with simplemine.  2024 08 17
 
-# http://tazendra.caltech.edu/~azurebrd/cgi-bin/forms/simple_find.cgi
-# https://caltech-curation.textpressolab.com/pub/cgi-bin/forms/simple_find.cgi
+# https://caltech-curation.textpressolab.com/pub/cgi-bin/forms/simplefind.cgi
 
 
 
@@ -40,7 +41,7 @@ my $host = $query->remote_host();		# get ip address
 
 # my $file_source = '/home/acedb/wen/simplemine/all_SPELL_datasets.csv';
 # my $file_source = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} .  '/pub/wen/simplemine/expressionDatasetLocator/all_SPELL_datasets.csv';
-# my $file_category = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} .  '/pub/wen/simplemine/ReagentHelp/CategoryHeader.csv';
+# my $file_category = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} .  '/pub/wen/simplemine/SimpleFind/CategoryHeader.csv';
 my %hash;
 # my ($dataHeader) = &processFile();
  
@@ -87,14 +88,14 @@ sub queryDataset {
   if ($actionType eq 'download') { $outputFormat = 'download'; }
   if ($outputFormat eq 'download') {
       print qq(Content-type: application/x-download\n);
-      print qq(Content-Disposition: attachment; filename="simple_find_results.txt"\n\n); }
+      print qq(Content-Disposition: attachment; filename="simplefind_results.txt"\n\n); }
     elsif ($outputFormat eq 'plain') {
       print "Content-type: text/plain\n\n"; }
     elsif ($outputFormat eq 'html') {
       print "Content-type: text/html\n\n"; }
     else {
       print qq(Content-type: application/x-download\n);
-      print qq(Content-Disposition: attachment; filename="simple_find_results.txt"\n\n); }
+      print qq(Content-Disposition: attachment; filename="simplefind_results.txt"\n\n); }
 #   my $output = '';
 #   my $dataHeader = qq(Dataset ID	Dataset Name	WormBase Paper ID	Method	Species	Tissue	Topics	Title	URL);
 
@@ -189,7 +190,7 @@ sub queryDataset {
 
 sub processDatafile {
   my ($filename) = @_;
-  my $file_source = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} .  '/pub/wen/simplemine/ReagentHelp/' . $filename;
+  my $file_source = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} .  '/pub/wen/simplemine/SimpleFind/' . $filename;
 # print qq(READ $file_source<br>);
   open (IN, "<$file_source") or die "Cannot open $file_source : $!";
   my $header = <IN>;
@@ -228,24 +229,24 @@ sub processDatafile {
 
 sub frontPage {
   print "Content-type: text/html\n\n";
-  my $title = 'Reagent Help';
+  my $title = 'Simple Find';
   my ($header, $footer) = &cshlNew($title);
 # TODO PUT THIS BACK
 #   print "$header\n";		# make beginning of HTML page
   my $action;                   # what user clicked
   unless ($action = $query->param('action')) { $action = 'none'; }
-  &showReagentHelpForm();
+  &showSimpleFindForm();
 # TODO PUT THIS BACK
 #   print "$footer"; 		# make end of HTML page
 } # sub frontPage
 
-sub showReagentHelpForm {
-  print qq(<h3>Reagent Help</h3><br/>\n);
+sub showSimpleFindForm {
+  print qq(<h3>Simple Find</h3><br/>\n);
 
   foreach my $filename (@{ $categories{list} }) {	# sort by list
 #   foreach my $filename (sort keys %categories) {
 #     next if ($filename eq 'list');
-    print qq(<form method="post" action="simple_find.cgi" enctype="multipart/form-data">\n);
+    print qq(<form method="post" action="simplefind.cgi" enctype="multipart/form-data">\n);
     print qq(<br><br><h4>$categories{$filename}{title}</h4>\n);
     print qq(<table border="0">);
     foreach my $field (@ { $categories{$filename}{fields} }) {
@@ -272,10 +273,10 @@ sub showReagentHelpForm {
     print qq(<input type="submit" name="action" value="$categories{$filename}{buttons}{download}"><br/>\n);
     print qq(</form>);
   }
-} # sub showReagentHelpForm
+} # sub showSimpleFindForm
  
 sub processGeneNameToId {
-  my $file_source = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} .  '/pub/wen/simplemine/ReagentHelp/GeneName.csv';
+  my $file_source = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} .  '/pub/wen/simplemine/SimpleFind/GeneName.csv';
   open (IN, "<$file_source") or die "Cannot open $file_source : $!";
   while (my $line = <IN>) {
     chomp $line;
@@ -293,7 +294,7 @@ sub processGeneNameToId {
 } # sub processGeneNameToId
 
 sub processCategoryFile {
-  my $file_source = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} .  '/pub/wen/simplemine/ReagentHelp/CategoryHeader.txt';
+  my $file_source = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} .  '/pub/wen/simplemine/SimpleFind/CategoryHeader.txt';
   my %categories;
   $/ = "";
   open (IN, "<$file_source") or die "Cannot open $file_source : $!";
@@ -449,7 +450,7 @@ sub showSpellForm {
 #   print qq(Not making any selection is equivalent to choosing all. For example, without specifying "Platform", results from all platforms will be displayed. If users choose "RNAseq" and "proteomics", the result will display both RNAseq and proteomics datasets.<br/><br/>\n);
 
 #   print qq(Gene mappings to gene identifiers, Tissue-LifeStage, RNAi-Phenotype, Allele-Phenotype, ConciseDescription.<br/><br/>);
-  print qq(<form method="post" action="simple_find.cgi" enctype="multipart/form-data">\n);
+  print qq(<form method="post" action="simplefind.cgi" enctype="multipart/form-data">\n);
 
 #   print qq(1. Method, optionally specify one or more methods.<br/>\n);
   print qq(1. Choose platform<br/>\n);
