@@ -11,6 +11,10 @@
 # Renamed from reagent_help to simple_find for Wen and Paul S.  2024 08 15
 #
 # Renamed to simplefind for consistency with simplemine.  2024 08 17
+#
+# Wen has a line in the CategoryHeader.txt like
+# SkipOutput: Skip Ontology Categories in Results|Biological Process|Molecular Function|Cellular Component|Expressed in Tissue|Expressed at Life Stage|Associated to Disease|Associated to Phenotype
+# which means to add a checkbox to skip those fields from the results.  2024 08 18
 
 # https://caltech-curation.textpressolab.com/pub/cgi-bin/forms/simplefind.cgi
 
@@ -107,9 +111,10 @@ sub queryDataset {
 #   my @tissues               = $query->param('tissue');
 #   my @topics                = $query->param('topics');
   (my $var, my $filename)        = &getHtmlVar($query, 'filename');
+  ($var, my $skipOutput)      = &getHtmlVar($query, 'skipOutput');
   my $html_additional_output = '';
 #   $html_additional_output .= qq(Queried $filename for fields : <br>\n);	# replaced with count later on
-  my ($dataHeader, $fileDataHashref) = &processDatafile($filename);
+  my ($dataHeader, $fileDataHashref) = &processDatafile($filename, $skipOutput);
   my %fileData = %$fileDataHashref;
   my %lines;
   my $categoryCount = scalar(@ { $categories{$filename}{fields} });
@@ -189,7 +194,7 @@ sub queryDataset {
 } # sub queryDataset
 
 sub processDatafile {
-  my ($filename) = @_;
+  my ($filename, $skipOutput) = @_;
   my $file_source = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} .  '/pub/wen/simplemine/SimpleFind/' . $filename;
 # print qq(READ $file_source<br>);
   open (IN, "<$file_source") or die "Cannot open $file_source : $!";
@@ -197,9 +202,11 @@ sub processDatafile {
   chomp $header;
   my %fieldToIndex;
   my %indexToField;
+  my %indexToActualFieldName;
   my (@fields) = split/\t/, $header;
   foreach my $i (0 .. $#fields) {
     my $fieldname = $fields[$i];
+    $indexToActualFieldName{$i} = $fieldname;
     $fieldname =~ s/\s+//g;
     $fieldToIndex{$fieldname} = $i;
     $indexToField{$i} = $fieldname;
@@ -219,11 +226,31 @@ sub processDatafile {
     my (@fields) = split/\t/, $line;
     foreach my $index (@wanted_indices) {
       my $fieldname = $indexToField{$index};
-# print qq($index fileData $fieldname $count $fields[$index]<br>);
       $fileData{$fieldname}{$count} = $fields[$index];
     } # foreach my $index (@wanted_indices)
+
+    if ($skipOutput eq 'skipOutput') {
+      my @lineDataExcludingSkip = ();
+      foreach my $i (0 .. $#fields) {
+        my $fieldvalue = $fields[$i];
+        my $fieldname = $indexToActualFieldName{$i};
+        unless ($categories{$filename}{skipOutput}{fields}{$fieldname}) {
+          push @lineDataExcludingSkip, $fieldvalue; }
+      }
+      $line = join"\t", @lineDataExcludingSkip;
+    }
     $fileData{line}{$count} = $line;
   } # while (my $line = <IN>)
+
+  if ($skipOutput eq 'skipOutput') {
+    my @headerExcludingSkip = ();
+    foreach my $i (0 .. $#fields) {
+      my $headervalue = $fields[$i];
+      unless ($categories{$filename}{skipOutput}{fields}{$headervalue}) {
+        push @headerExcludingSkip, $headervalue; }
+    }
+    $header = join"\t", @headerExcludingSkip;
+  }
   return ($header, \%fileData);
 }
 
@@ -267,6 +294,11 @@ sub showSimpleFindForm {
       }
       else { 1; }	# this shouldn't happen
     } # foreach my $field (@ { $categories{$filename}{fields} })
+    if ($categories{$filename}{skipOutput}) {
+      print qq(<tr><td>$categories{$filename}{skipOutput}{label}</td>\n);
+      print qq(<td><input type="checkbox" name="skipOutput" value="skipOutput" checked="checked"></td></tr>);
+    }
+#           $categories{$filename}{skipOutput}{label} = $label;
     print qq(</table>);
     print qq(<input type="hidden" name="filename" value="$filename">);
     print qq(<input type="submit" name="action" value="$categories{$filename}{buttons}{display}">\n);
@@ -312,19 +344,28 @@ sub processCategoryFile {
     $categories{$filename}{buttons}{display} = $buttons[0];
     $categories{$filename}{buttons}{download} = $buttons[1];
     foreach my $line (@lines) {
-      my (@stuff) = split/\|/, $line;
-      my $field = shift @stuff;
-      push @{ $categories{$filename}{fields} }, $field;
-      if ($stuff[0] =~ m/Free Text example: (.*)$/) { 
-        $categories{$filename}{field}{$field}{type} = 'freetext';
-        $categories{$filename}{field}{$field}{example} = $1; }
-      elsif ($stuff[0] =~ m/Gene Search example: (.*)$/) { 
-        $categories{$filename}{field}{$field}{type} = 'genesearch';
-        $categories{$filename}{field}{$field}{example} = $1; }
+      if ($line =~ m/SkipOutput: /) {
+          $line =~ s/SkipOutput: //; 
+          my (@stuff) = split/\|/, $line;
+          my $label = shift @stuff;
+          $categories{$filename}{skipOutput}{label} = $label;
+          foreach (@stuff) {
+            $categories{$filename}{skipOutput}{fields}{$_}++; }
+        }
       else {
-        $categories{$filename}{field}{$field}{type} = 'dropdown';
-        foreach my $value (@stuff) {
-          push @{ $categories{$filename}{field}{$field}{values} }, $value; } }
+        my (@stuff) = split/\|/, $line;
+        my $field = shift @stuff;
+        push @{ $categories{$filename}{fields} }, $field;
+        if ($stuff[0] =~ m/Free Text example: (.*)$/) { 
+          $categories{$filename}{field}{$field}{type} = 'freetext';
+          $categories{$filename}{field}{$field}{example} = $1; }
+        elsif ($stuff[0] =~ m/Gene Search example: (.*)$/) { 
+          $categories{$filename}{field}{$field}{type} = 'genesearch';
+          $categories{$filename}{field}{$field}{example} = $1; }
+        else {
+          $categories{$filename}{field}{$field}{type} = 'dropdown';
+          foreach my $value (@stuff) {
+            push @{ $categories{$filename}{field}{$field}{values} }, $value; } } }
     }
   }   
   close (IN) or die "Cannot close $file_source : $!";
