@@ -170,7 +170,7 @@ sub populateAfpContributor {
 } }
 
 sub populateAfpLasttouched {
-  my $result = $dbh->prepare( "SELECT joinkey, afp_lasttouched FROM afp_lasttouched" );
+  my $result = $dbh->prepare( "SELECT joinkey, afp_timestamp FROM afp_lasttouched" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
 #     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
@@ -323,8 +323,8 @@ sub outputNegData {
 #       $object{'BLAH'}  		      = 'afp';
       $object{'created_by'}  		      = $wbperson;
       $object{'updated_by'}  		      = $wbperson;
-# TODO
-# date stuff doesn't make sense in notes
+      $object{'date_updated'}                 = $afpLasttouched{$joinkey};
+      $object{'date_created'}                 = $afpLasttouched{$joinkey};
       $object{'topic_entity_tag_source_id'}   = $source_id_afp;
       if ($output_format eq 'json') {
         push @output_json, \%object; }
