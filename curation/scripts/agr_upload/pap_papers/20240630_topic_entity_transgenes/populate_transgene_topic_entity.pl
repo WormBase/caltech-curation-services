@@ -104,12 +104,12 @@ my %ackNeg;
 &populateAbcXref();
 &populatePapValid();
 &populatePapMerge(); 
+&populateAfpContributor();
+&populateAfpLasttouched();
 &populateTrp();
 &populateAfpEmail();
 &populateEmailToWbperson();
-&populateAfpContributor();
 &populateAfpTransgene();
-&populateAfpLasttouched();
 &populateAfpOthertransgene();
 &populateTfpTransgene();
 
