@@ -3493,8 +3493,7 @@ sub setAnySimpleAutocompleteValues {
     $data{$ontology_type}{name}{"Rat"}          = "Rat";
     $data{$ontology_type}{name}{"Guinea_pig"}   = "Guinea_pig";
     $data{$ontology_type}{name}{"Chicken"}      = "Chicken";
-    $data{$ontology_type}{name}{"Goat"}         = "Goat";
-    $data{$ontology_type}{name}{"Sheep"}        = "Sheep"; }
+    $data{$ontology_type}{name}{"Goat"}         = "Goat"; }
   elsif ($ontology_type eq 'antigen') {
     $data{$ontology_type}{name}{"Peptide"}       = "Peptide";
     $data{$ontology_type}{name}{"Protein"}       = "Protein";
