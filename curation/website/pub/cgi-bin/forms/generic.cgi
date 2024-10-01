@@ -77,6 +77,10 @@
 # &listPmids()  for Alliance to download xml, convert to json, pass back for populating author data.  2021 04 06
 #
 # modified to work in cervino docker, but only tested WpaXref and WpaXrefBackwards and PapIdToWBPaper.  2022 10 12
+#
+# Added a new action ListPictureSourcePaper for canopus to access mappings of pic_source to wbpaper.  Previously
+# was accessing referenceform.cgi but it's password protected, and this was easier than updating that script to
+# have password access.  2024 10 01
 
 
 use Jex;			# untaint, getHtmlVar, cshlNew, getPgDate
@@ -117,6 +121,7 @@ sub process {                   # see if anything clicked
   elsif ($action eq 'ContinentPIs') {              &continentPIs(); }
   elsif ($action eq 'PictureByPaper') {            &pictureByPaper(); }
   elsif ($action eq 'ConvertPaperIdentifiers') {   &convertPaperIdentifiers(); }
+  elsif ($action eq 'ListPictureSourcePaper') {    &listPictureSourcePaper(); }
   elsif ($action eq 'ListPmids') {                 &listPmids(); }
   elsif ($action eq 'WpaXref') {                   &wpaXref(); }
   elsif ($action eq 'WpaXrefBackwards') {          &wpaXref('backward'); }
@@ -300,6 +305,13 @@ sub wpaXref {			# replace wpa_xref.cgi and wpa_xref_backwards.cgi  for Kimberly 
         else { print "WBPaper$pap\t$other<BR>\n"; }
   } }
 } # sub wpaXref
+
+sub listPictureSourcePaper {
+  print "Content-type: text/plain\n\n";
+  $result = $dbh->prepare( "SELECT pic_source.pic_source, pic_paper.pic_paper, pic_paper.joinkey FROM pic_source, pic_paper WHERE pic_source.joinkey = pic_paper.joinkey" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) { print qq(@row\n); }
+} # sub listPictureSourcePaper
 
 sub listPmids {			# list pmids for alliance to download and convert to json
   my ($viewFlag) = @_;
