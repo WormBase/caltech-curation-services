@@ -24,6 +24,8 @@
 # Chris needs to be able to change the obo url, updating using his suggestion
 # to do what we did for https://github.com/WormBase/caltech-curation-services/blob/main/curation/scripts/citace_upload/lifestage/lifestageAceFromObo.pl
 # 2024 04 09
+# 
+# modified to allow WS### as command line parameter for chris_one_button.pl dumper script.  2024 10 07
 
 
 use strict;
@@ -89,16 +91,21 @@ sub readCvs {
 #   my $obofile = get "http://purl.obolibrary.org/obo/wbphenotype/releases/2019-01-29/wbphenotype-merged.obo";	# updated url 2019 02 27
 #   my $obofile = get "https://www.dropbox.com/s/1glm0lamc78clce/wbphenotype.obo?dl=0";	# updated url 2019 02 28
 #   my $obofile = get "http://tazendra.caltech.edu/~azurebrd/var/work/chris/wbphenotype.obo";	# temp testing 2019 02 28
-#   my $obofile = get "https://github.com/obophenotype/c-elegans-phenotype-ontology/raw/vWS293/wbphenotype.obo";
+#   my $obofile = get "https://github.com/obophenotype/c-elegans-phenotype-ontology/raw/vWS295/wbphenotype.obo";
 
-# Chris needs to be able to change the url, so using an external file for it
-  my $infile = 'obo_url';
-  open (IN, "<$infile") or die "Cannot open $infile : $!";
-  my $url = <IN>;
-  chomp $url;
-  close (IN) or die "Cannot open $infile : $!";
+  my $url = '';
+  if ($ARGV[0]) {
+    # chris_one_button.pl passing WS as parameter to construct url
+    $url = 'https://github.com/obophenotype/c-elegans-phenotype-ontology/raw/v' . $ARGV[0] . '/wbphenotype.obo'; }
+  else {
+    # Chris needs to be able to change the url, so using an external file for it
+    my $infile = 'obo_url';
+    open (IN, "<$infile") or die "Cannot open $infile : $!";
+    my $url = <IN>;
+    chomp $url;
+    close (IN) or die "Cannot open $infile : $!"; }
+
   my $obofile = get $url;
-
   my (@entries) = split/\n\n/, $obofile;
   foreach my $para (@entries) {
     next unless ($para =~ m/id:/);
