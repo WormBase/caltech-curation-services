@@ -5,6 +5,8 @@
 # added part_of and starts_at_end_of.  2014 03 27
 #
 # modified to suppress additional synonym junk, and print paper_evidence of definition.  2019 02 05
+#
+# modified to allow WS### as command line parameter for chris_one_button.pl dumper script.  2024 10 07
 
 
 use strict;
@@ -12,12 +14,17 @@ use LWP::Simple;
 
 # my $url = 'https://github.com/obophenotype/c-elegans-development-ontology/raw/vWS288/wbls.obo';
 
-# Chris needs to be able to change the url, so using an external file for it
-my $infile = 'obo_url';
-open (IN, "<$infile") or die "Cannot open $infile : $!";
-my $url = <IN>;
-chomp $url;
-close (IN) or die "Cannot open $infile : $!";
+my $url = '';
+if ($ARGV[0]) {
+  # chris_one_button.pl passing WS as parameter to construct url
+  $url = 'https://github.com/obophenotype/c-elegans-development-ontology/raw/v' . $ARGV[0] . '/wbls.obo'; }
+else {
+  # Chris needs to be able to change the url, so using an external file for it
+  my $infile = 'obo_url';
+  open (IN, "<$infile") or die "Cannot open $infile : $!";
+  my $url = <IN>;
+  chomp $url;
+  close (IN) or die "Cannot open $infile : $!"; }
 
 print qq(using url $url\n);
 
