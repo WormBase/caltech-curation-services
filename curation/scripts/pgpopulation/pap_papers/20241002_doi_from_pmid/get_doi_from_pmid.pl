@@ -17,6 +17,9 @@
 # WBPaper at ABC, though that would be unlikely.
 # For now, script is looking up references by pmid at ABC and outputting any DOI.
 # 2024 10 03
+#
+# Populated mangolassi, use pubmed as curator, even though we just know they came from abc.
+# 2024 10 12
 
 
 use strict;
@@ -64,13 +67,27 @@ while (my @row = $result->fetchrow) {
 my $count_wanted = scalar @pmids;
 # print qq(@pmids\n);
 
+my @pgcommands = ();
 my $count_matches = 0;
+my $pap_curator = 'two10877';
+my $timestamp = 'CURRENT_TIMESTAMP';
 foreach my $pmid (@pmids) {
   my $doi = &getPmidFromAbc($pmid);
-  if ($doi) { $count_matches++; }
+  if ($doi) { 
+    my $joinkey = $pmidToPap{$pmid};
+    my $order   = $highestOrder{$joinkey} + 1;
+    push @pgcommands, qq(INSERT INTO pap_identifier   VALUES ('$joinkey', '$doi', $order, '$pap_curator', $timestamp) );
+    push @pgcommands, qq(INSERT INTO h_pap_identifier VALUES ('$joinkey', '$doi', $order, '$pap_curator', $timestamp) );
+    $count_matches++; }
   print qq($pmid\t$doi\n);
 }
 print qq(found $count_matches dois out of $count_wanted pmids\n);
+
+foreach my $pgcommand (@pgcommands) {
+  print "$pgcommand\n";
+# UNCOMMENT TO POPULATE
+#   my $result2 = $dbh->do( $pgcommand );
+} # foreach my $pgcommand (@pgcommands)
 
 
 # my $max = 100;
