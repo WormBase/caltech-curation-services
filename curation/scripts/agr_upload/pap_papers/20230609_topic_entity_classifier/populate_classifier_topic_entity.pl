@@ -18,7 +18,11 @@
 # Derive merged papers from pap_identifier.  2024 07 26
 #
 # negated data from afp_lasttouched only for afp time period.  2024 08 05
-
+# 
+# not using %entitytypes , not tested, so not commited to github  2024 10 10
+#
+# now outputs to error logs, there's a .err.processing for processing error, and .err.<4002|stage|prod> for errors 
+# coming back from ABC.  2024 10 11
 
 
 
@@ -33,15 +37,12 @@
 #   SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE secondary_data_provider_id = (
 #   SELECT mod_id FROM mod WHERE abbreviation = 'WB' ));
 
-# TODO : output error log
 
 
-
-# if single json output
-# ./dump_classifier_topic_entity.pl | json_pp
-
-# if creating data through ABC API
+# Always run like 
 # ./dump_classifier_topic_entity.pl
+# but first change $output_format and $baseUrl
+
 
 
 # to clean up, must delete validation first, then tags.
@@ -90,7 +91,6 @@ my @wbpapers = qw( 00004952 00005199 00046571 00057043 00064676 );	# SCRUM-3775
 
 my %datatypesAfpCfp;
 my %datatypes;
-my %entitytypes;
 my %wbpToAgr;
 my %papValid;
 my %papMerge;
@@ -113,9 +113,6 @@ my %premadeComments;
 
 
 
-my $errfile = 'dump_classifier_topic_entity.err';
-open (ERR, ">$errfile") or die "Cannot create $errfile : $!";
-
 my %strData;
 my %svmData;
 my %nncData;
@@ -129,6 +126,21 @@ my %afpCurData;
 my %oaData;
 my %objsCurated;
 
+my $abc_location = 'stage';
+if ($baseUrl =~ m/dev4002/) { $abc_location = '4002'; }
+elsif ($baseUrl =~ m/prod/) { $abc_location = 'prod'; }
+
+my $date = &getSimpleSecDate();
+my $outfile = 'populate_classifier_topic_entity.' . $date . '.' . $output_format . '.' . $abc_location;
+open (OUT, ">$outfile") or die "Cannot create $outfile : $!";
+
+my $perrfile = 'populate_classifier_topic_entity.' . $date . '.err.processing';
+open (PERR, ">$perrfile") or die "Cannot create $perrfile : $!";
+
+my $errfile = 'populate_classifier_topic_entity.' . $date . '.err.' . $abc_location;
+if ($output_format eq 'api') {
+  open (ERR, ">$errfile") or die "Cannot create $outfile : $!";
+}
 
 # PUT THIS BACK
 # &populateCurCurData();
@@ -149,11 +161,15 @@ my %objsCurated;
 
 
 if ($output_format eq 'json') {
-  my $json = encode_json \@output_json;		# for single json file output
-  print qq($json\n);				# for single json file output
+  my $json = to_json( \@output_json, { pretty => 1 } );
+  print OUT qq($json);                            # for single json file output
 }
 
-close (ERR) or die "Cannot close $errfile : $!";
+close (OUT) or die "Cannot close $outfile : $!";
+if ($output_format eq 'api') {
+  close (ERR) or die "Cannot close $perrfile : $!";
+}
+close (PERR) or die "Cannot close $errfile : $!";
 
 
 # TODO - need to figure out how to get curator and timestamp
@@ -165,13 +181,13 @@ sub outputOaData {
   my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
   my $timestamp = &getPgDate();
   unless ($source_id) {
-    print qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
     return;
   }
 #   { "source_type": "professional_biocurator", "source_method": "wormbase_oa", "evidence": "eco_string", "description": "caltech curation tools", "mod_abbreviation": "WB" }
   foreach my $datatype (sort keys %oaData) {
     unless ($datatypes{$datatype}) { 
-      print ERR qq(no topic for oaData $datatype\n); 
+      print PERR qq(no topic for oaData $datatype\n); 
       next;
     }
     foreach my $joinkey (sort keys %{ $oaData{$datatype} }) {
@@ -202,13 +218,13 @@ sub outputAfpCurData {
   my $source_method = 'author_first_pass';
   my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
   unless ($source_id) {
-    print qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
     return;
   }
 #   { "source_type": "professional_biocurator", "source_method": "wormbase_curation_status", "evidence": "eco_string", "description": "cur_curdata", "mod_abbreviation": "WB" }
   foreach my $datatype (sort keys %afpCurData) {
     unless ($datatypes{$datatype}) { 
-      print ERR qq(no topic for afpCurData $datatype\n); 
+      print PERR qq(no topic for afpCurData $datatype\n); 
       next;
     }
     foreach my $joinkey (sort keys %{ $afpCurData{$datatype} }) {
@@ -243,17 +259,17 @@ sub outputAfpAutData {
   my $source_id_ack = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
 
   unless ($source_id_ack) {
-    print qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
     return;
   }
   unless ($source_id_afp) {
-    print qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
     return;
   }
 #   { "source_type": "professional_biocurator", "source_method": "wormbase_curation_status", "evidence": "eco_string", "description": "cur_curdata", "mod_abbreviation": "WB" }
   foreach my $datatype (sort keys %afpAutData) {
     unless ($datatypes{$datatype}) { 
-      print ERR qq(no topic for afpAutData $datatype\n); 
+      print PERR qq(no topic for afpAutData $datatype\n); 
       next;
     }
     foreach my $joinkey (sort keys %{ $afpAutData{$datatype} }) {
@@ -442,13 +458,13 @@ sub outputCfpData {
   my $source_method = 'curator_first_pass';
   my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
   unless ($source_id) {
-    print qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
     return;
   }
 #   { "source_type": "professional_biocurator", "source_method": "wormbase_curation_status", "evidence": "eco_string", "description": "cur_curdata", "mod_abbreviation": "WB" }
   foreach my $datatype (sort keys %cfpData) {
     unless ($datatypes{$datatype}) { 
-      print ERR qq(no topic for cfpData $datatype\n); 
+      print PERR qq(no topic for cfpData $datatype\n); 
       next;
     }
     foreach my $joinkey (sort keys %{ $cfpData{$datatype} }) {
@@ -497,11 +513,11 @@ sub populateCfpData {
 sub outputCurStrData {
   foreach my $datatype (sort keys %strData) {
     unless ($datatype eq 'antibody') {
-      print ERR qq(Only allowed string type is antibody, no $datatype\n); 
+      print PERR qq(Only allowed string type is antibody, no $datatype\n); 
       next;
     }
     unless ($datatypes{$datatype}) { 
-      print ERR qq(no topic for cur_strdata $datatype\n); 
+      print PERR qq(no topic for cur_strdata $datatype\n); 
       next;
     }
     my $data_provider = $mod;
@@ -510,7 +526,7 @@ sub outputCurStrData {
     my $source_method = 'string_matching_antibody';
     my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
     unless ($source_id) {
-      print qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+      print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
       return;
     }
     # only data for 1 source exists, everything has date after 2019 03 22
@@ -562,7 +578,7 @@ sub populateCurStrData {
 sub outputCurNncData {
   foreach my $datatype (sort keys %nncData) {
     unless ($datatypes{$datatype}) { 
-      print ERR qq(no topic for cur_nncdata $datatype\n); 
+      print PERR qq(no topic for cur_nncdata $datatype\n); 
       next;
     }
 
@@ -573,7 +589,7 @@ sub outputCurNncData {
       my $source_method = 'nnc_' . $datatype;
       my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
       unless ($source_id) {
-        print qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+        print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
         return;
       }
       my %object;
@@ -619,7 +635,7 @@ sub populateCurNncData {
 sub outputCurSvmData {
   foreach my $datatype (sort keys %svmData) {
     unless ($datatypes{$datatype}) { 
-      print ERR qq(no topic for cur_svmdata $datatype\n); 
+      print PERR qq(no topic for cur_svmdata $datatype\n); 
       next;
     }
     foreach my $joinkey (sort keys %{ $svmData{$datatype} }) {
@@ -629,7 +645,7 @@ sub outputCurSvmData {
       my $source_method = 'svm_' . $datatype;
       my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
       unless ($source_id) {
-        print qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+        print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
         return;
       }
       my %object;
@@ -680,13 +696,13 @@ sub outputCurCurData {
   my $source_method = 'curation_status_form';
   my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
   unless ($source_id) {
-    print qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
     return;
   }
 #   { "source_type": "professional_biocurator", "source_method": "wormbase_curation_status", "evidence": "eco_string", "description": "cur_curdata", "mod_abbreviation": "WB" }
   foreach my $datatype (sort keys %curData) {
     unless ($datatypes{$datatype}) { 
-      print ERR qq(no topic for cur_curdata $datatype\n); 
+      print PERR qq(no topic for cur_curdata $datatype\n); 
       next;
     }
     foreach my $joinkey (sort keys %{ $curData{$datatype} }) {
@@ -787,8 +803,12 @@ sub createTag {
   my $url = $baseUrl . 'topic_entity_tag/';
 # PUT THIS BACK
   my $api_json = `curl -X 'POST' $url -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json' --data '$object_json'`;
-  print qq(create $object_json\n);
-  print qq($api_json\n);
+  print OUT qq(create $object_json\n);
+  print OUT qq($api_json\n);
+  if ($api_json !~ /success/) {
+    print ERR qq(create $object_json\n);
+    print ERR qq($api_json\n);
+  }
 }
 
 
@@ -883,13 +903,6 @@ sub populateDatatypesAndABC {
   $datatypes{'structcorr'}         = 'ATP:0000054';
   # $datatypes{'timeaction'}         = 'no atp, skip';
   $datatypes{'transporter'}        = 'ATP:0000062';
-  
-  $entitytypes{'species'}          = 'ATP:0000123';
-  $entitytypes{'gene'}             = 'ATP:0000047';
-  $entitytypes{'variation'}        = 'ATP:0000030';
-  $entitytypes{'transgene'}        = 'ATP:0000099';
-  $entitytypes{'chemical'}         = 'ATP:0000094';
-  $entitytypes{'antibody'}         = 'ATP:0000096';
 
 #   &populateAbcXrefSample();
 # PUT THIS BACK, but change to read from db
