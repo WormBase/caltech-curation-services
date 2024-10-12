@@ -42,6 +42,8 @@
 #
 # Use afp_lasttouched timestamp for ABC date for negate old afp.
 # Generate logs based on abc api, json or api output, generate error log for api responses that are not success.  2024 08 19
+#
+# logging generates .err.processing for processing errors, separate for .err.<4002|stage|prod> for api errors.  2024 10 11
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -80,8 +82,8 @@ my @output_json;
 my $pgDate = &getPgDate();
 
 my $mod = 'WB';
-my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
-# my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
+# my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
+my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
 my $okta_token = &generateOktaToken();
 
 my %trp;
@@ -121,6 +123,9 @@ my $date = &getSimpleSecDate();
 my $outfile = 'populate_transgene_topic_entity.' . $date . '.' . $output_format . '.' . $abc_location;
 open (OUT, ">$outfile") or die "Cannot create $outfile : $!";
 
+my $perrfile = 'populate_transgene_topic_entity.' . $date . '.err.processing';
+open (PERR, ">$perrfile") or die "Cannot create $perrfile : $!";
+
 my $errfile = 'populate_transgene_topic_entity.' . $date . '.err.' . $abc_location;
 if ($output_format eq 'api') {
   open (ERR, ">$errfile") or die "Cannot create $outfile : $!";
@@ -139,6 +144,7 @@ if ($output_format eq 'json') {
 }
 
 close (OUT) or die "Cannot close $outfile : $!";
+close (PERR) or die "Cannot close $errfile : $!";
 if ($output_format eq 'api') {
   close (ERR) or die "Cannot close $errfile : $!";
 }
@@ -223,7 +229,7 @@ sub deriveValidPap {
 } # sub deriveValidPap
 
 sub populateTfpTransgene {
-  my $result = $dbh->prepare( "SELECT * FROM tfp_transgene;" );
+  my $result = $dbh->prepare( "SELECT * FROM tfp_transgene WHERE tfp_timestamp > '2019-03-22 00:00';" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     my ($joinkey, $trText, $ts) = @row;
@@ -302,7 +308,7 @@ sub populateAfpTransgene {
 # # if there is afp_lasttouched + NO afp_transgene + NO afp_othertransgene
 # # then created negated topic only
 #
-# # check tfp_transgene - if empty, make negated, if data, send the data.  source ECO:0008021 + ACKnoweldge_pipeline
+# # check tfp_transgene - if empty, make negated, if data, send the data.  source ECO:0008021 + ACKnowledge_pipeline
 
 # TODO
 # output an error log if running against API.
@@ -315,7 +321,7 @@ sub outputNegData {
   my $source_method = 'author_first_pass';
   my $source_id_afp = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
   unless ($source_id_afp) {
-    print STDERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
     return;
   }
 
@@ -323,7 +329,7 @@ sub outputNegData {
   $source_method = 'ACKnowledge_form';
   my $source_id_ack = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
   unless ($source_id_ack) {
-    print STDERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
     return;
   }
 
@@ -331,7 +337,7 @@ sub outputNegData {
   foreach my $joinkey (sort keys %afpLasttouched) {
     ($joinkey) = &deriveValidPap($joinkey);
     next unless $papValid{$joinkey};
-    unless ($wbpToAgr{$joinkey}) { print STDERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
+    unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
     my %object;
     $object{'force_insertion'}              = TRUE;
     $object{'negated'}                      = TRUE;
@@ -388,11 +394,11 @@ sub outputTfpData {
   my $source_method = 'ACKnowledge_pipeline';
   my $source_id_tfp = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
   unless ($source_id_tfp) {
-    print STDERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
     return;
   }
   foreach my $joinkey (sort keys %tfpTransgene) {
-    unless ($wbpToAgr{$joinkey}) { print STDERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
+    unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
     my $data = $tfpTransgene{$joinkey}{data};
     my %object;
     $object{'topic_entity_tag_source_id'}   = $source_id_tfp;
@@ -441,7 +447,7 @@ sub outputAfpData {
   my $source_id_afp = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
 
   unless ($source_id_afp) {
-    print STDERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
     return;
   }
 
@@ -450,7 +456,7 @@ sub outputAfpData {
   my $source_id_ack = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
 
   unless ($source_id_ack) {
-    print STDERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
     return;
   }
 
@@ -459,13 +465,13 @@ sub outputAfpData {
   my $source_id_afpx = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
 
   unless ($source_id_afpx) {
-    print STDERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
     return;
   }
 
   foreach my $datatype (sort keys %theHash) {
     foreach my $joinkey (sort keys %{ $theHash{$datatype} }) {
-      unless ($wbpToAgr{$joinkey}) { print STDERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
+      unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
 #       next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
       foreach my $obj (sort keys %{ $theHash{$datatype}{$joinkey} }) {
         foreach my $curator (sort keys %{ $theHash{$datatype}{$joinkey}{$obj} }) {
