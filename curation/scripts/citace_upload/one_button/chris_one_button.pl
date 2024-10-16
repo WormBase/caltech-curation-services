@@ -5,7 +5,10 @@
 #
 # Still needs tace testing.  For Chris  2024 10 07
 #
-# Generate tace file to connect with tace and parse the files, sending output to screen.  2024 10 14
+# Generate tace file to connect with tace and parse the files, sending output to screen.  2024 10 15
+#
+# Split ls interaction data from other data for tace testing into separate file, since it takes
+# forever.  2024 10 16
 
 
 use strict;
@@ -26,15 +29,7 @@ print qq($date\n);
 my $directory = '';
 
 my $tace_file = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . "/chris/test_read_chris.sh";
-open (OUT, ">$tace_file") or die "Cannot create $tace_file : $!\n";
-print OUT <<END_OUT;
-cd /usr/caltech_curation_files/wdemo
-export ACEDB=/usr/caltech_curation_files/wdemo
-#Start reading files
-/acedb/bin.LINUX_64/tace -tsuser 'chris' <<END_TACE
-Read-models
-y
-END_OUT
+&openTaceOut($tace_file);
 
 print qq(Starting Gene Regulation\n);
 $directory = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . "/chris/GeneReg_OA_Dumper/";
@@ -88,29 +83,52 @@ chdir ($output_dir) or die "Cannot chdir to $output_dir : $!";
 `mv interaction.ace.* ${ws}_interaction.ace`;
 print OUT qq(Parse ${output_dir}${ws}_interaction.ace\n);
 
+&closeTaceOut($tace_file);
+
+my $tace_file_ls = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . "/chris/test_read_chris_ls.sh";
+&openTaceOut($tace_file_ls);
+
 print qq(Starting Large scale Interaction\n);
 $directory = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . "/chris/Interaction_OA_Dumper/Large_scale_interactions/";
 chdir ($directory) or die "Cannot chdir to $directory : $!";
 `./historicGeneReplacementLSInteraction.pl`;
 `cp ${directory}/Large_scale_interactions.ace ${output_dir}/${ws}_Large_scale_interactions.ace`;
 `cp ${directory}/ls_dead_genes.txt ${output_dir}/${ws}_ls_dead_genes.txt`;
-# print OUT qq(Parse ${output_dir}${ws}_Large_scale_interactions.ace\n);
+print OUT qq(Parse ${output_dir}${ws}_Large_scale_interactions.ace\n);
 
 my $ws_dir = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . "/Data_for_citace/Data_from_Chris/";
 `cp ${output_dir}/*ace* $ws_dir`;
 
+&closeTaceOut($tace_file_ls);
 
+
+
+sub openTaceOut {
+  my $tace_file = shift;
+  open (OUT, ">$tace_file") or die "Cannot create $tace_file : $!\n";
 print OUT <<END_OUT;
+cd /usr/caltech_curation_files/wdemo
+export ACEDB=/usr/caltech_curation_files/wdemo
+#Start reading files
+/acedb/bin.LINUX_64/tace -tsuser 'chris' <<END_TACE
+Read-models
+y
+END_OUT
+}
+
+sub closeTaceOut {
+  my $tace_file = shift;
+  print OUT <<END_OUT;
 quit
 n
 END_TACE
 #End reading files.
 END_OUT
-
-close (OUT) or die "Cannot close $tace_file : $!";
-chmod 0755, $tace_file;
-my $ace_output = `$tace_file`;
-print qq($ace_output\n);
+  close (OUT) or die "Cannot close $tace_file : $!";
+  chmod 0755, $tace_file;
+  my $ace_output = `$tace_file`;
+  print qq($ace_output\n);
+}
 
 __END__
 
