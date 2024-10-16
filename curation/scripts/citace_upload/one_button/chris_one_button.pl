@@ -94,6 +94,7 @@ chdir ($directory) or die "Cannot chdir to $directory : $!";
 `./historicGeneReplacementLSInteraction.pl`;
 `cp ${directory}/Large_scale_interactions.ace ${output_dir}/${ws}_Large_scale_interactions.ace`;
 `cp ${directory}/ls_dead_genes.txt ${output_dir}/${ws}_ls_dead_genes.txt`;
+# print OUT qq(Parse ${output_dir}${ws}_Large_scale_interactions.ace\n);
 
 my $ws_dir = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . "/Data_for_citace/Data_from_Chris/";
 `cp ${output_dir}/*ace* $ws_dir`;
