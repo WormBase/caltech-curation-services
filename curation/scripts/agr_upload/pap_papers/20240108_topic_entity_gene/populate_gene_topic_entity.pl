@@ -19,6 +19,9 @@
 # 2024 04 18
 #
 # Derive merged papers from pap_identifier.  2024 07 26
+#
+# Output tfp positive data.  If no species or taxon for gene, output to processing log.  Have standardized
+# processing logs and api error logs.  2024 10 16
 
 
 
@@ -32,14 +35,8 @@
 #   SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE secondary_data_provider_id = (
 #   SELECT mod_id FROM mod WHERE abbreviation = 'WB' ));
 
-# TODO : output error log
 
-
-
-# if single json output
-# ./populate_gene_topic_entity.pl | json_pp
-
-# if creating data through ABC API
+# Run like
 # ./populate_gene_topic_entity.pl
 
 
@@ -100,7 +97,8 @@ my $okta_token = &generateOktaToken();
 # my @wbpapers = qw( 00018874 );		# automatic_update_merge_script
 # my @wbpapers = qw( 00044280 );		# briggsae genes
 # my @wbpapers = qw( 00003000 00003823 00004455 00004952 00005199 00005707 00006103 00006202 00006320 00017095 00018874 00025176 00027230 00044280 00046571 00057043 00063127 00064676 00064771 00065877 00066211 );		# kimberly 2024 04 18 set
-my @wbpapers = qw( 00000119 00000465 00003000 00003823 00004455 00004952 00005199 00005707 00005988 00006103 00006202 00006320 00013393 00017095 00024745 00025176 00027230 00038491 00044280 00046571 00057043 00063127 00064676 00064771 00065877 00066211 );		# kimberly 2024 05 13 set
+# my @wbpapers = qw( 00000119 00000465 00003000 00003823 00004455 00004952 00005199 00005707 00005988 00006103 00006202 00006320 00013393 00017095 00024745 00025176 00027230 00038491 00044280 00046571 00057043 00063127 00064676 00064771 00065877 00066211 );		# kimberly 2024 05 13 set
+my @wbpapers = qw( 00065553 00065560 00066296 00066410 00066411 00066419 00066461 00066469 );	# kimberly negative gene set  2024 10 02
 
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 00037049
@@ -115,10 +113,14 @@ my %meetings;
 my %geneToTaxon;
 my %manConn;
 my %papGenePublished;
+my %tfpGene;
+my %gin;
+my %speciesToTaxon;
 
 
 my %chosenPapers;
 my %ginValidation;
+my %ginTaxon;
 
 my %theHash;
 my %infOther;
@@ -131,6 +133,22 @@ my %afp;
 my %ack;
 my %absReadMeet;
 my %absReadNoMeet;
+
+my $abc_location = 'stage';
+if ($baseUrl =~ m/dev4002/) { $abc_location = '4002'; }
+elsif ($baseUrl =~ m/prod/) { $abc_location = 'prod'; }
+
+my $date = &getSimpleSecDate();
+my $outfile = 'populate_gene_topic_entity.' . $date . '.' . $output_format . '.' . $abc_location;
+open (OUT, ">$outfile") or die "Cannot create $outfile : $!";
+
+my $perrfile = 'populate_gene_topic_entity.' . $date . '.err.processing';
+open (PERR, ">$perrfile") or die "Cannot create $perrfile : $!";
+
+my $errfile = 'populate_gene_topic_entity.' . $date . '.err.' . $abc_location;
+if ($output_format eq 'api') {
+  open (ERR, ">$errfile") or die "Cannot create $outfile : $!";
+}
 
 # my $geneTopic = 'ATP:0000142';
 my $geneTopic = 'ATP:0000005';
@@ -147,14 +165,24 @@ foreach my $joinkey (@wbpapers) { $chosenPapers{$joinkey}++; }
 &populateGeneTaxon();
 &populatePapGene();
 &populateGinValidation();
+&populateGinTaxon();
+
+&outputTfpData();
+
 # &outputInfOther();
 # &outputCurConf();
 &outputTheHash();
 
 if ($output_format eq 'json') {
-  my $json = encode_json \@output_json;		# for single json file output
-  print qq($json\n);				# for single json file output
+  my $json = to_json( \@output_json, { pretty => 1 } );
+  print OUT qq($json\n);				# for single json file output
 }
+
+close (OUT) or die "Cannot close $outfile : $!";
+if ($output_format eq 'api') {
+  close (ERR) or die "Cannot close $errfile : $!";
+}
+close (PERR) or die "Cannot close $perrfile : $!";
 
 # foreach my $oj (@output_json) {
 #   print qq(OJ $oj\n);
@@ -194,7 +222,7 @@ sub outputTheHash {
       elsif ($datatype eq 'autoEimear')    { $source_evidence_assertion = 'ECO:0008021'; $source_method = 'automatic_update_merge_script'; }
     my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
     unless ($source_id) {
-      print qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+      print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
       return;
     }
     $datatypeToSourceId{$datatype} = $source_id;
@@ -209,7 +237,7 @@ sub outputTheHash {
       foreach my $gene (sort keys %{ $theHash{$datatype}{$joinkey} }) {
         my $entity_id_validation = 'alliance';
         if ($ginValidation{$gene}) { $entity_id_validation = $ginValidation{$gene}; }
-          else { print qq(ERROR $gene not in pap_species table\n); }
+          else { print PERR qq(ERROR $gene not in pap_species table\n); }
         foreach my $curator (sort keys %{ $theHash{$datatype}{$joinkey}{$gene} }) {
           my %object;
           $object{'force_insertion'}            = TRUE;
@@ -238,7 +266,97 @@ sub outputTheHash {
             my $object_json = encode_json \%object;
             &createTag($object_json); }
     } } }
-} }
+} } # sub outputTheHash
+
+sub populateTfpGenestudied {
+  my $result = $dbh->prepare( "SELECT * FROM tfp_genestudied WHERE tfp_timestamp > '2019-03-22 00:00';" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) {
+    my ($joinkey, $trText, $ts) = @row;
+    ($joinkey) = &deriveValidPap($joinkey);
+    next unless $papValid{$joinkey};
+    $tfpGene{$joinkey}{data} = $trText;
+    $tfpGene{$joinkey}{timestamp} = $ts; } }
+
+sub outputTfpData {
+  my $data_provider = $mod;
+  my $secondary_data_provider = $mod;
+  my $source_evidence_assertion = 'ECO:0008021';
+  my $source_method = 'ACKnowledge_pipeline';
+  my $source_id_tfp = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+  unless ($source_id_tfp) {
+    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    return;
+  }
+  foreach my $joinkey (sort keys %tfpGene) {
+    unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
+    my $data = $tfpGene{$joinkey}{data};
+    my %object;
+    $object{'topic_entity_tag_source_id'}   = $source_id_tfp;
+    $object{'force_insertion'}              = TRUE;
+    $object{'negated'}                      = FALSE;
+    $object{'reference_curie'}              = $wbpToAgr{$joinkey};
+#     $object{'wbpaper_id'}                   = $joinkey;               # for debugging
+    $object{'date_updated'}                 = $tfpGene{$joinkey}{timestamp};
+    $object{'date_created'}                 = $tfpGene{$joinkey}{timestamp};
+    $object{'created_by'}                   = 'ACKnowledge_pipeline';
+    $object{'updated_by'}                   = 'ACKnowledge_pipeline';
+    $object{'topic'}                        = 'ATP:0000047';
+    if ($data eq '') {
+      $object{'negated'}                    = TRUE;
+#       $object{'BLAH'}                       = 'TFP neg';
+      if ($output_format eq 'json') {
+        push @output_json, \%object; }
+      else {
+        my $object_json = encode_json \%object;
+        &createTag($object_json); } }
+    else {
+      my @data = split(/ | /, $data);
+      foreach my $data (@data) {
+        my $geneInt = $data =~ m/(\d{8})/;
+        my $geneSpecies = $gin{$geneInt};
+        my $geneTaxon = $speciesToTaxon{$geneSpecies};
+        unless ($geneSpecies || $geneTaxon) {	# if no geneSpecies or geneTaxon, skip, and add to error log
+          print PERR qq(ERROR no species or taxon for WBGene$geneInt\n);
+          next; }
+        my $obj = 'WB:WBGene' . $geneInt;
+#         $object{'BLAH'}                      = 'TFP yes';
+        $object{'entity_type'}               = 'ATP:0000047';
+        $object{'entity_id_validation'}      = 'alliance';
+        $object{'entity'}                    = $obj;
+        $object{'species'}                   = $geneTaxon;
+        if ($output_format eq 'json') {
+          push @output_json, \%object; }
+        else {
+          my $object_json = encode_json \%object;
+          &createTag($object_json); }
+    } }
+  }
+} # sub outputTfpData
+
+sub populateNegativeData {
+# TODO : discuss
+}
+
+sub populateGinTaxon {
+  my $result = $dbh->prepare( "SELECT * FROM gin_species;" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) {
+    $gin{$row[1]} = $row[0];
+  }
+
+  $result = $dbh->prepare( " SELECT * FROM obo_name_ncbitaxonid WHERE obo_name_ncbitaxonid IN ( SELECT DISTINCT(gin_species) FROM gin_species ); " );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) {
+    $speciesToTaxon{$row[1]} = 'NCBITaxon:' . $row[0];
+  }
+
+  $result = $dbh->prepare( "SELECT trp_name, trp_species FROM trp_name, trp_species WHERE trp_name.joinkey = trp_species.joinkey;" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) {
+    $ginTaxon{"WB:$row[0]"} = $speciesToTaxon{$row[1]};
+  }
+} # sub populateGinTaxon
 
 sub populateGinValidation {
   $result = $dbh->prepare( "SELECT * FROM gin_species;" );
@@ -455,8 +573,12 @@ sub createTag {
   my $url = $baseUrl . 'topic_entity_tag/';
 # PUT THIS BACK
   my $api_json = `curl -X 'POST' $url -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json' --data '$object_json'`;
-  print qq(create $object_json\n);
-  print qq($api_json\n);
+  print OUT qq(create $object_json\n);
+  print OUT qq($api_json\n);
+  if ($api_json !~ /success/) {
+    print ERR qq(create $object_json\n);
+    print ERR qq($api_json\n);
+  }
 }
 
 
