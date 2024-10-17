@@ -167,9 +167,9 @@ if ($output_format eq 'json') {
 
 close (OUT) or die "Cannot close $outfile : $!";
 if ($output_format eq 'api') {
-  close (ERR) or die "Cannot close $perrfile : $!";
+  close (ERR) or die "Cannot close $errfile : $!";
 }
-close (PERR) or die "Cannot close $errfile : $!";
+close (PERR) or die "Cannot close $perrfile : $!";
 
 
 # TODO - need to figure out how to get curator and timestamp
