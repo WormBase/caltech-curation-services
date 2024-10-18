@@ -166,6 +166,7 @@ foreach my $joinkey (@wbpapers) { $chosenPapers{$joinkey}++; }
 &populatePapGene();
 &populateGinValidation();
 &populateGinTaxon();
+&populateTfpGenestudied();
 
 &outputTfpData();
 
@@ -273,6 +274,7 @@ sub populateTfpGenestudied {
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     my ($joinkey, $trText, $ts) = @row;
+    next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
     ($joinkey) = &deriveValidPap($joinkey);
     next unless $papValid{$joinkey};
     $tfpGene{$joinkey}{data} = $trText;
@@ -313,9 +315,11 @@ sub outputTfpData {
     else {
       my @data = split(/ | /, $data);
       foreach my $data (@data) {
-        my $geneInt = $data =~ m/(\d{8})/;
+        my ($geneInt) = $data =~ m/(\d{8})/;
+        next unless ($geneInt);
+        my $geneTaxon = '';
         my $geneSpecies = $gin{$geneInt};
-        my $geneTaxon = $speciesToTaxon{$geneSpecies};
+        if ($geneSpecies) { $geneTaxon = $speciesToTaxon{$geneSpecies}; }
         unless ($geneSpecies || $geneTaxon) {	# if no geneSpecies or geneTaxon, skip, and add to error log
           print PERR qq(ERROR no species or taxon for WBGene$geneInt\n);
           next; }
@@ -342,7 +346,7 @@ sub populateGinTaxon {
   my $result = $dbh->prepare( "SELECT * FROM gin_species;" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
-    $gin{$row[1]} = $row[0];
+    $gin{$row[0]} = $row[1];
   }
 
   $result = $dbh->prepare( " SELECT * FROM obo_name_ncbitaxonid WHERE obo_name_ncbitaxonid IN ( SELECT DISTINCT(gin_species) FROM gin_species ); " );
