@@ -98,7 +98,9 @@ my $okta_token = &generateOktaToken();
 # my @wbpapers = qw( 00044280 );		# briggsae genes
 # my @wbpapers = qw( 00003000 00003823 00004455 00004952 00005199 00005707 00006103 00006202 00006320 00017095 00018874 00025176 00027230 00044280 00046571 00057043 00063127 00064676 00064771 00065877 00066211 );		# kimberly 2024 04 18 set
 # my @wbpapers = qw( 00000119 00000465 00003000 00003823 00004455 00004952 00005199 00005707 00005988 00006103 00006202 00006320 00013393 00017095 00024745 00025176 00027230 00038491 00044280 00046571 00057043 00063127 00064676 00064771 00065877 00066211 );		# kimberly 2024 05 13 set
-my @wbpapers = qw( 00065553 00065560 00066296 00066410 00066411 00066419 00066461 00066469 );	# kimberly negative gene set  2024 10 02
+my @wbpapers = qw( 00065553 00065560 00066296 00066355 00066405 00066410 00066411 00066419 00066461 00066469 );	# kimberly negative gene set  2024 10 02
+
+# my @wbpapers = qw( 00065560 );	# sample paper that has multiple entries in API for WB:WBGene00004796 AGRKB:101000000965217because the gene showed as both a gene name and a sequence name
 
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 00037049
@@ -303,7 +305,7 @@ sub outputTfpData {
     $object{'date_created'}                 = $tfpGene{$joinkey}{timestamp};
     $object{'created_by'}                   = 'ACKnowledge_pipeline';
     $object{'updated_by'}                   = 'ACKnowledge_pipeline';
-    $object{'topic'}                        = 'ATP:0000047';
+    $object{'topic'}                        = 'ATP:0000005';
     if ($data eq '') {
       $object{'negated'}                    = TRUE;
 #       $object{'BLAH'}                       = 'TFP neg';
@@ -325,7 +327,7 @@ sub outputTfpData {
           next; }
         my $obj = 'WB:WBGene' . $geneInt;
 #         $object{'BLAH'}                      = 'TFP yes';
-        $object{'entity_type'}               = 'ATP:0000047';
+        $object{'entity_type'}               = 'ATP:0000005';
         $object{'entity_id_validation'}      = 'alliance';
         $object{'entity'}                    = $obj;
         $object{'species'}                   = $geneTaxon;
