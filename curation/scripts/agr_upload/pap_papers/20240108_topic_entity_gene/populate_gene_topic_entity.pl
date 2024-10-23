@@ -100,7 +100,11 @@ my $okta_token = &generateOktaToken();
 # my @wbpapers = qw( 00000119 00000465 00003000 00003823 00004455 00004952 00005199 00005707 00005988 00006103 00006202 00006320 00013393 00017095 00024745 00025176 00027230 00038491 00044280 00046571 00057043 00063127 00064676 00064771 00065877 00066211 );		# kimberly 2024 05 13 set
 my @wbpapers = qw( 00065553 00065560 00066296 00066355 00066405 00066410 00066411 00066419 00066461 00066469 );	# kimberly negative gene set  2024 10 02
 
-# my @wbpapers = qw( 00065560 );	# sample paper that has multiple entries in API for WB:WBGene00004796 AGRKB:101000000965217because the gene showed as both a gene name and a sequence name
+# ( '00065553', '00065560', '00066296', '00066355', '00066405', '00066410', '00066411', '00066419', '00066461', '00066469' );	# kimberly negative gene set  2024 10 02
+
+# my @wbpapers = qw( 00065560 );	# sample paper that has multiple entries in API for WB:WBGene00004796 AGRKB:101000000965217 because the gene showed as both a gene name and a sequence name
+
+# my @wbpapers = qw( 00065560 );	# sample paper where author removed tfp data
 
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 00037049
@@ -135,6 +139,11 @@ my %afp;
 my %ack;
 my %absReadMeet;
 my %absReadNoMeet;
+my %afpContributor;
+my %ackPapGene;
+my %tfpPapGene;
+my %ackNegGeneTopic;
+my %tfpNegGeneTopic;
 
 my $abc_location = 'stage';
 if ($baseUrl =~ m/dev4002/) { $abc_location = '4002'; }
@@ -168,13 +177,14 @@ foreach my $joinkey (@wbpapers) { $chosenPapers{$joinkey}++; }
 &populatePapGene();
 &populateGinValidation();
 &populateGinTaxon();
+&populateAfpContributor();
 &populateTfpGenestudied();
+&populateNegativeData();
 
-&outputTfpData();
-
-# &outputInfOther();
-# &outputCurConf();
-&outputTheHash();
+# PUT THIS BACK
+# &outputTfpData();
+# &outputTheHash();
+&outputNegativeData();
 
 if ($output_format eq 'json') {
   my $json = to_json( \@output_json, { pretty => 1 } );
@@ -340,9 +350,162 @@ sub outputTfpData {
   }
 } # sub outputTfpData
 
+sub outputNegativeData {
+  my $data_provider = $mod;
+  my $secondary_data_provider = $mod;
+  my $source_evidence_assertion = 'ATP:0000035';
+  my $source_method = 'ACKnowledge_form';
+  my $source_id_ack = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+  unless ($source_id_ack) {
+    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    return;
+  }
+
+  $source_evidence_assertion = 'ECO:0008021';
+  $source_method = 'ACKnowledge_pipeline';
+  my $source_id_tfp = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+  unless ($source_id_tfp) {
+    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    return;
+  }
+
+#   foreach my $joinkey (sort keys %tfpPapGene) {
+#     foreach my $geneInt (sort keys %{ $tfpPapGene{$joinkey} }) {
+#       next if ($ackPapGene{$joinkey}{genes}{$geneInt});
+#       my @auts;
+#       if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
+#       if (scalar @auts < 1) { push @auts, 'unknown_author'; }
+#       foreach my $aut (@auts) {
+#         my %object;
+#         $object{'negated'}                    = TRUE;
+#         $object{'force_insertion'}            = TRUE;
+#         $object{'reference_curie'}            = $wbpToAgr{$joinkey};
+#         $object{'topic'}                      = 'ATP:0000005';
+#         $object{'entity_type'}                = 'ATP:0000005';
+#         $object{'entity_id_validation'}       = 'alliance';
+#         $object{'topic_entity_tag_source_id'} = $source_id_tfp;
+#         $object{'created_by'}                 = $aut;
+#         $object{'updated_by'}                 = $aut;
+#         my $ts = $ackPapGene{$joinkey}{timestamp};
+#         if ( $afpContributor{$joinkey}{$aut} ) { $ts = $afpContributor{$joinkey}{$aut}; }
+#         $object{'date_created'}               = $ts;
+#         $object{'date_updated'}               = $ts;
+#         # $object{'datatype'}                 = 'ack neg data';	# for debugging
+#         # $object{'wbpaper'}                  = $joinkey;		# for debugging
+#         my $obj = 'WB:WBGene' . $geneInt;
+#         $object{'entity'}                     = $obj;
+#         next unless ($geneInt);
+#         my $geneTaxon = '';
+#         my $geneSpecies = $gin{$geneInt};
+#         if ($geneSpecies) { $geneTaxon = $speciesToTaxon{$geneSpecies}; }
+#         unless ($geneSpecies || $geneTaxon) {	# if no geneSpecies or geneTaxon, skip, and add to error log
+#           print PERR qq(ERROR no species or taxon for WBGene$geneInt\n);
+#           next; }
+#         $object{'species'}                    = $geneTaxon;
+# 
+#         if ($output_format eq 'json') {
+#           push @output_json, \%object; }
+#         else {
+#           my $object_json = encode_json \%object;
+#           &createTag($object_json); }
+#   } } }
+
+  foreach my $joinkey (sort keys %ackNegGeneTopic) {
+    unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB ackNegGeneTopic\n); next; }
+    my @auts;
+    if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
+    if (scalar @auts < 1) { push @auts, 'unknown_author'; }
+    foreach my $aut (@auts) {
+      my $ts = $ackNegGeneTopic{$joinkey};
+      if ( $afpContributor{$joinkey}{$aut} ) { $ts = $afpContributor{$joinkey}{$aut}; }
+      my %object;
+      $object{'topic_entity_tag_source_id'}   = $source_id_ack;
+      $object{'force_insertion'}              = TRUE;
+      $object{'negated'}                      = TRUE;
+      $object{'reference_curie'}              = $wbpToAgr{$joinkey};
+      # $object{'wbpaper_id'}                   = $joinkey;               # for debugging
+      $object{'date_updated'}                 = $ts;
+      $object{'date_created'}                 = $ts;
+      $object{'created_by'}                   = $aut;
+      $object{'updated_by'}                   = $aut;
+      $object{'topic'}                        = 'ATP:0000005';
+      if ($output_format eq 'json') {
+        push @output_json, \%object; }
+      else {
+        my $object_json = encode_json \%object;
+        &createTag($object_json); }
+  } }
+
+  foreach my $joinkey (sort keys %tfpNegGeneTopic) {
+    unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB tfpNegGeneTopic\n); next; }
+    my $ts = $tfpNegGeneTopic{$joinkey};
+    my %object;
+    $object{'topic_entity_tag_source_id'}   = $source_id_tfp;
+    $object{'force_insertion'}              = TRUE;
+    $object{'negated'}                      = TRUE;
+    $object{'reference_curie'}              = $wbpToAgr{$joinkey};
+    # $object{'wbpaper_id'}                   = $joinkey;               # for debugging
+    $object{'date_updated'}                 = $ts;
+    $object{'date_created'}                 = $ts;
+    $object{'created_by'}                   = 'ACKnowledge_pipeline';
+    $object{'updated_by'}                   = 'ACKnowledge_pipeline';
+    $object{'topic'}                        = 'ATP:0000005';
+    if ($output_format eq 'json') {
+      push @output_json, \%object; }
+    else {
+      my $object_json = encode_json \%object;
+      &createTag($object_json); }
+  }
+} # sub outputNegativeData
+
 sub populateNegativeData {
-# TODO : discuss
-}
+  $result = $dbh->prepare( "SELECT * FROM afp_genestudied WHERE afp_genestudied != '' AND afp_timestamp > '2019-03-22 00:00' AND joinkey IN (SELECT joinkey FROM afp_lasttouched); " );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) {
+    next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+    my @data = split(/ | /, $row[1]);
+    foreach my $data (@data) {
+      my ($geneInt) = $data =~ m/(\d{8})/;
+      next unless ($geneInt);
+      $ackPapGene{$row[0]}{genes}{$geneInt}++;
+      $ackPapGene{$row[0]}{timestamp} = $row[2]; } }
+  $result = $dbh->prepare( "SELECT * FROM tfp_genestudied WHERE tfp_genestudied != '' AND tfp_timestamp > '2019-03-22 00:00' AND joinkey IN (SELECT joinkey FROM afp_lasttouched);" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) {
+    next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+    my @data = split(/ | /, $row[1]);
+    foreach my $data (@data) {
+      my ($geneInt) = $data =~ m/(\d{8})/;
+      next unless ($geneInt);
+      $tfpPapGene{$row[0]}{$geneInt} = $row[2]; } }
+
+  $result = $dbh->prepare( "SELECT * FROM afp_genestudied WHERE afp_genestudied = '' AND afp_timestamp > '2019-03-22 00:00' AND joinkey IN (SELECT joinkey FROM afp_lasttouched);" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) {
+    next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+    $ackNegGeneTopic{$row[0]} = $row[2]; }
+  $result = $dbh->prepare( "SELECT * FROM tfp_genestudied WHERE tfp_genestudied = '' AND tfp_timestamp > '2019-03-22 00:00';" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) {
+    next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+    $tfpNegGeneTopic{$row[0]} = $row[2]; }
+
+#   SELECT * FROM afp_genestudied WHERE afp_genestudied = '' AND afp_timestamp > '2019-03-22 00:00' AND joinkey IN (SELECT joinkey FROM afp_lasttouched) AND joinkey IN ( '00065553', '00065560', '00066296', '00066355', '00066405', '00066410', '00066411', '00066419', '00066461', '00066469' );
+#   SELECT * FROM tfp_genestudied WHERE tfp_genestudied = '' AND tfp_timestamp > '2019-03-22 00:00' AND joinkey IN ( '00065553', '00065560', '00066296', '00066355', '00066405', '00066410', '00066411', '00066419', '00066461', '00066469' );
+
+} # sub populateNegativeData
+
+sub populateAfpContributor {
+  $result = $dbh->prepare( "SELECT * FROM afp_contributor" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) {
+    next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+    next unless ($row[1]);
+    my ($joinkey) = &deriveValidPap($row[0]);
+    next unless $papValid{$joinkey};
+    my $who = $row[1]; $who =~ s/two/WBPerson/;
+    $afpContributor{$row[0]}{$who} = $row[2];
+} }
 
 sub populateGinTaxon {
   my $result = $dbh->prepare( "SELECT * FROM gin_species;" );
