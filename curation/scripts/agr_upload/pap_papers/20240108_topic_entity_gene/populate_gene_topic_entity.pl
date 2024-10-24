@@ -40,10 +40,6 @@
 # ./populate_gene_topic_entity.pl
 
 
-# to clean up, must delete validation first, then tags.
-# DELETE FROM topic_entity_tag_validation WHERE validated_topic_entity_tag_id > 516 OR validating_topic_entity_tag_id > 516
-# DELETE FROM topic_entity_tag WHERE topic_entity_tag_id > 516
-
 
 use strict;
 use diagnostics;
@@ -98,13 +94,18 @@ my $okta_token = &generateOktaToken();
 # my @wbpapers = qw( 00044280 );		# briggsae genes
 # my @wbpapers = qw( 00003000 00003823 00004455 00004952 00005199 00005707 00006103 00006202 00006320 00017095 00018874 00025176 00027230 00044280 00046571 00057043 00063127 00064676 00064771 00065877 00066211 );		# kimberly 2024 04 18 set
 # my @wbpapers = qw( 00000119 00000465 00003000 00003823 00004455 00004952 00005199 00005707 00005988 00006103 00006202 00006320 00013393 00017095 00024745 00025176 00027230 00038491 00044280 00046571 00057043 00063127 00064676 00064771 00065877 00066211 );		# kimberly 2024 05 13 set
-my @wbpapers = qw( 00065553 00065560 00066296 00066355 00066405 00066410 00066411 00066419 00066461 00066469 );	# kimberly negative gene set  2024 10 02
+my @wbpapers = qw( 00065553 00065560 00066296 00066355 00066405 00066410 00066411 00066419 00066461 00066469 00066891 00066862 00066767 00053843 );	# kimberly negative gene set  2024 10 02
 
 # ( '00065553', '00065560', '00066296', '00066355', '00066405', '00066410', '00066411', '00066419', '00066461', '00066469' );	# kimberly negative gene set  2024 10 02
 
 # my @wbpapers = qw( 00065560 );	# sample paper that has multiple entries in API for WB:WBGene00004796 AGRKB:101000000965217 because the gene showed as both a gene name and a sequence name
 
 # my @wbpapers = qw( 00065560 );	# sample paper where author removed tfp data
+
+# my @wbpapers = qw( 00066891 00066862 00066767	)	# tfp negative
+# SELECT * FROM tfp_genestudied WHERE tfp_genestudied = '' AND tfp_timestamp > '2019-03-22 00:00' AND joinkey IN ( '00066891', '00066862', '00066767' );
+
+# my @wbpapers = qw( 00053843 );	# added by the author not found by ACKnowledge pipeline, i.e. tfp_genestudied does not have the value but afp_genestudied does.
 
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 00037049
@@ -182,8 +183,8 @@ foreach my $joinkey (@wbpapers) { $chosenPapers{$joinkey}++; }
 &populateNegativeData();
 
 # PUT THIS BACK
-# &outputTfpData();
-# &outputTheHash();
+&outputTfpData();
+&outputTheHash();
 &outputNegativeData();
 
 if ($output_format eq 'json') {
@@ -332,7 +333,7 @@ sub outputTfpData {
         my $geneTaxon = '';
         my $geneSpecies = $gin{$geneInt};
         if ($geneSpecies) { $geneTaxon = $speciesToTaxon{$geneSpecies}; }
-        unless ($geneSpecies || $geneTaxon) {	# if no geneSpecies or geneTaxon, skip, and add to error log
+        unless ($geneSpecies && $geneTaxon) {	# if no geneSpecies or geneTaxon, skip, and add to error log
           print PERR qq(ERROR no species or taxon for WBGene$geneInt\n);
           next; }
         my $obj = 'WB:WBGene' . $geneInt;
@@ -369,46 +370,84 @@ sub outputNegativeData {
     return;
   }
 
-#   foreach my $joinkey (sort keys %tfpPapGene) {
-#     foreach my $geneInt (sort keys %{ $tfpPapGene{$joinkey} }) {
-#       next if ($ackPapGene{$joinkey}{genes}{$geneInt});
-#       my @auts;
-#       if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
-#       if (scalar @auts < 1) { push @auts, 'unknown_author'; }
-#       foreach my $aut (@auts) {
-#         my %object;
-#         $object{'negated'}                    = TRUE;
-#         $object{'force_insertion'}            = TRUE;
-#         $object{'reference_curie'}            = $wbpToAgr{$joinkey};
-#         $object{'topic'}                      = 'ATP:0000005';
-#         $object{'entity_type'}                = 'ATP:0000005';
-#         $object{'entity_id_validation'}       = 'alliance';
-#         $object{'topic_entity_tag_source_id'} = $source_id_tfp;
-#         $object{'created_by'}                 = $aut;
-#         $object{'updated_by'}                 = $aut;
-#         my $ts = $ackPapGene{$joinkey}{timestamp};
-#         if ( $afpContributor{$joinkey}{$aut} ) { $ts = $afpContributor{$joinkey}{$aut}; }
-#         $object{'date_created'}               = $ts;
-#         $object{'date_updated'}               = $ts;
-#         # $object{'datatype'}                 = 'ack neg data';	# for debugging
-#         # $object{'wbpaper'}                  = $joinkey;		# for debugging
-#         my $obj = 'WB:WBGene' . $geneInt;
-#         $object{'entity'}                     = $obj;
-#         next unless ($geneInt);
-#         my $geneTaxon = '';
-#         my $geneSpecies = $gin{$geneInt};
-#         if ($geneSpecies) { $geneTaxon = $speciesToTaxon{$geneSpecies}; }
-#         unless ($geneSpecies || $geneTaxon) {	# if no geneSpecies or geneTaxon, skip, and add to error log
-#           print PERR qq(ERROR no species or taxon for WBGene$geneInt\n);
-#           next; }
-#         $object{'species'}                    = $geneTaxon;
-# 
-#         if ($output_format eq 'json') {
-#           push @output_json, \%object; }
-#         else {
-#           my $object_json = encode_json \%object;
-#           &createTag($object_json); }
-#   } } }
+  foreach my $joinkey (sort keys %tfpPapGene) {
+    foreach my $geneInt (sort keys %{ $tfpPapGene{$joinkey}{genes} }) {
+      next if ($ackNegGeneTopic{$joinkey});			# if author sent nothing, don't create a negative entity
+      next if ($ackPapGene{$joinkey}{genes}{$geneInt});		# if author sent this entity, don't create a negative entity
+      next unless ($geneInt);					# must have a wbgene
+      my @auts;
+      if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
+      if (scalar @auts < 1) { push @auts, 'unknown_author'; }
+      foreach my $aut (@auts) {
+        my %object;
+        $object{'negated'}                    = TRUE;
+        $object{'force_insertion'}            = TRUE;
+        $object{'reference_curie'}            = $wbpToAgr{$joinkey};
+        $object{'topic'}                      = 'ATP:0000005';
+        $object{'entity_type'}                = 'ATP:0000005';
+        $object{'entity_id_validation'}       = 'alliance';
+        $object{'topic_entity_tag_source_id'} = $source_id_tfp;
+        $object{'created_by'}                 = $aut;
+        $object{'updated_by'}                 = $aut;
+        my $ts = $ackPapGene{$joinkey}{timestamp};
+        if ( $afpContributor{$joinkey}{$aut} ) { $ts = $afpContributor{$joinkey}{$aut}; }
+        $object{'date_created'}               = $ts;
+        $object{'date_updated'}               = $ts;
+        # $object{'datatype'}                 = 'ack neg entity data';	# for debugging
+        # $object{'wbpaper'}                  = $joinkey;			# for debugging
+        my $obj = 'WB:WBGene' . $geneInt;
+        $object{'entity'}                     = $obj;
+        my $geneTaxon = '';
+        my $geneSpecies = $gin{$geneInt};
+        if ($geneSpecies) { $geneTaxon = $speciesToTaxon{$geneSpecies}; }
+        unless ($geneSpecies && $geneTaxon) {	# if no geneSpecies or geneTaxon, skip, and add to error log
+          print PERR qq(ERROR no species or taxon for WBGene$geneInt\n);
+          next; }
+        $object{'species'}                    = $geneTaxon;
+
+        if ($output_format eq 'json') {
+          push @output_json, \%object; }
+        else {
+          my $object_json = encode_json \%object;
+          &createTag($object_json); }
+  } } }
+
+  foreach my $joinkey (sort keys %ackPapGene) {
+    foreach my $geneInt (sort keys %{ $ackPapGene{$joinkey}{genes} }) {
+      next if ($tfpNegGeneTopic{$joinkey});			# if author sent nothing, don't create a negative entity
+      next if ($tfpPapGene{$joinkey}{genes}{$geneInt});		# if author sent this entity, don't create a negative entity
+      next unless ($geneInt);					# must have a wbgene
+      my %object;
+      $object{'negated'}                    = TRUE;
+      $object{'force_insertion'}            = TRUE;
+      $object{'reference_curie'}            = $wbpToAgr{$joinkey};
+      $object{'topic'}                      = 'ATP:0000005';
+      $object{'entity_type'}                = 'ATP:0000005';
+      $object{'entity_id_validation'}       = 'alliance';
+      $object{'topic_entity_tag_source_id'} = $source_id_tfp;
+      $object{'created_by'}                 = 'ACKnowledge_pipeline';
+      $object{'updated_by'}                 = 'ACKnowledge_pipeline';
+      my $ts = $tfpPapGene{$joinkey}{timestamp};
+      $object{'date_created'}               = $ts;
+      $object{'date_updated'}               = $ts;
+      # $object{'datatype'}                 = 'tfp neg entity data';	# for debugging
+      # $object{'wbpaper'}                  = $joinkey;			# for debugging
+      my $obj = 'WB:WBGene' . $geneInt;
+      $object{'entity'}                     = $obj;
+      my $geneTaxon = '';
+      my $geneSpecies = $gin{$geneInt};
+      if ($geneSpecies) { $geneTaxon = $speciesToTaxon{$geneSpecies}; }
+      unless ($geneSpecies && $geneTaxon) {	# if no geneSpecies or geneTaxon, skip, and add to error log
+        print PERR qq(ERROR no species or taxon for WBGene$geneInt\n);
+        next; }
+      $object{'species'}                    = $geneTaxon;
+
+      if ($output_format eq 'json') {
+        push @output_json, \%object; }
+      else {
+        my $object_json = encode_json \%object;
+        &createTag($object_json); }
+  } }
 
   foreach my $joinkey (sort keys %ackNegGeneTopic) {
     unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB ackNegGeneTopic\n); next; }
@@ -459,7 +498,7 @@ sub outputNegativeData {
 } # sub outputNegativeData
 
 sub populateNegativeData {
-  $result = $dbh->prepare( "SELECT * FROM afp_genestudied WHERE afp_genestudied != '' AND afp_timestamp > '2019-03-22 00:00' AND joinkey IN (SELECT joinkey FROM afp_lasttouched); " );
+  $result = $dbh->prepare( "SELECT * FROM afp_genestudied WHERE afp_genestudied != '' AND afp_timestamp > '2019-03-22 00:00' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2019-03-22 00:00'); " );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
@@ -469,7 +508,7 @@ sub populateNegativeData {
       next unless ($geneInt);
       $ackPapGene{$row[0]}{genes}{$geneInt}++;
       $ackPapGene{$row[0]}{timestamp} = $row[2]; } }
-  $result = $dbh->prepare( "SELECT * FROM tfp_genestudied WHERE tfp_genestudied != '' AND tfp_timestamp > '2019-03-22 00:00' AND joinkey IN (SELECT joinkey FROM afp_lasttouched);" );
+  $result = $dbh->prepare( "SELECT * FROM tfp_genestudied WHERE tfp_genestudied != '' AND tfp_timestamp > '2019-03-22 00:00' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2019-03-22 00:00');" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
@@ -477,9 +516,10 @@ sub populateNegativeData {
     foreach my $data (@data) {
       my ($geneInt) = $data =~ m/(\d{8})/;
       next unless ($geneInt);
-      $tfpPapGene{$row[0]}{$geneInt} = $row[2]; } }
+      $tfpPapGene{$row[0]}{genes}{$geneInt}++;
+      $tfpPapGene{$row[0]}{timestamp} = $row[2]; } }
 
-  $result = $dbh->prepare( "SELECT * FROM afp_genestudied WHERE afp_genestudied = '' AND afp_timestamp > '2019-03-22 00:00' AND joinkey IN (SELECT joinkey FROM afp_lasttouched);" );
+  $result = $dbh->prepare( "SELECT * FROM afp_genestudied WHERE afp_genestudied = '' AND afp_timestamp > '2019-03-22 00:00' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2019-03-22 00:00');" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
