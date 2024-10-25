@@ -18,8 +18,11 @@
 # For now, script is looking up references by pmid at ABC and outputting any DOI.
 # 2024 10 03
 #
-# Populated mangolassi, use pubmed as curator, even though we just know they came from abc.
-# 2024 10 12
+# Populated caltech dev, use pubmed as curator, even though we just know they came 
+# from abc. 2024 10 12
+#
+# Populated caltech prod, Daniela and Kimberly approved running it.  Many PMIDs 
+# were not in ABC, while that wasn't an issue on dev.  2024 10 25
 
 
 use strict;
@@ -73,7 +76,7 @@ my $pap_curator = 'two10877';
 my $timestamp = 'CURRENT_TIMESTAMP';
 foreach my $pmid (@pmids) {
   my $doi = &getPmidFromAbc($pmid);
-  if ($doi) { 
+  if ($doi) {
     my $joinkey = $pmidToPap{$pmid};
     my $order   = $highestOrder{$joinkey} + 1;
     push @pgcommands, qq(INSERT INTO pap_identifier   VALUES ('$joinkey', '$doi', $order, '$pap_curator', $timestamp) );
@@ -126,6 +129,10 @@ sub getPmidFromAbc {
   # strip out the DOI:  and put 'doi' in front.
   my $url = 'https://literature-rest.alliancegenome.org/reference/by_cross_reference/PMID:' . $pmid;
   my $page_data = get $url;
+  unless ($page_data) {
+    print qq(PMID $pmid NOT IN ABC\n);
+    return;
+  }
 #   print "P $page_data P\n";
   my $perl_scalar = $json->decode( $page_data );
   my %hash = %$perl_scalar;
