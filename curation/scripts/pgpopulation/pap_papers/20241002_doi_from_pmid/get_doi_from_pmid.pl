@@ -23,6 +23,9 @@
 #
 # Populated caltech prod, Daniela and Kimberly approved running it.  Many PMIDs 
 # were not in ABC, while that wasn't an issue on dev.  2024 10 25
+#
+# Option to get data from europe pmc for Daniela and Kimberly.  Gets 137 more dois.
+# 2024 10 25
 
 
 use strict;
@@ -72,10 +75,14 @@ my $count_wanted = scalar @pmids;
 
 my @pgcommands = ();
 my $count_matches = 0;
+my $count = 0;
 my $pap_curator = 'two10877';
 my $timestamp = 'CURRENT_TIMESTAMP';
 foreach my $pmid (@pmids) {
-  my $doi = &getPmidFromAbc($pmid);
+#   my $doi = &getPmidFromAbc($pmid);
+  my $doi = &getPmidFromEuropePmc($pmid);
+#   $count++; if ($count > 3) { last; }
+#   $count++; if ($count > 1) { last; }
   if ($doi) {
     my $joinkey = $pmidToPap{$pmid};
     my $order   = $highestOrder{$joinkey} + 1;
@@ -119,6 +126,21 @@ foreach my $pgcommand (@pgcommands) {
 # 
 #   last;
 # }
+
+sub getPmidFromEuropePmc {
+  my $pmid = shift;
+  sleep 3;
+  my $url = 'https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=' . $pmid;
+  my $page_data = get $url;
+  unless ($page_data) {
+    print qq(PMID $pmid NOT IN EUROPE PMC\n);
+    return;
+  }
+  my (@results) = split/<result>/, $page_data;
+  foreach my $result (@results) {
+    if ( ($result =~ m/<pmid>$pmid<\/pmid>/) && ($result =~ m/<doi>(.*?)<\/doi>/) ) { return $1; } }
+  return '';
+}
 
 
 sub getPmidFromAbc {
