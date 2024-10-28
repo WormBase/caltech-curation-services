@@ -26,6 +26,11 @@
 #
 # Option to get data from europe pmc for Daniela and Kimberly.  Gets 137 more dois.
 # 2024 10 25
+#
+# Updated abc script to look up from stage instead of prod, still bunch of failures.
+# Updated to use UserAgent to get status codes, out of 946, 634 are success without
+# a doi, 312 are 500 errors.  It might be that the API finds the pmid, but then
+# trying to extract the data could have some ateam failure.  2024 10 28
 
 
 use strict;
@@ -33,8 +38,11 @@ use diagnostics;
 use DBI;
 use Encode qw( from_to is_utf8 );
 use LWP::Simple;
+use LWP::UserAgent;
 use JSON;
 use Dotenv -load => '/usr/lib/.env';
+
+my $ua = LWP::UserAgent->new;
 
 my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST};port=$ENV{PSQL_PORT}", "$ENV{PSQL_USERNAME}", "$ENV{PSQL_PASSWORD}") or die "Cannot connect to database!\n";
 my $result;
@@ -79,8 +87,8 @@ my $count = 0;
 my $pap_curator = 'two10877';
 my $timestamp = 'CURRENT_TIMESTAMP';
 foreach my $pmid (@pmids) {
-#   my $doi = &getPmidFromAbc($pmid);
-  my $doi = &getPmidFromEuropePmc($pmid);
+  my $doi = &getPmidFromAbc($pmid);
+#   my $doi = &getPmidFromEuropePmc($pmid);
 #   $count++; if ($count > 3) { last; }
 #   $count++; if ($count > 1) { last; }
   if ($doi) {
@@ -149,12 +157,20 @@ sub getPmidFromAbc {
   # take
   #       "curie": "DOI:10.1523/JNEUROSCI.17-15-05843.1997",
   # strip out the DOI:  and put 'doi' in front.
-  my $url = 'https://literature-rest.alliancegenome.org/reference/by_cross_reference/PMID:' . $pmid;
-  my $page_data = get $url;
-  unless ($page_data) {
-    print qq(PMID $pmid NOT IN ABC\n);
-    return;
+  my $url = 'https://stage-literature-rest.alliancegenome.org/reference/by_cross_reference/PMID:' . $pmid;
+#   my $page_data = get $url;
+#   unless ($page_data) {
+#     print qq(PMID $pmid NOT IN ABC\n);
+#     return;
+#   }
+  my $response = $ua->get($url);
+  my $r_code = $response->code;
+  my $r_msg = $response->message;
+  unless ($response->is_success) {
+    print qq(PMID $pmid ABC FAILURE $r_code $r_msg\n);
+    return '';
   }
+  my $page_data = $response->decoded_content;
 #   print "P $page_data P\n";
   my $perl_scalar = $json->decode( $page_data );
   my %hash = %$perl_scalar;
@@ -166,6 +182,7 @@ sub getPmidFromAbc {
       return $doi;
     }
   }
+  print qq(PMID $pmid ABC SUCCESS but no DOI $r_code $r_msg\n);
   return '';
 }
 
