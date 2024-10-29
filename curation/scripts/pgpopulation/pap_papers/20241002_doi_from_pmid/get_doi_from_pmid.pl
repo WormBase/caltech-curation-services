@@ -31,6 +31,9 @@
 # Updated to use UserAgent to get status codes, out of 946, 634 are success without
 # a doi, 312 are 500 errors.  It might be that the API finds the pmid, but then
 # trying to extract the data could have some ateam failure.  2024 10 28
+# 
+# getPmidFromAbcXrefToRef to look up xref get agrkb and look up ref, and this works
+# so something likely wrong with reference/by_cross_reference/ endpoint.  2024 10 28
 
 
 use strict;
@@ -87,7 +90,8 @@ my $count = 0;
 my $pap_curator = 'two10877';
 my $timestamp = 'CURRENT_TIMESTAMP';
 foreach my $pmid (@pmids) {
-  my $doi = &getPmidFromAbc($pmid);
+#   my $doi = &getPmidFromAbc($pmid);
+  my $doi = &getPmidFromAbcXrefToRef($pmid);
 #   my $doi = &getPmidFromEuropePmc($pmid);
 #   $count++; if ($count > 3) { last; }
 #   $count++; if ($count > 1) { last; }
@@ -174,6 +178,52 @@ sub getPmidFromAbc {
 #   print "P $page_data P\n";
   my $perl_scalar = $json->decode( $page_data );
   my %hash = %$perl_scalar;
+  my $doi = '';
+  foreach my $xref (@{ $hash{cross_references} }) {
+    if ($$xref{curie_prefix} eq 'DOI') { 
+      my $doi = $$xref{curie};
+      $doi =~ s/DOI:/doi/;
+      return $doi;
+    }
+  }
+  print qq(PMID $pmid ABC SUCCESS but no DOI $r_code $r_msg\n);
+  return '';
+}
+
+sub getPmidFromAbcXrefToRef {
+  my $pmid = shift;
+  # https://literature-rest.alliancegenome.org/reference/by_cross_reference/PMID%3A9221782
+  # take
+  #       "curie": "DOI:10.1523/JNEUROSCI.17-15-05843.1997",
+  # strip out the DOI:  and put 'doi' in front.
+#   my $url = 'https://stage-literature-rest.alliancegenome.org/cross_reference/PMID:' . $pmid;
+  my $url = 'https://literature-rest.alliancegenome.org/cross_reference/PMID:' . $pmid;
+  my $response = $ua->get($url);
+  my $r_code = $response->code;
+  my $r_msg = $response->message;
+  unless ($response->is_success) {
+    print qq(PMID $pmid ABC XREF FAILURE $r_code $r_msg\n);
+    return '';
+  }
+  my $page_data = $response->decoded_content;
+#   print "P $page_data P\n";
+  my $perl_scalar = $json->decode( $page_data );
+  my %hash = %$perl_scalar;
+  my $agrkb = $hash{reference_curie};
+
+#   $url = 'https://stage-literature-rest.alliancegenome.org/reference/' . $agrkb;
+  $url = 'https://literature-rest.alliancegenome.org/reference/' . $agrkb;
+  $response = $ua->get($url);
+  $r_code = $response->code;
+  $r_msg = $response->message;
+  unless ($response->is_success) {
+    print qq(PMID $pmid AGRKB $agrkb ABC REFERENCE FAILURE $r_code $r_msg\n);
+    return '';
+  }
+  $page_data = $response->decoded_content;
+#   print "P $page_data P\n";
+  $perl_scalar = $json->decode( $page_data );
+  %hash = %$perl_scalar;
   my $doi = '';
   foreach my $xref (@{ $hash{cross_references} }) {
     if ($$xref{curie_prefix} eq 'DOI') { 
