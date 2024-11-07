@@ -36,6 +36,8 @@ our $VERSION	= 1.00;
 # for dot_entry only, treat dis_assertedgene as if it were a dis_wbgene.  2023 03 27
 #
 # add dis_assertedhumangene dumping for Ranjana.  2023 07 05
+#
+# add .ace output for modgenotype Modifier_genotype for Ranjana and Stavros.  2024 11 06
 
 
 
@@ -80,6 +82,7 @@ $tableToTag{"eco"}                    = "ECO_term";
 $tableToTag{"qualifier"}              = "SELF";
 $tableToTag{"inducingchemical"}       = "Inducing_chemical";
 $tableToTag{"inducingagent"}          = "Inducing_agent";
+$tableToTag{"modgenotype"}            = "Modifier_genotype";
 $tableToTag{"modtransgene"}           = "Modifier_transgene";
 $tableToTag{"modvariation"}           = "Modifier_variation";
 $tableToTag{"modstrain"}              = "Modifier_strain";
