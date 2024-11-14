@@ -9,6 +9,9 @@
 #
 # Split ls interaction data from other data for tace testing into separate file, since it takes
 # forever.  2024 10 16
+# 
+# Do not create separate file for ls file, it's too large and hangs on dockerized prod, so Chris will
+# run it manually with xace.  2024 11 14
 
 
 use strict;
@@ -85,8 +88,9 @@ print OUT qq(Parse ${output_dir}${ws}_interaction.ace\n);
 
 &closeTaceOut($tace_file);
 
-my $tace_file_ls = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . "/chris/test_read_chris_ls.sh";
-&openTaceOut($tace_file_ls);
+# Do not create separate file for ls file, it's too large and hangs on dockerized prod, so Chris will run it manually with xace
+# my $tace_file_ls = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . "/chris/test_read_chris_ls.sh";
+# &openTaceOut($tace_file_ls);
 
 print qq(Starting Large scale Interaction\n);
 $directory = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . "/chris/Interaction_OA_Dumper/Large_scale_interactions/";
@@ -94,12 +98,12 @@ chdir ($directory) or die "Cannot chdir to $directory : $!";
 `./historicGeneReplacementLSInteraction.pl`;
 `cp ${directory}/Large_scale_interactions.ace ${output_dir}/${ws}_Large_scale_interactions.ace`;
 `cp ${directory}/ls_dead_genes.txt ${output_dir}/${ws}_ls_dead_genes.txt`;
-print OUT qq(Parse ${output_dir}${ws}_Large_scale_interactions.ace\n);
+# print OUT qq(Parse ${output_dir}${ws}_Large_scale_interactions.ace\n);
 
 my $ws_dir = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . "/Data_for_citace/Data_from_Chris/";
 `cp ${output_dir}/*ace* $ws_dir`;
 
-&closeTaceOut($tace_file_ls);
+# &closeTaceOut($tace_file_ls);
 
 
 
