@@ -7,6 +7,8 @@
 # modified to suppress additional synonym junk, and print paper_evidence of definition.  2019 02 05
 #
 # modified to allow WS### as command line parameter for chris_one_button.pl dumper script.  2024 10 07
+#
+# generate obo file that was downloaded for one button script to transfer to Data_for_Ontology.  2024 11 15
 
 
 use strict;
@@ -29,6 +31,10 @@ else {
 print qq(using url $url\n);
 
 my $page = get $url;
+my $obofile = 'development_ontology.' . $ARGV[0] . '.obo';
+open (OBO, ">$obofile") or die "Cannot create $obofile : $!";
+print OBO $page;
+close (OBO) or die "Cannot close $obofile : $!";
 
 my @objects = split/\n\n/, $page;
 

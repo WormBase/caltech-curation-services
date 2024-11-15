@@ -12,6 +12,9 @@
 # 
 # Do not create separate file for ls file, it's too large and hangs on dockerized prod, so Chris will
 # run it manually with xace.  2024 11 14
+#
+# life stage and phenotype now also generate .obo files which are copied to Data_for_Ontology/
+# 2024 11 15
 
 
 use strict;
@@ -23,6 +26,7 @@ unless ($ARGV[0]) { print qq(Usage ./chris_one_button.pl WS###\n); die; }
 my $ws = $ARGV[0];
 
 my $output_dir = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . "/chris/" . $ws . "_Upload/";
+my $ontology_dir = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . "/Data_for_Ontology/";
 
 if (-e $output_dir) { print qq($output_dir already exists, will overwrite files\n); }
   else { mkdir($output_dir, 0755); }
@@ -49,6 +53,7 @@ $directory = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . "/chris/LifeStageOntol
 chdir ($directory) or die "Cannot chdir to $directory : $!";
 `./lifestageAceFromObo.pl $ws`;
 `cp ${directory}/lifestage.ace ${output_dir}/${ws}_lifestage.ace`;
+`cp ${directory}/development_ontology.${ws}.obo ${ontology_dir}/development_ontology.${ws}.obo`;
 print OUT qq(Parse ${output_dir}${ws}_lifestage.ace\n);
 
 print qq(Starting Phenotype\n);
@@ -57,6 +62,7 @@ chdir ($directory) or die "Cannot chdir to $directory : $!";
 `./dump_phenotype_ace2.pl $ws`;
 `mv ${directory}/errorfile ${output_dir}/${ws}_phenotype_from_obo_errorfile`;
 `cp ${directory}/phenotype_from_obo.ace ${output_dir}/${ws}_phenotype_from_obo.ace`;
+`cp ${directory}/phenotype_ontology.${ws}.obo ${ontology_dir}/phenotype_ontology.${ws}.obo`;
 print OUT qq(Parse ${output_dir}${ws}_phenotype_from_obo.ace\n);
 
 print qq(Starting Pato OBO\n);

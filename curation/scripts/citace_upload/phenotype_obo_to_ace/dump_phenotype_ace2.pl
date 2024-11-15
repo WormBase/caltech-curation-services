@@ -26,7 +26,8 @@
 # 2024 04 09
 # 
 # modified to allow WS### as command line parameter for chris_one_button.pl dumper script.  2024 10 07
-
+# 
+# generate obo file that was downloaded for one button script to transfer to Data_for_Ontology.  2024 11 15
 
 use strict;
 use diagnostics;
@@ -106,6 +107,11 @@ sub readCvs {
     close (IN) or die "Cannot open $infile : $!"; }
 
   my $obofile = get $url;
+  my $obooutfile = 'phenotype_ontology.' . $ARGV[0] . '.obo';
+  open (OBO, ">$obooutfile") or die "Cannot create $obooutfile : $!";
+  print OBO $obofile;
+  close (OBO) or die "Cannot close $obooutfile : $!";
+
   my (@entries) = split/\n\n/, $obofile;
   foreach my $para (@entries) {
     next unless ($para =~ m/id:/);
