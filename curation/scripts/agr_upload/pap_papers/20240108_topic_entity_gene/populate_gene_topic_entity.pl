@@ -22,6 +22,8 @@
 #
 # Output tfp positive data.  If no species or taxon for gene, output to processing log.  Have standardized
 # processing logs and api error logs.  2024 10 16
+#
+# No longer output negative tfp data when ack author has positive gene entities and tfp didn't find it.  2024 11 21
 
 
 
@@ -127,7 +129,7 @@ my %speciesToTaxon;
 
 my %chosenPapers;
 my %ginValidation;
-my %ginTaxon;
+# my %ginTaxon;
 
 my %theHash;
 my %infOther;
@@ -412,42 +414,42 @@ sub outputNegativeData {
           &createTag($object_json); }
   } } }
 
-  foreach my $joinkey (sort keys %ackPapGene) {
-    foreach my $geneInt (sort keys %{ $ackPapGene{$joinkey}{genes} }) {
-      next if ($tfpNegGeneTopic{$joinkey});			# if author sent nothing, don't create a negative entity
-      next if ($tfpPapGene{$joinkey}{genes}{$geneInt});		# if author sent this entity, don't create a negative entity
-      next unless ($geneInt);					# must have a wbgene
-      my %object;
-      $object{'negated'}                    = TRUE;
-      $object{'force_insertion'}            = TRUE;
-      $object{'reference_curie'}            = $wbpToAgr{$joinkey};
-      $object{'topic'}                      = 'ATP:0000005';
-      $object{'entity_type'}                = 'ATP:0000005';
-      $object{'entity_id_validation'}       = 'alliance';
-      $object{'topic_entity_tag_source_id'} = $source_id_tfp;
-      $object{'created_by'}                 = 'ACKnowledge_pipeline';
-      $object{'updated_by'}                 = 'ACKnowledge_pipeline';
-      my $ts = $tfpPapGene{$joinkey}{timestamp};
-      $object{'date_created'}               = $ts;
-      $object{'date_updated'}               = $ts;
-      # $object{'datatype'}                 = 'tfp neg entity data';	# for debugging
-      # $object{'wbpaper'}                  = $joinkey;			# for debugging
-      my $obj = 'WB:WBGene' . $geneInt;
-      $object{'entity'}                     = $obj;
-      my $geneTaxon = '';
-      my $geneSpecies = $gin{$geneInt};
-      if ($geneSpecies) { $geneTaxon = $speciesToTaxon{$geneSpecies}; }
-      unless ($geneSpecies && $geneTaxon) {	# if no geneSpecies or geneTaxon, skip, and add to error log
-        print PERR qq(ERROR no species or taxon for WBGene$geneInt\n);
-        next; }
-      $object{'species'}                    = $geneTaxon;
-
-      if ($output_format eq 'json') {
-        push @output_json, \%object; }
-      else {
-        my $object_json = encode_json \%object;
-        &createTag($object_json); }
-  } }
+#   foreach my $joinkey (sort keys %ackPapGene) {
+#     foreach my $geneInt (sort keys %{ $ackPapGene{$joinkey}{genes} }) {
+#       next if ($tfpNegGeneTopic{$joinkey});			# if tfp pipeline says nothing, don't create a negative entity
+#       next if ($tfpPapGene{$joinkey}{genes}{$geneInt});		# if tfp pipeline sent this entity, don't create a negative entity
+#       next unless ($geneInt);					# must have a wbgene
+#       my %object;
+#       $object{'negated'}                    = TRUE;
+#       $object{'force_insertion'}            = TRUE;
+#       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
+#       $object{'topic'}                      = 'ATP:0000005';
+#       $object{'entity_type'}                = 'ATP:0000005';
+#       $object{'entity_id_validation'}       = 'alliance';
+#       $object{'topic_entity_tag_source_id'} = $source_id_tfp;
+#       $object{'created_by'}                 = 'ACKnowledge_pipeline';
+#       $object{'updated_by'}                 = 'ACKnowledge_pipeline';
+#       my $ts = $tfpPapGene{$joinkey}{timestamp};
+#       $object{'date_created'}               = $ts;
+#       $object{'date_updated'}               = $ts;
+#       # $object{'datatype'}                 = 'tfp neg entity data';	# for debugging
+#       # $object{'wbpaper'}                  = $joinkey;			# for debugging
+#       my $obj = 'WB:WBGene' . $geneInt;
+#       $object{'entity'}                     = $obj;
+#       my $geneTaxon = '';
+#       my $geneSpecies = $gin{$geneInt};
+#       if ($geneSpecies) { $geneTaxon = $speciesToTaxon{$geneSpecies}; }
+#       unless ($geneSpecies && $geneTaxon) {	# if no geneSpecies or geneTaxon, skip, and add to error log
+#         print PERR qq(ERROR no species or taxon for WBGene$geneInt\n);
+#         next; }
+#       $object{'species'}                    = $geneTaxon;
+# 
+#       if ($output_format eq 'json') {
+#         push @output_json, \%object; }
+#       else {
+#         my $object_json = encode_json \%object;
+#         &createTag($object_json); }
+#   } }
 
   foreach my $joinkey (sort keys %ackNegGeneTopic) {
     unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB ackNegGeneTopic\n); next; }
@@ -560,11 +562,11 @@ sub populateGinTaxon {
     $speciesToTaxon{$row[1]} = 'NCBITaxon:' . $row[0];
   }
 
-  $result = $dbh->prepare( "SELECT trp_name, trp_species FROM trp_name, trp_species WHERE trp_name.joinkey = trp_species.joinkey;" );
-  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
-  while (my @row = $result->fetchrow) {
-    $ginTaxon{"WB:$row[0]"} = $speciesToTaxon{$row[1]};
-  }
+#   $result = $dbh->prepare( "SELECT trp_name, trp_species FROM trp_name, trp_species WHERE trp_name.joinkey = trp_species.joinkey;" );
+#   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+#   while (my @row = $result->fetchrow) {
+#     $ginTaxon{"WB:$row[0]"} = $speciesToTaxon{$row[1]};
+#   }
 } # sub populateGinTaxon
 
 sub populateGinValidation {
@@ -578,6 +580,7 @@ sub populateGinValidation {
 sub populatePapGene {
   $result = $dbh->prepare( "SELECT joinkey, pap_gene, pap_timestamp, pap_curator, pap_evidence FROM pap_gene WHERE pap_evidence ~ 'Manually_connected'" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  # this is happening twice, because we need to know what is manConn before processing all data, to bin based on manConn
   while (my @row = $result->fetchrow) {
     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
     next unless ($row[1]);
