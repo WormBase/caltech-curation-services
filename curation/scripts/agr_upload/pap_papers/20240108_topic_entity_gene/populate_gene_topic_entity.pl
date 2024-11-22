@@ -24,6 +24,8 @@
 # processing logs and api error logs.  2024 10 16
 #
 # No longer output negative tfp data when ack author has positive gene entities and tfp didn't find it.  2024 11 21
+#
+# One source was wrong from copy-paste.  2024 11 22
 
 
 
@@ -388,7 +390,7 @@ sub outputNegativeData {
         $object{'topic'}                      = 'ATP:0000005';
         $object{'entity_type'}                = 'ATP:0000005';
         $object{'entity_id_validation'}       = 'alliance';
-        $object{'topic_entity_tag_source_id'} = $source_id_tfp;
+        $object{'topic_entity_tag_source_id'} = $source_id_ack;
         $object{'created_by'}                 = $aut;
         $object{'updated_by'}                 = $aut;
         my $ts = $ackPapGene{$joinkey}{timestamp};
