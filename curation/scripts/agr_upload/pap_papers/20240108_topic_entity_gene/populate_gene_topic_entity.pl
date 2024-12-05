@@ -26,6 +26,8 @@
 # No longer output negative tfp data when ack author has positive gene entities and tfp didn't find it.  2024 11 21
 #
 # One source was wrong from copy-paste.  2024 11 22
+#
+# Added another set of negative data, from stuff that is curation done, but doesn't have pap gene.  2024 12 05
 
 
 
@@ -149,6 +151,7 @@ my %ackPapGene;
 my %tfpPapGene;
 my %ackNegGeneTopic;
 my %tfpNegGeneTopic;
+my %curNegGeneTopic;
 
 my $abc_location = 'stage';
 if ($baseUrl =~ m/dev4002/) { $abc_location = '4002'; }
@@ -374,6 +377,14 @@ sub outputNegativeData {
     return;
   }
 
+  $source_evidence_assertion = 'ATP:0000036';
+  $source_method = 'paper_editor_genes_curator';
+  my $source_id_cur_conf = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+  unless ($source_id_cur_conf) {
+    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    return;
+  }
+
   foreach my $joinkey (sort keys %tfpPapGene) {
     foreach my $geneInt (sort keys %{ $tfpPapGene{$joinkey}{genes} }) {
       next if ($ackNegGeneTopic{$joinkey});			# if author sent nothing, don't create a negative entity
@@ -499,6 +510,27 @@ sub outputNegativeData {
       my $object_json = encode_json \%object;
       &createTag($object_json); }
   }
+
+  foreach my $joinkey (sort keys %curNegGeneTopic) {
+    unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB tfpNegGeneTopic\n); next; }
+    my $ts = $tfpNegGeneTopic{$joinkey};
+    my %object;
+    $object{'topic_entity_tag_source_id'}   = $source_id_cur_conf;
+    $object{'force_insertion'}              = TRUE;
+    $object{'negated'}                      = TRUE;
+    $object{'reference_curie'}              = $wbpToAgr{$joinkey};
+    # $object{'wbpaper_id'}                   = $joinkey;               # for debugging
+    $object{'date_updated'}                 = $curNegGeneTopic{$joinkey}{timestamp};
+    $object{'date_created'}                 = $curNegGeneTopic{$joinkey}{timestamp};
+    $object{'created_by'}                   = $curNegGeneTopic{$joinkey}{who};
+    $object{'updated_by'}                   = $curNegGeneTopic{$joinkey}{who};
+    $object{'topic'}                        = 'ATP:0000005';
+    if ($output_format eq 'json') {
+      push @output_json, \%object; }
+    else {
+      my $object_json = encode_json \%object;
+      &createTag($object_json); }
+  }
 } # sub outputNegativeData
 
 sub populateNegativeData {
@@ -536,6 +568,14 @@ sub populateNegativeData {
 
 #   SELECT * FROM afp_genestudied WHERE afp_genestudied = '' AND afp_timestamp > '2019-03-22 00:00' AND joinkey IN (SELECT joinkey FROM afp_lasttouched) AND joinkey IN ( '00065553', '00065560', '00066296', '00066355', '00066405', '00066410', '00066411', '00066419', '00066461', '00066469' );
 #   SELECT * FROM tfp_genestudied WHERE tfp_genestudied = '' AND tfp_timestamp > '2019-03-22 00:00' AND joinkey IN ( '00065553', '00065560', '00066296', '00066355', '00066405', '00066410', '00066411', '00066419', '00066461', '00066469' );
+
+  $result = $dbh->prepare( "SELECT joinkey FROM pap_curation_done WHERE pap_curation_done = 'genestudied' AND joinkey NOT IN (SELECT joinkey FROM pap_gene); " );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) {
+    next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+    $row[3] =~ s/two/WBPerson/;
+    $curNegGeneTopic{$row[0]}{who} = $row[3];
+    $curNegGeneTopic{$row[0]}{timestamp} = $row[4]; }
 
 } # sub populateNegativeData
 
