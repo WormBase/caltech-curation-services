@@ -39,8 +39,8 @@ my @output_json;
 my $pgDate = &getPgDate();
 
 my $mod = 'WB';
-# my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
-my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
+my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
+# my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
 my $okta_token = &generateOktaToken();
 
 my %variation;
@@ -236,24 +236,13 @@ sub populateAfpOthervariation {
     if ($afpContributor{$row[0]}) { foreach my $who (sort keys %{ $afpContributor{$row[0]} }) { push @auts, $who; } }
     if (scalar @auts < 1) { push @auts, 'unknown_author'; }
     foreach my $aut (@auts) {
-      my (@names) = $row[1] =~ m/"name":"(.*)"/g;
+      my (@names) = $row[1] =~ m/"name":"(.*?)"/g;
       my $note = join", ", @names;
       $afpOthervariation{$row[0]}{$aut}{note} = $note;
       $afpOthervariation{$row[0]}{$aut}{data} = $row[1];
       $afpOthervariation{$row[0]}{$aut}{timestamp} = $row[2]; }
 } }
 
-
-# Done but not tested
-# # ack
-# # if there is afp_lasttouched + afp_transgene is empty + afp_othertransgene = '[{"id":1,"name":""}]'
-# # then created negated topic only
-# 
-# # old afp
-# # if there is afp_lasttouched + NO afp_transgene + NO afp_othertransgene
-# # then created negated topic only
-#
-# # check tfp_transgene - if empty, make negated, if data, send the data.  source ECO:0008021 + ACKnowledge_pipeline
 
 sub outputNegData {
   my $data_provider = $mod;
@@ -274,50 +263,106 @@ sub outputNegData {
     return;
   }
 
-# TODO FIX this doesn't have any output, we need to debug it.
   # This is negative ack data where author removed something that tfp said
   foreach my $joinkey (sort keys %tfpVariation) {
+    next unless ($afpLasttouched{$joinkey});	# must be a final author submission
+    next unless ($afpContributor{$joinkey});	# must be an author that did that submission
     unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
+    my @auts;
+    if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
+    if (scalar @auts < 1) { print PERR qq(ERROR no author for WBPaper$joinkey with negative author data that has tfp data\n); }
     my $data = $tfpVariation{$joinkey}{data};
-    my (@wbvars) = $data =~ m/(WBVar\d+)/g;
-    foreach my $wbvar (@wbvars) {
-      my $obj = 'WB:' . $wbvar;
-      unless ($theHash{'ack'}{$joinkey}{$obj}) {
-        foreach my $aut (sort keys %{ $theHash{'ack'}{$joinkey}{$obj} }) {
-          my %object;
-          $object{'topic_entity_tag_source_id'}   = $source_id_ack;
-          $object{'force_insertion'}              = TRUE;
-          $object{'negated'}                      = TRUE;
-          $object{'reference_curie'}              = $wbpToAgr{$joinkey};
-      #     $object{'wbpaper_id'}                   = $joinkey;		# for debugging
-          $object{'NEGATIVE ACK ENTITY'}                   = $joinkey;		# for debugging
-          my $ts = $theHash{'ack'}{$joinkey}{$obj}{$aut}{timestamp};
-          if ( $afpContributor{$joinkey}{$aut} ) { $ts = $afpContributor{$joinkey}{$aut}; }
-          $object{'date_updated'}		  = $ts;
-          $object{'date_created'}		  = $ts;
-          $object{'created_by'}                   = $aut;
-          $object{'updated_by'}                   = $aut;
-          $object{'topic'}                        = 'ATP:0000006';
-          $object{'entity_type'}                  = 'ATP:0000006';
-          $object{'entity_id_validation'}         = 'alliance';
-          $object{'entity'}                       = $obj;
-          if ($variationTaxon{$obj}) { 	    # if there's a variation taxon, go with that value instead of default
-            $object{'species'}                    = $variationTaxon{$obj}; }
-          else {
-            print PERR qq(ERROR no taxon for WBPaper$joinkey Variation $obj\n);
-            next; }
-          if ($output_format eq 'json') {
-            push @output_json, \%object; }
-          else {
-            my $object_json = encode_json \%object;
-            &createTag($object_json); }
-  } } } }
 
-# TODO Need when there is nothing from ACK pipeline  negative topic
-# TODO Need when there is nothing from Author (including othervariation)  negative topic
+    if ($data) {				# there is tfp variation data
+      my (@wbvars) = $data =~ m/(WBVar\d+)/g;
+      if ($theHash{'ack'}{$joinkey}) {		# negative ack entity
+        my $data = $tfpVariation{$joinkey}{data};
+        my (@wbvars) = $data =~ m/(WBVar\d+)/g;
+        foreach my $wbvar (@wbvars) {
+          my $obj = 'WB:' . $wbvar;
+          unless ($theHash{'ack'}{$joinkey}{$obj}) {
+            foreach my $aut (@auts) {
+              my %object;
+              $object{'topic_entity_tag_source_id'}   = $source_id_ack;
+              $object{'force_insertion'}              = TRUE;
+              $object{'negated'}                      = TRUE;
+              $object{'reference_curie'}              = $wbpToAgr{$joinkey};
+#               $object{'wbpaper_id'}                   = $joinkey;		# for debugging
+#               $object{'NEGATIVE ACK ENTITY'}          = $joinkey;		# for debugging
+              my $ts = $theHash{'ack'}{$joinkey}{$obj}{$aut}{timestamp};
+              if ( $afpContributor{$joinkey}{$aut} ) { $ts = $afpContributor{$joinkey}{$aut}; }
+              $object{'date_updated'}		  = $ts;
+              $object{'date_created'}		  = $ts;
+              $object{'created_by'}                   = $aut;
+              $object{'updated_by'}                   = $aut;
+              $object{'topic'}                        = 'ATP:0000006';
+              $object{'entity_type'}                  = 'ATP:0000006';
+              $object{'entity_id_validation'}         = 'alliance';
+              $object{'entity'}                       = $obj;
+              if ($variationTaxon{$obj}) { 	    # if there's a variation taxon, go with that value instead of default
+                $object{'species'}                    = $variationTaxon{$obj}; }
+              else {
+                print PERR qq(ERROR no taxon for WBPaper$joinkey Variation $obj\n);
+                next; }
+              if ($output_format eq 'json') {
+                push @output_json, \%object; }
+              else {
+                my $object_json = encode_json \%object;
+                &createTag($object_json); }
+      } } } }
 
 
-}
+    }
+    else {						# there is no tfp variation data
+      my %object;
+      $object{'topic_entity_tag_source_id'}   = $source_id_tfp;
+      $object{'force_insertion'}              = TRUE;
+      $object{'negated'}                      = TRUE;
+      $object{'reference_curie'}              = $wbpToAgr{$joinkey};
+#       $object{'wbpaper_id'}                   = $joinkey;		# for debugging
+#       $object{'NEGATIVE TFP TOPIC'}           = $joinkey;		# for debugging
+      $object{'date_updated'}		      = $tfpVariation{$joinkey}{timestamp};
+      $object{'date_created'}		      = $tfpVariation{$joinkey}{timestamp};
+      $object{'created_by'}                   = 'ACKnowledge_pipeline';
+      $object{'updated_by'}                   = 'ACKnowledge_pipeline';
+      $object{'topic'}                        = 'ATP:0000006';
+      if ($output_format eq 'json') {
+        push @output_json, \%object; }
+      else {
+        my $object_json = encode_json \%object;
+        &createTag($object_json); }
+    }
+  } # foreach my $joinkey (sort keys %tfpVariation)
+
+  foreach my $joinkey (sort keys %afpLasttouched) {
+    next unless ($afpContributor{$joinkey});	# must be an author that did that submission
+    unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
+    next if ($afpVariation{$joinkey}{data});						# skip if any author sent any variation
+    my @auts;
+    if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
+    if (scalar @auts < 1) { print PERR qq(ERROR no author for WBPaper$joinkey with negative author data with author submission\n); }
+    foreach my $aut (@auts) {
+      next unless ($afpOthervariation{$joinkey}{$aut}{data} eq '[{"id":1,"name":""}]');	# skip if that author sent any other variation
+      my %object;
+      $object{'topic_entity_tag_source_id'}   = $source_id_ack;
+      $object{'force_insertion'}              = TRUE;
+      $object{'negated'}                      = TRUE;
+      $object{'reference_curie'}              = $wbpToAgr{$joinkey};
+#       $object{'wbpaper_id'}                   = $joinkey;		# for debugging
+#       $object{'NEGATIVE ACK TOPIC'}           = $joinkey;		# for debugging
+      my $ts = $afpContributor{$joinkey}{$aut};
+      $object{'date_updated'}		  = $ts;
+      $object{'date_created'}		  = $ts;
+      $object{'created_by'}                   = $aut;
+      $object{'updated_by'}                   = $aut;
+      $object{'topic'}                        = 'ATP:0000006';
+      if ($output_format eq 'json') {
+        push @output_json, \%object; }
+      else {
+        my $object_json = encode_json \%object;
+        &createTag($object_json); } }
+  }
+} # sub outputNegData
 
 sub outputTfpData {
   my $data_provider = $mod;
@@ -342,7 +387,7 @@ sub outputTfpData {
     $object{'date_created'}		    = $tfpVariation{$joinkey}{timestamp};
     $object{'created_by'}                   = 'ACKnowledge_pipeline';
     $object{'updated_by'}                   = 'ACKnowledge_pipeline';
-    $object{'topic'}                        = 'ATP:0000110';
+    $object{'topic'}                        = 'ATP:0000006';
     if ($data eq '') {
       $object{'negated'}                    = TRUE;
 #       $object{'BLAH'}                       = 'TFP neg';
@@ -423,18 +468,17 @@ sub outputAfpData {
 
   foreach my $joinkey (sort keys %afpOthervariation) {
     foreach my $curator (sort keys %{ $afpOthervariation{$joinkey} }) {
-      next unless ($afpOthervariation{$joinkey}{$curator}{data} eq '[{"id":1,"name":""}]');
+      next if ($afpOthervariation{$joinkey}{$curator}{data} eq '[{"id":1,"name":""}]');
       my %object;
       $object{'topic_entity_tag_source_id'}   = $source_id_ack;
       $object{'force_insertion'}              = TRUE;
       $object{'negated'}                      = FALSE;
       $object{'reference_curie'}              = $wbpToAgr{$joinkey};
 #       $object{'wbpaper_id'}                   = $joinkey;		# for debugging
+#       $object{'AFP OTHER VARIATION POSITIVE TOPIC'}                   = $joinkey;		# for debugging
       $object{'topic'}                        = 'ATP:0000006';
-      $object{'entity_type'}                  = 'ATP:0000006';
-      $object{'entity_id_validation'}         = 'alliance';
       if ($afpOthervariation{$joinkey}{$curator}{note}) {
-        my $note = join' | ', @{ $afpOthervariation{$joinkey}{$curator}{note} };
+        my $note = $afpOthervariation{$joinkey}{$curator}{note};
         $object{'note'}                     = $note; }
       $object{'created_by'}                 = $curator;
       $object{'updated_by'}                 = $curator;
