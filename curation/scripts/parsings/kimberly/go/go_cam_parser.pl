@@ -27,6 +27,8 @@
 # added RCA to ECO mapping list. 2020 06 28 kmva
 #
 # fixed RO_0002263 to now be RO:0002263 2022 04 21 kmva
+#
+# changed from gpad 1.2 to gpad 2.0 for Kimberly.  2024 12 11
 
 use strict;
 use diagnostics;
@@ -39,8 +41,9 @@ my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST}
 my $result;
 
 
-my %annotToRo;
-&populateAnnotrelToRo();
+# my %annotToRo;		# don't need this, RO directly in file.  2024 12 11
+# &populateAnnotrelToRo();
+
 my %chebiToMol;
 &populateChebiToMol();
 my %pmidToWBPaper;
@@ -64,29 +67,29 @@ open (ACE, ">$acefile") or die "Cannot create $acefile : $!";
 my %taxonToSpecies;
 &populateTaxonToSpecies();
 
-
 my %dbidToWb;		# uniprot to wbgene
-my %tempGpi;		# tempname to uniprot
-my %nameToWbg;		# tempname to wbgene
-my $gpifileUrl = 'ftp://ftp.wormbase.org/pub/wormbase/species/c_elegans/PRJNA13758/annotation/gene_product_info/c_elegans.canonical_bioproject.current_development.gene_product_info.gpi.gz';
-my $gpifiledata = get $gpifileUrl;
-my (@gpilines) = split/\n/, $gpifiledata;
-foreach my $line (@gpilines) {
-  next unless ($line =~ m/^WB/);
-  my (@tabs) = split/\t/, $line;
-  my $tempid   = $tabs[1];
-  my $tempname = lc($tabs[2]);
-  if ($tempid =~ m/WBGene\d+/) { $nameToWbg{$tempname} = $tempid; }
-  next unless $tabs[8];
-  my $uniprot  = $tabs[8];
-  my (@uniprots) = split/\|/, $uniprot;
-  foreach my $unip (@uniprots) { $tempGpi{$tempname}{$unip}++; } }
-foreach my $tempname (sort keys %tempGpi) { 
-  unless ($nameToWbg{$tempname}) { print ERR qq($tempname in gpi file doesn't map to a WBGene from column 2\n); next; }
-  my $wbgene = $nameToWbg{$tempname};
-  foreach my $unip (sort keys %{ $tempGpi{$tempname} }) {
-    $unip =~ s/UniProtKB://;
-    $dbidToWb{$unip} = $wbgene; } }
+# should not need dbidToWb because data requires it all to be WB data	2024 12 11
+# my %tempGpi;		# tempname to uniprot
+# my %nameToWbg;		# tempname to wbgene
+# my $gpifileUrl = 'ftp://ftp.wormbase.org/pub/wormbase/species/c_elegans/PRJNA13758/annotation/gene_product_info/c_elegans.canonical_bioproject.current_development.gene_product_info.gpi.gz';
+# my $gpifiledata = get $gpifileUrl;
+# my (@gpilines) = split/\n/, $gpifiledata;
+# foreach my $line (@gpilines) {
+#   next unless ($line =~ m/^WB/);
+#   my (@tabs) = split/\t/, $line;
+#   my $tempid   = $tabs[1];
+#   my $tempname = lc($tabs[2]);
+#   if ($tempid =~ m/WBGene\d+/) { $nameToWbg{$tempname} = $tempid; }
+#   next unless $tabs[8];
+#   my $uniprot  = $tabs[8];
+#   my (@uniprots) = split/\|/, $uniprot;
+#   foreach my $unip (@uniprots) { $tempGpi{$tempname}{$unip}++; } }
+# foreach my $tempname (sort keys %tempGpi) { 
+#   unless ($nameToWbg{$tempname}) { print ERR qq($tempname in gpi file doesn't map to a WBGene from column 2\n); next; }
+#   my $wbgene = $nameToWbg{$tempname};
+#   foreach my $unip (sort keys %{ $tempGpi{$tempname} }) {
+#     $unip =~ s/UniProtKB://;
+#     $dbidToWb{$unip} = $wbgene; } }
 
 
 my $annotCounter = 0;
@@ -122,7 +125,9 @@ my %filter;				# filter on wbgDbid + goid + dbref + evicode + withConverted + ta
 foreach my $line (@lines) {
   next unless ($line =~ m/^WB/);
   my (@tabs) = split/\t/, $line;
-  my ($db, $dbid, $qualifier, $goid, $dbref, $evicode, $with, $taxon, $date, $assignedBy, $annotExts, $annotProp) = split/\t/, $line;
+#   my ($db, $dbid, $qualifier, $goid, $dbref, $evicode, $with, $taxon, $date, $assignedBy, $annotExts, $annotProp) = split/\t/, $line;	# old format before 2024 12 11
+  my ($db_dbid, $negation, $qualifier, $goid, $dbref, $evicode, $with, $taxon, $date, $assignedBy, $annotExts, $annotProps) = split/\t/, $line;
+  my ($db, $dbid) = $db_dbid =~ m/^(.*?):(.*)$/;
   next if ($assignedBy eq 'SynGO');
   next if ($with =~ m/EC:/);
   next if ($with =~ m/InterPro:/);
@@ -137,20 +142,23 @@ foreach my $line (@lines) {
   $count++;
   my $goanid = &pad8Zeros($count);
   print ACE qq(GO_annotation : "$goanid"\n);
-  if ($dbidToWb{$dbid}) { $dbid = $dbidToWb{$dbid}; }
+#   if ($dbidToWb{$dbid}) { $dbid = $dbidToWb{$dbid}; }	# should not need dbidToWb because data requires it all to be WB data
   if ($dbid =~ m/WBGene/) {
       print ACE qq(Gene\t"$dbid"\n); }
     else {
-      print ERR qq($dbid doesn't map to WBGene from column 2, line $count\n); }
+      print ERR qq($dbid doesn't map to WBGene from column 1, line $count : $line\n); }
   print ACE qq(GO_term\t"$goid"\n);
   my (@annotRel) = split/\|/, $qualifier;
   my $annotTag = 'Annotation_relation';
-  if ($qualifier =~ m/NOT/) { $annotTag = 'Annotation_relation_not'; }
-  foreach my $annotRel (@annotRel) { 
-    if ($annotToRo{$annotRel}) {
-      print ACE qq($annotTag\t"$annotToRo{$annotRel}"\n); } }
-  my (@dbrefs) = split/\|/, $dbref;
-  foreach my $adbref (@dbrefs) {
+  if ($negation eq 'NOT') { $annotTag = 'Annotation_relation_not'; }
+  foreach my $annotRel (@annotRel) {
+#     if ($annotToRo{$annotRel}) {			# don't need this, RO directly in file.  2024 12 11
+#       print ACE qq($annotTag\t"$annotToRo{$annotRel}"\n); }
+    print ACE qq($annotTag\t"$annotRel"\n); }
+
+  my $adbref = $dbref;
+#   my (@dbrefs) = split/\|/, $dbref;			# no longer split on pipes, only one value.  2024 12 11
+#   foreach my $adbref (@dbrefs) {
     if ($adbref =~ m/GO_REF:(\d+)/) {                    print ACE qq(GO_reference\t"Gene Ontology Consortium"\t"GO_REF"\t"$1"\n); }
       elsif ($adbref =~ m/PMID:(\d+)/) {
         if ($pmidToWBPaper{$1}) {                        print ACE qq(Reference\t"$pmidToWBPaper{$1}"\n); }
@@ -158,10 +166,11 @@ foreach my $line (@lines) {
       elsif ($adbref =~ m/DOI:(.+)/) {
         if ($doiToWBPaper{$1}) {                         print ACE qq(Reference\t"$doiToWBPaper{$1}"\n); }
           else {                                         print ERR qq(DOI $1 does not map to WBPaper\n); } }
-      elsif ($adbref =~ m/PAINT_REF:\d+/) {              print ACE qq(Reference\t"WBPaper00046480"\n); }
+#       elsif ($adbref =~ m/PAINT_REF:\d+/) {              print ACE qq(Reference\t"WBPaper00046480"\n); }	# no longer have this data 2024 12 11
       else {                                             print ERR qq(DBREF $adbref invalid\n); }
-  } # foreach my $adbref (@dbrefs)
-  if ($evicode) {                             			 print ACE qq(ECO_term\t"$evicode"\n); }
+#   } # foreach my $adbref (@dbrefs)
+
+  if ($evicode) {                             		 print ACE qq(ECO_term\t"$evicode"\n); }
   if ($ecoToGoCode{$evicode}) {                          print ACE qq(GO_code\t"$ecoToGoCode{$evicode}"\n); }
       else {                                             print ERR qq(ECO $evicode invalid\n); }
 
@@ -173,10 +182,13 @@ foreach my $line (@lines) {
        my $withuniStripped = $withuni; 
        $withuniStripped =~ s/\-\d$//g;
        my $wbgWith = $withuni;
-       if ($dbidToWb{$withuniStripped}) { $wbgWith = $dbidToWb{$withuniStripped}; push @withConverted, $wbgWith; }
-         else { 
-           push @withConverted, "UniProtKB:$withuni";			# add uniprotkb value if does not map to wormbase value (kimberly 2015 02 05)
-           print ERR qq($withuni doesn't map to WBGene from column 8, line $count\n); } }
+# should not need dbidToWb because data requires it all to be WB data
+#        if ($dbidToWb{$withuniStripped}) { $wbgWith = $dbidToWb{$withuniStripped}; push @withConverted, $wbgWith; }
+#          else { 
+             push @withConverted, "UniProtKB:$withuni";			# add uniprotkb value if does not map to wormbase value (kimberly 2015 02 05)
+             print ERR qq($withuni doesn't map to WBGene from column 8, line $count\n);
+#            }
+       }
      else {
        push @withConverted, $withuni; }							# those that are not UniProtKB: just get added back
   } # foreach my $withuni (@withunis)
@@ -234,6 +246,12 @@ foreach my $line (@lines) {
     } # foreach my $annExt (@annExts)
   } # foreach my $annExtComma (@annExtsComma)
 
+  # Populate 'Noctua_model_id' with string after '=' sign: noctua-model-id=gomodel:5b318d0900000658
+  my (@annotProps) = split/\|/, $annotProps;
+  foreach my $annotProp (@annotProps) {
+    my ($pre, $prop) = $annotProp =~ m/^(.*?)=(.*)$/;
+    if ( ($pre eq 'noctua-model-id') && ($prop) ) {	   print ACE qq(Noctua_model_id\t"$prop"\n); } }
+
   print ACE qq(\n);
 } # foreach my $line (@lines)
 
@@ -257,21 +275,22 @@ sub pad8Zeros {         # take a number and pad to 8 digits
 } # sub pad8Zeros
 
 
-sub populateAnnotrelToRo {
-  $annotToRo{'colocalizes_with'} = 'RO:0002325';
-  $annotToRo{'contributes_to'}   = 'RO:0002326';
-  $annotToRo{'enables'}          = 'RO:0002327';
-  $annotToRo{'involved_in'}      = 'RO:0002331';
-  $annotToRo{'located_in'}       = 'RO:0001025';
-  $annotToRo{'is_active_in'}     = 'RO:0002432';
-  $annotToRo{'part_of'}          = 'BFO:0000050';
-  $annotToRo{'acts_upstream_of_or_within'}   = 'RO:0002264';
-  $annotToRo{'acts_upstream_of'}   = 'RO:0002263';
-  $annotToRo{'acts_upstream_of_or_within_negative_effect'}   = 'RO:0004033';
-  $annotToRo{'acts_upstream_of_or_within_positive_effect'}   = 'RO:0004032';
-  $annotToRo{'acts_upstream_of_negative_effect'}   = 'RO:0004035';
-  $annotToRo{'acts_upstream_of_positive_effect'}   = 'RO:0004034';
-} # sub populateAnnotrelToRo
+# don't need this, RO directly in file.  2024 12 11
+# sub populateAnnotrelToRo {
+#   $annotToRo{'colocalizes_with'} = 'RO:0002325';
+#   $annotToRo{'contributes_to'}   = 'RO:0002326';
+#   $annotToRo{'enables'}          = 'RO:0002327';
+#   $annotToRo{'involved_in'}      = 'RO:0002331';
+#   $annotToRo{'located_in'}       = 'RO:0001025';
+#   $annotToRo{'is_active_in'}     = 'RO:0002432';
+#   $annotToRo{'part_of'}          = 'BFO:0000050';
+#   $annotToRo{'acts_upstream_of_or_within'}   = 'RO:0002264';
+#   $annotToRo{'acts_upstream_of'}   = 'RO:0002263';
+#   $annotToRo{'acts_upstream_of_or_within_negative_effect'}   = 'RO:0004033';
+#   $annotToRo{'acts_upstream_of_or_within_positive_effect'}   = 'RO:0004032';
+#   $annotToRo{'acts_upstream_of_negative_effect'}   = 'RO:0004035';
+#   $annotToRo{'acts_upstream_of_positive_effect'}   = 'RO:0004034';
+# } # sub populateAnnotrelToRo
 
 sub populateChebiToMol {
   $result = $dbh->prepare( "SELECT mop_name.mop_name, mop_chebi.mop_chebi FROM mop_name, mop_chebi WHERE mop_name.joinkey = mop_chebi.joinkey;" );
