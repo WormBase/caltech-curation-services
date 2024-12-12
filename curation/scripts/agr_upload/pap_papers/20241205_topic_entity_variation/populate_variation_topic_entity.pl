@@ -208,18 +208,24 @@ sub populateAfpVariation {
     next unless $varText;
     my $tsdigits = &tsToDigits($ts);
     next unless ($afpLasttouched{$joinkey});
-    my (@wbvars) = $varText =~ m/(WBVar\d+)/g;
+#     my (@wbvars) = $varText =~ m/(WBVar\d+)/g;
+    my (@pairs) = split/ \| /, $varText;
     my @auts;
     if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
     if (scalar @auts < 1) { push @auts, 'unknown_author'; }
+#       foreach my $wbvar (@wbvars) { # }
+#         my $obj = 'WB:' . $wbvar;
     foreach my $aut (@auts) {
-      foreach my $wbvar (@wbvars) {
+      foreach my $pair (@pairs) {
+        my ($wbvar, $name) = split(/;%;/, $pair);
         my $obj = 'WB:' . $wbvar;
         if ($afpContributor{$joinkey}{$aut}) {
           $theHash{'ack'}{$joinkey}{$obj}{$aut}{timestamp} = $afpContributor{$joinkey}{$aut}; }
         else {
           $theHash{'ack'}{$joinkey}{$obj}{$aut}{timestamp} = $ts; }
-        push @{ $theHash{'ack'}{$joinkey}{$obj}{$aut}{note} }, $varText;
+        $theHash{'ack'}{$joinkey}{$obj}{$aut}{name} = $name;
+#         my $note = $varText; $note =~ s/;%;/; /g;
+#         push @{ $theHash{'ack'}{$joinkey}{$obj}{$aut}{note} }, $note;
     } }
   }
 } # sub populateAfpVariation
@@ -397,13 +403,17 @@ sub outputTfpData {
         my $object_json = encode_json \%object;
         &createTag($object_json); } }
     else {
-      my (@wbvars) = $data =~ m/(WBVar\d+)/g;
-      foreach my $wbvar (@wbvars) {
+#       my (@wbvars) = $data =~ m/(WBVar\d+)/g;
+#       foreach my $wbvar (@wbvars) {
+      my (@pairs) = split/ \| /, $data;
+      foreach my $pair (@pairs) {
+        my ($wbvar, $name) = split(/;%;/, $pair);
         my $obj = 'WB:' . $wbvar;
 #         $object{'BLAH'}                      = 'TFP yes';
         $object{'entity_type'}               = 'ATP:0000006';
         $object{'entity_id_validation'}      = 'alliance';
         $object{'entity'}                    = $obj;
+        $object{'entity_published_as'}       = $name;
         if ($variationTaxon{$obj}) { 	    # if there's a variation taxon, go with that value instead of default
           $object{'species'}                 = $variationTaxon{$obj}; }
         else {
@@ -447,14 +457,15 @@ sub outputAfpData {
           $object{'entity_type'}                  = 'ATP:0000006';
           $object{'entity_id_validation'}         = 'alliance';
           $object{'entity'}                       = $obj;
+          $object{'entity_published_as'}          = $theHash{$datatype}{$joinkey}{$obj}{$curator}{name};
           if ($variationTaxon{$obj}) { 			# if there's a variation taxon, go with that value instead of default
             $object{'species'}                    = $variationTaxon{$obj}; }
           else {
             print PERR qq(ERROR no taxon for WBPaper$joinkey Variation $obj\n);
             next; }
-          if ($theHash{$datatype}{$joinkey}{$obj}{$curator}{note}) {
-            my $note = join' | ', @{ $theHash{$datatype}{$joinkey}{$obj}{$curator}{note} };
-            $object{'note'}                     = $note; }
+#           if ($theHash{$datatype}{$joinkey}{$obj}{$curator}{note}) {
+#             my $note = join' | ', @{ $theHash{$datatype}{$joinkey}{$obj}{$curator}{note} };
+#             $object{'note'}                     = $note; }
           $object{'created_by'}                 = $curator;
           $object{'updated_by'}                 = $curator;
           $object{'date_created'}               = $theHash{$datatype}{$joinkey}{$obj}{$curator}{timestamp};
@@ -472,6 +483,7 @@ sub outputAfpData {
       my %object;
       $object{'topic_entity_tag_source_id'}   = $source_id_ack;
       $object{'force_insertion'}              = TRUE;
+      $object{'novel_topic_data'}             = TRUE;
       $object{'negated'}                      = FALSE;
       $object{'reference_curie'}              = $wbpToAgr{$joinkey};
 #       $object{'wbpaper_id'}                   = $joinkey;		# for debugging
