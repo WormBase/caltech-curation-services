@@ -6,10 +6,10 @@
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
 
 # delete command
-# DELETE FROM topic_entity_tag WHERE topic = 'ATP:0000006' AND topic_entity_tag_source_id IN ( SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE secondary_data_provider_id = ( SELECT mod_id FROM mod WHERE abbreviation = 'WB' ));
+# DELETE FROM topic_entity_tag WHERE topic = 'ATP:0000285' AND topic_entity_tag_source_id IN ( SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE secondary_data_provider_id = ( SELECT mod_id FROM mod WHERE abbreviation = 'WB' ));
 
 # select command if wanting to check
-# SELECT * FROM topic_entity_tag WHERE topic = 'ATP:0000006' AND topic_entity_tag_source_id IN (
+# SELECT * FROM topic_entity_tag WHERE topic = 'ATP:0000285' AND topic_entity_tag_source_id IN (
 #   SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE secondary_data_provider_id = (
 #   SELECT mod_id FROM mod WHERE abbreviation = 'WB' ));
 
@@ -301,8 +301,8 @@ sub outputNegData {
               $object{'date_created'}		  = $ts;
               $object{'created_by'}                   = $aut;
               $object{'updated_by'}                   = $aut;
-              $object{'topic'}                        = 'ATP:0000006';
-              $object{'entity_type'}                  = 'ATP:0000006';
+              $object{'topic'}                        = 'ATP:0000285';
+              $object{'entity_type'}                  = 'ATP:0000285';
               $object{'entity_id_validation'}         = 'alliance';
               $object{'entity'}                       = $obj;
               if ($variationTaxon{$obj}) { 	    # if there's a variation taxon, go with that value instead of default
@@ -331,7 +331,7 @@ sub outputNegData {
       $object{'date_created'}		      = $tfpVariation{$joinkey}{timestamp};
       $object{'created_by'}                   = 'ACKnowledge_pipeline';
       $object{'updated_by'}                   = 'ACKnowledge_pipeline';
-      $object{'topic'}                        = 'ATP:0000006';
+      $object{'topic'}                        = 'ATP:0000285';
       if ($output_format eq 'json') {
         push @output_json, \%object; }
       else {
@@ -361,7 +361,7 @@ sub outputNegData {
       $object{'date_created'}		  = $ts;
       $object{'created_by'}                   = $aut;
       $object{'updated_by'}                   = $aut;
-      $object{'topic'}                        = 'ATP:0000006';
+      $object{'topic'}                        = 'ATP:0000285';
       if ($output_format eq 'json') {
         push @output_json, \%object; }
       else {
@@ -393,7 +393,7 @@ sub outputTfpData {
     $object{'date_created'}		    = $tfpVariation{$joinkey}{timestamp};
     $object{'created_by'}                   = 'ACKnowledge_pipeline';
     $object{'updated_by'}                   = 'ACKnowledge_pipeline';
-    $object{'topic'}                        = 'ATP:0000006';
+    $object{'topic'}                        = 'ATP:0000285';
     if ($data eq '') {
       $object{'negated'}                    = TRUE;
 #       $object{'BLAH'}                       = 'TFP neg';
@@ -410,7 +410,7 @@ sub outputTfpData {
         my ($wbvar, $name) = split(/;%;/, $pair);
         my $obj = 'WB:' . $wbvar;
 #         $object{'BLAH'}                      = 'TFP yes';
-        $object{'entity_type'}               = 'ATP:0000006';
+        $object{'entity_type'}               = 'ATP:0000285';
         $object{'entity_id_validation'}      = 'alliance';
         $object{'entity'}                    = $obj;
         $object{'entity_published_as'}       = $name;
@@ -453,8 +453,8 @@ sub outputAfpData {
           $object{'negated'}                      = FALSE;
           $object{'reference_curie'}              = $wbpToAgr{$joinkey};
 #           $object{'wbpaper_id'}                   = $joinkey;		# for debugging
-          $object{'topic'}                        = 'ATP:0000006';
-          $object{'entity_type'}                  = 'ATP:0000006';
+          $object{'topic'}                        = 'ATP:0000285';
+          $object{'entity_type'}                  = 'ATP:0000285';
           $object{'entity_id_validation'}         = 'alliance';
           $object{'entity'}                       = $obj;
           $object{'entity_published_as'}          = $theHash{$datatype}{$joinkey}{$obj}{$curator}{name};
@@ -488,7 +488,7 @@ sub outputAfpData {
       $object{'reference_curie'}              = $wbpToAgr{$joinkey};
 #       $object{'wbpaper_id'}                   = $joinkey;		# for debugging
 #       $object{'AFP OTHER VARIATION POSITIVE TOPIC'}                   = $joinkey;		# for debugging
-      $object{'topic'}                        = 'ATP:0000006';
+      $object{'topic'}                        = 'ATP:0000285';
       if ($afpOthervariation{$joinkey}{$curator}{note}) {
         my $note = $afpOthervariation{$joinkey}{$curator}{note};
         $object{'note'}                     = $note; }
