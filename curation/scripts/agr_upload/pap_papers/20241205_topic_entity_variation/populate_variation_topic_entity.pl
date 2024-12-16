@@ -283,8 +283,10 @@ sub outputNegData {
       my (@wbvars) = $data =~ m/(WBVar\d+)/g;
       if ($theHash{'ack'}{$joinkey}) {		# negative ack entity
         my $data = $tfpVariation{$joinkey}{data};
-        my (@wbvars) = $data =~ m/(WBVar\d+)/g;
-        foreach my $wbvar (@wbvars) {
+
+        my (@pairs) = split/ \| /, $data;
+        foreach my $pair (@pairs) {
+          my ($wbvar, $name) = split(/;%;/, $pair);
           my $obj = 'WB:' . $wbvar;
           unless ($theHash{'ack'}{$joinkey}{$obj}) {
             foreach my $aut (@auts) {
@@ -305,6 +307,7 @@ sub outputNegData {
               $object{'entity_type'}                  = 'ATP:0000285';
               $object{'entity_id_validation'}         = 'alliance';
               $object{'entity'}                       = $obj;
+              $object{'entity_published_as'}       = $name;
               if ($variationTaxon{$obj}) { 	    # if there's a variation taxon, go with that value instead of default
                 $object{'species'}                    = $variationTaxon{$obj}; }
               else {
