@@ -48,6 +48,8 @@ my $newtabfile = 'gpad_extra_column';
 open (TAB, ">$newtabfile") or die "Cannot create $newtabfile : $!";
 my $errfile = 'gpad_extra_column.err';
 open (ERR, ">$errfile") or die "Cannot create $errfile : $!";
+my $err8file = 'column8.error';
+open (ER8, ">$err8file") or die "Cannot create $err8file : $!";
 my $acefile = 'gp_annotation.ace';
 open (ACE, ">$acefile") or die "Cannot create $acefile : $!";
 
@@ -109,7 +111,8 @@ foreach my $tempname (sort keys %tempGpi) {
     $dbidToWb{$unip} = $wbgene; } }
 
 
-my $sourcefile = 'ftp://ftp.ebi.ac.uk/pub/contrib/goa/gp_association.6239_wormbase.gz';
+# my $sourcefile = 'ftp://ftp.ebi.ac.uk/pub/contrib/goa/gp_association.6239_wormbase.gz';
+my $sourcefile = 'ftp://ftp.ebi.ac.uk/pub/contrib/goa/gp_association.6239_wormbase.v2.gz';
 my $sourcedata = get $sourcefile;
 my (@lines) = split/\n/, $sourcedata;
 my $count = 0;
@@ -117,7 +120,9 @@ my %filter;				# filter on wbgDbid + goid + dbref + evicode + withConverted + ta
 foreach my $line (@lines) {
   next unless ($line =~ m/^UniProtKB/);
   my (@tabs) = split/\t/, $line;
-  my ($db, $dbid, $qualifier, $goid, $dbref, $evicode, $with, $taxon, $date, $assignedBy, $annotExts, $annotProp) = split/\t/, $line;
+#   my ($db, $dbid, $qualifier, $goid, $dbref, $evicode, $with, $taxon, $date, $assignedBy, $annotExts, $annotProp) = split/\t/, $line;
+  my ($db_dbid, $negation, $qualifier, $goid, $dbref, $evicode, $with, $taxon, $date, $assignedBy, $annotExts, $annotProp) = split/\t/, $line;
+  my ($db, $dbid) = $db_dbid =~ m/^(.*?):(.*)$/;
   next if ($assignedBy eq 'InterPro');
   next if ($assignedBy eq 'Reactome');
   next if ($assignedBy eq 'ComplexPortal');
@@ -149,7 +154,7 @@ foreach my $line (@lines) {
          if ($dbidToWb{$withuniStripped}) { $wbgWith = $dbidToWb{$withuniStripped}; push @withConverted, $wbgWith; }
            else { 
              push @withConverted, "UniProtKB:$withuni";			# add uniprotkb value if does not map to wormbase value (kimberly 2015 02 05)
-             $err .= qq($withuni doesn't map to WBGene from column 8, line $count\n); } } 
+             print ER8 qq($withuni doesn't map to WBGene from column 8, line $count\n); } }
        else {
          push @withConverted, $withuni; }							# those that are not UniProtKB: just get added back
     } # foreach my $withuni (@withunis)
@@ -176,14 +181,15 @@ foreach my $line (@lines) {
          print ACE qq(Gene\t"$wbgDbid"\n);
          print ACE qq(ECO_term\t"$evicode"\n);
          print ACE qq(GO_term\t"$goid"\n);
-         my ($gocode) = $annotProp =~ m/go_evidence=([A-Z]+)/;
+         my ($gocode) = $annotProp =~ m/go_evidence:([A-Z]+)/;
          print ACE qq(GO_code\t"$gocode"\n);
          my (@annotRel) = split/\|/, $qualifier;
          my $annotTag = 'Annotation_relation';
-         if ($qualifier =~ m/NOT/) { $annotTag = 'Annotation_relation_not'; }
+         if ($negation eq 'NOT') { $annotTag = 'Annotation_relation_not'; }
          foreach my $annotRel (@annotRel) { 
-           if ($annotToRo{$annotRel}) {
-             print ACE qq($annotTag\t"$annotToRo{$annotRel}"\n); } }
+         # if ($annotToRo{$annotRel}) {			# don't need this, RO directly in file.  2024 12 16
+         #   print ACE qq($annotTag\t"$annotToRo{$annotRel}"\n); }
+         print ACE qq($annotTag\t"$annotRel"\n); }
          my (@withs) = split/\|/, $withConverted;
          foreach my $with (@withs) {
            if ($with =~ m/With:Not_supplied/) { 1; }			# do nothing
@@ -239,8 +245,9 @@ foreach my $line (@lines) {
          if ($taxon) {
            if ($taxonToSpecies{$taxon}) {                       print ACE qq($taxonToSpecies{$taxon}\n); }
              else {                                             print ERR qq(Taxon $taxon does not map to species\n); } }
-         my (@dbrefs) = split/\|/, $dbref;
-         foreach my $adbref (@dbrefs) {
+#          my (@dbrefs) = split/\|/, $dbref;		# no longer split on pipes, only one value.  2024 12 16
+         my $adbref = $dbref;
+#          foreach my $adbref (@dbrefs) {
            if ($adbref =~ m/GO_REF:(\d+)/) {                    print ACE qq(GO_reference\t"Gene Ontology Consortium"\t"GO_REF"\t"$1"\n); }
              elsif ($adbref =~ m/PMID:(\d+)/) {
                if ($pmidToWBPaper{$1}) {                        print ACE qq(Reference\t"$pmidToWBPaper{$1}"\n); }
@@ -248,9 +255,9 @@ foreach my $line (@lines) {
              elsif ($adbref =~ m/DOI:(.+)/) {
                if ($doiToWBPaper{$1}) {                         print ACE qq(Reference\t"$doiToWBPaper{$1}"\n); }
                  else {                                         print ERR qq(DOI $1 does not map to WBPaper\n); } }
-             elsif ($adbref =~ m/PAINT_REF:\d+/) {              print ACE qq(Reference\t"WBPaper00046480"\n); }
+#              elsif ($adbref =~ m/PAINT_REF:\d+/) {              print ACE qq(Reference\t"WBPaper00046480"\n); }	# no longer have this data 2024 12 16
              else {                                             print ERR qq(DBREF $adbref invalid\n); }
-         } # foreach my $adbref (@dbrefs)
+#          } # foreach my $adbref (@dbrefs)
          if ($assignedBy) {                                     print ACE qq(Contributed_by\t"$assignedBy"\n); }
          if ($date) { if ($date =~ m/(\d{4})(\d{2})(\d{2})/) {  print ACE qq(Date_last_updated\t"$1-$2-$3"\n); } }
          print ACE qq(\n);
@@ -265,6 +272,7 @@ foreach my $line (@lines) {
 
 close (TAB) or die "Cannot close $newtabfile : $!";
 close (ERR) or die "Cannot close $errfile : $!";
+close (ER8) or die "Cannot close $err8file : $!";
 close (ACE) or die "Cannot close $acefile : $!";
 
 sub pad8Zeros {         # take a number and pad to 8 digits
@@ -316,33 +324,33 @@ sub populatePmidToWBPaper {
 } # sub populatePmidToWBPaper
 
 sub populateTaxonToSpecies {
-  $taxonToSpecies{"taxon:1280"}   = qq(Interacting_species\t"Staphylococcus aureus");
-  $taxonToSpecies{"taxon:1428"}   = qq(Interacting_species\t"Bacillus thuringiensis");
-  $taxonToSpecies{"taxon:1423143"}   = qq(Interacting_species\t"Bacillus thuringiensis");
-  $taxonToSpecies{"taxon:98403"}  = qq(Interacting_species\t"Drechmeria coniospora");
-  $taxonToSpecies{"taxon:5207"}   = qq(Interacting_species\t"Cryptococcus neoformans");
-  $taxonToSpecies{"taxon:216597"} = qq(Interacting_species\t "Salmonella enterica subs. enterica serovar Typhimurium" "WBStrain00042084");
-  $taxonToSpecies{"taxon:226185"} = qq(Interacting_species\t"Enterococcus faecalis" "WBStrain00042092");
-  $taxonToSpecies{"taxon:273526"} = qq(Interacting_species\t"Serratia marcescens" "WBStrain00041003");
-  $taxonToSpecies{"taxon:474186"} = qq(Interacting_species\t"Enterococcus faecalis" "WBStrain00041967");
-  $taxonToSpecies{"taxon:5476"}   = qq(Interacting_species\t"Candida albicans");
-  $taxonToSpecies{"taxon:615"}    = qq(Interacting_species\t"Serratia marcescens");
-  $taxonToSpecies{"taxon:637912"} = qq(Interacting_species\t"Escherichia coli" "WBStrain00041969");
-  $taxonToSpecies{"taxon:652611"} = qq(Interacting_species\t"Pseudomonas aeruginosa" "WBStrain00041978");
-  $taxonToSpecies{"taxon:208963"} = qq(Interacting_species\t"Pseudomonas aeruginosa");
-  $taxonToSpecies{"taxon:686"}    = qq(Interacting_species\t"Vibrio cholerae O1 biovar El Tor");
-  $taxonToSpecies{"taxon:93061"}  = qq(Interacting_species\t"Staphylococcus aureus subsp. aureus" "WBStrain00041949");
-  $taxonToSpecies{"taxon:90371"}  = qq(Interacting_species\t"Salmonella enteric subs. enterica serovar Typhimurium");
-  $taxonToSpecies{"taxon:28450"}  = qq(Interacting_species\t"Burkholderia pseudomallei");
-  $taxonToSpecies{"taxon:46170"}  = qq)Interacting_species\t"Staphylococcus aureus subsp. aureus");
-  $taxonToSpecies{"taxon:287"}    = qq)Interacting_species\t"Pseudomonas aeruginosa");
-  $taxonToSpecies{"taxon:621"}    = qq)Interacting_species\t"Shigella boydii");
-  $taxonToSpecies{"taxon:623"}    = qq)Interacting_species\t"Shigella flexneri");
-  $taxonToSpecies{"taxon:29488"}  = qq)Interacting_species\t"Photorhabdus luminescens");
-  $taxonToSpecies{"taxon:151262"} = qq)Interacting_species\t"Microbacterium nematophilum");
-  $taxonToSpecies{"taxon:666"}    = qq)Interacting_species\t"Vibrio cholerae");
-  $taxonToSpecies{"taxon:632"}    = qq)Interacting_species\t"Yersinia pestis");
-  $taxonToSpecies{"taxon:208964"} = qq)Interacting_species\t"Pseudomonas aeruginosa PAO1");
+  $taxonToSpecies{"NCBITaxon:1280"}   = qq(Interacting_species\t"Staphylococcus aureus");
+  $taxonToSpecies{"NCBITaxon:1428"}   = qq(Interacting_species\t"Bacillus thuringiensis");
+  $taxonToSpecies{"NCBITaxon:1423143"}   = qq(Interacting_species\t"Bacillus thuringiensis");
+  $taxonToSpecies{"NCBITaxon:98403"}  = qq(Interacting_species\t"Drechmeria coniospora");
+  $taxonToSpecies{"NCBITaxon:5207"}   = qq(Interacting_species\t"Cryptococcus neoformans");
+  $taxonToSpecies{"NCBITaxon:216597"} = qq(Interacting_species\t "Salmonella enterica subs. enterica serovar Typhimurium" "WBStrain00042084");
+  $taxonToSpecies{"NCBITaxon:226185"} = qq(Interacting_species\t"Enterococcus faecalis" "WBStrain00042092");
+  $taxonToSpecies{"NCBITaxon:273526"} = qq(Interacting_species\t"Serratia marcescens" "WBStrain00041003");
+  $taxonToSpecies{"NCBITaxon:474186"} = qq(Interacting_species\t"Enterococcus faecalis" "WBStrain00041967");
+  $taxonToSpecies{"NCBITaxon:5476"}   = qq(Interacting_species\t"Candida albicans");
+  $taxonToSpecies{"NCBITaxon:615"}    = qq(Interacting_species\t"Serratia marcescens");
+  $taxonToSpecies{"NCBITaxon:637912"} = qq(Interacting_species\t"Escherichia coli" "WBStrain00041969");
+  $taxonToSpecies{"NCBITaxon:652611"} = qq(Interacting_species\t"Pseudomonas aeruginosa" "WBStrain00041978");
+  $taxonToSpecies{"NCBITaxon:208963"} = qq(Interacting_species\t"Pseudomonas aeruginosa");
+  $taxonToSpecies{"NCBITaxon:686"}    = qq(Interacting_species\t"Vibrio cholerae O1 biovar El Tor");
+  $taxonToSpecies{"NCBITaxon:93061"}  = qq(Interacting_species\t"Staphylococcus aureus subsp. aureus" "WBStrain00041949");
+  $taxonToSpecies{"NCBITaxon:90371"}  = qq(Interacting_species\t"Salmonella enteric subs. enterica serovar Typhimurium");
+  $taxonToSpecies{"NCBITaxon:28450"}  = qq(Interacting_species\t"Burkholderia pseudomallei");
+  $taxonToSpecies{"NCBITaxon:46170"}  = qq)Interacting_species\t"Staphylococcus aureus subsp. aureus");
+  $taxonToSpecies{"NCBITaxon:287"}    = qq)Interacting_species\t"Pseudomonas aeruginosa");
+  $taxonToSpecies{"NCBITaxon:621"}    = qq)Interacting_species\t"Shigella boydii");
+  $taxonToSpecies{"NCBITaxon:623"}    = qq)Interacting_species\t"Shigella flexneri");
+  $taxonToSpecies{"NCBITaxon:29488"}  = qq)Interacting_species\t"Photorhabdus luminescens");
+  $taxonToSpecies{"NCBITaxon:151262"} = qq)Interacting_species\t"Microbacterium nematophilum");
+  $taxonToSpecies{"NCBITaxon:666"}    = qq)Interacting_species\t"Vibrio cholerae");
+  $taxonToSpecies{"NCBITaxon:632"}    = qq)Interacting_species\t"Yersinia pestis");
+  $taxonToSpecies{"NCBITaxon:208964"} = qq)Interacting_species\t"Pseudomonas aeruginosa PAO1");
 } # sub populateTaxonToSpecies
 
 # sub populateGin {
