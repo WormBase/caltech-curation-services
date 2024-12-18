@@ -224,7 +224,7 @@ foreach my $line (@lines) {
   if ($taxon) {
     if ($taxonToSpecies{$taxon}) {                       print ACE qq($taxonToSpecies{$taxon}\n); }
       else {                                             print ERR qq(Taxon $taxon does not map to species\n); } }
-  if ($date) { if ($date =~ m/(\d{4})(\d{2})(\d{2})/) {  print ACE qq(Date_last_updated\t"$1-$2-$3"\n); } }
+  if ($date) { if ($date =~ m/(\d{4}\-\d{2}\-\d{2})/) {  print ACE qq(Date_last_updated\t"$1"\n); } }
   if ($assignedBy) {                                     print ACE qq(Contributed_by\t"$assignedBy"\n); }
   my (@annExtsComma) = split/\|/, $annotExts;
   foreach my $annExtComma (@annExtsComma) {

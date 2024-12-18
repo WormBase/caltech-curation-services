@@ -259,7 +259,7 @@ foreach my $line (@lines) {
              else {                                             print ERR qq(DBREF $adbref invalid\n); }
 #          } # foreach my $adbref (@dbrefs)
          if ($assignedBy) {                                     print ACE qq(Contributed_by\t"$assignedBy"\n); }
-         if ($date) { if ($date =~ m/(\d{4})(\d{2})(\d{2})/) {  print ACE qq(Date_last_updated\t"$1-$2-$3"\n); } }
+         if ($date) { if ($date =~ m/(\d{4}\-\d{2}\-\d{2})/) {  print ACE qq(Date_last_updated\t"$1"\n); } }
          print ACE qq(\n);
       }
   } # foreach my $annotExt (@annotExts)
