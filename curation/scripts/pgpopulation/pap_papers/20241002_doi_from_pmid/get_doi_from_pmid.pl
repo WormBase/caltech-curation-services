@@ -34,6 +34,9 @@
 # 
 # getPmidFromAbcXrefToRef to look up xref get agrkb and look up ref, and this works
 # so something likely wrong with reference/by_cross_reference/ endpoint.  2024 10 28
+# 
+# we processed a file that Daniela got from europe pmc, but someone on their end 
+# needs to fix some issues with it before we can process from it.  2024 10 30  
 
 
 use strict;
@@ -51,6 +54,10 @@ my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST}
 my $result;
 
 my $json = JSON->new->allow_nonref;
+
+my %epmcPmidToDoi;
+&populatePmidFromEuropePmcCsv();
+
 
 my %highestOrder;
 my %pmidToDoi;
@@ -90,9 +97,10 @@ my $count = 0;
 my $pap_curator = 'two10877';
 my $timestamp = 'CURRENT_TIMESTAMP';
 foreach my $pmid (@pmids) {
-#   my $doi = &getPmidFromAbc($pmid);
-  my $doi = &getPmidFromAbcXrefToRef($pmid);
-#   my $doi = &getPmidFromEuropePmc($pmid);
+#   my $doi = &getPmidFromAbc($pmid);	# this gets a 500 error sometimes, don't use it.
+#   my $doi = &getPmidFromAbcXrefToRef($pmid);
+#   my $doi = &getPmidFromEuropePmcUrl($pmid);
+  my $doi = &getPmidFromEuropePmcCsv($pmid);
 #   $count++; if ($count > 3) { last; }
 #   $count++; if ($count > 1) { last; }
   if ($doi) {
@@ -139,7 +147,32 @@ foreach my $pgcommand (@pgcommands) {
 #   last;
 # }
 
-sub getPmidFromEuropePmc {
+# 2024 10 30  we processed a file that Daniela got from europe pmc, but someone on their end needs to fix some issues with it before we can process from it.
+sub populatePmidFromEuropePmcCsv {
+  my $infile = "/usr/caltech_curation_files/postgres/pgpopulation/pap_papers/20241002_doi_from_pmid/PMID_PMCID_DOI.csv";
+  open (IN, "<$infile") or die "Cannot open $infile : $!";
+  while (my $line = <IN>) {
+    chomp $line;
+    my ($pmid, $pmic, $doi) = split/,/, $line;
+    $doi =~ s/"//g;
+    $epmcPmidToDoi{$pmid} = $doi;
+  }
+  close (IN) or die "Cannot close $infile : $!";
+}
+
+sub getPmidFromEuropePmcCsv {
+  my $pmid = shift;
+  unless (exists $epmcPmidToDoi{$pmid}) {
+    print qq(PMID $pmid NOT IN EUROPE PMC\n);
+    return;
+  }
+  if ($epmcPmidToDoi{$pmid}) {
+    return $epmcPmidToDoi{$pmid}
+  }
+  return '';
+}
+
+sub getPmidFromEuropePmcUrl {
   my $pmid = shift;
   sleep 3;
   my $url = 'https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=' . $pmid;
