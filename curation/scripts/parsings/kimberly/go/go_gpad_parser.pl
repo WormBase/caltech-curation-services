@@ -18,6 +18,8 @@
 # added ComplexPortal assigned by filter until the evidence code issues are sorte out. kmva 2021 12 08
 #
 # gpi file at ftp wasn't working, switched url for Kimberly.  handle gzip.  2024 07 08
+#
+# remove skipping ComplexPortal.  Process Xenbase and RHEA with data.  2024 12 19
 
 
 use strict;
@@ -125,7 +127,7 @@ foreach my $line (@lines) {
   my ($db, $dbid) = $db_dbid =~ m/^(.*?):(.*)$/;
   next if ($assignedBy eq 'InterPro');
   next if ($assignedBy eq 'Reactome');
-  next if ($assignedBy eq 'ComplexPortal');
+#   next if ($assignedBy eq 'ComplexPortal');
   if ($assignedBy eq 'UniProt') { $assignedBy = 'UniProt_GOA'; }
 
   my $dbidStripped = $dbid; $dbidStripped =~ s/\-\d//g;
@@ -218,8 +220,9 @@ foreach my $line (@lines) {
              elsif ($with =~ m/^dictyBase:(DDB_G\d+)/) {        print ACE qq(Database\t"dictyBase"\t"dictyBaseID"\t"$1"\n); }
              elsif ($with =~ m/^EcoGene:(EG\d+)/) {             print ACE qq(Database\t"EcoGene"\t"EcoGeneID"\t"$1"\n); }
              elsif ($with =~ m/^ZFIN:(ZDB-GENE-\d+\-\d+)/) {    print ACE qq(Database\t"ZFIN"\t"ZFINID"\t"$1"\n); }
+             elsif ($with =~ m/^Xenbase:(XB-GENE-\d+)/) {  	print ACE qq(Database\t"Xenbase"\t"XenbaseID"\t"$1"\n); }
              elsif ($with =~ m/^CHEBI:(\d+)/) {                 print ACE qq(Database\t"ChEBI"\t"CHEBI_ID"\t"$1"\n); }
-			 elsif ($with =~ m/^RHEA:(\d+)/) {                  print ACE qq(Database\t"RHEA"\t"RHEA_ID"\t"$1"\n); }
+	     elsif ($with =~ m/^RHEA:(\d+)/) {                  print ACE qq(Database\t"RHEA"\t"RHEA_ID"\t"$1"\n); }
              else {                                             print ERR qq(WITH $with not acounted in .ace file\n); }
          } # foreach my $with (@withs)
          my (@annExtsComma) = split/\|/, $annotExtConverted;
