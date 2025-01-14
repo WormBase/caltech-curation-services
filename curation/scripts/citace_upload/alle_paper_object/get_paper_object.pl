@@ -15,6 +15,8 @@
 #
 # Dockerized cronjob. Output to /usr/caltech_curation_files/pub/citace_upload/karen/  2023 03 14
 #
+# Don't dump if app_nodump for Chris and Karen.  2025 01 13
+#
 # cronjob
 # 0 4 * * sun /usr/lib/scripts/citace_upload/alle_paper_object/get_paper_object.pl
 
@@ -69,6 +71,9 @@ while (my @row = $result->fetchrow) { $hash{obj}{$row[0]} = $row[1]; $hash{type}
 $result = $dbh->prepare( "SELECT * FROM app_paper;" );
 $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
 while (my @row = $result->fetchrow) { $hash{paper}{$row[1]}{$row[0]}++; }
+$result = $dbh->prepare( "SELECT * FROM app_nodump;" );
+$result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+while (my @row = $result->fetchrow) { $hash{nodump}{$row[0]}++; }
 
 # my $outDir = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . "/pub/citace_upload/karen/";
 # my $outfile = '/home/acedb/karen/WS_upload_scripts/paper_object/alle_paper.ace';
@@ -81,6 +86,7 @@ foreach my $paper (sort keys %{ $hash{paper} }) {
   next unless ($paper);
   print OUT "Paper : $paper\n";
   foreach my $joinkey (sort keys %{ $hash{paper}{$paper} }) {
+    next if ($hash{nodump}{$joinkey});
     my $type = $hash{type}{$joinkey};
     my $obj = $hash{obj}{$joinkey};
     unless ($type) { $error_messages .= "// ERR no type $joinkey PGDBID in $paper\n"; }
