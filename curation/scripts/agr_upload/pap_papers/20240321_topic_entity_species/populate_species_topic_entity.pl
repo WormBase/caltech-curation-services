@@ -336,9 +336,13 @@ sub populatePapSpecies {
     elsif ($evi =~ m/Inferred_automatically/) { 	# this has to be more specific later
       $papAck{$joinkey}{$taxon}{curator} = $two;
       $papAck{$joinkey}{$taxon}{timestamp} = $ts; }
-    elsif ( ($ts =~ m/2016-05-20/) || ($ts =~ m/2019-09-19/) || ($ts =~ m/2022-04-08/) ) {
+    elsif ( ($ts =~ m/2016-05-20/) || ($ts =~ m/2017-08-01/) || ($ts =~ m/2019-09-19/) || ($ts =~ m/2022-04-08/) ) {
       $papScript{$joinkey}{$taxon}{curator} = 'caltech_pipeline';
       $papScript{$joinkey}{$taxon}{timestamp} = $ts; }
+# TODO put this back
+#     else {	# before 2019 02 05 pap_species didn't have evidence, so treating as if Kimberly did those manually, without a note
+#       $papEditor{$joinkey}{$taxon}{curator} = 'WBPerson1843';
+#       $papEditor{$joinkey}{$taxon}{timestamp} = $ts; }
 } }
 
 sub populateTfpSpecies {
