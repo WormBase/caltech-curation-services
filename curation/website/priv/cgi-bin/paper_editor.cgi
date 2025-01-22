@@ -134,6 +134,8 @@
 # stuff to work like 'gene' but for 'gene_comp'.  for Kimberly.  2022 02 11
 #
 # Dockerized but added back pubmed xml pipeline to create papers from xml.  2023 04 17
+#
+# paper editor species curator was showing logged in curator instead of database curator, fixed.  2025 01 22
 
 
 
@@ -1693,7 +1695,7 @@ sub displayNumber {
 #           <input size="80" id="$input_id" name="$input_id" style="width: 98%;" value="$data" onblur="checkInputEmptyUpdatePg('$table', '$joinkey', '$order', '$curator_id')">
 #           <div id="div_Container_$input_id" style="width: 98%;"></div></div></td>);
           $species_max_order = $order;
-          $entry_data .= "<tr bgcolor=\"$blue\"><td>$table</td>$td_data<td>$order</td><td>$curator_id</td><td>$timestamp</td></tr>\n"; }
+          $entry_data .= "<tr bgcolor=\"$blue\"><td>$table</td>$td_data<td>$order</td><td>$row_curator</td><td>$timestamp</td></tr>\n"; }
 #         my @data; foreach (@row) { if ($_) { push @data, $_; } else { push @data, ""; } }		# some data is undefined
 #         my $data = join"</td><td>", @data;
         elsif ( ($table eq 'type') || ($table eq 'curation_flags') || ($table eq 'curation_done') || ($table eq 'primary_data') 
