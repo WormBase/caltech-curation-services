@@ -198,6 +198,8 @@
 # Removed premadeComments 15 and added new value 'Toxicology'.  for Ranjana 2021 03 16
 #
 # Added premadeComments 17 18 19 for disease values for Ranjana.  2023 07 18
+#
+# Add abstract as a column option for specific paper page, for Ranjana.  2025 01 23
 
 
 
@@ -257,6 +259,7 @@ my %afpPos;			# author has afp value for datatype-joinkey		$afpPos{$datatype}{$j
 my %afpNeg;			# author has afp value for datatype-joinkey		$afpNeg{$datatype}{$joinkey}++;
 my %svmData; 			# svm results by datatype-joinkey			$svmData{$datatype}{$joinkey} = $svmdata;
 my %nncData; 			# nnc results by datatype-joinkey			$nncData{$datatype}{$joinkey} = $nncdata;
+my %abstract;			# pap_abstract key is paper joinkey
 my %journal;			# pap_journal key is paper joinkey
 my %pmid;			# link to ncbi from pap_identifier
 my %pdf;			# link to pdf on tazendra from pap_electronic_path
@@ -2277,9 +2280,10 @@ sub printCheckboxesCurationSources {
 
 sub printPaperOptions {
   print qq(papers per page <input name="papers_per_page" value="10"><br/>\n);
-  print qq(<input type="checkbox" name="checkbox_journal" checked="checked">show journal<br/>\n);
-  print qq(<input type="checkbox" name="checkbox_pmid"    checked="checked">show pmid<br/>\n);
-  print qq(<input type="checkbox" name="checkbox_pdf"     checked="checked">show pdf<br/>\n);
+  print qq(<input type="checkbox" name="checkbox_journal"    checked="checked">show journal<br/>\n);
+  print qq(<input type="checkbox" name="checkbox_pmid"       checked="checked">show pmid<br/>\n);
+  print qq(<input type="checkbox" name="checkbox_pdf"        checked="checked">show pdf<br/>\n);
+  print qq(<input type="checkbox" name="checkbox_abstract"                    >show abstract<br/>\n);
   print qq(<br/>);
 } # sub printPaperOptions
 
@@ -2650,19 +2654,21 @@ sub getResults {
   print qq(<input type="hidden" name="checkbox_nnc" value="$displayNnc">\n);
   print qq(<input type="hidden" name="checkbox_svm" value="$displaySvm">\n);
   print qq(<input type="hidden" name="checkbox_str" value="$displayStr">\n);
-  if ($displayOa) {  &populateOaData();  }
+  if ($displayOa)  { &populateOaData();  }
   if ($displayCfp) { &populateCfpData(); }
   if ($displayAfp) { &populateAfpData(); }
   if ($displayNnc) { &populateNncData(); }
   if ($displaySvm) { &populateSvmData(); }
   if ($displayStr) { &populateStrData(); }
 
-  ($oop, my $showJournal) = &getHtmlVar($query, "checkbox_journal");   unless ($showJournal) { $showJournal = ''; }
-  ($oop, my $showPmid)    = &getHtmlVar($query, "checkbox_pmid");      unless ($showPmid) {    $showPmid = '';    }
-  ($oop, my $showPdf)     = &getHtmlVar($query, "checkbox_pdf");       unless ($showPdf) {     $showPdf = '';     }
-  print qq(<input type="hidden" name="checkbox_journal" value="$showJournal">\n);
-  print qq(<input type="hidden" name="checkbox_pmid"    value="$showPmid">\n);
-  print qq(<input type="hidden" name="checkbox_pdf"     value="$showPdf">\n);
+  ($oop, my $showJournal)  = &getHtmlVar($query, "checkbox_journal");   unless ($showJournal) {  $showJournal = ''; }
+  ($oop, my $showPmid)     = &getHtmlVar($query, "checkbox_pmid");      unless ($showPmid) {     $showPmid = '';    }
+  ($oop, my $showPdf)      = &getHtmlVar($query, "checkbox_pdf");       unless ($showPdf) {      $showPdf = '';     }
+  ($oop, my $showAbstract) = &getHtmlVar($query, "checkbox_abstract");  unless ($showAbstract) { $showAbstract = ''; }
+  print qq(<input type="hidden" name="checkbox_journal"   value="$showJournal">\n);
+  print qq(<input type="hidden" name="checkbox_pmid"      value="$showPmid">\n);
+  print qq(<input type="hidden" name="checkbox_pdf"       value="$showPdf">\n);
+  print qq(<input type="hidden" name="checkbox_abstract"  value="$showAbstract">\n);
 
   ($oop, my $papersPerPage) = &getHtmlVar($query, "papers_per_page");
   ($oop, my $pageSelected)  = &getHtmlVar($query, "select_page");
@@ -2671,9 +2677,10 @@ sub getResults {
   print qq(<input type="hidden" name="papers_per_page" value="$papersPerPage">\n);
 
   my @headerRow = qw( paperID );
-  if ($showJournal) { push @headerRow, "journal"; &populateJournal(); }
-  if ($showPmid)    { push @headerRow, "pmid";    &populatePmid();    }
-  if ($showPdf)     { push @headerRow, "pdf";     &populatePdf();     }
+  if ($showJournal)  { push @headerRow, "journal";  &populateJournal();  }
+  if ($showPmid)     { push @headerRow, "pmid";     &populatePmid();     }
+  if ($showPdf)      { push @headerRow, "pdf";      &populatePdf();      }
+  if ($showAbstract) { push @headerRow, "abstract"; &populateAbstract(); }
 
   my %trs;				# td data for each table row
   my %paperPosNegOkay;			# papers that have positive-negative data okay, so show all svm results for that paper even if a given row isn't positive-negative okay
@@ -2693,7 +2700,7 @@ sub getResults {
     next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
 
     push @{ $paperInfo{$joinkey} }, $joinkey;
-    my $journal = ''; my $pmid = ''; my $pdf = ''; my $primaryData = '';
+    my $journal = ''; my $pmid = ''; my $pdf = ''; my $abstract = ''; my $primaryData = '';
     if ($showJournal) { 
       if ($journal{$joinkey}) { $journal = $journal{$joinkey}; }
       push @{ $paperInfo{$joinkey} }, $journal; }
@@ -2703,6 +2710,9 @@ sub getResults {
     if ($showPdf) {
       if ($pdf{$joinkey}) { $pdf = $pdf{$joinkey}; }
       push @{ $paperInfo{$joinkey} }, $pdf; }
+    if ($showAbstract) {
+      if ($abstract{$joinkey}) { $abstract = $abstract{$joinkey}; }
+      push @{ $paperInfo{$joinkey} }, $abstract; }
 
 #     foreach my $datatype (sort keys %{ $allPaperData{$joinkey} }) { # } used to default to how only those that have data, now defaults to show all datatypes.  for Chris and Raymond 2014 07 09
     foreach my $datatype (sort keys %datatypes) {
@@ -3313,6 +3323,12 @@ sub populateCurCurData {
     $curData{$row[1]}{$row[0]}{timestamp}  = $row[7]; }
 } # sub populateCurCurData
 
+
+sub populateAbstract {
+  $result = $dbh->prepare( "SELECT * FROM pap_abstract WHERE pap_abstract IS NOT NULL" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
+  while (my @row = $result->fetchrow) { if ($row[0]) { $abstract{$row[0]} = $row[1]; } }
+} # sub populateAbstract
 
 sub populateJournal {
   $result = $dbh->prepare( "SELECT * FROM pap_journal WHERE pap_journal IS NOT NULL" );
