@@ -17,6 +17,8 @@
 #
 # Don't dump if app_nodump for Chris and Karen.  2025 01 13
 #
+# Don't dump paper object if object is empty.  2025 01 24
+#
 # cronjob
 # 0 4 * * sun /usr/lib/scripts/citace_upload/alle_paper_object/get_paper_object.pl
 
@@ -84,7 +86,7 @@ open (OUT, ">$outfile") or die "Cannot create $outfile : $!";
 my $error_messages = '';
 foreach my $paper (sort keys %{ $hash{paper} }) {
   next unless ($paper);
-  print OUT "Paper : $paper\n";
+  my $to_print = '';
   foreach my $joinkey (sort keys %{ $hash{paper}{$paper} }) {
     next if ($hash{nodump}{$joinkey});
     my $type = $hash{type}{$joinkey};
@@ -93,11 +95,15 @@ foreach my $paper (sort keys %{ $hash{paper} }) {
     unless ($obj) { $error_messages .= "// ERR no obj $joinkey PGDBID in $paper\n"; }
     if ($type && $obj) { 
       next if ($type =~ m/Multi/);
-      if ($allele_to_gene{$obj}) { print OUT "Gene\t$allele_to_gene{$obj}\n"; }
-      print OUT "$type\t\"$obj\"\tInferred_Automatically\t\"Inferred automatically from curated phenotype\"\n"; }
+      if ($allele_to_gene{$obj}) { $to_print .= "Gene\t$allele_to_gene{$obj}\n"; }
+      $to_print .= "$type\t\"$obj\"\tInferred_Automatically\t\"Inferred automatically from curated phenotype\"\n"; }
     
   } # foreach my $joinkey (sort keys %{ $hash{paper}{$paper} })
-  print OUT "\n";
+  if ($to_print) { 
+    print OUT "Paper : $paper\n";
+    print OUT "$to_print";
+    print OUT "\n";
+  }
 } # foreach my $paper (sort keys %{ $hash{paper} })
 
 print OUT "\n\n$error_messages\n";
