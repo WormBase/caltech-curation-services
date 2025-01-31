@@ -28,6 +28,10 @@
 # One source was wrong from copy-paste.  2024 11 22
 #
 # Added another set of negative data, from stuff that is curation done, but doesn't have pap gene.  2024 12 05
+#
+# Decided not to have negative tfp entities when author says something and tfp doesn't.
+# Compared negative gene processing to negative variation processing and made gene like variation.
+# Add afp_lasttouched for some skip logic in negative data.  2025 01 31
 
 
 
@@ -147,6 +151,7 @@ my %ack;
 my %absReadMeet;
 my %absReadNoMeet;
 my %afpContributor;
+my %afpLasttouched;
 my %ackPapGene;
 my %tfpPapGene;
 my %ackNegGeneTopic;
@@ -186,6 +191,7 @@ foreach my $joinkey (@wbpapers) { $chosenPapers{$joinkey}++; }
 &populateGinValidation();
 &populateGinTaxon();
 &populateAfpContributor();
+&populateAfpLasttouched();
 &populateTfpGenestudied();
 &populateNegativeData();
 
@@ -385,7 +391,11 @@ sub outputNegativeData {
     return;
   }
 
+  # This is negative ack data where author removed something that tfp said
   foreach my $joinkey (sort keys %tfpPapGene) {
+    next unless ($afpLasttouched{$joinkey});    # must be a final author submission
+    next unless ($afpContributor{$joinkey});    # must be an author that did that submission
+    unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
     foreach my $geneInt (sort keys %{ $tfpPapGene{$joinkey}{genes} }) {
       next if ($ackNegGeneTopic{$joinkey});			# if author sent nothing, don't create a negative entity
       next if ($ackPapGene{$joinkey}{genes}{$geneInt});		# if author sent this entity, don't create a negative entity
@@ -427,44 +437,31 @@ sub outputNegativeData {
           &createTag($object_json); }
   } } }
 
-#   foreach my $joinkey (sort keys %ackPapGene) {
-#     foreach my $geneInt (sort keys %{ $ackPapGene{$joinkey}{genes} }) {
-#       next if ($tfpNegGeneTopic{$joinkey});			# if tfp pipeline says nothing, don't create a negative entity
-#       next if ($tfpPapGene{$joinkey}{genes}{$geneInt});		# if tfp pipeline sent this entity, don't create a negative entity
-#       next unless ($geneInt);					# must have a wbgene
-#       my %object;
-#       $object{'negated'}                    = TRUE;
-#       $object{'force_insertion'}            = TRUE;
-#       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
-#       $object{'topic'}                      = 'ATP:0000005';
-#       $object{'entity_type'}                = 'ATP:0000005';
-#       $object{'entity_id_validation'}       = 'alliance';
-#       $object{'topic_entity_tag_source_id'} = $source_id_tfp;
-#       $object{'created_by'}                 = 'ACKnowledge_pipeline';
-#       $object{'updated_by'}                 = 'ACKnowledge_pipeline';
-#       my $ts = $tfpPapGene{$joinkey}{timestamp};
-#       $object{'date_created'}               = $ts;
-#       $object{'date_updated'}               = $ts;
-#       # $object{'datatype'}                 = 'tfp neg entity data';	# for debugging
-#       # $object{'wbpaper'}                  = $joinkey;			# for debugging
-#       my $obj = 'WB:WBGene' . $geneInt;
-#       $object{'entity'}                     = $obj;
-#       my $geneTaxon = '';
-#       my $geneSpecies = $gin{$geneInt};
-#       if ($geneSpecies) { $geneTaxon = $speciesToTaxon{$geneSpecies}; }
-#       unless ($geneSpecies && $geneTaxon) {	# if no geneSpecies or geneTaxon, skip, and add to error log
-#         print PERR qq(ERROR no species or taxon for WBGene$geneInt\n);
-#         next; }
-#       $object{'species'}                    = $geneTaxon;
-# 
-#       if ($output_format eq 'json') {
-#         push @output_json, \%object; }
-#       else {
-#         my $object_json = encode_json \%object;
-#         &createTag($object_json); }
-#   } }
+  # This is negative tfp topic data where tfp is empty
+  foreach my $joinkey (sort keys %tfpNegGeneTopic) {
+    unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB tfpNegGeneTopic\n); next; }
+    my $ts = $tfpNegGeneTopic{$joinkey};
+    my %object;
+    $object{'topic_entity_tag_source_id'}   = $source_id_tfp;
+    $object{'force_insertion'}              = TRUE;
+    $object{'negated'}                      = TRUE;
+    $object{'reference_curie'}              = $wbpToAgr{$joinkey};
+    # $object{'wbpaper_id'}                   = $joinkey;               # for debugging
+    $object{'date_updated'}                 = $ts;
+    $object{'date_created'}                 = $ts;
+    $object{'created_by'}                   = 'ACKnowledge_pipeline';
+    $object{'updated_by'}                   = 'ACKnowledge_pipeline';
+    $object{'topic'}                        = 'ATP:0000005';
+    if ($output_format eq 'json') {
+      push @output_json, \%object; }
+    else {
+      my $object_json = encode_json \%object;
+      &createTag($object_json); }
+  }
 
+  # This is negative ack topic data where ack is empty
   foreach my $joinkey (sort keys %ackNegGeneTopic) {
+    next unless ($afpContributor{$joinkey});    # must be an author that did that submission
     unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB ackNegGeneTopic\n); next; }
     my @auts;
     if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
@@ -490,30 +487,10 @@ sub outputNegativeData {
         &createTag($object_json); }
   } }
 
-  foreach my $joinkey (sort keys %tfpNegGeneTopic) {
-    unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB tfpNegGeneTopic\n); next; }
-    my $ts = $tfpNegGeneTopic{$joinkey};
-    my %object;
-    $object{'topic_entity_tag_source_id'}   = $source_id_tfp;
-    $object{'force_insertion'}              = TRUE;
-    $object{'negated'}                      = TRUE;
-    $object{'reference_curie'}              = $wbpToAgr{$joinkey};
-    # $object{'wbpaper_id'}                   = $joinkey;               # for debugging
-    $object{'date_updated'}                 = $ts;
-    $object{'date_created'}                 = $ts;
-    $object{'created_by'}                   = 'ACKnowledge_pipeline';
-    $object{'updated_by'}                   = 'ACKnowledge_pipeline';
-    $object{'topic'}                        = 'ATP:0000005';
-    if ($output_format eq 'json') {
-      push @output_json, \%object; }
-    else {
-      my $object_json = encode_json \%object;
-      &createTag($object_json); }
-  }
-
+  # pap_curation_done = 'genestudied' paper not in pap_gene
   foreach my $joinkey (sort keys %curNegGeneTopic) {
-    unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB tfpNegGeneTopic\n); next; }
-    my $ts = $tfpNegGeneTopic{$joinkey};
+    unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB curNegGeneTopic\n); next; }
+    my $ts = $curNegGeneTopic{$joinkey};
     my %object;
     $object{'topic_entity_tag_source_id'}   = $source_id_cur_conf;
     $object{'force_insertion'}              = TRUE;
@@ -589,6 +566,16 @@ sub populateAfpContributor {
     next unless $papValid{$joinkey};
     my $who = $row[1]; $who =~ s/two/WBPerson/;
     $afpContributor{$row[0]}{$who} = $row[2];
+} }
+
+sub populateAfpLasttouched {
+  my $result = $dbh->prepare( "SELECT joinkey, afp_timestamp FROM afp_lasttouched" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) {
+#     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+    next unless ($row[1]);
+    my $who = $row[1]; $who =~ s/two/WBPerson/;
+    $afpLasttouched{$row[0]} = $row[1];
 } }
 
 sub populateGinTaxon {
