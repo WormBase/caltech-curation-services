@@ -18,6 +18,12 @@
 #
 # modified to work with cron by writing output to logfiles.  2024 04 04
 #
+# before 2019 02 05 pap_species didn't have evidence, so treating as if Kimberly did those manually, without a note.
+# testing against stage, then will run on prod to fix the data, then will uncomment from this script which is live
+# in a cronjob.  2025 01 22
+#
+# send pap_species without evidence as Kimberly.  2025 01 31
+#
 # can test every minute with
 # * * * * * /usr/lib/scripts/agr_upload/pap_papers/20240321_topic_entity_species/populate_species_topic_entity.pl
 # updated to send emails with outreach@wormbase.org email  setting cronjob for live runs, since Kimberly signed off on this.
@@ -339,10 +345,9 @@ sub populatePapSpecies {
     elsif ( ($ts =~ m/2016-05-20/) || ($ts =~ m/2017-08-01/) || ($ts =~ m/2019-09-19/) || ($ts =~ m/2022-04-08/) ) {
       $papScript{$joinkey}{$taxon}{curator} = 'caltech_pipeline';
       $papScript{$joinkey}{$taxon}{timestamp} = $ts; }
-# TODO put this back
-#     else {	# before 2019 02 05 pap_species didn't have evidence, so treating as if Kimberly did those manually, without a note
-#       $papEditor{$joinkey}{$taxon}{curator} = 'WBPerson1843';
-#       $papEditor{$joinkey}{$taxon}{timestamp} = $ts; }
+    else {	# before 2019 02 05 pap_species didn't have evidence, so treating as if Kimberly did those manually, without a note
+      $papEditor{$joinkey}{$taxon}{curator} = 'WBPerson1843';
+      $papEditor{$joinkey}{$taxon}{timestamp} = $ts; }
 } }
 
 sub populateTfpSpecies {
