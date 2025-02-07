@@ -104,7 +104,8 @@ my $okta_token = &generateOktaToken();
 # my @wbpapers = qw( 00044280 );		# briggsae genes
 # my @wbpapers = qw( 00003000 00003823 00004455 00004952 00005199 00005707 00006103 00006202 00006320 00017095 00018874 00025176 00027230 00044280 00046571 00057043 00063127 00064676 00064771 00065877 00066211 );		# kimberly 2024 04 18 set
 # my @wbpapers = qw( 00000119 00000465 00003000 00003823 00004455 00004952 00005199 00005707 00005988 00006103 00006202 00006320 00013393 00017095 00024745 00025176 00027230 00038491 00044280 00046571 00057043 00063127 00064676 00064771 00065877 00066211 );		# kimberly 2024 05 13 set
-my @wbpapers = qw( 00065553 00065560 00066296 00066355 00066405 00066410 00066411 00066419 00066461 00066469 00066891 00066862 00066767 00053843 );	# kimberly negative gene set  2024 10 02
+# my @wbpapers = qw( 00065553 00065560 00066296 00066355 00066405 00066410 00066411 00066419 00066461 00066469 00066891 00066862 00066767 00053843 );	# kimberly negative gene set  2024 10 02
+my @wbpapers = qw( 00065553 00065560 00066296 00066355 00066405 00066410 00066411 00066419 00066461 00066469 00066891 00066862 00066767 00053843 00004452 00017615 00005440 00005870 00006533 00025104 00027167 );	# kimberly negative gene set  2025 02 07
 
 # ( '00065553', '00065560', '00066296', '00066355', '00066405', '00066410', '00066411', '00066419', '00066461', '00066469' );	# kimberly negative gene set  2024 10 02
 
@@ -229,7 +230,7 @@ sub outputTheHash {
     my $data_provider = $mod;
     my $secondary_data_provider = $mod;
     if ($datatype eq 'noEvi')              { $source_evidence_assertion = 'ECO:0006151'; $source_method = 'unknown'; }
-      elsif ($datatype eq 'infOther')      { $source_evidence_assertion = 'ECO:0008021'; $source_method = 'script_gene'; }
+#       elsif ($datatype eq 'infOther')      { $source_evidence_assertion = 'ECO:0008021'; $source_method = 'script_gene'; }	# this source doesn't exist, and it's for unaccounted for data, but if we ever get this data, it just fails
       elsif ($datatype eq 'curConfNoMan')  { $source_evidence_assertion = 'ATP:0000036'; $source_method = 'genes_curator'; }
       elsif ($datatype eq 'curConfMan')    { $source_evidence_assertion = 'ATP:0000036'; $source_method = 'paper_editor_genes_curator'; }
       elsif ($datatype eq 'perEvi')        { $source_evidence_assertion = 'ATP:0000035'; $source_method = 'author_first_pass'; }
@@ -266,6 +267,11 @@ sub outputTheHash {
         if ($ginValidation{$gene}) { $entity_id_validation = $ginValidation{$gene}; }
           else { print PERR qq(ERROR $gene not in pap_species table\n); }
         foreach my $curator (sort keys %{ $theHash{$datatype}{$joinkey}{$gene} }) {
+          my $who = $curator;
+          if ( ($datatype eq 'infOther')      || ($datatype eq 'absReadMeet')   || ($datatype eq 'absReadNoMeet') || ($datatype eq 'abs2aceCgc')    ||
+               ($datatype eq 'abs2acePmid')   || ($datatype eq 'fixDead')       || ($datatype eq 'geneChecker')   || ($datatype eq 'update2gcds')   ||
+               ($datatype eq 'updateOldWbg')  || ($datatype eq 'supTable')      || ($datatype eq 'maryAnnDead')   || ($datatype eq 'autoEimear') ) {
+            $who = 'caltech_pipeline'; }
           my %object;
           $object{'force_insertion'}            = TRUE;
           $object{'negated'}                    = FALSE;
@@ -283,8 +289,8 @@ sub outputTheHash {
           if ($theHash{$datatype}{$joinkey}{$gene}{$curator}{note}) {
             my $note = join' | ', @{ $theHash{$datatype}{$joinkey}{$gene}{$curator}{note} };
             $object{'note'}                     = $note; }
-          $object{'created_by'}                 = $curator;
-          $object{'updated_by'}                 = $curator;
+          $object{'created_by'}                 = $who;
+          $object{'updated_by'}                 = $who;
           $object{'date_created'}               = $theHash{$datatype}{$joinkey}{$gene}{$curator}{timestamp};
           $object{'date_updated'}               = $theHash{$datatype}{$joinkey}{$gene}{$curator}{timestamp};
           if ($output_format eq 'json') {
@@ -614,7 +620,7 @@ sub populatePapGene {
     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
     next unless ($row[1]);
     my ($joinkey, $gene, $ts, $two, $evi) = @row;
-    if ($evi =~ m/Manually_connected.*"(.*?)"/) {
+    if ($evi =~ m/(Manually_connected.*".*")/) {
       $manConn{$joinkey}{$gene} = $1; }
   }
   $result = $dbh->prepare( "SELECT joinkey, pap_gene, pap_timestamp, pap_curator, pap_evidence FROM pap_gene" );
@@ -629,6 +635,7 @@ sub populatePapGene {
     if ($evi =~ m/Curator_confirmed.*(WBPerson\d+)/) {
       if ($manConn{$joinkey}{$gene}) { 
 #         $theHash{'curConfMan'}{$joinkey}{$gene}{$1}{curator} = $1;
+        push @{ $theHash{'curConfMan'}{$joinkey}{$gene}{$1}{note} }, $manConn{$joinkey}{$gene};
         $theHash{'curConfMan'}{$joinkey}{$gene}{$1}{timestamp} = $ts; }
       else {
 #         $theHash{'curConfNoMan'}{$joinkey}{$gene}{$1}{curator} = $1;
@@ -691,11 +698,17 @@ sub populatePapGene {
       elsif ($evi =~ m/Inferred_automatically\s+"(.*Eimear Kenny, 02-09-05.*)"/) {
         $theHash{'autoEimear'}{$joinkey}{$gene}{$two}{timestamp} = $ts;
         push @{ $theHash{'autoEimear'}{$joinkey}{$gene}{$two}{note} }, $1; }
-      elsif ($evi =~ m/Inferred_automatically\s+"(.*?)"/) {
-        $theHash{'infOther'}{$joinkey}{$gene}{$two}{timestamp} = $ts;
-        push @{ $theHash{'infOther'}{$joinkey}{$gene}{$two}{note} }, $1; }
-      else {	# this should never happen
-        $theHash{'infOther'}{$joinkey}{$gene}{$two}{timestamp} = $ts; }
+      elsif ($evi =~ m/Inferred_automatically\s+"(.*abstract2aceLeonsFormat.pl eek.*)"/) {
+        $theHash{'autoEimear'}{$joinkey}{$gene}{$two}{timestamp} = $ts;
+        push @{ $theHash{'autoEimear'}{$joinkey}{$gene}{$two}{note} }, $1; }
+      else {
+        print PERR qq(ATTN Kimberly, unaccounted for type of data infOther : paper $joinkey, gene $gene, curator $two\n); }
+# these were things we tried to account for, but we don't have a source for, so instead going to processing error log
+#       elsif ($evi =~ m/Inferred_automatically\s+"(.*?)"/) {
+#         $theHash{'infOther'}{$joinkey}{$gene}{$two}{timestamp} = $ts;
+#         push @{ $theHash{'infOther'}{$joinkey}{$gene}{$two}{note} }, $1; }
+#       else {	# this should never happen
+#         $theHash{'infOther'}{$joinkey}{$gene}{$two}{timestamp} = $ts; }
     }
     elsif ($evi =~ m/Published_as\s+"(.*?)"/) {
       push @{ $papGenePublished{$joinkey}{$gene} }, $1; }
