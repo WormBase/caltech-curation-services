@@ -7,6 +7,8 @@
 # http for .js wasn't working anymore after tazendra move to Chen and back, and possibly because of ssl cert that Valerio wanted.
 # cloudflare links Sybil found weren't working because of a type error or something.  Downloaded needed files and pointed to
 # https://tazendra.caltech.edu/~azurebrd/javascript/yui/2.7.0/  2021 11 16
+#
+# Add number as a way to search for Cecilia.  2025 03 05
 
  
 
@@ -62,6 +64,7 @@ $min_rows{'mail'} = 4;
 
 my %type_input;				# all inputs are inputs, but usefulwebpage is a checkbox
 foreach (@normal_tables) { $type_input{$_} = 'input'; } 
+$type_input{'number'} = 'input';
 $type_input{'usefulwebpage'} = 'checkbox';
 
 
@@ -239,7 +242,7 @@ sub firstPage {
   print "<input type=\"radio\" name=\"display_or_edit\" value=\"edit\" $edit_checked />edit\n";
   print "</td>\n";
   print "</tr>\n";
-  foreach my $table (@normal_tables) {
+  foreach my $table ("number", @normal_tables) {
     my $order = 1; my $input_size = 80; my $colspan = 1;
     my $table_to_print = &showEditorText($table, $order, $input_size, $colspan, '');
     $table_to_print .= "<input type=\"hidden\" class=\"fields\" value=\"$table\" \/>\n";
