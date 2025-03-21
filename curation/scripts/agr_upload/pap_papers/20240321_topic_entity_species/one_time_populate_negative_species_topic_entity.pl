@@ -30,6 +30,8 @@
 # 2025 01 23
 #
 # ran against abc prod.  2025 01 28
+#
+# modified for negative species data.  2025 03 19
 
 
 
@@ -43,6 +45,8 @@
 # if creating data through ABC API
 # ./populate_species_topic_entity.pl
 
+
+# this one time script populates only negative data.  we should figure out a delete command for just the negative 123 wb data, but we didn't.
 
 # delete all species tet 
 # DELETE FROM topic_entity_tag WHERE topic = 'ATP:0000123' AND topic_entity_tag_source_id IN ( SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE secondary_data_provider_id = ( SELECT mod_id FROM mod WHERE abbreviation = 'WB' ));
