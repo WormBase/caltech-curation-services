@@ -46,7 +46,10 @@
 # ./populate_species_topic_entity.pl
 
 
-# this one time script populates only negative data.  we should figure out a delete command for just the negative 123 wb data, but we didn't.
+# this one time script populates only negative data.  we should have used a delete command for just the negative 123 wb data
+# DELETE FROM topic_entity_tag WHERE topic = 'ATP:0000123' AND topic_entity_tag_source_id IN ( SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE secondary_data_provider_id = ( SELECT mod_id FROM mod WHERE abbreviation = 'WB' )) AND negated IS TRUE;
+# SELECT * FROM topic_entity_tag WHERE topic = 'ATP:0000123' AND topic_entity_tag_source_id IN ( SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE secondary_data_provider_id = ( SELECT mod_id FROM mod WHERE abbreviation = 'WB' )) AND negated IS TRUE;
+
 
 # delete all species tet 
 # DELETE FROM topic_entity_tag WHERE topic = 'ATP:0000123' AND topic_entity_tag_source_id IN ( SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE secondary_data_provider_id = ( SELECT mod_id FROM mod WHERE abbreviation = 'WB' ));
