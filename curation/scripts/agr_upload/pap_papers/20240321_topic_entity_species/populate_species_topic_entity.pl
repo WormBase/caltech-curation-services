@@ -103,6 +103,7 @@ my @output_json;
 
 my $source_error_body = '';
 my $taxon_error_body = '';
+my $api_error_body = '';
 
 
 my $mod = 'WB';
@@ -459,6 +460,7 @@ sub createTag {
 # PUT THIS BACK
   my $api_json = `curl -X 'POST' $url -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json' --data '$object_json'`;
   print LOG qq(create $object_json\n);
+  if ( ($api_json !~ '"status":"exists"') && ($api_json !~ '"status":"success"') ) { $api_error_log .= qq($api_json); }
   print LOG qq($api_json\n);
 }
 
@@ -489,7 +491,12 @@ sub sendErrorEmails {
 #   my $email = 'azurebrd@tazendra.caltech.edu';
   my $email = 'vanauken@caltech.edu';
   my $cc = '';
-  if ($source_error_body) { 
+  if ($api_error_body) {
+    my $subject = 'api error populate_species_topic_entity cronjob';
+    my $body = $api_error_body;
+    &mailSendmail($user, $email, $subject, $body, $cc);
+  }
+  if ($source_error_body) {
     my $subject = 'source error populate_species_topic_entity cronjob';
     my $body = $source_error_body;
     &mailSendmail($user, $email, $subject, $body, $cc);
