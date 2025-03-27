@@ -29,6 +29,9 @@
 # updated to send emails with outreach@wormbase.org email  setting cronjob for live runs, since Kimberly signed off on this.
 # 0 13 * * 6 /usr/lib/scripts/agr_upload/pap_papers/20240321_topic_entity_species/populate_species_topic_entity.pl
 # 2024 09 10
+#
+# updated to handle negative species data.  incorporated code from one_time_populate_negative_species_topic_entity.pl
+# and tested it runs against abc stage.  cronjob will resume running this.  2025 03 26
 
 
 
@@ -101,6 +104,7 @@ if ($output_format eq 'api') {
 
 my @output_json;
 
+my $processing_error_body = '';
 my $source_error_body = '';
 my $taxon_error_body = '';
 my $api_error_body = '';
@@ -120,6 +124,7 @@ my $okta_token = &generateOktaToken();
 # my @wbpapers = qw( 00066031 );
 # my @wbpapers = qw( 00038491 00055090 );	# large gene set
 my @wbpapers = qw( 00004952 00005199 00046571 00057043 00064676 );	# test species set
+# my @wbpapers = qw( 00063962 00064505 00065288 00067248 );       # papers with negative species set
 
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 00037049
@@ -130,6 +135,9 @@ my %datatypesAfpCfp;
 my %datatypes;
 my %entitytypes;
 my %wbpToAgr;
+my %taxonNameToId;
+my %papValid;
+my %papMerge;
 
 my %chosenPapers;
 
@@ -141,6 +149,12 @@ my %papEditor;
 my %papScript;
 my %tfpSpecies;
 
+my %afpLasttouched;
+my %afpContributor;
+my %ackNegSpeciesTopic;
+my %tfpNegSpeciesTopic;
+my %afpNegSpeciesEntities;
+
 # my $speciesTopic = 'ATP:0000142';	# entity
 my $speciesTopic = 'ATP:0000123';	# species	# 2024 04 29
 my $entityType = 'ATP:0000123';		# species
@@ -150,11 +164,17 @@ my $entity_id_validation = 'alliance';
 $chosenPapers{all}++;
 
 # UNCOMMENT to populate
+&populateTaxonNameToId();
+&populatePapValid();
+&populateAfpContributor();
+&populateAfpLasttouched();
 &populateAbcXref();
 &populatePapSpecies();
+&populateNegativeData();
 &outputPapAck();
 &outputPapScript();
 &outputPapEditor();
+&outputNegativeData();
 &populateTfpSpecies();
 &outputTfpSpecies();
 
@@ -322,6 +342,151 @@ sub outputTfpSpecies {
         &createTag($object_json); }
 } } }
 
+sub outputNegativeData {
+  my $data_provider = $mod;
+  my $secondary_data_provider = $mod;
+  my $source_evidence_assertion = 'ATP:0000035';
+  my $source_method = 'ACKnowledge_form';
+  my $source_id_ack = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+  unless ($source_id_ack) {
+    $processing_error_body .= qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    return;
+  }
+
+  $source_evidence_assertion = 'ECO:0008021';
+  $source_method = 'ACKnowledge_pipeline';
+  my $source_id_tfp = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+  unless ($source_id_tfp) {
+    $processing_error_body .= qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    return;
+  }
+
+  # This is negative ack data where author removed something that tfp said
+  foreach my $joinkey (sort keys %afpNegSpeciesEntities) {
+    next unless ($afpLasttouched{$joinkey});    # must be a final author submission
+    next unless ($afpContributor{$joinkey});    # must be an author that did that submission
+    unless ($wbpToAgr{$joinkey}) { $processing_error_body .= qq(ERROR paper $joinkey NOT AGRKB\n); next; }
+    foreach my $species (sort keys %{ $afpNegSpeciesEntities{$joinkey} }) {
+      unless ($taxonNameToId{$species}) {
+        $taxon_error_body .= qq(NO TAXON for $species in paper $joinkey in negative ack entities\n); next; }
+      my $taxon = $taxonNameToId{$species};
+      my @auts;
+      if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
+      if (scalar @auts < 1) { push @auts, 'unknown_author'; }
+      foreach my $aut (@auts) {
+        my %object;
+        $object{'negated'}                    = TRUE;
+        $object{'force_insertion'}            = TRUE;
+        $object{'reference_curie'}            = $wbpToAgr{$joinkey};
+        $object{'topic'}                      = $speciesTopic;
+        $object{'entity_type'}                = $entityType;
+        $object{'entity_id_validation'}       = 'alliance';
+        $object{'topic_entity_tag_source_id'} = $source_id_ack;
+        $object{'created_by'}                 = $aut;
+        $object{'updated_by'}                 = $aut;
+        my $ts = $afpNegSpeciesEntities{$joinkey}{$species}{timestamp};
+        if ( $afpContributor{$joinkey}{$aut} ) { $ts = $afpContributor{$joinkey}{$aut}; }
+        $object{'date_created'}               = $ts;
+        $object{'date_updated'}               = $ts;
+        # $object{'datatype'}                 = 'ack neg entity data';  # for debugging
+        # $object{'wbpaper'}                  = $joinkey;                       # for debugging
+        $object{'entity'}                     = $taxon;
+        $object{'species'}                    = $taxon;
+        if ($output_format eq 'json') {
+          push @output_json, \%object; }
+        else {
+          my $object_json = encode_json \%object;
+          &createTag($object_json); }
+  } } }
+
+  # This is negative ack topic data where ack is empty
+  foreach my $joinkey (sort keys %ackNegSpeciesTopic) {
+    next unless ($afpContributor{$joinkey});    # must be an author that did that submission
+    unless ($wbpToAgr{$joinkey}) { $processing_error_body .= qq(ERROR paper $joinkey NOT AGRKB ackNegSpeciesTopic\n); next; }
+    my @auts;
+    if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
+    if (scalar @auts < 1) { push @auts, 'unknown_author'; }
+    foreach my $aut (@auts) {
+      my $ts = $ackNegSpeciesTopic{$joinkey};
+      if ( $afpContributor{$joinkey}{$aut} ) { $ts = $afpContributor{$joinkey}{$aut}; }
+      my %object;
+      $object{'topic_entity_tag_source_id'}   = $source_id_ack;
+      $object{'force_insertion'}              = TRUE;
+      $object{'negated'}                      = TRUE;
+      $object{'reference_curie'}              = $wbpToAgr{$joinkey};
+      # $object{'wbpaper_id'}                   = $joinkey;               # for debugging
+      $object{'date_updated'}                 = $ts;
+      $object{'date_created'}                 = $ts;
+      $object{'created_by'}                   = $aut;
+      $object{'updated_by'}                   = $aut;
+      $object{'topic'}                        = $speciesTopic;
+      if ($output_format eq 'json') {
+        push @output_json, \%object; }
+      else {
+        my $object_json = encode_json \%object;
+        &createTag($object_json); }
+  } }
+
+  # This is negative tfp topic data where tfp is empty
+  foreach my $joinkey (sort keys %tfpNegSpeciesTopic) {
+    unless ($wbpToAgr{$joinkey}) { $processing_error_body .= qq(ERROR paper $joinkey NOT AGRKB tfpNegSpeciesTopic\n); next; }
+    my $ts = $tfpNegSpeciesTopic{$joinkey};
+    my %object;
+    $object{'topic_entity_tag_source_id'}   = $source_id_tfp;
+    $object{'force_insertion'}              = TRUE;
+    $object{'negated'}                      = TRUE;
+    $object{'reference_curie'}              = $wbpToAgr{$joinkey};
+    # $object{'wbpaper_id'}                   = $joinkey;               # for debugging
+    $object{'date_updated'}                 = $ts;
+    $object{'date_created'}                 = $ts;
+    $object{'created_by'}                   = 'ACKnowledge_pipeline';
+    $object{'updated_by'}                   = 'ACKnowledge_pipeline';
+    $object{'topic'}                        = $speciesTopic;
+    if ($output_format eq 'json') {
+      push @output_json, \%object; }
+    else {
+      my $object_json = encode_json \%object;
+      &createTag($object_json); }
+  }
+} # sub outputNegativeData
+
+sub deriveValidPap {
+  my ($joinkey) = @_;
+  if ($papValid{$joinkey}) { return $joinkey; }
+    elsif ($papMerge{$joinkey}) {
+      ($joinkey) = &deriveValidPap($papMerge{$joinkey});
+      return $joinkey; }
+    else { return 'NOTVALID'; }
+} # sub deriveValidPap
+
+sub populatePapValid {
+  $result = $dbh->prepare( "SELECT * FROM pap_status WHERE pap_status = 'valid';" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) {
+    $papValid{$row[0]}++; }
+}
+
+sub populateAfpContributor {
+  $result = $dbh->prepare( "SELECT * FROM afp_contributor" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) {
+    next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+    next unless ($row[1]);
+    my ($joinkey) = &deriveValidPap($row[0]);
+    next unless $papValid{$joinkey};
+    my $who = $row[1]; $who =~ s/two/WBPerson/;
+    $afpContributor{$row[0]}{$who} = $row[2];
+} }
+
+sub populateAfpLasttouched {
+  my $result = $dbh->prepare( "SELECT joinkey, afp_timestamp FROM afp_lasttouched" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) {
+#     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+    next unless ($row[1]);
+    my $who = $row[1]; $who =~ s/two/WBPerson/;
+    $afpLasttouched{$row[0]} = $row[1];
+} }
 
 sub populatePapSpecies {
 #  joinkey | pap_species | pap_order | pap_curator | pap_timestamp | pap_evidence
@@ -351,8 +516,7 @@ sub populatePapSpecies {
       $papEditor{$joinkey}{$taxon}{timestamp} = $ts; }
 } }
 
-sub populateTfpSpecies {
-  my %taxonNameToId;
+sub populateTaxonNameToId {
 #   $result = $dbh->prepare( "SELECT * FROM obo_name_ncbitaxonid" );
 #   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
 #   while (my @row = $result->fetchrow) { $taxonNameToId{$row[1]} = 'NCBITaxon:' . $row[0]; }
@@ -360,7 +524,7 @@ sub populateTfpSpecies {
   # Kimberly updated the pap_species_index to have all the entries it needs on caltech prod.  2024 03 22
   $result = $dbh->prepare( "SELECT * FROM pap_species_index ORDER BY pap_timestamp" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
-  while (my @row = $result->fetchrow) { 
+  while (my @row = $result->fetchrow) {
     if ($row[1] && $row[0]) {
       $taxonNameToId{$row[1]} = 'NCBITaxon:' . $row[0]; } }
 
@@ -376,8 +540,9 @@ sub populateTfpSpecies {
 #     } # while (my $para = <IN>)
 #     close (IN) or warn "Cannot close $taxon_file : $!";
 #     $/ = "\n"; }
+} # sub populateTaxonNameToId
 
-
+sub populateTfpSpecies {
   my %noTaxon;
 #   $result = $dbh->prepare( "SELECT joinkey, tfp_species, tfp_timestamp FROM tfp_species WHERE tfp_timestamp > now() - interval '1 week'");
   $result = $dbh->prepare( "SELECT joinkey, tfp_species, tfp_timestamp FROM tfp_species WHERE tfp_timestamp > now() - interval '2 weeks'");
@@ -402,7 +567,56 @@ sub populateTfpSpecies {
   }
 } # sub populateTfpSpecies
 
+# tfpSpecies is equivalent to tfpPapGene  but it's in a different structure
+# # we do want              negative ack data where author removed something that tfp said
+# # we do want              negative tfp topic data where tfp is empty
+# # we do want              negated topic when ACK author says ''
+# # we do not have          pap_curation_done = 'genestudied' paper not in pap_gene
 
+sub populateNegativeData {
+#   $result = $dbh->prepare( "SELECT * FROM afp_species WHERE afp_species = '' AND afp_timestamp > '2019-03-22 00:00' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2019-03-22 00:00');" );
+  $result = $dbh->prepare( "SELECT * FROM afp_species WHERE afp_species = '' AND afp_timestamp > now() - interval '2 weeks' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2019-03-22 00:00');" );
+$result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+while (my @row = $result->fetchrow) {
+  next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+  $ackNegSpeciesTopic{$row[0]} = $row[2]; }
+
+#   $result = $dbh->prepare( "SELECT * FROM tfp_species WHERE tfp_species = '' AND tfp_timestamp > '2019-03-22 00:00';" );
+  $result = $dbh->prepare( "SELECT * FROM tfp_species WHERE tfp_species = '' AND tfp_timestamp > now() - interval '2 weeks';" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) {
+    next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+    $tfpNegSpeciesTopic{$row[0]} = $row[2]; }
+
+
+  my %tfpSpeciesForNegation;    # this is always for all time, not just the last couple of weeks
+  $result = $dbh->prepare( "SELECT * FROM tfp_species WHERE tfp_species != '' AND tfp_timestamp > '2019-03-22 00:00' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2019-03-22 00:00');" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) {
+    next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+    my @data = split(/ \| /, $row[1]);
+    foreach my $data (@data) { $tfpSpeciesForNegation{$row[0]}{$data}++; } }
+
+  my %afpSpeciesForNegation;
+#   $result = $dbh->prepare( "SELECT * FROM afp_species WHERE afp_species != '' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2019-03-22 00:00');" );
+  # get all papers that have an afp_lasttouched in the last couple of weeks.
+  $result = $dbh->prepare( "SELECT * FROM afp_species WHERE afp_species != '' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > now() - interval '2 weeks');" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) {
+    next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+    my @data = split(/ \| /, $row[1]);
+    foreach my $data (@data) { $afpSpeciesForNegation{$row[0]}{$data} = $row[2]; } }
+
+  # query all tfp_species for all time.  query afp_species for recent entries.
+  # For every paper with a recent afp_species, get all the tfp species, and if that species not in afp, it's a negative ack entity
+  foreach my $joinkey (sort keys %afpSpeciesForNegation) {
+    foreach my $species (sort keys %{ $tfpSpeciesForNegation{$joinkey} }){
+      unless ($afpSpeciesForNegation{$joinkey}{$species}) {
+        $afpNegSpeciesEntities{$joinkey}{$species}{timestamp} = $afpLasttouched{$joinkey};
+      }
+    }
+  }
+} # sub populateNegativeData
 
 sub populateAbcXref {
   $result = $dbh->prepare( "SELECT * FROM pap_identifier WHERE pap_identifier ~ 'AGRKB';" );
@@ -460,7 +674,7 @@ sub createTag {
 # PUT THIS BACK
   my $api_json = `curl -X 'POST' $url -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json' --data '$object_json'`;
   print LOG qq(create $object_json\n);
-  if ( ($api_json !~ '"status":"exists"') && ($api_json !~ '"status":"success"') ) { $api_error_log .= qq($api_json); }
+  if ( ($api_json !~ '"status":"exists"') && ($api_json !~ '"status":"success"') ) { $api_error_body .= qq($api_json); }
   print LOG qq($api_json\n);
 }
 
@@ -494,6 +708,11 @@ sub sendErrorEmails {
   if ($api_error_body) {
     my $subject = 'api error populate_species_topic_entity cronjob';
     my $body = $api_error_body;
+    &mailSendmail($user, $email, $subject, $body, $cc);
+  }
+  if ($processing_error_body) {
+    my $subject = 'processing error populate_species_topic_entity cronjob';
+    my $body = $processing_error_body;
     &mailSendmail($user, $email, $subject, $body, $cc);
   }
   if ($source_error_body) {
