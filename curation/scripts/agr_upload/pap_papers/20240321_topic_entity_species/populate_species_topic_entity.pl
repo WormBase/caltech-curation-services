@@ -674,7 +674,7 @@ sub createTag {
 # PUT THIS BACK
   my $api_json = `curl -X 'POST' $url -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json' --data '$object_json'`;
   print LOG qq(create $object_json\n);
-  if ( ($api_json !~ '"status":"exists"') && ($api_json !~ '"status":"success"') ) { $api_error_body .= qq($api_json); }
+  if ( ($api_json !~ '"status":"exists"') && ($api_json !~ '"status":"success"') ) { $api_error_body .= qq($api_json\n); }
   print LOG qq($api_json\n);
 }
 
