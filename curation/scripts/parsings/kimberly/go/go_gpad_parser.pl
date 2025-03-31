@@ -21,6 +21,8 @@
 #
 # remove skipping ComplexPortal.  Process Xenbase and RHEA with data.  2024 12 19
 
+# Added ARBA to list of possible databases.  2025 03 31
+
 
 use strict;
 use diagnostics;
@@ -223,6 +225,7 @@ foreach my $line (@lines) {
              elsif ($with =~ m/^Xenbase:(XB-GENE-\d+)/) {  	print ACE qq(Database\t"Xenbase"\t"XenbaseID"\t"$1"\n); }
              elsif ($with =~ m/^CHEBI:(\d+)/) {                 print ACE qq(Database\t"ChEBI"\t"CHEBI_ID"\t"$1"\n); }
 	     elsif ($with =~ m/^RHEA:(\d+)/) {                  print ACE qq(Database\t"RHEA"\t"RHEA_ID"\t"$1"\n); }
+             elsif ($with =~ m/^ARBA:(\w+)/) {			print ACE qq(Database\t"ARBA"\t"ARBA_ID"\t"$1"\n); }
              else {                                             print ERR qq(WITH $with not acounted in .ace file\n); }
          } # foreach my $with (@withs)
          my (@annExtsComma) = split/\|/, $annotExtConverted;
