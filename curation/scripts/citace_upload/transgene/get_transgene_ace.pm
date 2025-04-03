@@ -42,6 +42,8 @@ our $VERSION	= 1.00;
 # always skip trp_objpap_falsepos when getting data from db.  2022 10 15
 #
 # always dump species, so if no data use 'Caenorhabditis elegans'.  approved by Karen, Chris, Daniela.  2023 08 25
+#
+# always dump publicname, if there isn't one use the WBTransgene id from name.  2025 04 03
 
 
 
@@ -142,6 +144,7 @@ sub getTransgene {
             $array_state = 'Integrated'; } 
           else { $err_text .= qq($joinkey\t$name\tInvalid publicname\t$hash{publicname}{$joinkey}\n); } }
       if ($hash{publicname}{$joinkey}) { &printTag('Public_name', $hash{publicname}{$joinkey}); }
+        else { &printTag('Public_name', $name); }
       if ($hash{summary}{$joinkey}) { &printTag('Summary', $hash{summary}{$joinkey}); }
       if ($hash{construct}{$joinkey}) { &printTag('Construct', $hash{construct}{$joinkey}); }
       if ($hash{coinjectionconstruct}{$joinkey}) { &printTag('Coinjection', $hash{coinjectionconstruct}{$joinkey}); }
