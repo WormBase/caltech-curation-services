@@ -18,7 +18,7 @@ my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST}
 my $result;
 
 my %pis;
-$result = $dbh->prepare( "SELECT * FROM two_pis WHERE two_timestamp > '2022-12-20' AND two_pis ~ '[A-Z]'" );
+$result = $dbh->prepare( "SELECT * FROM two_pis WHERE two_pis ~ '[A-Z]'" );
 $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 
 while (my @row = $result->fetchrow) {
   $pis{$row[0]} = $row[2];
