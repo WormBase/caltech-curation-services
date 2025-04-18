@@ -5,6 +5,11 @@
 # use person_editor.cgi searchPaper code as starting point.  Always using two_possible two_verified order 1, which is 
 # wrong, but simpler for now.  Needs fixing.  For Cecilia to look over to see how it looks, will need to decide whether
 # to implement on form, or cronjob to automatically make connections, and if automatic, figure out how.  2025 04 15
+#
+# handle looping through order to make sure that possible and verified map with each other.  ignore collectivename.
+# notice that some xml authors don't have a forename or initials or other stuff.  compare how many things match and
+# don't match, and they mostly match, but there's cases where some stuff matches and is unverified, and other stuff
+# doesn't match because there's no person under possible, or the persons are different.  run on whole set.  2025 04 18
 
 
 use strict;
@@ -33,7 +38,14 @@ while (my @row = $result->fetchrow) {
   $papPmid{$row[0]} = $row[1];
 }
 
-my @wbpapers = qw( 00067850 00068000 00068005 00068008 00068014 00068015 00068016 00068017 00068022 00068023 00068026 00068028 );
+# my @wbpapers = qw( 00067850 00068000 00068005 00068008 00068014 00068015 00068016 00068017 00068022 00068023 00068026 00068028 );
+my @wbpapers = ();
+
+my $count = 0;
+foreach my $joinkey (sort {$b<=>$a} keys %papPmid) {
+  push @wbpapers, $joinkey;
+  $count++; last if ($count > 1000000);
+}
 
 my %papAids;
 my %pg_aid;
@@ -51,6 +63,9 @@ foreach my $joinkey (@wbpapers) {
     while (my @row = $result->fetchrow) { unless ($row[2]) { $row[2] = 1; } $pg_aid{$row[0]}{$table}{$row[2]} = $row[1]; } }
 }
 
+my $count_same = 0;
+my @same_unverified = ();
+my @different = ();
 
 foreach my $joinkey (@wbpapers) {
   print qq(\n$joinkey\t$papPmid{$joinkey}\n);
@@ -73,7 +88,7 @@ foreach my $joinkey (@wbpapers) {
       close (IN) or die "Cannot close $xmlfile : $!";
       $/ = "\n";
       my %xml_authors_found;                # names found, to print ones not found
-      %xml_authors = &getXmlAuthors($xmldata);
+      %xml_authors = &getXmlAuthors($xmldata, $pmid);
       my (@aids) = split/','/, $papAids{$joinkey};
       foreach my $i (0 .. $#aids) {
         my $aid = $aids[$i]; my $aname = $pg_aid{$aid}{index}{'1'};
@@ -86,29 +101,58 @@ foreach my $joinkey (@wbpapers) {
         if ($xml_authors{$aname}{orcid}) {        $orcid        = shift @{ $xml_authors{$aname}{orcid} };        $xml_authors_found{$aname}++; 
           if ($orcidToTwo{$orcid}) { $orcidPerson = $orcidToTwo{$orcid}; } }
         if ($xml_authors{$aname}{standardname}) { $standardname = shift @{ $xml_authors{$aname}{standardname} }; $xml_authors_found{$aname}++; }
-        if ($pg_aid{$aid}{possible}{'1'}) { $possible = $pg_aid{$aid}{possible}{'1'}; }	# FIX always using one, but might not be right
-        if ($pg_aid{$aid}{verified}{'1'}) { $verified = $pg_aid{$aid}{verified}{'1'}; }	# FIX always using one, but might not be right
         unless ($orcid) { $orcid = 'no_orcid'; }
+        foreach my $order (sort {$a<=>$b} keys %{ $pg_aid{$aid}{possible} }) {
+          my $this_possible = ''; my $this_verified = '';
+          if ($pg_aid{$aid}{possible}{$order}) { $this_possible = $pg_aid{$aid}{possible}{$order}; }
+          if ($pg_aid{$aid}{verified}{$order}) { $this_verified = $pg_aid{$aid}{verified}{$order}; }
+          if ($this_verified =~ m/YES/) { $verified = $this_verified; $possible = $this_possible; }
+            elsif ($this_verified =~ m/NO/) { next; }	# ignore possible if verified no
+            elsif ($this_verified eq '') { if ($verified eq 'not_verified') { $possible = $this_possible; } }
+            else { print qq(ERR AID $aid VERIFIED $this_verified not allowed\n); }
+        }
         print qq($aid\t$aname\t$standardname\t$orcid\t$possible\t$verified\t$orcidPerson\n);
+        if ($orcidPerson ne 'no_orcid_person') {
+          if ($orcidPerson eq $possible) {
+            $count_same++; 
+            if ($verified !~ m/YES/) { push @same_unverified, qq($joinkey\t$aid\t$possible\t$orcid\t$aname); } }
+          else {
+            push @different, qq($joinkey\t$aid\tPOSTGRES $possible\tPMID_ORCID $orcidPerson\t$orcid\t$aname); }
+        }
       }
     }
     else { print "NO XML for $pmid\n"; } }
   else { print "<br />No PMID found for WBPaper$joinkey\n"; }
 } # foreach my $joinkey (@wbpapers)
 
+my $count_unverified = scalar @same_unverified;
+my $count_different = scalar @different;
+my $unverified_log = join"\n", @same_unverified;
+my $different_log = join"\n", @different;
+
+print qq(\n\n);
+print qq(There are $count_same that are the same\n);
+print qq(There are $count_unverified that are same but unverified\n);
+print qq($unverified_log\n);
+print qq(There are $count_different that are different\n);
+print qq($different_log\n);
 
 
 
 sub getXmlAuthors {
-  my ($xmldata) = @_; my %xml_authors;
+  my ($xmldata, $pmid) = @_; my %xml_authors;
   my @xml_authors = $xmldata =~ /\<Author.*?\>(.+?)\<\/Author\>/sig;
   foreach my $author_xml (@xml_authors) {
+    next if ($author_xml =~ m/CollectiveName/);
     my ($affiliation) = $author_xml =~ /\<Affiliation\>(.+?)\<\/Affiliation\>/i;
     my ($lastname) = $author_xml =~ /\<LastName\>(.+?)\<\/LastName\>/i;
     my ($initials) = $author_xml =~ /\<Initials\>(.+?)\<\/Initials\>/i;
     my ($forename) = $author_xml =~ /\<ForeName\>(.+?)\<\/ForeName\>/i;
     my $orcid = '';
     if ($author_xml =~ /\<Identifier Source="ORCID"\>(.+?)\<\/Identifier\>/i) { $orcid = $1; }
+    unless ($lastname) { print qq(XML ERR $pmid NO lastname : $author_xml\n); }
+    unless ($initials) { print qq(XML ERR $pmid NO initials : $author_xml\n); }
+    unless ($forename) { print qq(XML ERR $pmid NO forename : $author_xml\n); }
     my $author = $lastname . " " . $initials;
 #     $xml_authors{$author}{affiliation} = $affiliation;
 #     $xml_authors{$author}{lastname} = $lastname;
