@@ -112,7 +112,7 @@ sub backToMainPage {
 sub displayObjects {
   my ($table) = @_;
   my ($var, $curator_id)       = &getHtmlVar($query, 'curator_id');
-  my $result = $dbh->prepare( "SELECT * FROM $table ORDER BY frm_timestamp; " );
+  my $result = $dbh->prepare( "SELECT * FROM $table ORDER BY frm_timestamp DESC; " );
   $result->execute;
   print qq(<TABLE border=1>\n);
   while (my @row = $result->fetchrow) {
