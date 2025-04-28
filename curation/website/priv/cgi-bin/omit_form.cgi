@@ -3,6 +3,8 @@
 # Track IPs, Persons, emails to omit / skip.
 #
 # for Chris, Valerio.  2020 03 23
+#
+# Cecilia wants descending timestamp order.  2025 04 28
 
 
 
