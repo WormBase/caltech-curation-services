@@ -19,6 +19,8 @@
 # New file source with gene status in its own column.  2020 07 27
 #
 # Added link to source data for users to download.  2020 08 06
+#
+# Updated link to source data for users to download.  2025 05 01
 
 
 
@@ -246,7 +248,8 @@ sub showSanitizeForm {
   print qq(Example 2: ref-1 is the public name for WBGene00004334. It may also refer to WBGene00000120 (aly-1) before the latter was renamed on 2005-04-27.<br/>);
   print qq(Example 3: B0564.1 is the sequence name for both WBGene00007201 (exos-4.1) and WBGene00044083 (tin-9.2). These two genes share sequences.<br/><br/>);
 #   print qq(Download source data for all genes <a href="../data/GeneNameHistory.csv">here</a>.<br/><br/>);	# does not work with wormbase reverse proxy 2021 04 29
-  print qq(Download source data for all genes <a href="http://tazendra.caltech.edu/~azurebrd/cgi-bin/data/GeneNameHistory.csv">here</a>.<br/><br/>);
+#   print qq(Download source data for all genes <a href="http://tazendra.caltech.edu/~azurebrd/cgi-bin/data/GeneNameHistory.csv">here</a>.<br/><br/>);
+  print qq(Download source data for all genes <a href="http://caltech.wormbase.org/pub/wormbase/spell_download/tables/GeneNameHistory.csv">here</a>.<br/><br/>);
 
   print qq(<form method="post" action="gene_sanitizer.cgi" enctype="multipart/form-data">\n);
 
