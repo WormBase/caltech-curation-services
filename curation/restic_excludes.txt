@@ -5,3 +5,4 @@
 /usr/caltech_curation_files/citace/bin/*
 /usr/caltech_curation_files/citace/citaceAdmin/*
 /usr/caltech_curation_files/WSDump/*
+/usr/caltech_curation_files/pub/wormbase/spell_download/*
