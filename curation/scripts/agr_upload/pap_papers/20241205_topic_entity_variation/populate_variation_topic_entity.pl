@@ -423,9 +423,9 @@ sub outputTfpData {
           print PERR qq(ERROR no taxon for WBPaper$joinkey Variation $obj\n);
           next; }
         if ($output_format eq 'json') {
-          push @output_json, \%object; }
+          push @output_json, { %object }; }
         else {
-          my $object_json = encode_json \%object;
+          my $object_json = encode_json { %object };
           &createTag($object_json); }
     } }
   }
