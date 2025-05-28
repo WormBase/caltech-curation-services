@@ -263,6 +263,8 @@ sub populateAfpTransgene {
 #         print qq(NO PERSON for paper : $joinkey\temail : $email\n); }
       $theHash{'afp'}{$joinkey}{'NOENTITY'}{$wbperson}{timestamp} = $ts;
       push @{ $theHash{'afp'}{$joinkey}{'NOENTITY'}{$wbperson}{note} }, $trText;
+# TODO  future self  do not add ATP that means it's new to database   added this newToDatabase to theHash, but not changed the processing when posting to ABC
+      $theHash{'afp'}{$joinkey}{'NOENTITY'}{$wbperson}{newToDatabase} = 'false';
 
       $trText =~ s/\[[^\]]*\]//g;
       $trText =~ s/~~/ /g;
@@ -420,20 +422,22 @@ sub outputTfpData {
         my $object_json = encode_json \%object;
         &createTag($object_json); } }
     else {
-      my (@wbtransgenes) = $data =~ m/(WBTransgene\d+)/g;
-      foreach my $wbtr (@wbtransgenes) {
+      my (@pairs) = split/ \| /, $data;
+      foreach my $pair (@pairs) {
+        my ($wbtr, $name) = split(/;%;/, $pair);
         my $obj = 'WB:' . $wbtr;
 #         $object{'BLAH'}                      = 'TFP yes';
         $object{'entity_type'}               = 'ATP:0000110';
         $object{'entity_id_validation'}      = 'alliance';
         $object{'entity'}                    = $obj;
+        $object{'entity_published_as'}       = $name;
         $object{'species'}                   = 'NCBITaxon:6239';
         if ($trpTaxon{$obj}) { 		     # if there's a trp taxon, go with that value instead of default
           $object{'species'}                 = $trpTaxon{$obj}; }
         if ($output_format eq 'json') {
-          push @output_json, \%object; }
+          push @output_json, { %object }; }
         else {
-          my $object_json = encode_json \%object;
+          my $object_json = encode_json { %object };
           &createTag($object_json); }
     } }
   }
