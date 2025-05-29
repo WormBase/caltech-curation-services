@@ -33,6 +33,7 @@ my $result;
 my $output_format = 'json';
 # my $output_format = 'api';
 my $tag_counter = 0;
+my $retry_counter = 0;
 
 my @output_json;
 
@@ -51,9 +52,9 @@ my %afpToEmail;
 my %emailToWbperson;
 my %afpContributor;
 my %afpLasttouched;
-my %afpOthertransgene;
+my %afpOtherstrain;
 my %afpStrain;
-my %tfpTransgene;
+my %tfpStrain;
 my %wbpToAgr;
 my %papValid;
 my %papMerge;
@@ -84,15 +85,14 @@ if ($output_format eq 'api') {
 &populateAfpEmail();
 &populateEmailToWbperson();
 &populateAfpStrain();
-# TODO
-# &populateAfpOthertransgene();
-# &populateTfpTransgene();
+&populateAfpOtherstrain();
+&populateTfpStrain();
 
 
 &outputAfpData();
+# &outputTfpData();
 # TODO
 # &outputNegData();
-# &outputTfpData();
 
 if ($output_format eq 'json') {
   # to print to screen
@@ -179,15 +179,29 @@ sub populateAfpLasttouched {
     $afpLasttouched{$row[0]} = $row[1];
 } }
 
-sub populateAfpOthertransgene {
-  my $result = $dbh->prepare( "SELECT joinkey, afp_othertransgene FROM afp_othertransgene" );
+sub populateAfpOtherstrain {
+  my $result = $dbh->prepare( "SELECT * FROM afp_otherstrain" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
 #     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
     next unless ($row[1]);
-    my $who = $row[1]; $who =~ s/two/WBPerson/;
-    $afpOthertransgene{$row[0]} = $row[1];
-} }
+    next if ($row[1] eq '[{"id":1,"name":""}]');
+    $afpOtherstrain{$row[0]} = $row[1];
+    my $joinkey = $row[0];
+    my @auts;
+    if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
+    if (scalar @auts < 1) { push @auts, 'unknown_author'; }
+    foreach my $aut (@auts) {
+      my $obj = 'NOENTITY';
+      if ($afpContributor{$joinkey}{$aut}) {
+        $theHash{'ack'}{$joinkey}{$obj}{$aut}{timestamp} = $afpContributor{$joinkey}{$aut}; }
+      else {
+        $theHash{'ack'}{$joinkey}{$obj}{$aut}{timestamp} = $row[2]; }
+      $theHash{'ack'}{$joinkey}{$obj}{$aut}{newToDatabase} = 'true';
+      push @{ $theHash{'ack'}{$joinkey}{$obj}{$aut}{note} }, $row[1];
+    }
+  }
+}
 
 sub deriveValidPap {
   my ($joinkey) = @_;
@@ -198,15 +212,15 @@ sub deriveValidPap {
     else { return 'NOTVALID'; }
 } # sub deriveValidPap
 
-sub populateTfpTransgene {
-  my $result = $dbh->prepare( "SELECT * FROM tfp_transgene WHERE tfp_timestamp > '2019-03-22 00:00';" );
+sub populateTfpStrain {
+  my $result = $dbh->prepare( "SELECT * FROM tfp_strain WHERE tfp_timestamp > '2019-03-22 00:00';" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     my ($joinkey, $trText, $ts) = @row;
     ($joinkey) = &deriveValidPap($joinkey);
     next unless $papValid{$joinkey};
-    $tfpTransgene{$joinkey}{data} = $trText;
-    $tfpTransgene{$joinkey}{timestamp} = $ts; } }
+    $tfpStrain{$joinkey}{data} = $trText;
+    $tfpStrain{$joinkey}{timestamp} = $ts; } }
 
 sub populateAfpStrain {
 #   my $result = $dbh->prepare( "SELECT * FROM afp_transgene WHERE afp_timestamp < '2019-03-22 00:00';" );
@@ -227,14 +241,11 @@ sub populateAfpStrain {
     else {
       my (@words) = split/ \| /, $trText;
       foreach my $word (@words) {
-        $word =~ s/\s+//g;
-        if ($strain{$word}) {
-          push @wbstrains, $strain{$word};
-        } else {
-          print PERR qq($joinkey $word not a WBStrain ID\n); 
-        }
-      }
-    }
+        if ($strain{$word}) { push @wbstrains, $strain{$word}; }
+        else {
+          $word =~ s/\s+//g;
+          if ($strain{$word}) { push @wbstrains, $strain{$word}; }
+          else { print PERR qq($joinkey $word not a WBStrain ID\n); } } } }
     my @auts;
     if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
     if (scalar @auts < 1) { push @auts, 'unknown_author'; }
@@ -324,58 +335,72 @@ sub populateAfpStrain {
 #     }
 #   }
 # } # sub outputNegData
-# 
-# sub outputTfpData {
-#   my $data_provider = $mod;
-#   my $secondary_data_provider = $mod;
-#   my $source_evidence_assertion = 'ECO:0008021';
-#   my $source_method = 'ACKnowledge_pipeline';
-#   my $source_id_tfp = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
-#   unless ($source_id_tfp) {
-#     print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
-#     return;
-#   }
-#   foreach my $joinkey (sort keys %tfpTransgene) {
-#     unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
-#     my $data = $tfpTransgene{$joinkey}{data};
-#     my %object;
-#     $object{'topic_entity_tag_source_id'}   = $source_id_tfp;
-#     $object{'force_insertion'}              = TRUE;
-#     $object{'negated'}                      = FALSE;
-#     $object{'reference_curie'}              = $wbpToAgr{$joinkey};
-# #     $object{'wbpaper_id'}                   = $joinkey;		# for debugging
-#     $object{'date_updated'}		    = $tfpTransgene{$joinkey}{timestamp};
-#     $object{'date_created'}		    = $tfpTransgene{$joinkey}{timestamp};
-#     $object{'created_by'}                   = 'ACKnowledge_pipeline';
-#     $object{'updated_by'}                   = 'ACKnowledge_pipeline';
-#     $object{'topic'}                        = 'ATP:0000027';
-#     if ($data eq '') {
-#       $object{'negated'}                    = TRUE;
-# #       $object{'BLAH'}                       = 'TFP neg';
-#       if ($output_format eq 'json') {
-#         push @output_json, \%object; }
-#       else {
-#         my $object_json = encode_json \%object;
-#         &createTag($object_json); } }
-#     else {
-#       my (@wbtransgenes) = $data =~ m/(WBTransgene\d+)/g;
-#       foreach my $wbtr (@wbtransgenes) {
-#         my $obj = 'WB:' . $wbtr;
-# #         $object{'BLAH'}                      = 'TFP yes';
-#         $object{'entity_type'}               = 'ATP:0000027';
-#         $object{'entity_id_validation'}      = 'alliance';
-#         $object{'entity'}                    = $obj;
-#         $object{'species'}                   = 'NCBITaxon:6239';
-#         if ($trpTaxon{$obj}) { 		     # if there's a trp taxon, go with that value instead of default
-#           $object{'species'}                 = $trpTaxon{$obj}; }
-#         if ($output_format eq 'json') {
-#           push @output_json, \%object; }
-#         else {
-#           my $object_json = encode_json \%object;
-#           &createTag($object_json); }
-#     } }
-#   }
-# } # sub outputTfpData
+
+sub outputTfpData {
+  my $data_provider = $mod;
+  my $secondary_data_provider = $mod;
+  my $source_evidence_assertion = 'ECO:0008021';
+  my $source_method = 'ACKnowledge_pipeline';
+  my $source_id_tfp = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+  unless ($source_id_tfp) {
+    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    return;
+  }
+  foreach my $joinkey (sort keys %tfpStrain) {
+    unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
+    my $data = $tfpStrain{$joinkey}{data};
+    my %object;
+    $object{'topic_entity_tag_source_id'}   = $source_id_tfp;
+    $object{'force_insertion'}              = TRUE;
+    $object{'negated'}                      = FALSE;
+    $object{'reference_curie'}              = $wbpToAgr{$joinkey};
+    $object{'wbpaper_id'}                   = $joinkey;		# for debugging
+    $object{'date_updated'}		    = $tfpStrain{$joinkey}{timestamp};
+    $object{'date_created'}		    = $tfpStrain{$joinkey}{timestamp};
+    $object{'created_by'}                   = 'ACKnowledge_pipeline';
+    $object{'updated_by'}                   = 'ACKnowledge_pipeline';
+    $object{'topic'}                        = 'ATP:0000027';
+    if ($data eq '') {
+      $object{'negated'}                    = TRUE;
+#       $object{'BLAH'}                       = 'TFP neg';
+      if ($output_format eq 'json') {
+        push @output_json, \%object; }
+      else {
+        my $object_json = encode_json \%object;
+        &createTag($object_json); } }
+
+    else {
+      my (@words) = split/ \| /, $data;
+      foreach my $word (@words) {
+        my $obj = ''; my $name = '';
+        if ($word =~ m/WBStrain/) {
+          (my $wbstrain, $name) = split(/;%;/, $word);
+          $obj = 'WB:' . $wbstrain; }
+        else {
+          if ($strain{$word}) { $obj = 'WB:' . $strain{$word}; }
+          else {
+            $word =~ s/\s+//g;
+            if ($strain{$word}) { $obj = 'WB:' . $strain{$word}; }
+            else { print PERR qq($joinkey $word not a WBStrain ID\n); } } }
+        next unless ($obj);
+        $object{'entity_type'}               = 'ATP:0000027';
+        $object{'entity_id_validation'}      = 'alliance';
+        $object{'entity'}                    = $obj;
+        if ($name) {
+          $object{'entity_published_as'}     = $name; }
+        if ($strainTaxon{$obj}) {        # if there's a strain taxon, go with that value instead of default
+          $object{'species'}                 = $strainTaxon{$obj}; }
+        else {
+          print PERR qq(ERROR no taxon for WBPaper$joinkey Strain $obj\n);
+          next; }
+        if ($output_format eq 'json') {
+          push @output_json, { %object }; }
+        else {
+          my $object_json = encode_json { %object };
+          &createTag($object_json); }
+    } }
+  }
+} # sub outputTfpData
 
 sub outputAfpData {
   my $data_provider = $mod;
@@ -410,7 +435,8 @@ sub outputAfpData {
 #       next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
       foreach my $obj (sort keys %{ $theHash{$datatype}{$joinkey} }) {
 #         unless ($strainTaxon{$obj}) { print qq(ERROR paper $joinkey strain $obj has no taxon\n); next; }
-        unless ($strainTaxon{$obj}) { print PERR qq(ERROR paper $joinkey strain $obj has no taxon\n); next; }
+        if ($obj ne 'NOENTITY') {
+          unless ($strainTaxon{$obj}) { print PERR qq(ERROR paper $joinkey strain $obj has no taxon\n); next; } }
         foreach my $curator (sort keys %{ $theHash{$datatype}{$joinkey}{$obj} }) {
           my %object;
           $object{'topic_entity_tag_source_id'}   = $source_id_ack;
@@ -432,6 +458,9 @@ sub outputAfpData {
           if ($strainTaxon{$obj}) { 		# if there's a strain taxon, go with that value instead of default
             $object{'species'}                    = $strainTaxon{$obj}; }
           if ($obj eq 'NOENTITY') {
+# TODO   future self add ATP that means it's new to database
+            if ($theHash{$datatype}{$joinkey}{$obj}{$curator}{newToDatabase} eq 'true') { 1; }	# use atp that means newToDatabase
+#             $object{'NOENTITY'} = $theHash{$datatype}{$joinkey}{$obj}{$curator}{newToDatabase};
             delete $object{'entity_type'};
             delete $object{'entity_id_validation'};
             delete $object{'entity'};
@@ -490,6 +519,15 @@ sub createTag {
     print ERR qq(create $object_json\n);
     print ERR qq($api_json\n);
   }
+  unless ($api_json) {
+    $retry_counter++;
+    if ($retry_counter > 4) {
+      print ERR qq(api failed without response $retry_counter times, giving up\n);
+      $retry_counter = 0; }
+    else {
+      my $sleep_amount = 4 ** $retry_counter;
+      sleep $sleep_amount;
+      &createTag($object_json); } }
 }
 
 sub getSourceId {
