@@ -89,8 +89,8 @@ if ($output_format eq 'api') {
 &populateTfpStrain();
 
 
-&outputAfpData();
-# &outputTfpData();
+# &outputAfpData();
+&outputTfpData();
 # TODO
 # &outputNegData();
 
@@ -512,19 +512,36 @@ sub createTag {
   }
   my $url = $baseUrl . 'topic_entity_tag/';
 # PUT THIS BACK
-  my $api_json = `curl -X 'POST' $url -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json' --data '$object_json'`;
-  print OUT qq(create $object_json\n);
-  print OUT qq($api_json\n);
-  if ($api_json !~ /success/) {
+#   print qq(curl -X 'POST' $url -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json' --data '$object_json'\n);
+#   my $api_json = `curl -X 'POST' $url -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json' --data '$object_json'`;
+
+  my @curl_cmd = (
+    "curl", "-X", "POST", $url,
+    "-H", "accept: application/json",
+    "-H", "Authorization: Bearer $okta_token",
+    "-H", "Content-Type: application/json",
+    "--data", $object_json,
+  );
+  my $api_json = '';
+  open my $fh, "-|", @curl_cmd or die "Could not run curl: $!";
+  while (my $line = <$fh>) {
+    $api_json .= $line;
+  }
+  close $fh;
+  if ($? != 0 || $api_json !~ /success/) {
     print ERR qq(create $object_json\n);
     print ERR qq($api_json\n);
   }
+  print OUT qq(create $object_json\n);
+  print OUT qq($api_json\n);
+  # $? is the exit status of the last command (0 is success).
   unless ($api_json) {
     $retry_counter++;
     if ($retry_counter > 4) {
       print ERR qq(api failed without response $retry_counter times, giving up\n);
       $retry_counter = 0; }
     else {
+      print ERR qq(api failed $retry_counter times, retrying\n);
       my $sleep_amount = 4 ** $retry_counter;
       sleep $sleep_amount;
       &createTag($object_json); } }
