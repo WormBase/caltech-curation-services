@@ -32,6 +32,8 @@
 #
 # updated to handle negative species data.  incorporated code from one_time_populate_negative_species_topic_entity.pl
 # and tested it runs against abc stage.  cronjob will resume running this.  2025 03 26
+#
+# Outputting tfp data, do not skip if there is no contributor, using unknown_author.  2025 06 03
 
 
 
@@ -153,6 +155,7 @@ my %afpLasttouched;
 my %afpContributor;
 my %ackNegSpeciesTopic;
 my %tfpNegSpeciesTopic;
+# my %tfpNegSpeciesTopicAlltime;	# don't need this  2025 06 03
 my %afpNegSpeciesEntities;
 
 # my $speciesTopic = 'ATP:0000142';	# entity
@@ -364,7 +367,6 @@ sub outputNegativeData {
   # This is negative ack data where author removed something that tfp said
   foreach my $joinkey (sort keys %afpNegSpeciesEntities) {
     next unless ($afpLasttouched{$joinkey});    # must be a final author submission
-    next unless ($afpContributor{$joinkey});    # must be an author that did that submission
     unless ($wbpToAgr{$joinkey}) { $processing_error_body .= qq(ERROR paper $joinkey NOT AGRKB\n); next; }
     foreach my $species (sort keys %{ $afpNegSpeciesEntities{$joinkey} }) {
       unless ($taxonNameToId{$species}) {
@@ -399,9 +401,10 @@ sub outputNegativeData {
           &createTag($object_json); }
   } } }
 
-  # This is negative ack topic data where ack is empty
+  # This is negative ack topic data where ack is empty regardless of tfp empty or not
   foreach my $joinkey (sort keys %ackNegSpeciesTopic) {
     next unless ($afpContributor{$joinkey});    # must be an author that did that submission
+    # next if ($tfpNegSpeciesTopicAlltime{$joinkey});	# explicitly not skipping because always treat empty ack author data as negative topic
     unless ($wbpToAgr{$joinkey}) { $processing_error_body .= qq(ERROR paper $joinkey NOT AGRKB ackNegSpeciesTopic\n); next; }
     my @auts;
     if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
@@ -576,18 +579,23 @@ sub populateTfpSpecies {
 sub populateNegativeData {
 #   $result = $dbh->prepare( "SELECT * FROM afp_species WHERE afp_species = '' AND afp_timestamp > '2019-03-22 00:00' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2019-03-22 00:00');" );
   $result = $dbh->prepare( "SELECT * FROM afp_species WHERE afp_species = '' AND afp_timestamp > now() - interval '2 weeks' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2019-03-22 00:00');" );
-$result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
-while (my @row = $result->fetchrow) {
-  next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
-  $ackNegSpeciesTopic{$row[0]} = $row[2]; }
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) {
+    next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+    $ackNegSpeciesTopic{$row[0]} = $row[2]; }
 
-#   $result = $dbh->prepare( "SELECT * FROM tfp_species WHERE tfp_species = '' AND tfp_timestamp > '2019-03-22 00:00';" );
   $result = $dbh->prepare( "SELECT * FROM tfp_species WHERE tfp_species = '' AND tfp_timestamp > now() - interval '2 weeks';" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
     $tfpNegSpeciesTopic{$row[0]} = $row[2]; }
 
+  # we don't need this, this was only to compare recent ack author data to tfp all time, but we're not doing that anymore.  2025 06 03
+  # $result = $dbh->prepare( "SELECT * FROM tfp_species WHERE tfp_species = '' AND tfp_timestamp > '2019-03-22 00:00';" );
+  # $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  # while (my @row = $result->fetchrow) {
+  #   next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+  #   $tfpNegSpeciesTopicAlltime{$row[0]} = $row[2]; }
 
   my %tfpSpeciesForNegation;    # this is always for all time, not just the last couple of weeks
   $result = $dbh->prepare( "SELECT * FROM tfp_species WHERE tfp_species != '' AND tfp_timestamp > '2019-03-22 00:00' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2019-03-22 00:00');" );
