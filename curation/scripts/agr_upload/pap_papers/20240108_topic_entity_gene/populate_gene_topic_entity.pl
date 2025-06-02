@@ -32,6 +32,8 @@
 # Decided not to have negative tfp entities when author says something and tfp doesn't.
 # Compared negative gene processing to negative variation processing and made gene like variation.
 # Add afp_lasttouched for some skip logic in negative data.  2025 01 31
+#
+# Outputting tfp data, do not skip if there is no contributor, using unknown_author.  2025 06 02
 
 
 
@@ -400,7 +402,6 @@ sub outputNegativeData {
   # This is negative ack data where author removed something that tfp said
   foreach my $joinkey (sort keys %tfpPapGene) {
     next unless ($afpLasttouched{$joinkey});    # must be a final author submission
-    next unless ($afpContributor{$joinkey});    # must be an author that did that submission
     unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
     foreach my $geneInt (sort keys %{ $tfpPapGene{$joinkey}{genes} }) {
       next if ($ackNegGeneTopic{$joinkey});			# if author sent nothing, don't create a negative entity
@@ -465,9 +466,10 @@ sub outputNegativeData {
       &createTag($object_json); }
   }
 
-  # This is negative ack topic data where ack is empty
+  # This is negative ack topic data where ack is empty regardless of tfp empty or not
   foreach my $joinkey (sort keys %ackNegGeneTopic) {
     next unless ($afpContributor{$joinkey});    # must be an author that did that submission
+    # next if ($tfpNegGeneTopic{$joinkey});	# explicitly not skipping because always treat empty ack author data as negative topic
     unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB ackNegGeneTopic\n); next; }
     my @auts;
     if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
