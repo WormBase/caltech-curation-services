@@ -44,6 +44,10 @@
 # Generate logs based on abc api, json or api output, generate error log for api responses that are not success.  2024 08 19
 #
 # logging generates .err.processing for processing errors, separate for .err.<4002|stage|prod> for api errors.  2024 10 11
+#
+# Do not want negative topic data for old afp, because of how that form worked.
+# Output negative tfp topic data where tfp is empty.
+# Output negative ack data where author removed something that tfp said.  2025 06 02
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -335,7 +339,15 @@ sub outputNegData {
     return;
   }
 
+  $source_evidence_assertion = 'ECO:0008021';
+  $source_method = 'ACKnowledge_pipeline';
+  my $source_id_tfp = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+  unless ($source_id_tfp) {
+    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    return;
+  }
 
+  # this is negative ack topic data, no longer doing negative afp topic data
   foreach my $joinkey (sort keys %afpLasttouched) {
     ($joinkey) = &deriveValidPap($joinkey);
     next unless $papValid{$joinkey};
@@ -346,25 +358,27 @@ sub outputNegData {
     $object{'reference_curie'}              = $wbpToAgr{$joinkey};
 #     $object{'wbpaper_id'}                   = $joinkey;		# for debugging
     $object{'topic'}                        = 'ATP:0000110';
-    if ( (!exists $afpTransgene{$joinkey}) && (!exists $afpOthertransgene{$joinkey}) ) {
-      my $email = $afpToEmail{$joinkey};
-      my $lcemail = '';
-      if ($email) { $lcemail = lc($email); }
-      my $wbperson = 'unknown_author';
-      if ($emailToWbperson{$lcemail}) { $wbperson = $emailToWbperson{$lcemail}; }
-#       $object{'BLAH'}  		      = 'afp';
-      $object{'created_by'}  		      = $wbperson;
-      $object{'updated_by'}  		      = $wbperson;
-      $object{'date_updated'}                 = $afpLasttouched{$joinkey};
-      $object{'date_created'}                 = $afpLasttouched{$joinkey};
-      $object{'topic_entity_tag_source_id'}   = $source_id_afp;
-      if ($output_format eq 'json') {
-        push @output_json, \%object; }
-      else {
-        my $object_json = encode_json \%object;
-        &createTag($object_json); }
-      }
-    elsif ( ($afpTransgene{$joinkey}{data} eq '') && ($afpOthertransgene{$joinkey} eq '[{"id":1,"name":""}]') ) {
+# Do not want negative topic data for old afp, because of how that form worked.  2025 06 02
+#     if ( (!exists $afpTransgene{$joinkey}) && (!exists $afpOthertransgene{$joinkey}) ) {	# old afp, pre-acknowledge
+#       my $email = $afpToEmail{$joinkey};
+#       my $lcemail = '';
+#       if ($email) { $lcemail = lc($email); }
+#       my $wbperson = 'unknown_author';
+#       if ($emailToWbperson{$lcemail}) { $wbperson = $emailToWbperson{$lcemail}; }
+# #       $object{'BLAH'}  		      = 'afp';
+#       $object{'created_by'}  		      = $wbperson;
+#       $object{'updated_by'}  		      = $wbperson;
+#       $object{'date_updated'}                 = $afpLasttouched{$joinkey};
+#       $object{'date_created'}                 = $afpLasttouched{$joinkey};
+#       $object{'topic_entity_tag_source_id'}   = $source_id_afp;
+#       if ($output_format eq 'json') {
+#         push @output_json, \%object; }
+#       else {
+#         my $object_json = encode_json { %object };
+#         &createTag($object_json); }
+#       }
+    next if ( (!exists $afpTransgene{$joinkey}) && (!exists $afpOthertransgene{$joinkey}) );	# old afp, pre-acknowledge
+    if ( ($afpTransgene{$joinkey}{data} eq '') && ($afpOthertransgene{$joinkey} eq '[{"id":1,"name":""}]') ) {	# acknowledge
       $object{'topic_entity_tag_source_id'}   = $source_id_ack;
       my @auts;
       if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
@@ -382,11 +396,77 @@ sub outputNegData {
         if ($output_format eq 'json') {
           push @output_json, \%object; }
         else {
+          my $object_json = encode_json { %object };
+          &createTag($object_json); }
+  } } }
+
+  # This is negative tfp topic data where tfp is empty
+  foreach my $joinkey (sort keys %tfpTransgene) {
+    ($joinkey) = &deriveValidPap($joinkey);
+    next unless $papValid{$joinkey};
+    unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB tfpNegGeneTopic\n); next; }
+    next unless ($tfpTransgene{$joinkey}{data} eq '');
+    my $ts = $tfpTransgene{$joinkey}{timestamp};
+    my %object;
+    $object{'topic_entity_tag_source_id'}   = $source_id_tfp;
+    $object{'force_insertion'}              = TRUE;
+    $object{'negated'}                      = TRUE;
+    $object{'reference_curie'}              = $wbpToAgr{$joinkey};
+    # $object{'wbpaper_id'}                   = $joinkey;               # for debugging
+    $object{'date_updated'}                 = $ts;
+    $object{'date_created'}                 = $ts;
+    $object{'created_by'}                   = 'ACKnowledge_pipeline';
+    $object{'updated_by'}                   = 'ACKnowledge_pipeline';
+    $object{'topic'}                        = 'ATP:0000110';
+    if ($output_format eq 'json') {
+      push @output_json, \%object; }
+    else {
+      my $object_json = encode_json \%object;
+      &createTag($object_json); }
+  }
+
+  # This is negative ack data where author removed something that tfp said
+  foreach my $joinkey (sort keys %tfpTransgene) {
+    next unless ($afpLasttouched{$joinkey});    # must be a final author submission
+    ($joinkey) = &deriveValidPap($joinkey);
+    next unless $papValid{$joinkey};
+    unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
+    next if (exists $theHash{'ack'}{$joinkey} && keys %{ $theHash{'ack'}{$joinkey} });	# if author sent nothing, don't create a negative entity
+    my (@tfpTransgenes) = $tfpTransgene{$joinkey}{data} =~ m/(WBTransgene\d+)/g;
+    foreach my $wbtransgene (@tfpTransgenes) {
+      next unless ($wbtransgene);				# must have a wbtransgene
+      my $obj = 'WB:' . $wbtransgene;
+      next if ($theHash{'ack'}{$joinkey}{$obj});         	# if author sent this entity, don't create a negative entity
+      my @auts;
+      if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
+      if (scalar @auts < 1) { push @auts, 'unknown_author'; }
+      foreach my $aut (@auts) {
+        my %object;
+        $object{'negated'}                    = TRUE;
+        $object{'force_insertion'}            = TRUE;
+        $object{'reference_curie'}            = $wbpToAgr{$joinkey};
+        $object{'topic'}                      = 'ATP:0000110';
+        $object{'entity_type'}                = 'ATP:0000110';
+        $object{'entity_id_validation'}       = 'alliance';
+        $object{'topic_entity_tag_source_id'} = $source_id_ack;
+        $object{'created_by'}                 = $aut;
+        $object{'updated_by'}                 = $aut;
+        my $ts = $theHash{'ack'}{$joinkey}{$obj}{$aut}{timestamp};
+        if ( $afpContributor{$joinkey}{$aut} ) { $ts = $afpContributor{$joinkey}{$aut}; }
+        $object{'date_created'}               = $ts;
+        $object{'date_updated'}               = $ts;
+        # $object{'datatype'}                 = 'ack neg entity data';  # for debugging
+        # $object{'wbpaper'}                  = $joinkey;                       # for debugging
+        $object{'entity'}                     = $obj;
+        $object{'species'}                    = 'NCBITaxon:6239';
+        if ($trpTaxon{$obj}) { 		     # if there's a trp taxon, go with that value instead of default
+          $object{'species'}                  = $trpTaxon{$obj}; }
+        if ($output_format eq 'json') {
+          push @output_json, \%object; }
+        else {
           my $object_json = encode_json \%object;
           &createTag($object_json); }
-      }
-    }
-  }
+  } } }
 } # sub outputNegData
 
 sub outputTfpData {
