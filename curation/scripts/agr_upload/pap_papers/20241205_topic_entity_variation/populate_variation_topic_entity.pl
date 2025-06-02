@@ -1,6 +1,8 @@
 #!/usr/bin/env perl
 
 # modified populate_transgene_topic_entity.pl for allele / variation data.  2024 12 05
+#
+# allow negative data when there is no contributor, using unknown_author  2025 06 02
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -272,18 +274,15 @@ sub outputNegData {
   # This is negative ack data where author removed something that tfp said
   foreach my $joinkey (sort keys %tfpVariation) {
     next unless ($afpLasttouched{$joinkey});	# must be a final author submission
-    next unless ($afpContributor{$joinkey});	# must be an author that did that submission
     unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
     my @auts;
     if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
-    if (scalar @auts < 1) { print PERR qq(ERROR no author for WBPaper$joinkey with negative author data that has tfp data\n); }
+    if (scalar @auts < 1) { push @auts, 'unknown_author'; }
     my $data = $tfpVariation{$joinkey}{data};
-
     if ($data) {				# there is tfp variation data
       my (@wbvars) = $data =~ m/(WBVar\d+)/g;
       if ($theHash{'ack'}{$joinkey}) {		# negative ack entity
         my $data = $tfpVariation{$joinkey}{data};
-
         my (@pairs) = split/ \| /, $data;
         foreach my $pair (@pairs) {
           my ($wbvar, $name) = split(/;%;/, $pair);
@@ -318,10 +317,7 @@ sub outputNegData {
               else {
                 my $object_json = encode_json \%object;
                 &createTag($object_json); }
-      } } } }
-
-
-    }
+    } } } } }
     else {						# there is no tfp variation data
       my %object;
       $object{'topic_entity_tag_source_id'}   = $source_id_tfp;
@@ -343,13 +339,14 @@ sub outputNegData {
     }
   } # foreach my $joinkey (sort keys %tfpVariation)
 
+  # This is negative acknowledge author topic
   foreach my $joinkey (sort keys %afpLasttouched) {
-    next unless ($afpContributor{$joinkey});	# must be an author that did that submission
+    # next unless ($afpContributor{$joinkey});	# explicitly okay to have submissions with unknown author
     unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
     next if ($afpVariation{$joinkey}{data});						# skip if any author sent any variation
     my @auts;
     if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
-    if (scalar @auts < 1) { print PERR qq(ERROR no author for WBPaper$joinkey with negative author data with author submission\n); }
+    if (scalar @auts < 1) { push @auts, 'unknown_author'; }
     foreach my $aut (@auts) {
       next unless ($afpOthervariation{$joinkey}{$aut}{data} eq '[{"id":1,"name":""}]');	# skip if that author sent any other variation
       my %object;
