@@ -34,6 +34,7 @@
 # Add afp_lasttouched for some skip logic in negative data.  2025 01 31
 #
 # Outputting tfp data, do not skip if there is no contributor, using unknown_author.  2025 06 02
+# explicitly okay to have submissions with unknown author  2025 06 02
 
 
 
@@ -468,7 +469,7 @@ sub outputNegativeData {
 
   # This is negative ack topic data where ack is empty regardless of tfp empty or not
   foreach my $joinkey (sort keys %ackNegGeneTopic) {
-    next unless ($afpContributor{$joinkey});    # must be an author that did that submission
+    # next unless ($afpContributor{$joinkey});	# explicitly okay to have submissions with unknown author
     # next if ($tfpNegGeneTopic{$joinkey});	# explicitly not skipping because always treat empty ack author data as negative topic
     unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB ackNegGeneTopic\n); next; }
     my @auts;
