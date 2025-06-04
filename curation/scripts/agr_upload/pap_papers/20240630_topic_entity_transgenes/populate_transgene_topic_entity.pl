@@ -236,11 +236,11 @@ sub populateAfpOthertransgene {
   while (my @row = $result->fetchrow) {
 #     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
     next unless ($row[1]);
-    ($joinkey) = &deriveValidPap($row[0]);
+    my ($joinkey) = &deriveValidPap($row[0]);
     next unless $papValid{$joinkey};
     next unless ($afpLasttouched{$joinkey});
     my $who = $row[1]; $who =~ s/two/WBPerson/;
-    $afpOthertransgene{$row[0]} = $row[1];
+    $afpOthertransgene{$joinkey} = $row[1];
 } }
 
 sub deriveValidPap {
