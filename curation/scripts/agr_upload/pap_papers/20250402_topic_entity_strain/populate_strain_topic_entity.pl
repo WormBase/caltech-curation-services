@@ -4,6 +4,7 @@
 #
 # Populate afpContributor from pap_species and pap_gene too, even though we don't know if that help.  2025 06 04
 # Skip if no lasttouched when reading afp_otherstrain.  2025 06 04
+# output negative data processing all negative data.  skip strains without a taxon.  2025 06 04
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -92,8 +93,8 @@ if ($output_format eq 'api') {
 &populateTfpStrain();
 
 
-&outputAfpData();
-&outputTfpData();
+# &outputAfpData();
+# &outputTfpData();
 &outputNegData();
 
 if ($output_format eq 'json') {
@@ -285,23 +286,31 @@ sub populateAfpStrain {
 sub outputNegData {
   my $data_provider = $mod;
   my $secondary_data_provider = $mod;
-#   my $source_evidence_assertion = 'ATP:0000035';
-#   my $source_method = 'author_first_pass';
-#   my $source_id_afp = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
-#   unless ($source_id_afp) {
-#     print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
-#     return;
-#   }
-
   my $source_evidence_assertion = 'ATP:0000035';
-  my $source_method = 'ACKnowledge_form';
+  my $source_method = 'author_first_pass';
+  my $source_id_afp = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+  unless ($source_id_afp) {
+    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    return;
+  }
+
+  $source_evidence_assertion = 'ATP:0000035';
+  $source_method = 'ACKnowledge_form';
   my $source_id_ack = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
   unless ($source_id_ack) {
     print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
     return;
   }
 
+  $source_evidence_assertion = 'ECO:0008021';
+  $source_method = 'ACKnowledge_pipeline';
+  my $source_id_tfp = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+  unless ($source_id_tfp) {
+    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    return;
+  }
 
+  # this is negative ack topic data, no longer doing negative afp topic data
   foreach my $joinkey (sort keys %afpLasttouched) {
     ($joinkey) = &deriveValidPap($joinkey);
     next unless $papValid{$joinkey};
@@ -312,6 +321,7 @@ sub outputNegData {
     $object{'reference_curie'}              = $wbpToAgr{$joinkey};
 #     $object{'wbpaper_id'}                   = $joinkey;		# for debugging
     $object{'topic'}                        = 'ATP:0000027';
+# Do not want negative topic data for old afp, because of how that form worked.  2025 06 02
 #     if ( (!exists $afpStrain{$joinkey}) && (!exists $afpOtherstrain{$joinkey}) ) {
 #       my $email = $afpToEmail{$joinkey};
 #       my $lcemail = '';
@@ -330,8 +340,8 @@ sub outputNegData {
 #         my $object_json = encode_json \%object;
 #         &createTag($object_json); }
 #       }
-    next if ( (!exists $afpStrain{$joinkey}) && (!exists $afpOtherstrain{$joinkey}) );
-    if ( ($afpStrain{$joinkey}{data} eq '') && ($afpOtherstrain{$joinkey} eq '[{"id":1,"name":""}]') ) {
+    next if ( (!exists $afpStrain{$joinkey}) && (!exists $afpOtherstrain{$joinkey}) );	#  old afp, pre-acknowledge
+    if ( ($afpStrain{$joinkey}{data} eq '') && ($afpOtherstrain{$joinkey} eq '[{"id":1,"name":""}]') ) {	# acknowledge
       $object{'topic_entity_tag_source_id'}   = $source_id_ack;
       my @auts;
       if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
@@ -354,6 +364,90 @@ sub outputNegData {
       }
     }
   }
+
+  # This is negative tfp topic data where tfp is empty
+  foreach my $joinkey (sort keys %tfpStrain) {
+    ($joinkey) = &deriveValidPap($joinkey);
+    next unless $papValid{$joinkey};
+    unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB tfpNegGeneTopic\n); next; }
+    next unless ($tfpStrain{$joinkey}{data} eq '');
+    my $ts = $tfpStrain{$joinkey}{timestamp};
+    my %object;
+    $object{'topic_entity_tag_source_id'}   = $source_id_tfp;
+    $object{'force_insertion'}              = TRUE;
+    $object{'negated'}                      = TRUE;
+    $object{'reference_curie'}              = $wbpToAgr{$joinkey};
+#     $object{'wbpaper_id'}                   = $joinkey;               # for debugging
+    $object{'date_updated'}                 = $ts;
+    $object{'date_created'}                 = $ts;
+    $object{'created_by'}                   = 'ACKnowledge_pipeline';
+    $object{'updated_by'}                   = 'ACKnowledge_pipeline';
+    $object{'topic'}                        = 'ATP:0000110';
+    if ($output_format eq 'json') {
+      push @output_json, \%object; }
+    else {
+      my $object_json = encode_json \%object;
+      &createTag($object_json); }
+  }
+
+
+  # This is negative ack data where author removed something that tfp said
+  foreach my $joinkey (sort keys %tfpStrain) {
+    next unless ($afpLasttouched{$joinkey});    # must be a final author submission
+    ($joinkey) = &deriveValidPap($joinkey);
+    next unless $papValid{$joinkey};
+    unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
+    next if (exists $theHash{'ack'}{$joinkey} && keys %{ $theHash{'ack'}{$joinkey} });  # if author sent nothing, don't create a negative entity
+#     my (@tfpStrains) = $tfpStrain{$joinkey}{data} =~ m/(WBStrain\d+)/g;
+    my %tfpStrains;
+    my (@words) = split/ \| /, $tfpStrain{$joinkey}{data};
+    foreach my $word (@words) {
+      my $obj = ''; my $name = '';
+      if ($word =~ m/WBStrain/) {
+        (my $wbstrain, $name) = split(/;%;/, $word);
+        $tfpStrains{$wbstrain}++; }
+      else {
+        if ($strain{$word}) { $tfpStrains{$strain{$word}}++; }
+        else {
+          $word =~ s/\s+//g;
+          if ($strain{$word}) { $tfpStrains{$strain{$word}}++; }
+          else { print PERR qq($joinkey $word not a WBStrain ID\n); } } } }
+    my (@tfpStrains) = sort keys %tfpStrains;
+    foreach my $wbstrain (@tfpStrains) {
+      next unless ($wbstrain);  				# must have a wbstrain
+      my $obj = 'WB:' . $wbstrain;
+      next if ($theHash{'ack'}{$joinkey}{$obj});		# if author sent this entity, don't create a negative entity
+      unless ($strainTaxon{$obj}) { print qq(ERROR paper $joinkey negative ack strain $obj has no taxon\n); next; }
+      my @auts;
+      if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
+      if (scalar @auts < 1) { push @auts, 'unknown_author'; }
+      foreach my $aut (@auts) {
+        my %object;
+        $object{'negated'}                    = TRUE;
+        $object{'force_insertion'}            = TRUE;
+        $object{'reference_curie'}            = $wbpToAgr{$joinkey};
+#         $object{'wbpaper_id'}                 = $joinkey;             # for debugging
+        $object{'topic'}                      = 'ATP:0000110';
+        $object{'entity_type'}                = 'ATP:0000110';
+        $object{'entity_id_validation'}       = 'alliance';
+        $object{'topic_entity_tag_source_id'} = $source_id_ack;
+        $object{'created_by'}                 = $aut;
+        $object{'updated_by'}                 = $aut;
+        my $ts = $theHash{'ack'}{$joinkey}{$obj}{$aut}{timestamp};
+        if ( $afpContributor{$joinkey}{$aut} ) { $ts = $afpContributor{$joinkey}{$aut}; }
+        $object{'date_created'}               = $ts;
+        $object{'date_updated'}               = $ts;
+        # $object{'datatype'}                 = 'ack neg entity data';  # for debugging
+        $object{'entity'}                     = $obj;
+        $object{'species'}                    = 'NCBITaxon:6239';
+        if ($strainTaxon{$obj}) {
+          $object{'species'}                  = $strainTaxon{$obj}; }
+        if ($output_format eq 'json') {
+          push @output_json, \%object; }
+        else {
+          my $object_json = encode_json \%object;
+          &createTag($object_json); }
+  } } }
 } # sub outputNegData
 
 sub outputTfpData {
@@ -388,7 +482,6 @@ sub outputTfpData {
       else {
         my $object_json = encode_json \%object;
         &createTag($object_json); } }
-
     else {
       my (@words) = split/ \| /, $data;
       foreach my $word (@words) {
@@ -403,12 +496,13 @@ sub outputTfpData {
             if ($strain{$word}) { $obj = 'WB:' . $strain{$word}; }
             else { print PERR qq($joinkey $word not a WBStrain ID\n); } } }
         next unless ($obj);
+        unless ($strainTaxon{$obj}) { print qq(ERROR paper $joinkey tfpStrain $obj has no taxon\n); next; }
         $object{'entity_type'}               = 'ATP:0000027';
         $object{'entity_id_validation'}      = 'alliance';
         $object{'entity'}                    = $obj;
         if ($name) {
           $object{'entity_published_as'}     = $name; }
-        if ($strainTaxon{$obj}) {        # if there's a strain taxon, go with that value instead of default
+        if ($strainTaxon{$obj}) {
           $object{'species'}                 = $strainTaxon{$obj}; }
         else {
           print PERR qq(ERROR no taxon for WBPaper$joinkey Strain $obj\n);
@@ -454,7 +548,7 @@ sub outputAfpData {
       unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
 #       next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
       foreach my $obj (sort keys %{ $theHash{$datatype}{$joinkey} }) {
-#         unless ($strainTaxon{$obj}) { print qq(ERROR paper $joinkey strain $obj has no taxon\n); next; }
+        unless ($strainTaxon{$obj}) { print qq(ERROR paper $joinkey $datatype strain $obj has no taxon\n); next; }
         if ($obj ne 'NOENTITY') {
           unless ($strainTaxon{$obj}) { print PERR qq(ERROR paper $joinkey strain $obj has no taxon\n); next; } }
         foreach my $curator (sort keys %{ $theHash{$datatype}{$joinkey}{$obj} }) {
@@ -474,7 +568,7 @@ sub outputAfpData {
           $object{'entity_type'}                  = 'ATP:0000027';
           $object{'entity_id_validation'}         = 'alliance';
           $object{'entity'}                       = $obj;
-          $object{'species'}                      = 'NCBITaxon:6239';
+#           $object{'species'}                      = 'NCBITaxon:6239';	# used to have a default, now skip if no taxon
           if ($strainTaxon{$obj}) { 		# if there's a strain taxon, go with that value instead of default
             $object{'species'}                    = $strainTaxon{$obj}; }
           if ($obj eq 'NOENTITY') {
