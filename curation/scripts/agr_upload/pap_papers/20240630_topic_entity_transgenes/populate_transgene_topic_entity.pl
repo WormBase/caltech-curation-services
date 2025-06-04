@@ -477,7 +477,6 @@ sub outputNegData {
         $object{'date_created'}               = $ts;
         $object{'date_updated'}               = $ts;
         # $object{'datatype'}                 = 'ack neg entity data';  # for debugging
-        # $object{'wbpaper'}                  = $joinkey;                       # for debugging
         $object{'entity'}                     = $obj;
         $object{'species'}                    = 'NCBITaxon:6239';
         if ($trpTaxon{$obj}) { 		     # if there's a trp taxon, go with that value instead of default
