@@ -196,6 +196,7 @@ sub populateEmailToWbperson {
 }
 
 sub populateAfpContributor {
+# Populate afpContributor from pap_species and pap_gene too, even though we don't know if that help.  2025 06 04
   my $result = $dbh->prepare( "SELECT joinkey, pap_curator, pap_timestamp FROM pap_species WHERE pap_evidence ~ 'from author first pass'" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {

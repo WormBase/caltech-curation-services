@@ -35,7 +35,8 @@
 #
 # Outputting tfp data, do not skip if there is no contributor, using unknown_author.  2025 06 02
 # explicitly okay to have submissions with unknown author  2025 06 02
-
+#
+# Populate afpContributor from pap_species and pap_gene too, even though we don't know if that help.  2025 06 04
 
 
 # cronjob (TODO change when)
@@ -471,13 +472,25 @@ sub populatePapValid {
 }
 
 sub populateAfpContributor {
-  $result = $dbh->prepare( "SELECT * FROM afp_contributor" );
+  my $result = $dbh->prepare( "SELECT joinkey, pap_curator, pap_timestamp FROM pap_species WHERE pap_evidence ~ 'from author first pass'" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
-    next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+#     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
     next unless ($row[1]);
-    my ($joinkey) = &deriveValidPap($row[0]);
-    next unless $papValid{$joinkey};
+    my $who = $row[1]; $who =~ s/two/WBPerson/;
+    $afpContributor{$row[0]}{$who} = $row[2]; }
+  $result = $dbh->prepare( "SELECT joinkey, pap_curator, pap_timestamp FROM pap_gene WHERE pap_evidence ~ 'from author first pass'" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) {
+#     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+    next unless ($row[1]);
+    my $who = $row[1]; $who =~ s/two/WBPerson/;
+    $afpContributor{$row[0]}{$who} = $row[2]; }
+  $result = $dbh->prepare( "SELECT joinkey, afp_contributor, afp_timestamp FROM afp_contributor ORDER BY afp_timestamp" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) {
+#     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+    next unless ($row[1]);
     my $who = $row[1]; $who =~ s/two/WBPerson/;
     $afpContributor{$row[0]}{$who} = $row[2];
 } }
