@@ -37,6 +37,7 @@
 # explicitly okay to have submissions with unknown author  2025 06 02
 #
 # Populate afpContributor from pap_species and pap_gene too, even though we don't know if that help.  2025 06 04
+# Skip sending unless there's an AGRKB.  ack Inferred_automatically must also say 'from author first pass'  2025 06 04
 
 
 # cronjob (TODO change when)
@@ -215,6 +216,7 @@ sub outputPapAck {
   foreach my $joinkey (sort keys %papAck) {
     next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
     foreach my $taxon (sort keys %{ $papAck{$joinkey} }) {
+      next unless ($wbpToAgr{$joinkey});
       my %object;
       $object{'negated'}                    = FALSE;
       $object{'force_insertion'}            = TRUE;
@@ -522,7 +524,7 @@ sub populatePapSpecies {
       $papEditor{$joinkey}{$taxon}{note} = $1;
       $papEditor{$joinkey}{$taxon}{curator} = $two;
       $papEditor{$joinkey}{$taxon}{timestamp} = $ts; }
-    elsif ($evi =~ m/Inferred_automatically/) { 	# this has to be more specific later
+    elsif ($evi =~ m/Inferred_automatically.*from author first pass/) {
       $papAck{$joinkey}{$taxon}{curator} = $two;
       $papAck{$joinkey}{$taxon}{timestamp} = $ts; }
     elsif ( ($ts =~ m/2016-05-20/) || ($ts =~ m/2017-08-01/) || ($ts =~ m/2019-09-19/) || ($ts =~ m/2022-04-08/) ) {
