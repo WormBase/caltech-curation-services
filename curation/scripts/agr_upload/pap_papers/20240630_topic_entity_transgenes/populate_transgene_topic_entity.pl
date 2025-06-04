@@ -50,6 +50,7 @@
 # Output negative ack data where author removed something that tfp said.  2025 06 02
 #
 # Additional queries to populate afpContributor from pap_gene and pap_species even though they don't help for transgene.  2025 06 04
+# When reading afp transgene or othertransgene, always derive valid paper, and skip regardless of ack vs old afp.  2025 06 04
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -235,6 +236,9 @@ sub populateAfpOthertransgene {
   while (my @row = $result->fetchrow) {
 #     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
     next unless ($row[1]);
+    ($joinkey) = &deriveValidPap($row[0]);
+    next unless $papValid{$joinkey};
+    next unless ($afpLasttouched{$joinkey});
     my $who = $row[1]; $who =~ s/two/WBPerson/;
     $afpOthertransgene{$row[0]} = $row[1];
 } }
@@ -269,6 +273,7 @@ sub populateAfpTransgene {
     $afpTransgene{$joinkey}{timestamp} = $ts;
     next unless $papValid{$joinkey};
     next unless $trText;
+    next unless ($afpLasttouched{$joinkey});
     my $tsdigits = &tsToDigits($ts);
     if ($tsdigits < '20190322') {
       my $email = $afpToEmail{$joinkey};
@@ -304,7 +309,6 @@ sub populateAfpTransgene {
       } } }
     }
     else {
-      next unless ($afpLasttouched{$joinkey});
       my (@wbtransgenes) = $trText =~ m/(WBTransgene\d+)/g;
       my @auts;
       if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
