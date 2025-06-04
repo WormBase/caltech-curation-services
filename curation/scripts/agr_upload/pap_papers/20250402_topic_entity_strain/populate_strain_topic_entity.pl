@@ -3,6 +3,7 @@
 # modify populate_transgene_topic_entity.pl to work with strains  2025 04 02
 #
 # Populate afpContributor from pap_species and pap_gene too, even though we don't know if that help.  2025 06 04
+# Skip if no lasttouched when reading afp_otherstrain.  2025 06 04
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -91,8 +92,8 @@ if ($output_format eq 'api') {
 &populateTfpStrain();
 
 
-# &outputAfpData();
-# &outputTfpData();
+&outputAfpData();
+&outputTfpData();
 &outputNegData();
 
 if ($output_format eq 'json') {
@@ -201,8 +202,11 @@ sub populateAfpOtherstrain {
 #     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
     next unless ($row[1]);
     next if ($row[1] eq '[{"id":1,"name":""}]');
-    $afpOtherstrain{$row[0]} = $row[1];
     my $joinkey = $row[0];
+    ($joinkey) = &deriveValidPap($joinkey);
+    next unless $papValid{$joinkey};
+    next unless ($afpLasttouched{$joinkey});
+    $afpOtherstrain{$joinkey} = $row[1];
     my @auts;
     if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
     if (scalar @auts < 1) { push @auts, 'unknown_author'; }
@@ -289,8 +293,8 @@ sub outputNegData {
 #     return;
 #   }
 
-  $source_evidence_assertion = 'ATP:0000035';
-  $source_method = 'ACKnowledge_form';
+  my $source_evidence_assertion = 'ATP:0000035';
+  my $source_method = 'ACKnowledge_form';
   my $source_id_ack = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
   unless ($source_id_ack) {
     print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
@@ -326,6 +330,7 @@ sub outputNegData {
 #         my $object_json = encode_json \%object;
 #         &createTag($object_json); }
 #       }
+    next if ( (!exists $afpStrain{$joinkey}) && (!exists $afpOtherstrain{$joinkey}) );
     if ( ($afpStrain{$joinkey}{data} eq '') && ($afpOtherstrain{$joinkey} eq '[{"id":1,"name":""}]') ) {
       $object{'topic_entity_tag_source_id'}   = $source_id_ack;
       my @auts;
@@ -369,7 +374,7 @@ sub outputTfpData {
     $object{'force_insertion'}              = TRUE;
     $object{'negated'}                      = FALSE;
     $object{'reference_curie'}              = $wbpToAgr{$joinkey};
-    $object{'wbpaper_id'}                   = $joinkey;		# for debugging
+#     $object{'wbpaper_id'}                   = $joinkey;		# for debugging
     $object{'date_updated'}		    = $tfpStrain{$joinkey}{timestamp};
     $object{'date_created'}		    = $tfpStrain{$joinkey}{timestamp};
     $object{'created_by'}                   = 'ACKnowledge_pipeline';
