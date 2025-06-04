@@ -5,6 +5,7 @@
 # allow negative data when there is no contributor, using unknown_author  2025 06 02
 #
 # Populate afpContributor from pap_species and pap_gene too, even though we don't know if that help.  2025 06 04
+# When reading afp variation or othervariation, always derive valid paper.  2025 06 04
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -254,17 +255,19 @@ sub populateAfpOthervariation {
   while (my @row = $result->fetchrow) {
 #     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
     next unless ($row[1]);
-    next unless ($afpLasttouched{$row[0]});
+    my ($joinkey) = &deriveValidPap($row[0]);
+    next unless $papValid{$joinkey};
+    next unless ($afpLasttouched{$joinkey});
     my $who = $row[1]; $who =~ s/two/WBPerson/;
     my @auts;
-    if ($afpContributor{$row[0]}) { foreach my $who (sort keys %{ $afpContributor{$row[0]} }) { push @auts, $who; } }
+    if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
     if (scalar @auts < 1) { push @auts, 'unknown_author'; }
     foreach my $aut (@auts) {
       my (@names) = $row[1] =~ m/"name":"(.*?)"/g;
       my $note = join", ", @names;
-      $afpOthervariation{$row[0]}{$aut}{note} = $note;
-      $afpOthervariation{$row[0]}{$aut}{data} = $row[1];
-      $afpOthervariation{$row[0]}{$aut}{timestamp} = $row[2]; }
+      $afpOthervariation{$joinkey}{$aut}{note} = $note;
+      $afpOthervariation{$joinkey}{$aut}{data} = $row[1];
+      $afpOthervariation{$joinkey}{$aut}{timestamp} = $row[2]; }
 } }
 
 
