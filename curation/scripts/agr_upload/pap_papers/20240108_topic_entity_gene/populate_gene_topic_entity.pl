@@ -37,6 +37,7 @@
 # explicitly okay to have submissions with unknown author  2025 06 02
 #
 # Populate afpContributor from pap_species and pap_gene too, even though we don't know if that help.  2025 06 04
+# when doing output deriveValidPap.  2025 06 04
 
 
 
@@ -332,6 +333,8 @@ sub outputTfpData {
     return;
   }
   foreach my $joinkey (sort keys %tfpGene) {
+    my ($joinkey) = &deriveValidPap($joinkey);
+    next unless $papValid{$joinkey};
     unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
     my $data = $tfpGene{$joinkey}{data};
     my %object;
@@ -408,6 +411,8 @@ sub outputNegativeData {
 
   # This is negative ack data where author removed something that tfp said
   foreach my $joinkey (sort keys %tfpPapGene) {
+    my ($joinkey) = &deriveValidPap($joinkey);
+    next unless $papValid{$joinkey};
     next unless ($afpLasttouched{$joinkey});    # must be a final author submission
     unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
     foreach my $geneInt (sort keys %{ $tfpPapGene{$joinkey}{genes} }) {
@@ -453,6 +458,8 @@ sub outputNegativeData {
 
   # This is negative tfp topic data where tfp is empty
   foreach my $joinkey (sort keys %tfpNegGeneTopic) {
+    my ($joinkey) = &deriveValidPap($joinkey);
+    next unless $papValid{$joinkey};
     unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB tfpNegGeneTopic\n); next; }
     my $ts = $tfpNegGeneTopic{$joinkey};
     my %object;
@@ -477,6 +484,8 @@ sub outputNegativeData {
   foreach my $joinkey (sort keys %ackNegGeneTopic) {
     # next unless ($afpContributor{$joinkey});	# explicitly okay to have submissions with unknown author
     # next if ($tfpNegGeneTopic{$joinkey});	# explicitly not skipping because always treat empty ack author data as negative topic
+    my ($joinkey) = &deriveValidPap($joinkey);
+    next unless $papValid{$joinkey};
     unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB ackNegGeneTopic\n); next; }
     my @auts;
     if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
@@ -504,6 +513,8 @@ sub outputNegativeData {
 
   # pap_curation_done = 'genestudied' paper not in pap_gene
   foreach my $joinkey (sort keys %curNegGeneTopic) {
+    my ($joinkey) = &deriveValidPap($joinkey);
+    next unless $papValid{$joinkey};
     unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB curNegGeneTopic\n); next; }
     my $ts = $curNegGeneTopic{$joinkey};
     my %object;
@@ -524,10 +535,6 @@ sub outputNegativeData {
       &createTag($object_json); }
   }
 } # sub outputNegativeData
-
-# TODO 
-#     ($joinkey) = &deriveValidPap($joinkey);
-#     next unless $papValid{$joinkey};
 
 sub populateNegativeData {
   $result = $dbh->prepare( "SELECT * FROM afp_genestudied WHERE afp_genestudied != '' AND afp_timestamp > '2019-03-22 00:00' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2019-03-22 00:00'); " );

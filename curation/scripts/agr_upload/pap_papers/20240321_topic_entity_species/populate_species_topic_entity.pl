@@ -38,6 +38,7 @@
 #
 # Populate afpContributor from pap_species and pap_gene too, even though we don't know if that help.  2025 06 04
 # Skip sending unless there's an AGRKB.  ack Inferred_automatically must also say 'from author first pass'  2025 06 04
+# when doing output deriveValidPap.  2025 06 04
 
 
 # cronjob (TODO change when)
@@ -216,6 +217,8 @@ sub outputPapAck {
   foreach my $joinkey (sort keys %papAck) {
     next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
     foreach my $taxon (sort keys %{ $papAck{$joinkey} }) {
+      my ($joinkey) = &deriveValidPap($joinkey);
+      next unless $papValid{$joinkey};
       next unless ($wbpToAgr{$joinkey});
       my %object;
       $object{'negated'}                    = FALSE;
@@ -252,6 +255,9 @@ sub outputPapScript {
   }
   foreach my $joinkey (sort keys %papScript) {
     next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
+    my ($joinkey) = &deriveValidPap($joinkey);
+    next unless $papValid{$joinkey};
+    next unless ($wbpToAgr{$joinkey});
     foreach my $taxon (sort keys %{ $papScript{$joinkey} }) {
       my %object;
       $object{'negated'}                    = FALSE;
@@ -290,6 +296,9 @@ sub outputPapEditor {
   }
   foreach my $joinkey (sort keys %papEditor) {
     next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
+    my ($joinkey) = &deriveValidPap($joinkey);
+    next unless $papValid{$joinkey};
+    next unless ($wbpToAgr{$joinkey});
     foreach my $taxon (sort keys %{ $papEditor{$joinkey} }) {
       my %object;
       $object{'negated'}                    = FALSE;
@@ -326,6 +335,9 @@ sub outputTfpSpecies {
   }
   foreach my $joinkey (sort keys %tfpSpecies) {
     next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
+    my ($joinkey) = &deriveValidPap($joinkey);
+    next unless $papValid{$joinkey};
+    next unless ($wbpToAgr{$joinkey});
     foreach my $taxon (sort keys %{ $tfpSpecies{$joinkey} }) {
       my %object;
       $object{'negated'}                    = FALSE;
@@ -370,6 +382,9 @@ sub outputNegativeData {
 
   # This is negative ack data where author removed something that tfp said
   foreach my $joinkey (sort keys %afpNegSpeciesEntities) {
+    my ($joinkey) = &deriveValidPap($joinkey);
+    next unless $papValid{$joinkey};
+    next unless ($wbpToAgr{$joinkey});
     next unless ($afpLasttouched{$joinkey});    # must be a final author submission
     unless ($wbpToAgr{$joinkey}) { $processing_error_body .= qq(ERROR paper $joinkey NOT AGRKB\n); next; }
     foreach my $species (sort keys %{ $afpNegSpeciesEntities{$joinkey} }) {
@@ -409,6 +424,9 @@ sub outputNegativeData {
   foreach my $joinkey (sort keys %ackNegSpeciesTopic) {
     # next unless ($afpContributor{$joinkey});	# explicitly okay to have submissions with unknown author  2025 06 02
     # next if ($tfpNegSpeciesTopicAlltime{$joinkey});	# explicitly not skipping because always treat empty ack author data as negative topic
+    my ($joinkey) = &deriveValidPap($joinkey);
+    next unless $papValid{$joinkey};
+    next unless ($wbpToAgr{$joinkey});
     unless ($wbpToAgr{$joinkey}) { $processing_error_body .= qq(ERROR paper $joinkey NOT AGRKB ackNegSpeciesTopic\n); next; }
     my @auts;
     if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
@@ -436,6 +454,9 @@ sub outputNegativeData {
 
   # This is negative tfp topic data where tfp is empty
   foreach my $joinkey (sort keys %tfpNegSpeciesTopic) {
+    my ($joinkey) = &deriveValidPap($joinkey);
+    next unless $papValid{$joinkey};
+    next unless ($wbpToAgr{$joinkey});
     unless ($wbpToAgr{$joinkey}) { $processing_error_body .= qq(ERROR paper $joinkey NOT AGRKB tfpNegSpeciesTopic\n); next; }
     my $ts = $tfpNegSpeciesTopic{$joinkey};
     my %object;
