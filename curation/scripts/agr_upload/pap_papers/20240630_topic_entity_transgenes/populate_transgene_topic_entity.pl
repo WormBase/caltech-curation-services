@@ -48,6 +48,8 @@
 # Do not want negative topic data for old afp, because of how that form worked.
 # Output negative tfp topic data where tfp is empty.
 # Output negative ack data where author removed something that tfp said.  2025 06 02
+#
+# Additional queries to populate afpContributor from pap_gene and pap_species even though they don't help for transgene.  2025 06 04
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -194,7 +196,21 @@ sub populateEmailToWbperson {
 }
 
 sub populateAfpContributor {
-  my $result = $dbh->prepare( "SELECT joinkey, afp_contributor, afp_timestamp FROM afp_contributor ORDER BY afp_timestamp" );
+  my $result = $dbh->prepare( "SELECT joinkey, pap_curator, pap_timestamp FROM pap_species WHERE pap_evidence ~ 'from author first pass'" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) {
+#     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+    next unless ($row[1]);
+    my $who = $row[1]; $who =~ s/two/WBPerson/;
+    $afpContributor{$row[0]}{$who} = $row[2]; }
+  $result = $dbh->prepare( "SELECT joinkey, pap_curator, pap_timestamp FROM pap_gene WHERE pap_evidence ~ 'from author first pass'" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) {
+#     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+    next unless ($row[1]);
+    my $who = $row[1]; $who =~ s/two/WBPerson/;
+    $afpContributor{$row[0]}{$who} = $row[2]; }
+  $result = $dbh->prepare( "SELECT joinkey, afp_contributor, afp_timestamp FROM afp_contributor ORDER BY afp_timestamp" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
 #     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
@@ -412,7 +428,7 @@ sub outputNegData {
     $object{'force_insertion'}              = TRUE;
     $object{'negated'}                      = TRUE;
     $object{'reference_curie'}              = $wbpToAgr{$joinkey};
-    # $object{'wbpaper_id'}                   = $joinkey;               # for debugging
+#     $object{'wbpaper_id'}                   = $joinkey;               # for debugging
     $object{'date_updated'}                 = $ts;
     $object{'date_created'}                 = $ts;
     $object{'created_by'}                   = 'ACKnowledge_pipeline';
@@ -445,6 +461,7 @@ sub outputNegData {
         $object{'negated'}                    = TRUE;
         $object{'force_insertion'}            = TRUE;
         $object{'reference_curie'}            = $wbpToAgr{$joinkey};
+#         $object{'wbpaper_id'}                 = $joinkey;		# for debugging
         $object{'topic'}                      = 'ATP:0000110';
         $object{'entity_type'}                = 'ATP:0000110';
         $object{'entity_id_validation'}       = 'alliance';
