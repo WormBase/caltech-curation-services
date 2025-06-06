@@ -38,6 +38,8 @@
 #
 # Populate afpContributor from pap_species and pap_gene too, even though we don't know if that help.  2025 06 04
 # when doing output deriveValidPap.  2025 06 04
+#
+# Use afp_version to determine ACK instead of timestamp.  2025 06 06
 
 
 
@@ -157,6 +159,7 @@ my %afp;
 my %ack;
 my %absReadMeet;
 my %absReadNoMeet;
+my %afpVersion;
 my %afpContributor;
 my %afpLasttouched;
 my %ackPapGene;
@@ -189,7 +192,7 @@ foreach my $joinkey (@wbpapers) { $chosenPapers{$joinkey}++; }
 # $chosenPapers{all}++;
 
 
-# TODO  SELECT * FROM afp_genestudied WHERE afp_timestamp < '2019-03-22 00:00';
+# TODO  SELECT * FROM afp_genestudied   not in afpVersion
 # try to map against   gin_locus gin_seqname gin_wbgene
 # look at  populateAfpTransgene
 
@@ -197,12 +200,13 @@ foreach my $joinkey (@wbpapers) { $chosenPapers{$joinkey}++; }
 &populatePapValid();
 &populatePapMerge();
 &populateMeetings();
+&populateAfpVersion();
+&populateAfpContributor();
+&populateAfpLasttouched();
 &populateGeneTaxon();
 &populatePapGene();
 &populateGinValidation();
 &populateGinTaxon();
-&populateAfpContributor();
-&populateAfpLasttouched();
 &populateTfpGenestudied();
 &populateNegativeData();
 
@@ -312,7 +316,7 @@ sub outputTheHash {
 } } # sub outputTheHash
 
 sub populateTfpGenestudied {
-  my $result = $dbh->prepare( "SELECT * FROM tfp_genestudied WHERE tfp_timestamp > '2019-03-22 00:00';" );
+  my $result = $dbh->prepare( "SELECT * FROM tfp_genestudied;" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     my ($joinkey, $trText, $ts) = @row;
@@ -537,20 +541,25 @@ sub outputNegativeData {
 } # sub outputNegativeData
 
 sub populateNegativeData {
-  $result = $dbh->prepare( "SELECT * FROM afp_genestudied WHERE afp_genestudied != '' AND afp_timestamp > '2019-03-22 00:00' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2019-03-22 00:00'); " );
+#   $result = $dbh->prepare( "SELECT * FROM afp_genestudied WHERE afp_genestudied != '' AND afp_timestamp > '2019-03-22 00:00' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2019-03-22 00:00'); " );
+  $result = $dbh->prepare( "SELECT * FROM afp_genestudied WHERE afp_genestudied != ''; " );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+    next unless (exists $afpVersion{$row[0]});
+    next unless (exists $afpLasttouched{$row[0]});
     my @data = split(/ | /, $row[1]);
     foreach my $data (@data) {
       my ($geneInt) = $data =~ m/(\d{8})/;
       next unless ($geneInt);
       $ackPapGene{$row[0]}{genes}{$geneInt}++;
       $ackPapGene{$row[0]}{timestamp} = $row[2]; } }
-  $result = $dbh->prepare( "SELECT * FROM tfp_genestudied WHERE tfp_genestudied != '' AND tfp_timestamp > '2019-03-22 00:00' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2019-03-22 00:00');" );
+#   $result = $dbh->prepare( "SELECT * FROM tfp_genestudied WHERE tfp_genestudied != '' AND tfp_timestamp > '2019-03-22 00:00' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2019-03-22 00:00');" );
+  $result = $dbh->prepare( "SELECT * FROM tfp_genestudied WHERE tfp_genestudied != '';" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+    next unless (exists $afpVersion{$row[0]});
     my @data = split(/ | /, $row[1]);
     foreach my $data (@data) {
       my ($geneInt) = $data =~ m/(\d{8})/;
@@ -558,15 +567,21 @@ sub populateNegativeData {
       $tfpPapGene{$row[0]}{genes}{$geneInt}++;
       $tfpPapGene{$row[0]}{timestamp} = $row[2]; } }
 
-  $result = $dbh->prepare( "SELECT * FROM afp_genestudied WHERE afp_genestudied = '' AND afp_timestamp > '2019-03-22 00:00' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2019-03-22 00:00');" );
+
+#   $result = $dbh->prepare( "SELECT * FROM afp_genestudied WHERE afp_genestudied = '' AND afp_timestamp > '2019-03-22 00:00' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2019-03-22 00:00');" );
+  $result = $dbh->prepare( "SELECT * FROM afp_genestudied WHERE afp_genestudied = '';" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+    next unless (exists $afpVersion{$row[0]});
+    next unless (exists $afpLasttouched{$row[0]});
     $ackNegGeneTopic{$row[0]} = $row[2]; }
-  $result = $dbh->prepare( "SELECT * FROM tfp_genestudied WHERE tfp_genestudied = '' AND tfp_timestamp > '2019-03-22 00:00';" );
+#   $result = $dbh->prepare( "SELECT * FROM tfp_genestudied WHERE tfp_genestudied = '' AND tfp_timestamp > '2019-03-22 00:00';" );
+  $result = $dbh->prepare( "SELECT * FROM tfp_genestudied WHERE tfp_genestudied = '';" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+    next unless (exists $afpVersion{$row[0]});
     $tfpNegGeneTopic{$row[0]} = $row[2]; }
 
 #   SELECT * FROM afp_genestudied WHERE afp_genestudied = '' AND afp_timestamp > '2019-03-22 00:00' AND joinkey IN (SELECT joinkey FROM afp_lasttouched) AND joinkey IN ( '00065553', '00065560', '00066296', '00066355', '00066405', '00066410', '00066411', '00066419', '00066461', '00066469' );
@@ -579,7 +594,6 @@ sub populateNegativeData {
     $row[3] =~ s/two/WBPerson/;
     $curNegGeneTopic{$row[0]}{who} = $row[3];
     $curNegGeneTopic{$row[0]}{timestamp} = $row[4]; }
-
 } # sub populateNegativeData
 
 sub populateAfpContributor {
@@ -604,6 +618,15 @@ sub populateAfpContributor {
     next unless ($row[1]);
     my $who = $row[1]; $who =~ s/two/WBPerson/;
     $afpContributor{$row[0]}{$who} = $row[2];
+} }
+
+sub populateAfpVersion {
+  my $result = $dbh->prepare( "SELECT joinkey, afp_version FROM afp_version" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) {
+#     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+    next unless ($row[1]);
+    $afpVersion{$row[0]} = $row[1];
 } }
 
 sub populateAfpLasttouched {
@@ -688,12 +711,12 @@ sub populatePapGene {
         push @{ $theHash{'cfp'}{$joinkey}{$gene}{$two}{note} }, $1; }
       elsif ($evi =~ m/Inferred_automatically\s+"(from author first pass .*?)"/) {
         my $tsdigits = &tsToDigits($ts);
-        if ($tsdigits < '20190322') {
-          $theHash{'afp'}{$joinkey}{$gene}{$two}{timestamp} = $ts;
-          push @{ $theHash{'afp'}{$joinkey}{$gene}{$two}{note} }, $1; }
-        else {
+        if (exists $afpVersion{$joinkey}) {
           $theHash{'ack'}{$joinkey}{$gene}{$two}{timestamp} = $ts;
-          push @{ $theHash{'ack'}{$joinkey}{$gene}{$two}{note} }, $1; } }
+          push @{ $theHash{'ack'}{$joinkey}{$gene}{$two}{note} }, $1; }
+        else {
+          $theHash{'afp'}{$joinkey}{$gene}{$two}{timestamp} = $ts;
+          push @{ $theHash{'afp'}{$joinkey}{$gene}{$two}{note} }, $1; } }
       elsif ($evi =~ m/Inferred_automatically\s+"(abstract2aceCGC.pl.*)"/) {
         $theHash{'abs2aceCgc'}{$joinkey}{$gene}{$two}{timestamp} = $ts;
         push @{ $theHash{'abs2aceCgc'}{$joinkey}{$gene}{$two}{note} }, $1; }
