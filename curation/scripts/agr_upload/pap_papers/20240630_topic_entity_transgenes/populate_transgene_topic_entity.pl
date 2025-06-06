@@ -51,6 +51,8 @@
 #
 # Additional queries to populate afpContributor from pap_gene and pap_species even though they don't help for transgene.  2025 06 04
 # When reading afp transgene or othertransgene, always derive valid paper, and skip regardless of ack vs old afp.  2025 06 04
+#
+# use afp_version to determine ACK vs afp instead of timestamp.  removed timestamp requirement for tfp_ query.  2025 06 06
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -89,8 +91,8 @@ my @output_json;
 my $pgDate = &getPgDate();
 
 my $mod = 'WB';
-# my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
-my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
+my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
+# my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
 my $okta_token = &generateOktaToken();
 
 my %trp;
@@ -99,6 +101,7 @@ my %trpTaxon;
 my %theHash;
 my %afpToEmail;
 my %emailToWbperson;
+my %afpVersion;
 my %afpContributor;
 my %afpLasttouched;
 my %afpOthertransgene;
@@ -113,6 +116,7 @@ my %ackNeg;
 &populateAbcXref();
 &populatePapValid();
 &populatePapMerge(); 
+&populateAfpVersion();
 &populateAfpContributor();
 &populateAfpLasttouched();
 &populateTrp();
@@ -196,6 +200,15 @@ sub populateEmailToWbperson {
   }
 }
 
+sub populateAfpVersion {
+  my $result = $dbh->prepare( "SELECT joinkey, afp_version FROM afp_version" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) {
+#     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+    next unless ($row[1]);
+    $afpVersion{$row[0]} = $row[1];
+} }
+
 sub populateAfpContributor {
   my $result = $dbh->prepare( "SELECT joinkey, pap_curator, pap_timestamp FROM pap_species WHERE pap_evidence ~ 'from author first pass'" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
@@ -253,7 +266,7 @@ sub deriveValidPap {
 } # sub deriveValidPap
 
 sub populateTfpTransgene {
-  my $result = $dbh->prepare( "SELECT * FROM tfp_transgene WHERE tfp_timestamp > '2019-03-22 00:00';" );
+  my $result = $dbh->prepare( "SELECT * FROM tfp_transgene;" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     my ($joinkey, $trText, $ts) = @row;
@@ -268,14 +281,15 @@ sub populateAfpTransgene {
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     my ($joinkey, $trText, $ts, $curator, $approve, $curts) = @row;
+    next unless ($afpLasttouched{$joinkey});
     ($joinkey) = &deriveValidPap($joinkey);
     $afpTransgene{$joinkey}{data} = $trText;
     $afpTransgene{$joinkey}{timestamp} = $ts;
     next unless $papValid{$joinkey};
     next unless $trText;
-    next unless ($afpLasttouched{$joinkey});
     my $tsdigits = &tsToDigits($ts);
-    if ($tsdigits < '20190322') {
+#     if ($tsdigits < '20190322')	# no longer doing things by timestamp
+    if (!exists $afpVersion{$row[0]}) {	# if database joinkey doesn't exist in afp_version it's old afp
       my $email = $afpToEmail{$joinkey};
       my $lcemail = '';
       if ($email) { $lcemail = lc($email); }
@@ -308,7 +322,7 @@ sub populateAfpTransgene {
 #             push @{ $theHash{'afpx'}{$joinkey}{$obj}{$wbperson}{note} }, $trText;	# don't get note 2024 08 01
       } } }
     }
-    else {
+    else {				# acknowledge
       my (@wbtransgenes) = $trText =~ m/(WBTransgene\d+)/g;
       my @auts;
       if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
@@ -369,6 +383,7 @@ sub outputNegData {
 
   # this is negative ack topic data, no longer doing negative afp topic data
   foreach my $joinkey (sort keys %afpLasttouched) {
+    next unless $afpVersion{$joinkey};	# only ack data
     ($joinkey) = &deriveValidPap($joinkey);
     next unless $papValid{$joinkey};
     unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
@@ -448,6 +463,7 @@ sub outputNegData {
   # This is negative ack data where author removed something that tfp said
   foreach my $joinkey (sort keys %tfpTransgene) {
     next unless ($afpLasttouched{$joinkey});    # must be a final author submission
+    next unless $afpVersion{$joinkey};		# only ack data
     ($joinkey) = &deriveValidPap($joinkey);
     next unless $papValid{$joinkey};
     unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
