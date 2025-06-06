@@ -6,6 +6,8 @@
 #
 # Populate afpContributor from pap_species and pap_gene too, even though we don't know if that help.  2025 06 04
 # When reading afp variation or othervariation, always derive valid paper.  2025 06 04
+#
+# Commented out code for afpVersion, but variation doesn't need it.  removed timestamp requirement for tfp_ query.  2025 06 06
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -54,6 +56,7 @@ my %variationTaxon;
 my %theHash;
 my %afpToEmail;
 my %emailToWbperson;
+# my %afpVersion;	# afpVersion not needed, variation only has ACK
 my %afpContributor;
 my %afpLasttouched;
 my %afpOthervariation;
@@ -68,6 +71,7 @@ my %ackNeg;
 &populateAbcXref();
 &populatePapValid();
 &populatePapMerge(); 
+# &populateAfpVersion();
 &populateAfpContributor();
 &populateAfpLasttouched();
 &populateVariation();
@@ -161,6 +165,15 @@ sub populateEmailToWbperson {
   }
 }
 
+# sub populateAfpVersion {
+#   my $result = $dbh->prepare( "SELECT joinkey, afp_version FROM afp_version" );
+#   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+#   while (my @row = $result->fetchrow) {
+# #     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+#     next unless ($row[1]);
+#     $afpVersion{$row[0]} = $row[1];
+# } }
+
 sub populateAfpContributor {
   my $result = $dbh->prepare( "SELECT joinkey, pap_curator, pap_timestamp FROM pap_species WHERE pap_evidence ~ 'from author first pass'" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
@@ -205,7 +218,7 @@ sub deriveValidPap {
 } # sub deriveValidPap
 
 sub populateTfpVariation {
-  my $result = $dbh->prepare( "SELECT * FROM tfp_variation WHERE tfp_timestamp > '2019-03-22 00:00';" );
+  my $result = $dbh->prepare( "SELECT * FROM tfp_variation;" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     my ($joinkey, $trText, $ts) = @row;
@@ -215,7 +228,6 @@ sub populateTfpVariation {
     $tfpVariation{$joinkey}{timestamp} = $ts; } }
 
 sub populateAfpVariation {
-#   my $result = $dbh->prepare( "SELECT * FROM afp_transgene WHERE afp_timestamp < '2019-03-22 00:00';" );
   my $result = $dbh->prepare( "SELECT * FROM afp_variation;" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
