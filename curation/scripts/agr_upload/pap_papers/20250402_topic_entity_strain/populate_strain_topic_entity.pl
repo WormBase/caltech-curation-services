@@ -5,6 +5,8 @@
 # Populate afpContributor from pap_species and pap_gene too, even though we don't know if that help.  2025 06 04
 # Skip if no lasttouched when reading afp_otherstrain.  2025 06 04
 # output negative data processing all negative data.  skip strains without a taxon.  2025 06 04
+#
+# Commented out code for afpVersion, but strain doesn't need it.  removed timestamp requirement for tfp_ query.  2025 06 06
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -54,6 +56,7 @@ my %strainTaxon;
 my %theHash;
 my %afpToEmail;
 my %emailToWbperson;
+# my %afpVersion;	# strains only have ACK, no old afp, don't need to check for version
 my %afpContributor;
 my %afpLasttouched;
 my %afpOtherstrain;
@@ -83,6 +86,7 @@ if ($output_format eq 'api') {
 &populateAbcXref();
 &populatePapValid();
 &populatePapMerge(); 
+# &populateAfpVersion();
 &populateAfpContributor();
 &populateAfpLasttouched();
 &populateStrain();
@@ -162,6 +166,15 @@ sub populateEmailToWbperson {
   }
 }
 
+# sub populateAfpVersion {
+#   my $result = $dbh->prepare( "SELECT joinkey, afp_version FROM afp_version" );
+#   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+#   while (my @row = $result->fetchrow) {
+# #     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+#     next unless ($row[1]);
+#     $afpVersion{$row[0]} = $row[1];
+# } }
+
 sub populateAfpContributor {
   my $result = $dbh->prepare( "SELECT joinkey, pap_curator, pap_timestamp FROM pap_species WHERE pap_evidence ~ 'from author first pass'" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
@@ -233,7 +246,7 @@ sub deriveValidPap {
 } # sub deriveValidPap
 
 sub populateTfpStrain {
-  my $result = $dbh->prepare( "SELECT * FROM tfp_strain WHERE tfp_timestamp > '2019-03-22 00:00';" );
+  my $result = $dbh->prepare( "SELECT * FROM tfp_strain;" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     my ($joinkey, $trText, $ts) = @row;
@@ -248,13 +261,13 @@ sub populateAfpStrain {
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     my ($joinkey, $trText, $ts) = @row;
+    next unless ($afpLasttouched{$joinkey});
     ($joinkey) = &deriveValidPap($joinkey);
     $afpStrain{$joinkey}{data} = $trText;
     $afpStrain{$joinkey}{timestamp} = $ts;
     next unless $papValid{$joinkey};
     next unless $trText;
 #     my $tsdigits = &tsToDigits($ts);
-    next unless ($afpLasttouched{$joinkey});
     my @wbstrains = ();
     if ($trText =~ m/WBStrain/) {
       (@wbstrains) = $trText =~ m/(WBStrain\d+)/g; }
