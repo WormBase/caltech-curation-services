@@ -39,6 +39,8 @@
 # Populate afpContributor from pap_species and pap_gene too, even though we don't know if that help.  2025 06 04
 # Skip sending unless there's an AGRKB.  ack Inferred_automatically must also say 'from author first pass'  2025 06 04
 # when doing output deriveValidPap.  2025 06 04
+#
+# species only in ACK, not old afp, do not need afp_version nor timestamp restriction.  2025 06 06
 
 
 # cronjob (TODO change when)
@@ -615,7 +617,8 @@ sub populateTfpSpecies {
 
 sub populateNegativeData {
 #   $result = $dbh->prepare( "SELECT * FROM afp_species WHERE afp_species = '' AND afp_timestamp > '2019-03-22 00:00' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2019-03-22 00:00');" );
-  $result = $dbh->prepare( "SELECT * FROM afp_species WHERE afp_species = '' AND afp_timestamp > now() - interval '2 weeks' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2019-03-22 00:00');" );
+#   $result = $dbh->prepare( "SELECT * FROM afp_species WHERE afp_species = '' AND afp_timestamp > now() - interval '2 weeks' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2019-03-22 00:00');" );
+  $result = $dbh->prepare( "SELECT * FROM afp_species WHERE afp_species = '' AND afp_timestamp > now() - interval '2 weeks' AND joinkey IN (SELECT joinkey FROM afp_lasttouched);" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
@@ -635,7 +638,8 @@ sub populateNegativeData {
   #   $tfpNegSpeciesTopicAlltime{$row[0]} = $row[2]; }
 
   my %tfpSpeciesForNegation;    # this is always for all time, not just the last couple of weeks
-  $result = $dbh->prepare( "SELECT * FROM tfp_species WHERE tfp_species != '' AND tfp_timestamp > '2019-03-22 00:00' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2019-03-22 00:00');" );
+#   $result = $dbh->prepare( "SELECT * FROM tfp_species WHERE tfp_species != '' AND tfp_timestamp > '2019-03-22 00:00' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2019-03-22 00:00');" );
+  $result = $dbh->prepare( "SELECT * FROM tfp_species WHERE tfp_species != '';" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
