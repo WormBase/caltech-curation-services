@@ -76,6 +76,10 @@
 #
 # dockerized and cronjob.  Still needs nightly_geneace.pl populate_gin_nightly.pl
 # parse_seqfeat.pl  2023 03 19
+#
+# when this was dockerized, the populate_gin_nightly.pl was pointing to the postgres directory
+# instead of the correct /usr/lib/ directory.  The nameserver currently has bad data, so don't
+# enable until nameserver data is fixed.  2025 06 17
 
 # 0 20 * * * /usr/lib/scripts/pgpopulation/obo_oa_ontologies/update_obo_oa_ontologies.pl
 
@@ -176,7 +180,8 @@ $/ = "\n";
 # `/home/postgres/work/pgpopulation/obo_oa_ontologies/geneace/nightly_geneace.pl`;
 
 # get nightly gin_ data from geneace and nightly nameserver json dump  2013 10 25
-`/home/postgres/work/pgpopulation/obo_oa_ontologies/geneace/populate_gin_nightly.pl`;
+# UNCOMMENT THIS when nameserver data is fixed to enable this.  2025 06 17
+# `/usr/lib/scripts/pgpopulation/obo_oa_ontologies/populate_gin_nightly.pl`;
 # This no longer needs java / aws / and geneace/get_nameserver_genes.sh to get the gin files.  Uses s3 file from Paulo.  2023 06 23
  
 # get new sequence features data and email Daniela and Xiaodong about new objects or added/changed papers.  2014 10 01
