@@ -71,10 +71,14 @@
 # Paulo added a cronjob to generate genes.csv into s3 on 2023 06 23 and can now
 # wget http://namesoutput.s3-website-us-east-1.amazonaws.com/genes.csv
 # 2023 06 23
+#
+# This was dockerized when tazendra switched, but was never connected in
+# /usr/lib/scripts/pgpopulation/obo_oa_ontologies/update_obo_oa_ontologies.pl until now.
+# 2025 06 17
 
 
 # gets called by cronjob
-# 0 20 * * * /home/postgres/work/pgpopulation/obo_oa_ontologies/update_obo_oa_ontologies.pl
+# 0 20 * * * /usr/lib/scripts/pgpopulation/obo_oa_ontologies/update_obo_oa_ontologies.pl
 
 
 use strict;
