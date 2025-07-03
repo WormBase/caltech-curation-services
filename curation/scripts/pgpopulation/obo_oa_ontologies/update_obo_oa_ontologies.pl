@@ -180,8 +180,7 @@ $/ = "\n";
 # `/home/postgres/work/pgpopulation/obo_oa_ontologies/geneace/nightly_geneace.pl`;
 
 # get nightly gin_ data from geneace and nightly nameserver json dump  2013 10 25
-# UNCOMMENT THIS when nameserver data is fixed to enable this.  2025 06 17
-# `/usr/lib/scripts/pgpopulation/obo_oa_ontologies/populate_gin_nightly.pl`;
+`/usr/lib/scripts/pgpopulation/obo_oa_ontologies/populate_gin_nightly.pl`;
 # This no longer needs java / aws / and geneace/get_nameserver_genes.sh to get the gin files.  Uses s3 file from Paulo.  2023 06 23
  
 # get new sequence features data and email Daniela and Xiaodong about new objects or added/changed papers.  2014 10 01
