@@ -2,7 +2,11 @@
 
 # for Ranjana, query entries that at some point had a null in dis_diseaserelevance_hst.  check that currently they have
 # no data in dis_diseaserelevance, have a curator in dis_curator, can retrieve something useful from the latest
-# dis_diseaserelevance_hst entry, and have either a dis_wbgene or dis_assertedgene.  2025 06 07
+# dis_diseaserelevance_hst entry, and have either a dis_wbgene or dis_assertedgene.  2025 07 07
+#
+# Skip entries with multiple dis_assertedgene, Ranjana doesn't want those.  2025 07 09
+# This doesn't properly escape singlequotes when creating data, so it's failing on those entries.  Luckily the only entry
+# with singlequotes is the last one.  Don't use this script as a model of how to populate data in the future.  2025 07 09
 
 
 use strict;
@@ -63,9 +67,10 @@ foreach my $joinkey (sort {$a<=>$b} keys %hasNull) {
   next unless ($recentData{$joinkey});
   my $wbgene = $subject{'dis_wbgene'}{$joinkey};
   unless ($wbgene) { $wbgene = $subject{'dis_assertedgene'}{$joinkey}; }
-  unless ($wbgene) { $wbgene = 'NO WBGENE'; }
+  unless ($wbgene) { $wbgene = 'SKIP'; }
+  if ($wbgene =~ m/","/) { $wbgene = 'SKIP'; }
   print qq($joinkey\t$wbgene\t$recentData{$joinkey}\n);
-  if ($wbgene ne 'NO WBGENE') {
+  if ($wbgene ne 'SKIP') {
     push @pgcommands, qq(INSERT INTO dis_diseaserelevance_hst VALUES ('$joinkey', '$recentData{$joinkey}'););
     push @pgcommands, qq(DELETE FROM dis_diseaserelevance WHERE joinkey = '$joinkey';);
     push @pgcommands, qq(INSERT INTO dis_diseaserelevance VALUES ('$joinkey', '$recentData{$joinkey}'););
