@@ -294,6 +294,7 @@ sub outputTheHash {
           $object{'entity_type'}                = $entityType;
           $object{'entity_id_validation'}       = $entity_id_validation;
           $object{'topic_entity_tag_source_id'} = $datatypeToSourceId{$datatype};
+          $object{'data_novelty'}               = 'ATP:0000335';	# stub for now
           $object{'entity'}                     = "WB:WBGene$gene";
           if ($geneToTaxon{$gene}) {
             $object{'species'}                  = $geneToTaxon{$gene}; }
