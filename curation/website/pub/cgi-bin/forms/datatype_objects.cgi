@@ -78,6 +78,8 @@ $objectMap{integrationmethod}{datatype}    = 'cns';
 $objectMap{integrationmethod}{field}       = 'integrationmethod';
 $objectMap{phenotype}{field}               = 'term';
 $objectMap{phenotype}{datatype}            = 'app';
+$objectMap{humandoid}{field}               = 'humandoid';
+$objectMap{humandoid}{datatype}            = 'dis';
 
 
 print "Content-type: text/html\n\n";
