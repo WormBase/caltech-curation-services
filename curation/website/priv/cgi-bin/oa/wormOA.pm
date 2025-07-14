@@ -3541,6 +3541,8 @@ sub setAnySimpleAutocompleteValues {
     $data{$ontology_type}{name}{"Cis_regulatory_element"}          = "Cis_regulatory_element";
     $data{$ontology_type}{name}{"Genome_editing"}                  = "Genome_editing";
     $data{$ontology_type}{name}{"Reporter_gene"}                   = "Reporter_gene";
+    $data{$ontology_type}{name}{"RNAseq"}                          = "RNAseq";
+    $data{$ontology_type}{name}{"Ribosome_profiling"}              = "Ribosome_profiling";
     $data{$ontology_type}{name}{"In_Situ"}                         = "In_Situ";
     $data{$ontology_type}{name}{"RT_PCR"}                          = "RT_PCR";
     $data{$ontology_type}{name}{"EPIC"}                            = "EPIC";
