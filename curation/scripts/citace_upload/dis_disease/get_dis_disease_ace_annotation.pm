@@ -57,7 +57,7 @@ my $result;
 
 my %theHash;
 # my @tables = qw( wbgene curator humandoid paperexpmod dbexpmod lastupdateexpmod species diseaserelevance paperdisrel dbdisrel genedisrel lastupdatedisrel );
-my @tables = qw( humandoid species strain straintext variation variationtext transgene transgenetext genotype wbgene wbgenetext interactvariation interacttransgene interactgene rnaiexperiment modelremark assertedgene assertedvariation assertedhumangene associationtype goinference eco qualifier inducingchemical inducingagent modtransgene modvariation modstrain modgene modgenotype modmolecule modother moleculetype modqualifier geneticsex phenotypedisease phenotypeameliorated phenotypeexacerbated commentdisphen paperexpmod diseasemodeldesc genedisrel dbexpmod curator lastupdateexpmod );
+my @tables = qw( humandoid species strain straintext variation variationtext transgene transgenetext genotype wbgene wbgenetext interactvariation interacttransgene interactgene rnaiexperiment modelremark assertedgene assertedvariation assertedhumangene associationtype goinference eco qualifier inducingchemical inducingagent modtransgene modvariation modstrain modhumangene modgene modgenotype modmolecule modother moleculetype modqualifier geneticsex phenotypedisease phenotypeameliorated phenotypeexacerbated commentdisphen paperexpmod diseasemodeldesc genedisrel dbexpmod curator lastupdateexpmod );
 
 
 my %tableToTag;
@@ -86,6 +86,7 @@ $tableToTag{"modgenotype"}            = "Modifier_genotype";
 $tableToTag{"modtransgene"}           = "Modifier_transgene";
 $tableToTag{"modvariation"}           = "Modifier_variation";
 $tableToTag{"modstrain"}              = "Modifier_strain";
+$tableToTag{"modhumangene"}           = "Modifier_gene";
 $tableToTag{"modgene"}                = "Modifier_gene";
 $tableToTag{"modmolecule"}            = "Modifier_molecule";
 $tableToTag{"modother"}               = "Other_modifier";
