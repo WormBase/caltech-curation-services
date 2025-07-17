@@ -38,6 +38,8 @@ our $VERSION	= 1.00;
 # add dis_assertedhumangene dumping for Ranjana.  2023 07 05
 #
 # add .ace output for modgenotype Modifier_genotype for Ranjana and Stavros.  2024 11 06
+#
+# add .ace output for modhumangene for Ranjana.  2025 07 17
 
 
 
@@ -121,6 +123,7 @@ $extraTableToTag{"modtransgene"}           = "Disease_modifier_transgene";
 $extraTableToTag{"modvariation"}           = "Disease_modifier_variation";
 $extraTableToTag{"modstrain"}              = "Disease_modifier_strain";
 $extraTableToTag{"modgene"}                = "Disease_modifier_gene";
+$extraTableToTag{"modhumangene"}           = "Disease_modifier_gene";
 $extraTableToTag{"modgenotype"}            = "Disease_modifier_genotype";
 $extraTableToTag{"inducingchemical"}       = "Chemical_inducer";
 $extraTableToTag{"inducingagent"}          = "Other_inducer";
@@ -212,9 +215,9 @@ sub getDiseaseAnnotation {
 #          !($theHash{inferredgene}{$pgid}) ) { 
 # 		 $err_text .= "pgid $pgid has wbgene or variation but no inferredgene\n"; }
     if ( ( ($theHash{modtransgene}{$pgid}) || ($theHash{modvariation}{$pgid}) || ($theHash{modstrain}{$pgid}) || 
-           ($theHash{modgene}{$pgid}) || ($theHash{modmolecule}{$pgid}) || ($theHash{modother}{$pgid}) ) &&
+           ($theHash{modgene}{$pgid}) || ($theHash{modhumangene}{$pgid}) || ($theHash{modmolecule}{$pgid}) || ($theHash{modother}{$pgid}) ) &&
          !($theHash{moleculetype}{$pgid}) ) { 
-		 $err_text .= "pgid $pgid has modtransgene or modvariation or modstrain or modgene or modmolecule or modother but no moleculetype\n"; }
+		 $err_text .= "pgid $pgid has modtransgene or modvariation or modstrain or modgene or modhumangene or modmolecule or modother but no moleculetype\n"; }
     next unless ($theHash{'associationtype'}{$pgid});	# replaced below restriction 2017 08 23	# removed 2018 09 12 # put back 2018 09 17
 
 #     $counter++;
@@ -248,7 +251,7 @@ sub getDiseaseAnnotation {
     } # foreach my $table (@tables)
 
     
-    my @extraTables = qw( wbgene assertedgene strain variation transgene genotype modtransgene modvariation modstrain modgene modgenotype inducingchemical inducingagent modmolecule );
+    my @extraTables = qw( wbgene assertedgene strain variation transgene genotype modtransgene modvariation modstrain modgene modhumangene modgenotype inducingchemical inducingagent modmolecule );
     my $dot_entry = '';
     if ($theHash{"humandoid"}{$pgid}) {
       if ($theHash{"humandoid"}{$pgid} =~ m/\"/) { $theHash{"humandoid"}{$pgid} =~ s/\"//g; }
