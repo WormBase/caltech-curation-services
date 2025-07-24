@@ -31,6 +31,10 @@
 
 # Set to cronjob to update everyday.  2023 03 17
 # 0 4 * * * /usr/lib/scripts/cronjobs/update_wormbase_header.pl
+#
+# Disabled because Todd is changing stuff that blocks css and images and so on to be linked from
+# wormbase, and the header footer looks messed up.  Raymond and curators okay with freezing this.
+# 2025 07 24
 
 
 use strict;
