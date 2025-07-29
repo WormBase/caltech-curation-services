@@ -20,7 +20,7 @@ my @tables = qw( tfp_genestudied tfp_species tfp_strain tfp_variation tfp_transg
 foreach my $table (@tables) {
   my $outfile = '/usr/caltech_curation_files/pub/kimberly/tfp_for_abc/' . $table . '.tsv';
   open (OUT, ">$outfile") or die "Cannot create $outfile : $!";
-  my $result = $dbh->prepare( "SELECT * FROM $table;" );
+  my $result = $dbh->prepare( "SELECT * FROM $table WHERE joinkey IN (SELECT joinkey FROM afp_version);" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     print OUT qq(WB:WBPaper$row[0]\t$row[1]\n);
