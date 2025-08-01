@@ -23,7 +23,7 @@ foreach my $table (@tables) {
   my $result = $dbh->prepare( "SELECT * FROM $table WHERE joinkey IN (SELECT joinkey FROM afp_version);" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
-    print OUT qq(WB:WBPaper$row[0]\t$row[1]\n);
+    print OUT qq(WB:WBPaper$row[0]\t$row[1]\t$row[2]\n);
   }
   close (OUT) or die "Cannot close $outfile : $!";
 }
