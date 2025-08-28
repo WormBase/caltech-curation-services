@@ -76,51 +76,60 @@ while (my $line = <IN>) {
 }
 close (IN) or die "Cannot close $infile : $!";
 
-my $name = 'catalyticact';
-my $atp = $nameMap{$name};
-
-# Collect all unique rankings from both abc and nnc
-my %all_rankings;
-$all_rankings{$_}++ for keys %{ $abc{$atp}{'ranking'} };
-$all_rankings{$_}++ for keys %{ $nnc{$name}{'ranking'} };
-
-foreach my $ranking (sort keys %all_rankings) {
-  # Initialize counters
-  my ($abc_agree, $abc_disagree, $abc_novalid) = (0, 0, 0);
-  my ($nnc_agree, $nnc_disagree, $nnc_novalid) = (0, 0, 0);
-
-  # Count for abc
-  if (exists $abc{$atp}{'ranking'}{$ranking}) {
-    foreach my $paper (keys %{ $abc{$atp}{'ranking'}{$ranking} }) {
-      if ($cur{$name}{$paper}) {
-        if    ($cur{$name}{$paper} eq 'yes') { $abc_agree++; }
-        elsif ($cur{$name}{$paper} eq 'no')  { $abc_disagree++; }
-        else                                 { $abc_novalid++; }
-      } else {
-        $abc_novalid++;
+foreach my $name (sort keys %nameMap) {
+#   my $name = 'catalyticact';
+  my $atp = $nameMap{$name};
+  
+  # Collect all unique rankings from both abc and nnc
+  my %all_rankings;
+  $all_rankings{$_}++ for keys %{ $abc{$atp}{'ranking'} };
+  $all_rankings{$_}++ for keys %{ $nnc{$name}{'ranking'} };
+  
+  print qq(\n$name\t$atp\n);
+  foreach my $ranking (
+    sort {
+      my @order = qw(HIGH MEDIUM LOW NEG NULL);
+      my %priority = map { $order[$_] => $_ } 0..$#order;
+      ($priority{$a} // 999) <=> ($priority{$b} // 999) || $a cmp $b;
+    } keys %all_rankings
+  ) {
+    # Initialize counters
+    my ($abc_agree, $abc_disagree, $abc_novalid) = (0, 0, 0);
+    my ($nnc_agree, $nnc_disagree, $nnc_novalid) = (0, 0, 0);
+  
+    # Count for abc
+    if (exists $abc{$atp}{'ranking'}{$ranking}) {
+      foreach my $paper (keys %{ $abc{$atp}{'ranking'}{$ranking} }) {
+        if ($cur{$name}{$paper}) {
+          if    ($cur{$name}{$paper} eq 'yes') { $abc_agree++; }
+          elsif ($cur{$name}{$paper} eq 'no')  { $abc_disagree++; }
+          else                                 { $abc_novalid++; }
+        } else {
+          $abc_novalid++;
+        }
       }
     }
-  }
-
-  # Count for nnc
-  if (exists $nnc{$name}{'ranking'}{$ranking}) {
-    foreach my $paper (keys %{ $nnc{$name}{'ranking'}{$ranking} }) {
-      if ($cur{$name}{$paper}) {
-        if    ($cur{$name}{$paper} eq 'yes') { $nnc_agree++; }
-        elsif ($cur{$name}{$paper} eq 'no')  { $nnc_disagree++; }
-        else                                 { $nnc_novalid++; }
-      } else {
-        $nnc_novalid++;
+  
+    # Count for nnc
+    if (exists $nnc{$name}{'ranking'}{$ranking}) {
+      foreach my $paper (keys %{ $nnc{$name}{'ranking'}{$ranking} }) {
+        if ($cur{$name}{$paper}) {
+          if    ($cur{$name}{$paper} eq 'yes') { $nnc_agree++; }
+          elsif ($cur{$name}{$paper} eq 'no')  { $nnc_disagree++; }
+          else                                 { $nnc_novalid++; }
+        } else {
+          $nnc_novalid++;
+        }
       }
     }
+  
+    # Print side-by-side comparison
+    print "$ranking\n";
+    print "abc: count_agree $abc_agree\tcount_disagree $abc_disagree\tcount_novalidation $abc_novalid\n";
+    print "nnc: count_agree $nnc_agree\tcount_disagree $nnc_disagree\tcount_novalidation $nnc_novalid\n";
+    print "\n";
   }
-
-  # Print side-by-side comparison
-  print "$ranking\n";
-  print "abc: count_agree $abc_agree\tcount_disagree $abc_disagree\tcount_novalidation $abc_novalid\n";
-  print "nnc: count_agree $nnc_agree\tcount_disagree $nnc_disagree\tcount_novalidation $nnc_novalid\n";
-  print "\n";
-}
+} 
 
 __END__
 
