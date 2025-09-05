@@ -227,7 +227,8 @@ sub populateFromFilesystem {
 #     my $data    = get $dataUrl;			# to get from Athena or ftp
     my $filepath = $files_path . $file;			# to get from local files
     $/ = undef;
-    open (IN, "<$filepath") or die "Cannot open $filepath : $!";
+#     open (IN, "<$filepath") or die "Cannot open $filepath : $!";
+    open (IN, "<:encoding(UTF-8)", $filepath) or die "Cannot open $filepath : $!";	# account for utf-8 characters in source  2025 09 02
     my $data = <IN>;
     close (IN) or die "Cannot close $filepath : $!";
     $/ = "\n";
