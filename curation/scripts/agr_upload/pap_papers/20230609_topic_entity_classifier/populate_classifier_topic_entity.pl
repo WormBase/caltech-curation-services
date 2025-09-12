@@ -875,34 +875,54 @@ sub populateDatatypesAndABC {
   delete $datatypesAfpCfp{'genesymbol'};                # has svm but no afp / cfp      # added 2021 01 25
   delete $datatypesAfpCfp{'transporter'};               # has svm but no afp / cfp      # added 2021 01 25
   
+  $datatypes{'additionalexpr'}     = 'ATP:0000010';
   $datatypes{'antibody'}           = 'ATP:0000096';
-  $datatypes{'blastomere'}         = 'ATP:0000143';
+# $datatypes{'blastomere'}         = 'ATP:0000143';	# correct mapping, curator doesn't want transferred
   $datatypes{'catalyticact'}       = 'ATP:0000061';
+  $datatypes{'chemicals'}          = 'ATP:0000278';
   $datatypes{'chemphen'}           = 'ATP:0000080';
-  $datatypes{'envphen'}            = 'ATP:0000080';
-  $datatypes{'expression_cluster'} = 'ATP:0000044';
-  $datatypes{'expmosaic'}          = 'ATP:0000034';
+  $datatypes{'covalent'}           = 'ATP:0000061';
+  $datatypes{'domanal'}            = 'ATP:0000019';
+  $datatypes{'envpheno'}           = 'ATP:0000080';
+  $datatypes{'expression'}         = 'ATP:0000041';
+# $datatypes{'expression_cluster'} = 'ATP:0000044';	# correct mapping, curator doesn't want transferred
+# $datatypes{'expmosaic'}          = 'ATP:0000034';	# correct mapping, curator doesn't want transferred
+  $datatypes{'extvariation'}       = 'ATP:0000285';
+  $datatypes{'funccomp'}           = 'ATP:0000071';
   $datatypes{'geneint'}            = 'ATP:0000068';
   $datatypes{'geneprod'}           = 'ATP:0000069';
-  $datatypes{'genereg'}            = 'ATP:0000042';
-  $datatypes{'genesymbol'}         = 'ATP:0000048';
-  $datatypes{'geneticablation'}    = 'ATP:0000032';
-  $datatypes{'geneticmosaic'}      = 'ATP:0000034';
+  $datatypes{'genereg'}            = 'ATP:0000070';
+  $datatypes{'genestudied'}        = 'ATP:0000005';
+  $datatypes{'genesymbol'}         = 'ATP:0000048'; 
+# $datatypes{'geneticablation'}    = 'ATP:0000032';	# correct mapping, curator doesn't want transferred
+# $datatypes{'geneticmosaic'}      = 'ATP:0000034';	# correct mapping, curator doesn't want transferred
   $datatypes{'humandisease'}       = 'ATP:0000152';
-  $datatypes{'laserablation'}      = 'ATP:0000032';
+# $datatypes{'laserablation'}      = 'ATP:0000032';	# correct mapping, curator doesn't want transferred
+  $datatypes{'lsrnai'}             = 'ATP:0000082';
+  $datatypes{'marker'}             = 'ATP:0000010';	# additionalexpr ?
   $datatypes{'newmutant'}          = 'ATP:0000083';
-  $datatypes{'optogenet'}          = 'ATP:0000145';
-  $datatypes{'otherexpr'}          = 'ATP:0000041';
+  $datatypes{'newstrains'}         = 'ATP:0000027';	# not part of strain script
+# $datatypes{'optogenet'}          = 'ATP:0000145';	# correct mapping, curator doesn't want transferred
+  $datatypes{'otherantibody'}      = 'ATP:0000096';
+  $datatypes{'otherexpr'}          = 'ATP:0000041';	# 10 ?
+# $datatypes{'otherspecies'}       = 'ATP:0000123';	# part of species script
+# $datatypes{'otherstrain'}        = 'ATP:0000027';	# part of strain script
+# $datatypes{'othertransgene'}     = 'ATP:0000110';	# part of transgene script
+# $datatypes{'othervariation'}     = 'ATP:0000285';	# part of variation script
   $datatypes{'overexpr'}           = 'ATP:0000084';
-  # $datatypes{'picture'}            = 'no atp, skip';
+# $datatypes{'picture'}            = 'no atp, skip';
   $datatypes{'rnai'}               = 'ATP:0000082';
-  $datatypes{'rnaseq'}             = 'ATP:0000146';
+# $datatypes{'rnaseq'}             = 'ATP:0000146';	# correct mapping, curator doesn't want transferred
   $datatypes{'seqchange'}          = 'ATP:0000056';
+  $datatypes{'seqfeat'}            = 'ATP:0000055';
   $datatypes{'siteaction'}         = 'ATP:0000033';
-  # $datatypes{'strain'}             = 'ATP:0000027     not in WB';
+# $datatypes{'species'}            = 'ATP:0000123';	# part of species script
+# $datatypes{'strain'}             = 'ATP:0000027';	# part of strain script
   $datatypes{'structcorr'}         = 'ATP:0000054';
-  # $datatypes{'timeaction'}         = 'no atp, skip';
+# $datatypes{'timeaction'}         = 'no atp, skip';
+# $datatypes{'transgene'}          = 'ATP:0000110';	# part of transgene script
   $datatypes{'transporter'}        = 'ATP:0000062';
+# $datatypes{'variation'}          = 'ATP:0000285';	# part of variation script
 
 #   &populateAbcXrefSample();
 # PUT THIS BACK, but change to read from db
