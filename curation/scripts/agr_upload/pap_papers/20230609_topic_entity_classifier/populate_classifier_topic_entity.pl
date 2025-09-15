@@ -29,13 +29,14 @@
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
 
 # delete command  2024 08 14 - if more ATP get added later, this needs to be modified.
-# DELETE FROM topic_entity_tag WHERE topic IN ('ATP:0000096', 'ATP:0000143', 'ATP:0000061', 'ATP:0000080', 'ATP:0000080', 'ATP:0000044', 'ATP:0000034', 'ATP:0000068', 'ATP:0000069', 'ATP:0000042', 'ATP:0000048', 'ATP:0000032', 'ATP:0000034', 'ATP:0000152', 'ATP:0000032', 'ATP:0000083', 'ATP:0000145', 'ATP:0000041', 'ATP:0000084', 'ATP:0000082', 'ATP:0000146', 'ATP:0000056', 'ATP:0000033', 'ATP:0000054', 'ATP:0000062') AND topic_entity_tag_source_id IN ( SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE secondary_data_provider_id = ( SELECT mod_id FROM mod WHERE abbreviation = 'WB' ));
+# DELETE FROM topic_entity_tag WHERE topic IN ('ATP:0000096', 'ATP:0000143', 'ATP:0000061', 'ATP:0000080', 'ATP:0000080', 'ATP:0000044', 'ATP:0000034', 'ATP:0000068', 'ATP:0000069', 'ATP:0000042', 'ATP:0000048', 'ATP:0000032', 'ATP:0000034', 'ATP:0000152', 'ATP:0000032', 'ATP:0000083', 'ATP:0000145', 'ATP:0000041', 'ATP:0000084', 'ATP:0000082', 'ATP:0000146', 'ATP:0000056', 'ATP:0000033', 'ATP:0000054', 'ATP:0000062') AND topic_entity_tag_source_id IN ( SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE secondary_data_provider_id = ( SELECT mod_id FROM mod WHERE abbreviation = 'WB' )) AND created_by != 'default_user';
 
 # select command if wanting to check
 # SELECT * FROM topic_entity_tag WHERE topic IN ('ATP:0000096', 'ATP:0000143', 'ATP:0000061', 'ATP:0000080', 'ATP:0000080', 'ATP:0000044', 'ATP:0000034', 'ATP:0000068', 'ATP:0000069', 'ATP:0000042', 'ATP:0000048', 'ATP:0000032', 'ATP:0000034', 'ATP:0000152', 'ATP:0000032', 'ATP:0000083', 'ATP:0000145', 'ATP:0000041', 'ATP:0000084', 'ATP:0000082', 'ATP:0000146', 'ATP:0000056', 'ATP:0000033', 'ATP:0000054', 'ATP:0000062')
 #   AND topic_entity_tag_source_id IN (
 #   SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE secondary_data_provider_id = (
-#   SELECT mod_id FROM mod WHERE abbreviation = 'WB' ));
+#   SELECT mod_id FROM mod WHERE abbreviation = 'WB' ))
+#   AND created_by != 'default_user';
 
 
 
@@ -74,17 +75,18 @@ my $tag_counter = 0;
 my @output_json;
 
 my $mod = 'WB';
-# my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
-my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
+my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
+# my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
 my $okta_token = &generateOktaToken();
 # my $okta_token = 'use_above_when_live';
 
 # my @wbpapers = qw( 00004952 00005199 00026609 00030933 00035427 );
-my @wbpapers = qw( 00004952 00005199 00046571 00057043 00064676 );	# SCRUM-3775
+# my @wbpapers = qw( 00004952 00005199 00046571 00057043 00064676 );	# SCRUM-3775
 # my @wbpapers = qw( 00046571 );
 # my @wbpapers = qw( 00005199 );
 # my @wbpapers = qw( 00057043 );
 # my @wbpapers = qw( 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 00037049 );
+my @wbpapers = qw( 00004952 00031697 00032245 00032467 00032959 00033036 00033406 00034728 00035977 00040400 00053203 00059003 00059712 00060296 00065201 00067387 00067433 00068170 );	# SCRUM-5255
 
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 00037049
@@ -181,7 +183,7 @@ sub outputOaData {
   my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
   my $timestamp = &getPgDate();
   unless ($source_id) {
-    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider\n);
     return;
   }
 #   { "source_type": "professional_biocurator", "source_method": "wormbase_oa", "evidence": "eco_string", "description": "caltech curation tools", "mod_abbreviation": "WB" }
@@ -218,7 +220,7 @@ sub outputAfpCurData {
   my $source_method = 'author_first_pass';
   my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
   unless ($source_id) {
-    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider\n);
     return;
   }
 #   { "source_type": "professional_biocurator", "source_method": "wormbase_curation_status", "evidence": "eco_string", "description": "cur_curdata", "mod_abbreviation": "WB" }
@@ -259,11 +261,11 @@ sub outputAfpAutData {
   my $source_id_ack = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
 
   unless ($source_id_ack) {
-    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider\n);
     return;
   }
   unless ($source_id_afp) {
-    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider\n);
     return;
   }
 #   { "source_type": "professional_biocurator", "source_method": "wormbase_curation_status", "evidence": "eco_string", "description": "cur_curdata", "mod_abbreviation": "WB" }
@@ -458,7 +460,7 @@ sub outputCfpData {
   my $source_method = 'curator_first_pass';
   my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
   unless ($source_id) {
-    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider\n);
     return;
   }
 #   { "source_type": "professional_biocurator", "source_method": "wormbase_curation_status", "evidence": "eco_string", "description": "cur_curdata", "mod_abbreviation": "WB" }
@@ -526,7 +528,7 @@ sub outputCurStrData {
     my $source_method = 'string_matching_antibody';
     my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
     unless ($source_id) {
-      print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+      print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider\n);
       return;
     }
     # only data for 1 source exists, everything has date after 2019 03 22
@@ -645,7 +647,7 @@ sub outputCurSvmData {
       my $source_method = 'svm_' . $datatype;
       my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
       unless ($source_id) {
-        print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+        print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider\n);
         return;
       }
       my %object;
@@ -696,7 +698,7 @@ sub outputCurCurData {
   my $source_method = 'curation_status_form';
   my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
   unless ($source_id) {
-    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider\n);
     return;
   }
 #   { "source_type": "professional_biocurator", "source_method": "wormbase_curation_status", "evidence": "eco_string", "description": "cur_curdata", "mod_abbreviation": "WB" }
@@ -766,6 +768,7 @@ sub getSourceId {
 #   my $url = $baseUrl . 'topic_entity_tag/source/' . $source_type . '/' . $source_method . '/' . $mod;
   # print qq($url\n);
   my $api_json = `curl -X 'GET' $url -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json'`;
+  # print qq($api_json\n);
   my $hash_ref = decode_json $api_json;
   if ($$hash_ref{'topic_entity_tag_source_id'}) {
     my $source_id = $$hash_ref{'topic_entity_tag_source_id'};
@@ -881,7 +884,7 @@ sub populateDatatypesAndABC {
   $datatypes{'catalyticact'}       = 'ATP:0000061';
   $datatypes{'chemicals'}          = 'ATP:0000278';
   $datatypes{'chemphen'}           = 'ATP:0000080';
-  $datatypes{'covalent'}           = 'ATP:0000061';
+# $datatypes{'covalent'}           = 'ATP:0000061';	# kimberly says covered by catalyticact
   $datatypes{'domanal'}            = 'ATP:0000019';
   $datatypes{'envpheno'}           = 'ATP:0000080';
   $datatypes{'expression'}         = 'ATP:0000041';
