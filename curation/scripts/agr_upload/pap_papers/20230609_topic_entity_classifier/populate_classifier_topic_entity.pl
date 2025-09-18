@@ -23,6 +23,8 @@
 #
 # now outputs to error logs, there's a .err.processing for processing error, and .err.<4002|stage|prod> for errors 
 # coming back from ABC.  2024 10 11
+#
+# Adding data_novelty because the API will fail otherwise, but it's not the correct term.  2025 09 17
 
 
 
@@ -202,6 +204,7 @@ sub outputOaData {
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $datatypes{$datatype};
       $object{'topic_entity_tag_source_id'} = $source_id;
+      $object{'data_novelty'}               = 'ATP:0000335';
       $object{'created_by'}                 = 'caltech_pipeline';
       $object{'updated_by'}                 = 'caltech_pipeline';
       $object{'date_created'}               = $timestamp;
@@ -238,6 +241,7 @@ sub outputAfpCurData {
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $datatypes{$datatype};
       $object{'topic_entity_tag_source_id'} = $source_id;
+      $object{'data_novelty'}               = 'ATP:0000335';
       $object{'created_by'}                 = $afpCurData{$datatype}{$joinkey}{curator};
       $object{'updated_by'}                 = $afpCurData{$datatype}{$joinkey}{curator};
       $object{'date_created'}               = $afpCurData{$datatype}{$joinkey}{timestamp};
@@ -291,6 +295,7 @@ sub outputAfpAutData {
         $object{'reference_curie'}            = $wbpToAgr{$joinkey};
         $object{'topic'}                      = $datatypes{$datatype};
         $object{'topic_entity_tag_source_id'} = $source_id;
+        $object{'data_novelty'}               = 'ATP:0000335';
         $object{'created_by'}                 = $aut;
         $object{'updated_by'}                 = $aut;
         $object{'date_created'}               = $afpAutData{$datatype}{$joinkey}{timestamp};
@@ -410,6 +415,7 @@ sub populateTfpData {
 #       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
 #       $object{'topic'}                      = $datatypes{$datatype};
 #       $object{'topic_entity_tag_source_id'} = $source_id;
+#       $object{'data_novelty'}               = 'ATP:0000335';
 #       $object{'created_by'}                 = 'caltech_pipeline';
 #       $object{'updated_by'}                 = 'caltech_pipeline';
 #       $object{'date_created'}               = $tfpData{$datatype}{$joinkey}{timestamp};
@@ -481,6 +487,7 @@ sub outputCfpData {
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $datatypes{$datatype};
       $object{'topic_entity_tag_source_id'} = $source_id;
+      $object{'data_novelty'}               = 'ATP:0000335';
       $object{'created_by'}                 = $cfpData{$datatype}{$joinkey}{curator};
       $object{'updated_by'}                 = $cfpData{$datatype}{$joinkey}{curator};
       $object{'date_created'}               = $cfpData{$datatype}{$joinkey}{timestamp};
@@ -550,6 +557,7 @@ sub outputCurStrData {
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $datatypes{$datatype};
       $object{'topic_entity_tag_source_id'} = $source_id;
+      $object{'data_novelty'}               = 'ATP:0000335';
       $object{'created_by'}                 = 'caltech_pipeline';
       $object{'updated_by'}                 = 'caltech_pipeline';
       $object{'date_created'}               = $strData{$datatype}{$joinkey}{timestamp};
@@ -603,6 +611,7 @@ sub outputCurNncData {
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $datatypes{$datatype};
       $object{'topic_entity_tag_source_id'} = $source_id;
+      $object{'data_novelty'}               = 'ATP:0000335';
       $object{'created_by'}                 = 'caltech_pipeline';
       $object{'updated_by'}                 = 'caltech_pipeline';
       $object{'date_created'}               = $nncData{$datatype}{$joinkey}{date};
@@ -659,6 +668,7 @@ sub outputCurSvmData {
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $datatypes{$datatype};
       $object{'topic_entity_tag_source_id'} = $source_id;
+      $object{'data_novelty'}               = 'ATP:0000335';
       $object{'created_by'}                 = 'caltech_pipeline';
       $object{'updated_by'}                 = 'caltech_pipeline';
       $object{'date_created'}               = $svmData{$datatype}{$joinkey}{date};
@@ -724,6 +734,7 @@ sub outputCurCurData {
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $datatypes{$datatype};
       $object{'topic_entity_tag_source_id'} = $source_id;
+      $object{'data_novelty'}               = 'ATP:0000335';
       $object{'created_by'}                 = $curData{$datatype}{$joinkey}{curator};
       $object{'updated_by'}                 = $curData{$datatype}{$joinkey}{curator};
       $object{'date_created'}               = $curData{$datatype}{$joinkey}{timestamp};
