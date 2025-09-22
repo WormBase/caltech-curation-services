@@ -70,13 +70,14 @@
 
 
 # current queue :
-# Raymond Lee, Scott Cain, Karen Yook, Wen Chen, Mark Quinton-Tulloch, Adam Wright, Juancarlos Chan, Cecilia Nakamura, Stavros Diamantakis, Gary Schindelman, Daniel Wang, Todd Harris, Ranjana Kishore, Paul Davis, Kimberly Van Auken, Chris Grove, Daniela Raciti, Valerio Arnaboldi, Jae Cho. 
+# Raymond Lee, Paulo Nuin, Scott Cain, Karen Yook, Wen Chen, Mark Quinton-Tulloch, Juancarlos Chan, Cecilia Nakamura, Stavros Diamantakis, Gary Schindelman, Daniel Wang, Todd Harris, Ranjana Kishore, Kimberly Van Auken, Chris Grove, Daniela Raciti, Valerio Arnaboldi, Jae Cho. 
 
 use strict;
 use Time::Local;
 
 my @ppl;
 
+push @ppl, "Paulo Nuin";		# 2025 09 22  maybe replacing scott
 push @ppl, "Scott Cain";		# 2014 04 30  added to list
 # push @ppl, "Manuel Luypaert";		# 2020 06 01  added to list	# don't add yet by Kevin  2020 06 01	# don't add at all 2020 09 04
 # push @ppl, "Magdalena Zarowieki";	# 2020 09 04  added to list	# removed 2023 01 19
