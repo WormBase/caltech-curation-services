@@ -235,7 +235,7 @@ sub outputPapAck {
       $object{'entity_id_validation'}       = $entity_id_validation;
       $object{'topic_entity_tag_source_id'} = $source_id;
       $object{'entity'}                     = $taxon;
-#       $object{'data_novelty'}               = $dataNoveltyExisting;
+      $object{'data_novelty'}               = $dataNoveltyExisting;
       if ($papAck{$joinkey}{$taxon}{note}) {
         $object{'note'}                     = $papAck{$joinkey}{$taxon}{note}; }
       $object{'created_by'}                 = $papAck{$joinkey}{$taxon}{curator};
@@ -277,7 +277,7 @@ sub outputPapScript {
       $object{'entity_id_validation'}       = $entity_id_validation;
       $object{'topic_entity_tag_source_id'} = $source_id;
       $object{'entity'}                     = $taxon;
-#       $object{'data_novelty'}               = $dataNoveltyExisting;
+      $object{'data_novelty'}               = $dataNoveltyExisting;
       if ($papScript{$joinkey}{$taxon}{note}) {
         $object{'note'}                     = $papScript{$joinkey}{$taxon}{note}; }
       $object{'created_by'}                 = $papScript{$joinkey}{$taxon}{curator};
@@ -317,7 +317,7 @@ sub outputPapEditor {
       $object{'entity_id_validation'}       = $entity_id_validation;
       $object{'topic_entity_tag_source_id'} = $source_id;
       $object{'entity'}                     = $taxon;
-#       $object{'data_novelty'}               = $dataNoveltyExisting;
+      $object{'data_novelty'}               = $dataNoveltyExisting;
       if ($papEditor{$joinkey}{$taxon}{note}) {
         $object{'note'}                     = $papEditor{$joinkey}{$taxon}{note}; }
       $object{'created_by'}                 = $papEditor{$joinkey}{$taxon}{curator};
@@ -357,7 +357,7 @@ sub outputTfpSpecies {
       $object{'entity_id_validation'}       = $entity_id_validation;
       $object{'topic_entity_tag_source_id'} = $source_id;
       $object{'entity'}                     = $taxon;
-#       $object{'data_novelty'}               = $dataNoveltyExisting;
+      $object{'data_novelty'}               = $dataNoveltyExisting;
       if ($tfpSpecies{$joinkey}{$taxon}{note}) {
         $object{'note'}                     = $tfpSpecies{$joinkey}{$taxon}{note}; }
       $object{'created_by'}                 = $tfpSpecies{$joinkey}{$taxon}{curator};
@@ -423,7 +423,7 @@ sub outputNegativeData {
         # $object{'wbpaper'}                  = $joinkey;                       # for debugging
         $object{'entity'}                     = $taxon;
         $object{'species'}                    = $taxon;
-#         $object{'data_novelty'}               = $dataNoveltyExisting;
+        $object{'data_novelty'}               = $dataNoveltyExisting;
         if ($output_format eq 'json') {
           push @output_json, \%object; }
         else {
@@ -456,7 +456,7 @@ sub outputNegativeData {
       $object{'created_by'}                   = $aut;
       $object{'updated_by'}                   = $aut;
       $object{'topic'}                        = $speciesTopic;
-#       $object{'data_novelty'}                 = $dataNoveltyParent;
+      $object{'data_novelty'}                 = $dataNoveltyParent;
       if ($output_format eq 'json') {
         push @output_json, \%object; }
       else {
@@ -482,7 +482,7 @@ sub outputNegativeData {
     $object{'created_by'}                   = 'ACKnowledge_pipeline';
     $object{'updated_by'}                   = 'ACKnowledge_pipeline';
     $object{'topic'}                        = $speciesTopic;
-#     $object{'data_novelty'}                 = $dataNoveltyParent;
+    $object{'data_novelty'}                 = $dataNoveltyParent;
     if ($output_format eq 'json') {
       push @output_json, \%object; }
     else {
