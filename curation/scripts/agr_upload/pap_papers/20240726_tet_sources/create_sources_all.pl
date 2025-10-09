@@ -17,6 +17,8 @@
 # new source added by Kimberly on 2024 07 23 for afp_transgene extraction.  2024 07 23
 #
 # aggregate topic, gene, transgenic_allele into a single script for sources.  species are already on abc prod.  2024 07 26
+#
+# new topic source for genetics_g3_linking_curator.  2025 10 09
 
 # ./create_sources.pl
 
@@ -159,6 +161,19 @@ unless ($source_id) {
   $source_json{source_evidence_assertion}	= $source_evidence_assertion;
   $source_json{source_method}   		= $source_method;
   $source_json{description}     		= 'String matching algorithm that identifies relevant words and/or phrases in C. elegans references to identify references describing production and/or use of antibodies.';
+  my $source_json = encode_json \%source_json;
+  &createSource($source_json);
+}
+
+$source_evidence_assertion = 'ATP:0000036';
+$source_method = 'genetics_g3_linking_curator';
+$source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+unless ($source_id) { 
+  my %source_json = %{ dclone (\%source_default) };
+  $source_json{validation_type}			= 'professional_biocurator';
+  $source_json{source_evidence_assertion}	= $source_evidence_assertion;
+  $source_json{source_method}   		= $source_method;
+  $source_json{description}     		= 'Association of classical alleles and strains with references via the collaboration with the Genetics Society of America (GSA) to link entities with their respective pages at WormBase.';
   my $source_json = encode_json \%source_json;
   &createSource($source_json);
 }
