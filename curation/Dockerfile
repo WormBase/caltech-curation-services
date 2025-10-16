@@ -29,6 +29,7 @@ RUN chmod +x /bin/agr_referencefile_bulk_uploader
 COPY curation/website/apache_conf/apache2.conf /etc/apache2/apache2.conf
 COPY curation/website/apache_conf/000-default.conf /etc/apache2/sites-enabled/000-default.conf
 COPY curation/website/apache_conf/000-default-le-ssl.conf /etc/apache2/sites-enabled/000-default-le-ssl.conf
+COPY curation/website/apache_conf/caltech-wormbase.conf /etc/apache2/sites-enabled/caltech-wormbase.conf
 COPY curation/website/apache_conf/options-ssl-apache.conf /etc/apache2/options-ssl-apache.conf
 COPY curation/website/apache_conf/httpd.conf /etc/apache2/httpd.conf
 COPY curation/scripts/perl_modules/Jex.pm /usr/local/lib/perl5/5.18.4/Jex.pm
