@@ -7,6 +7,8 @@
 # Wen only wants html output.  Link to FTP URL.  Topics are optional.  2017 07 26
 # 
 # Dockerized.  2023 09 15
+#
+# split tissues like topics.  2025 10 22
 
 # http://tazendra.caltech.edu/~azurebrd/cgi-bin/forms/expression_dataset_locator.cgi
 # https://caltech-curation.textpressolab.com/pub/cgi-bin/forms/expression_dataset_locator.cgi
@@ -85,11 +87,11 @@ sub querySpell {
   my $anyTopicOk = 0;
   unless (scalar @methods > 0) { (@methods) = sort keys %{ $hash{method}  };  }
   unless (scalar @species > 0) { (@species) = sort keys %{ $hash{species} };  }
-  unless (scalar @tissues > 0) { (@tissues) = sort keys %{ $hash{tissue}  };  }
+  unless (scalar @tissues > 0) { (@tissues) = sort keys %{ $hash{tissues}  };  }
   unless (scalar @topics > 0)  { (@topics)  = sort keys %{ $hash{topics}  }; $anyTopicOk++; }
 #   if (scalar @methods > 0) { $requiredFields++; } else { (@methods) = sort keys %{ $hash{method}  };  }
 #   if (scalar @species > 0) { $requiredFields++; } else { (@species) = sort keys %{ $hash{species} };  }
-#   if (scalar @tissues > 0) { $requiredFields++; } else { (@tissues) = sort keys %{ $hash{tissue}  };  }
+#   if (scalar @tissues > 0) { $requiredFields++; } else { (@tissues) = sort keys %{ $hash{tissues}  };  }
 #   if (scalar @topics > 0)  { $requiredFields++; } else { (@topics)  = sort keys %{ $hash{topics}  };  }
 #   $requiredFields = 4;
 #   print qq(M $method<br/>\n);
@@ -110,7 +112,7 @@ sub querySpell {
   foreach my $species (@species) { 
     foreach my $line (keys %{ $hash{species}{$species} }) { $lines{$line}{species}++; } }
   foreach my $tissue (@tissues) { 
-    foreach my $line (keys %{ $hash{tissue}{$tissue} }) { $lines{$line}{tissue}++; } }
+    foreach my $line (keys %{ $hash{tissues}{$tissue} }) { $lines{$line}{tissue}++; } }
   foreach my $topic (@topics) {   
     foreach my $line (keys %{ $hash{topics}{$topic} }) { $lines{$line}{topic}++; } }
   foreach my $line (sort keys %lines) {
@@ -186,7 +188,7 @@ sub showSpellForm {
 
 #   print qq(3. Tissue, optionally specify Tissue Specific, Whole Animal, or Both.<br/>\n);
   print qq(3. Choose Tissue Specificity<br/>\n);
-  foreach my $tissue (sort keys %{ $hash{tissue} }) { print qq(<input type="checkbox" name="tissue" value="$tissue"> $tissue<br/>); }
+  foreach my $tissue (sort keys %{ $hash{tissues} }) { print qq(<input type="checkbox" name="tissue" value="$tissue"> $tissue<br/>); }
   print qq(<br/>\n);
 
 #   print qq(4. Topic, optionally choose one or more topics.<br/>\n);
@@ -227,13 +229,15 @@ sub processFile {
   while (my $line = <IN>) {
     chomp $line;
     $count++;
-    my ($dataid, $dataname, $paper, $method, $species, $tissue, $topics, $title, $url) = split/\t/, $line;
+    my ($dataid, $dataname, $paper, $method, $species, $tissues, $topics, $title, $url) = split/\t/, $line;
     if ($url) {
       $line =~ s/$url/<a href="$url">$url<\/a>/; }
     $hash{line}{$count} = $line;
     $hash{method}{$method}{$count}++;
     $hash{species}{$species}{$count}++;
-    $hash{tissue}{$tissue}{$count}++;
+#     $hash{tissue}{$tissue}{$count}++;
+    my (@tissues) = split/\|/, $tissues;
+    foreach my $tissue (@tissues) { $hash{tissues}{$tissue}{$count}++; }
 #     if ($topics) { $hash{topics}{$topics}{$count}++; }
 #     $hash{topics}{$topics}{$count}++;
     my (@topics) = split/\|/, $topics;
