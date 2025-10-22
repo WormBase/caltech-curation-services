@@ -41,6 +41,8 @@
 # when doing output deriveValidPap.  2025 06 04
 #
 # species only in ACK, not old afp, do not need afp_version nor timestamp restriction.  2025 06 06
+#
+# added data_novelty for ABC  but not sure if we should populate this on cronjob tomorrow, so commented out.  2025 09 12
 
 
 # cronjob (TODO change when)
@@ -83,6 +85,7 @@ my $outDir = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . "/postgres/agr_upload/
 # print OUT qq($start_time\n);
 # close (OUT) or die "Cannot close to $outfile : $!";
 
+# PUT THIS BACK
 # my $destination = '4002';
 # my $destination = 'stage';
 my $destination = 'prod';
@@ -96,6 +99,7 @@ if ($destination eq 'prod') {
 if ($ENV{ENV_STATE} ne 'prod') { die; }		# cronjob should only run from caltech prod
 
 
+# PUT THIS BACK
 # my $output_format = 'json';
 my $output_format = 'api';
 my $tag_counter = 0;
@@ -168,6 +172,8 @@ my %afpNegSpeciesEntities;
 my $speciesTopic = 'ATP:0000123';	# species	# 2024 04 29
 my $entityType = 'ATP:0000123';		# species
 my $entity_id_validation = 'alliance';
+my $dataNoveltyExisting = 'ATP:0000334';	# existing data
+my $dataNoveltyParent = 'ATP:0000335';		# parent term
 
 # foreach my $joinkey (@wbpapers) { $chosenPapers{$joinkey}++; }
 $chosenPapers{all}++;
@@ -231,6 +237,7 @@ sub outputPapAck {
       $object{'entity_id_validation'}       = $entity_id_validation;
       $object{'topic_entity_tag_source_id'} = $source_id;
       $object{'entity'}                     = $taxon;
+      $object{'data_novelty'}               = $dataNoveltyExisting;
       if ($papAck{$joinkey}{$taxon}{note}) {
         $object{'note'}                     = $papAck{$joinkey}{$taxon}{note}; }
       $object{'created_by'}                 = $papAck{$joinkey}{$taxon}{curator};
@@ -272,6 +279,7 @@ sub outputPapScript {
       $object{'entity_id_validation'}       = $entity_id_validation;
       $object{'topic_entity_tag_source_id'} = $source_id;
       $object{'entity'}                     = $taxon;
+      $object{'data_novelty'}               = $dataNoveltyExisting;
       if ($papScript{$joinkey}{$taxon}{note}) {
         $object{'note'}                     = $papScript{$joinkey}{$taxon}{note}; }
       $object{'created_by'}                 = $papScript{$joinkey}{$taxon}{curator};
@@ -311,6 +319,7 @@ sub outputPapEditor {
       $object{'entity_id_validation'}       = $entity_id_validation;
       $object{'topic_entity_tag_source_id'} = $source_id;
       $object{'entity'}                     = $taxon;
+      $object{'data_novelty'}               = $dataNoveltyExisting;
       if ($papEditor{$joinkey}{$taxon}{note}) {
         $object{'note'}                     = $papEditor{$joinkey}{$taxon}{note}; }
       $object{'created_by'}                 = $papEditor{$joinkey}{$taxon}{curator};
@@ -350,6 +359,7 @@ sub outputTfpSpecies {
       $object{'entity_id_validation'}       = $entity_id_validation;
       $object{'topic_entity_tag_source_id'} = $source_id;
       $object{'entity'}                     = $taxon;
+      $object{'data_novelty'}               = $dataNoveltyExisting;
       if ($tfpSpecies{$joinkey}{$taxon}{note}) {
         $object{'note'}                     = $tfpSpecies{$joinkey}{$taxon}{note}; }
       $object{'created_by'}                 = $tfpSpecies{$joinkey}{$taxon}{curator};
@@ -415,6 +425,7 @@ sub outputNegativeData {
         # $object{'wbpaper'}                  = $joinkey;                       # for debugging
         $object{'entity'}                     = $taxon;
         $object{'species'}                    = $taxon;
+        $object{'data_novelty'}               = $dataNoveltyExisting;
         if ($output_format eq 'json') {
           push @output_json, \%object; }
         else {
@@ -447,6 +458,7 @@ sub outputNegativeData {
       $object{'created_by'}                   = $aut;
       $object{'updated_by'}                   = $aut;
       $object{'topic'}                        = $speciesTopic;
+      $object{'data_novelty'}                 = $dataNoveltyParent;
       if ($output_format eq 'json') {
         push @output_json, \%object; }
       else {
@@ -472,6 +484,7 @@ sub outputNegativeData {
     $object{'created_by'}                   = 'ACKnowledge_pipeline';
     $object{'updated_by'}                   = 'ACKnowledge_pipeline';
     $object{'topic'}                        = $speciesTopic;
+    $object{'data_novelty'}                 = $dataNoveltyParent;
     if ($output_format eq 'json') {
       push @output_json, \%object; }
     else {
@@ -533,7 +546,10 @@ sub populateAfpLasttouched {
 sub populatePapSpecies {
 #  joinkey | pap_species | pap_order | pap_curator | pap_timestamp | pap_evidence
 #   $result = $dbh->prepare( "SELECT joinkey, pap_species, pap_timestamp, pap_curator, pap_evidence FROM pap_species WHERE pap_timestamp > now() - interval '1 week'");
+# PUT THIS BACK
   $result = $dbh->prepare( "SELECT joinkey, pap_species, pap_timestamp, pap_curator, pap_evidence FROM pap_species WHERE pap_timestamp > now() - interval '2 weeks'");
+#   $result = $dbh->prepare( "SELECT joinkey, pap_species, pap_timestamp, pap_curator, pap_evidence FROM pap_species WHERE pap_timestamp > '2025-08-02 00:00:01'");
+#   $result = $dbh->prepare( "SELECT joinkey, pap_species, pap_timestamp, pap_curator, pap_evidence FROM pap_species ");
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
@@ -587,7 +603,10 @@ sub populateTaxonNameToId {
 sub populateTfpSpecies {
   my %noTaxon;
 #   $result = $dbh->prepare( "SELECT joinkey, tfp_species, tfp_timestamp FROM tfp_species WHERE tfp_timestamp > now() - interval '1 week'");
+# PUT THIS BACK
   $result = $dbh->prepare( "SELECT joinkey, tfp_species, tfp_timestamp FROM tfp_species WHERE tfp_timestamp > now() - interval '2 weeks'");
+#   $result = $dbh->prepare( "SELECT joinkey, tfp_species, tfp_timestamp FROM tfp_species WHERE tfp_timestamp > '2025-08-02 00:00:01'");
+#   $result = $dbh->prepare( "SELECT joinkey, tfp_species, tfp_timestamp FROM tfp_species");
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
@@ -618,13 +637,19 @@ sub populateTfpSpecies {
 sub populateNegativeData {
 #   $result = $dbh->prepare( "SELECT * FROM afp_species WHERE afp_species = '' AND afp_timestamp > '2019-03-22 00:00' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2019-03-22 00:00');" );
 #   $result = $dbh->prepare( "SELECT * FROM afp_species WHERE afp_species = '' AND afp_timestamp > now() - interval '2 weeks' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2019-03-22 00:00');" );
+# PUT THIS BACK
   $result = $dbh->prepare( "SELECT * FROM afp_species WHERE afp_species = '' AND afp_timestamp > now() - interval '2 weeks' AND joinkey IN (SELECT joinkey FROM afp_lasttouched);" );
+#   $result = $dbh->prepare( "SELECT * FROM afp_species WHERE afp_species = '' AND afp_timestamp > '2025-08-02 00:00:01' AND joinkey IN (SELECT joinkey FROM afp_lasttouched);" );
+#   $result = $dbh->prepare( "SELECT * FROM afp_species WHERE afp_species = '' AND joinkey IN (SELECT joinkey FROM afp_lasttouched);" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
     $ackNegSpeciesTopic{$row[0]} = $row[2]; }
 
+# PUT THIS BACK
   $result = $dbh->prepare( "SELECT * FROM tfp_species WHERE tfp_species = '' AND tfp_timestamp > now() - interval '2 weeks';" );
+#   $result = $dbh->prepare( "SELECT * FROM tfp_species WHERE tfp_species = '' AND tfp_timestamp > '2025-08-02 00:00:01';" );
+#   $result = $dbh->prepare( "SELECT * FROM tfp_species WHERE tfp_species = '';" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
@@ -649,7 +674,10 @@ sub populateNegativeData {
   my %afpSpeciesForNegation;
 #   $result = $dbh->prepare( "SELECT * FROM afp_species WHERE afp_species != '' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2019-03-22 00:00');" );
   # get all papers that have an afp_lasttouched in the last couple of weeks.
+# PUT THIS BACK
   $result = $dbh->prepare( "SELECT * FROM afp_species WHERE afp_species != '' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > now() - interval '2 weeks');" );
+#   $result = $dbh->prepare( "SELECT * FROM afp_species WHERE afp_species != '' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2025-08-02 00:00:01');" );
+#   $result = $dbh->prepare( "SELECT * FROM afp_species WHERE afp_species != '' AND joinkey IN (SELECT joinkey FROM afp_lasttouched);" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});

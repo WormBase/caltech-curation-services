@@ -23,19 +23,27 @@
 #
 # now outputs to error logs, there's a .err.processing for processing error, and .err.<4002|stage|prod> for errors 
 # coming back from ABC.  2024 10 11
+#
+# Adding data_novelty because the API will fail otherwise, but it's not the correct term.  2025 09 17
+#
+# Added processing for extvariation.  Also afp_newstrains which does not have cfp or tfp.
+# Loading datatype to atp mappings from flatfile that Kimberly can manage, but manually updated the database delete command.
+# Fixed a bug that was looping getting the ABC source for each paper for a couple of sources.
 
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
 
 # delete command  2024 08 14 - if more ATP get added later, this needs to be modified.
-# DELETE FROM topic_entity_tag WHERE topic IN ('ATP:0000096', 'ATP:0000143', 'ATP:0000061', 'ATP:0000080', 'ATP:0000080', 'ATP:0000044', 'ATP:0000034', 'ATP:0000068', 'ATP:0000069', 'ATP:0000042', 'ATP:0000048', 'ATP:0000032', 'ATP:0000034', 'ATP:0000152', 'ATP:0000032', 'ATP:0000083', 'ATP:0000145', 'ATP:0000041', 'ATP:0000084', 'ATP:0000082', 'ATP:0000146', 'ATP:0000056', 'ATP:0000033', 'ATP:0000054', 'ATP:0000062') AND topic_entity_tag_source_id IN ( SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE secondary_data_provider_id = ( SELECT mod_id FROM mod WHERE abbreviation = 'WB' ));
+# DELETE FROM topic_entity_tag WHERE topic IN ('ATP:0000005', 'ATP:0000027', 'ATP:0000033', 'ATP:0000041', 'ATP:0000048', 'ATP:0000054', 'ATP:0000055', 'ATP:0000056', 'ATP:0000060', 'ATP:0000061', 'ATP:0000062', 'ATP:0000068', 'ATP:0000069', 'ATP:0000070', 'ATP:0000071', 'ATP:0000082', 'ATP:0000083', 'ATP:0000084', 'ATP:0000089', 'ATP:0000096', 'ATP:0000110', 'ATP:0000123', 'ATP:0000152', 'ATP:0000278', 'ATP:0000285', 'ATP:0000349', 'ATP:0000350', 'ATP:0000351', 'ATP:0000352') AND topic_entity_tag_source_id IN ( SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE secondary_data_provider_id = ( SELECT mod_id FROM mod WHERE abbreviation = 'WB' )) AND topic_entity_tag_source_id NOT IN (SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE source_method = 'abc_document_classifier') AND created_by != 'default_user';
 
 # select command if wanting to check
-# SELECT * FROM topic_entity_tag WHERE topic IN ('ATP:0000096', 'ATP:0000143', 'ATP:0000061', 'ATP:0000080', 'ATP:0000080', 'ATP:0000044', 'ATP:0000034', 'ATP:0000068', 'ATP:0000069', 'ATP:0000042', 'ATP:0000048', 'ATP:0000032', 'ATP:0000034', 'ATP:0000152', 'ATP:0000032', 'ATP:0000083', 'ATP:0000145', 'ATP:0000041', 'ATP:0000084', 'ATP:0000082', 'ATP:0000146', 'ATP:0000056', 'ATP:0000033', 'ATP:0000054', 'ATP:0000062')
-#   AND topic_entity_tag_source_id IN (
-#   SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE secondary_data_provider_id = (
-#   SELECT mod_id FROM mod WHERE abbreviation = 'WB' ));
+#  SELECT * FROM topic_entity_tag WHERE topic IN ('ATP:0000005', 'ATP:0000027', 'ATP:0000033', 'ATP:0000041', 'ATP:0000048', 'ATP:0000054', 'ATP:0000055', 'ATP:0000056', 'ATP:0000060', 'ATP:0000061', 'ATP:0000062', 'ATP:0000068', 'ATP:0000069', 'ATP:0000070', 'ATP:0000071', 'ATP:0000082', 'ATP:0000083', 'ATP:0000084', 'ATP:0000089', 'ATP:0000096', 'ATP:0000110', 'ATP:0000123', 'ATP:0000152', 'ATP:0000278', 'ATP:0000285', 'ATP:0000349', 'ATP:0000350', 'ATP:0000351', 'ATP:0000352')
+#    AND topic_entity_tag_source_id IN (
+#    SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE secondary_data_provider_id = (
+#    SELECT mod_id FROM mod WHERE abbreviation = 'WB' ))
+#    AND topic_entity_tag_source_id NOT IN (SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE source_method = 'abc_document_classifier')
+#    AND created_by != 'default_user';
 
 
 
@@ -74,17 +82,19 @@ my $tag_counter = 0;
 my @output_json;
 
 my $mod = 'WB';
-# my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
-my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
+my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
+# my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
 my $okta_token = &generateOktaToken();
 # my $okta_token = 'use_above_when_live';
 
 # my @wbpapers = qw( 00004952 00005199 00026609 00030933 00035427 );
-my @wbpapers = qw( 00004952 00005199 00046571 00057043 00064676 );	# SCRUM-3775
+# my @wbpapers = qw( 00004952 00005199 00046571 00057043 00064676 );	# SCRUM-3775
 # my @wbpapers = qw( 00046571 );
 # my @wbpapers = qw( 00005199 );
 # my @wbpapers = qw( 00057043 );
 # my @wbpapers = qw( 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 00037049 );
+# my @wbpapers = qw( 00004952 00031697 00032245 00032467 00032959 00033036 00033406 00034728 00035977 00040400 00053203 00059003 00059712 00060296 00065201 00067387 00067433 00068170 );	# SCRUM-5255
+my @wbpapers = qw( 00001084 00004952 00031697 00032245 00032467 00032959 00033036 00033406 00034728 00035977 00040400 00053203 00059003 00059712 00060296 00065201 00067387 00067433 00068170 00068343 );	# 2025 10 09
 
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 00037049
@@ -181,7 +191,7 @@ sub outputOaData {
   my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
   my $timestamp = &getPgDate();
   unless ($source_id) {
-    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider\n);
     return;
   }
 #   { "source_type": "professional_biocurator", "source_method": "wormbase_oa", "evidence": "eco_string", "description": "caltech curation tools", "mod_abbreviation": "WB" }
@@ -200,6 +210,7 @@ sub outputOaData {
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $datatypes{$datatype};
       $object{'topic_entity_tag_source_id'} = $source_id;
+      $object{'data_novelty'}               = 'ATP:0000335';
       $object{'created_by'}                 = 'caltech_pipeline';
       $object{'updated_by'}                 = 'caltech_pipeline';
       $object{'date_created'}               = $timestamp;
@@ -218,7 +229,7 @@ sub outputAfpCurData {
   my $source_method = 'author_first_pass';
   my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
   unless ($source_id) {
-    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider\n);
     return;
   }
 #   { "source_type": "professional_biocurator", "source_method": "wormbase_curation_status", "evidence": "eco_string", "description": "cur_curdata", "mod_abbreviation": "WB" }
@@ -236,6 +247,7 @@ sub outputAfpCurData {
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $datatypes{$datatype};
       $object{'topic_entity_tag_source_id'} = $source_id;
+      $object{'data_novelty'}               = 'ATP:0000335';
       $object{'created_by'}                 = $afpCurData{$datatype}{$joinkey}{curator};
       $object{'updated_by'}                 = $afpCurData{$datatype}{$joinkey}{curator};
       $object{'date_created'}               = $afpCurData{$datatype}{$joinkey}{timestamp};
@@ -253,17 +265,24 @@ sub outputAfpAutData {
   my $source_evidence_assertion = 'ATP:0000035';
   my $source_method = 'author_first_pass';
   my $source_id_afp = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+  unless ($source_id_afp) {
+    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider\n);
+    return;
+  }
 
   $source_evidence_assertion = 'ATP:0000035';
   $source_method = 'ACKnowledge_form';
   my $source_id_ack = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
-
   unless ($source_id_ack) {
-    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider\n);
     return;
   }
-  unless ($source_id_afp) {
-    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+
+  $source_evidence_assertion = 'ATP:0000036';
+  $source_method = 'genetics_g3_linking_curator';
+  my $source_id_genetics = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+  unless ($source_id_genetics) {
+    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider\n);
     return;
   }
 #   { "source_type": "professional_biocurator", "source_method": "wormbase_curation_status", "evidence": "eco_string", "description": "cur_curdata", "mod_abbreviation": "WB" }
@@ -282,6 +301,7 @@ sub outputAfpAutData {
         if ($afpAutData{$datatype}{$joinkey}{negated}) { $negated = TRUE; }
         my $source_id = $source_id_afp;
         if ($afpAutData{$datatype}{$joinkey}{source} eq 'ack') { $source_id = $source_id_ack; }
+        if ( ($datatype eq 'extvariation') || ($datatype eq 'newstrains') ) { $source_id = $source_id_genetics; }
         if ($afpAutData{$datatype}{$joinkey}{note}) {
           $object{'note'}                     = $afpAutData{$datatype}{$joinkey}{note}; }
         $object{'negated'}                    = $negated;
@@ -289,6 +309,7 @@ sub outputAfpAutData {
         $object{'reference_curie'}            = $wbpToAgr{$joinkey};
         $object{'topic'}                      = $datatypes{$datatype};
         $object{'topic_entity_tag_source_id'} = $source_id;
+        $object{'data_novelty'}               = 'ATP:0000335';
         $object{'created_by'}                 = $aut;
         $object{'updated_by'}                 = $aut;
         $object{'date_created'}               = $afpAutData{$datatype}{$joinkey}{timestamp};
@@ -375,6 +396,7 @@ sub populateAfpLasttouched {
 sub populateTfpData {
   return if (%tfpData);		# this called for generating tfpdata but also for afpdata, but don't need to read it twice if already has data
   foreach my $datatype (sort keys %datatypesAfpCfp) {
+    next if ($datatype eq 'newstrains');	# has afp but not tfp  2025 10 09
     $result = $dbh->prepare( "SELECT joinkey, tfp_$datatypesAfpCfp{$datatype}, tfp_timestamp FROM tfp_$datatypesAfpCfp{$datatype}" );
     $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
     while (my @row = $result->fetchrow) {
@@ -408,6 +430,7 @@ sub populateTfpData {
 #       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
 #       $object{'topic'}                      = $datatypes{$datatype};
 #       $object{'topic_entity_tag_source_id'} = $source_id;
+#       $object{'data_novelty'}               = 'ATP:0000335';
 #       $object{'created_by'}                 = 'caltech_pipeline';
 #       $object{'updated_by'}                 = 'caltech_pipeline';
 #       $object{'date_created'}               = $tfpData{$datatype}{$joinkey}{timestamp};
@@ -458,7 +481,7 @@ sub outputCfpData {
   my $source_method = 'curator_first_pass';
   my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
   unless ($source_id) {
-    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider\n);
     return;
   }
 #   { "source_type": "professional_biocurator", "source_method": "wormbase_curation_status", "evidence": "eco_string", "description": "cur_curdata", "mod_abbreviation": "WB" }
@@ -479,6 +502,7 @@ sub outputCfpData {
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $datatypes{$datatype};
       $object{'topic_entity_tag_source_id'} = $source_id;
+      $object{'data_novelty'}               = 'ATP:0000335';
       $object{'created_by'}                 = $cfpData{$datatype}{$joinkey}{curator};
       $object{'updated_by'}                 = $cfpData{$datatype}{$joinkey}{curator};
       $object{'date_created'}               = $cfpData{$datatype}{$joinkey}{timestamp};
@@ -493,6 +517,7 @@ sub outputCfpData {
 
 sub populateCfpData {
   foreach my $datatype (sort keys %datatypesAfpCfp) {
+    next if ($datatype eq 'newstrains');	# has afp but not cfp  2025 10 09
     $result = $dbh->prepare( "SELECT joinkey, cfp_$datatypesAfpCfp{$datatype}, cfp_curator, cfp_timestamp AT TIME ZONE 'UTC' FROM cfp_$datatypesAfpCfp{$datatype}" );
     $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
     while (my @row = $result->fetchrow) {
@@ -526,7 +551,7 @@ sub outputCurStrData {
     my $source_method = 'string_matching_antibody';
     my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
     unless ($source_id) {
-      print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+      print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider\n);
       return;
     }
     # only data for 1 source exists, everything has date after 2019 03 22
@@ -548,6 +573,7 @@ sub outputCurStrData {
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $datatypes{$datatype};
       $object{'topic_entity_tag_source_id'} = $source_id;
+      $object{'data_novelty'}               = 'ATP:0000335';
       $object{'created_by'}                 = 'caltech_pipeline';
       $object{'updated_by'}                 = 'caltech_pipeline';
       $object{'date_created'}               = $strData{$datatype}{$joinkey}{timestamp};
@@ -581,17 +607,17 @@ sub outputCurNncData {
       print PERR qq(no topic for cur_nncdata $datatype\n); 
       next;
     }
+    my $data_provider = $mod;
+    my $secondary_data_provider = $mod;
+    my $source_evidence_assertion = 'ECO:0008025';
+    my $source_method = 'nnc_' . $datatype;
+    my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    unless ($source_id) {
+      print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+      return;
+    }
 
     foreach my $joinkey (sort keys %{ $nncData{$datatype} }) {
-      my $data_provider = $mod;
-      my $secondary_data_provider = $mod;
-      my $source_evidence_assertion = 'ECO:0008025';
-      my $source_method = 'nnc_' . $datatype;
-      my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
-      unless ($source_id) {
-        print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
-        return;
-      }
       my %object;
       my $negated = FALSE;  
       if ($nncData{$datatype}{$joinkey}{result} eq 'NEG') { $negated = TRUE; }
@@ -601,6 +627,7 @@ sub outputCurNncData {
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $datatypes{$datatype};
       $object{'topic_entity_tag_source_id'} = $source_id;
+      $object{'data_novelty'}               = 'ATP:0000335';
       $object{'created_by'}                 = 'caltech_pipeline';
       $object{'updated_by'}                 = 'caltech_pipeline';
       $object{'date_created'}               = $nncData{$datatype}{$joinkey}{date};
@@ -638,16 +665,16 @@ sub outputCurSvmData {
       print PERR qq(no topic for cur_svmdata $datatype\n); 
       next;
     }
+    my $data_provider = $mod;
+    my $secondary_data_provider = $mod;
+    my $source_evidence_assertion = 'ECO:0008019';
+    my $source_method = 'svm_' . $datatype;
+    my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    unless ($source_id) {
+      print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider\n);
+      return;
+    }
     foreach my $joinkey (sort keys %{ $svmData{$datatype} }) {
-      my $data_provider = $mod;
-      my $secondary_data_provider = $mod;
-      my $source_evidence_assertion = 'ECO:0008019';
-      my $source_method = 'svm_' . $datatype;
-      my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
-      unless ($source_id) {
-        print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
-        return;
-      }
       my %object;
       my $negated = FALSE;  
       if ($svmData{$datatype}{$joinkey}{result} eq 'NEG') { $negated = TRUE; }
@@ -657,6 +684,7 @@ sub outputCurSvmData {
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $datatypes{$datatype};
       $object{'topic_entity_tag_source_id'} = $source_id;
+      $object{'data_novelty'}               = 'ATP:0000335';
       $object{'created_by'}                 = 'caltech_pipeline';
       $object{'updated_by'}                 = 'caltech_pipeline';
       $object{'date_created'}               = $svmData{$datatype}{$joinkey}{date};
@@ -696,7 +724,7 @@ sub outputCurCurData {
   my $source_method = 'curation_status_form';
   my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
   unless ($source_id) {
-    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider\n);
     return;
   }
 #   { "source_type": "professional_biocurator", "source_method": "wormbase_curation_status", "evidence": "eco_string", "description": "cur_curdata", "mod_abbreviation": "WB" }
@@ -722,6 +750,7 @@ sub outputCurCurData {
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $datatypes{$datatype};
       $object{'topic_entity_tag_source_id'} = $source_id;
+      $object{'data_novelty'}               = 'ATP:0000335';
       $object{'created_by'}                 = $curData{$datatype}{$joinkey}{curator};
       $object{'updated_by'}                 = $curData{$datatype}{$joinkey}{curator};
       $object{'date_created'}               = $curData{$datatype}{$joinkey}{timestamp};
@@ -764,8 +793,9 @@ sub getSourceId {
   my $url = $baseUrl . 'topic_entity_tag/source/' . $source_evidence_assertion . '/' . $source_method . '/' . $data_provider . '/' . $secondary_data_provider;
 #   my ($source_type, $source_method) = @_;
 #   my $url = $baseUrl . 'topic_entity_tag/source/' . $source_type . '/' . $source_method . '/' . $mod;
-  # print qq($url\n);
+#   print qq($url\n);
   my $api_json = `curl -X 'GET' $url -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json'`;
+  # print qq($api_json\n);
   my $hash_ref = decode_json $api_json;
   if ($$hash_ref{'topic_entity_tag_source_id'}) {
     my $source_id = $$hash_ref{'topic_entity_tag_source_id'};
@@ -870,39 +900,22 @@ sub populateDatatypesAndABC {
   $datatypesAfpCfp{'envpheno'}      = 'envpheno';               # for new afp form 2018 10 31
   $datatypesAfpCfp{'timeaction'}    = 'timeaction';             # for new afp form 2018 11 13
   $datatypesAfpCfp{'siteaction'}    = 'siteaction';             # for new afp form 2018 11 13
+  $datatypesAfpCfp{'extvariation'}  = 'extvariation';           # for genetics and g3 linking  2025 10 09
+  $datatypesAfpCfp{'newstrains'}    = 'newstrains';             # for genetics and g3 linking  does not have tfp cfp   2025 10 09
   #   delete $datatypesAfpCfp{'catalyticact'};    # has svm but no afp / cfp      # afp got added, so cfp table also created.  2018 11 07
   delete $datatypesAfpCfp{'expression_cluster'};        # has svm but no afp / cfp      # should have been removed 2017 07 08, fixed 2017 08 04
   delete $datatypesAfpCfp{'genesymbol'};                # has svm but no afp / cfp      # added 2021 01 25
   delete $datatypesAfpCfp{'transporter'};               # has svm but no afp / cfp      # added 2021 01 25
   
-  $datatypes{'antibody'}           = 'ATP:0000096';
-  $datatypes{'blastomere'}         = 'ATP:0000143';
-  $datatypes{'catalyticact'}       = 'ATP:0000061';
-  $datatypes{'chemphen'}           = 'ATP:0000080';
-  $datatypes{'envphen'}            = 'ATP:0000080';
-  $datatypes{'expression_cluster'} = 'ATP:0000044';
-  $datatypes{'expmosaic'}          = 'ATP:0000034';
-  $datatypes{'geneint'}            = 'ATP:0000068';
-  $datatypes{'geneprod'}           = 'ATP:0000069';
-  $datatypes{'genereg'}            = 'ATP:0000042';
-  $datatypes{'genesymbol'}         = 'ATP:0000048';
-  $datatypes{'geneticablation'}    = 'ATP:0000032';
-  $datatypes{'geneticmosaic'}      = 'ATP:0000034';
-  $datatypes{'humandisease'}       = 'ATP:0000152';
-  $datatypes{'laserablation'}      = 'ATP:0000032';
-  $datatypes{'newmutant'}          = 'ATP:0000083';
-  $datatypes{'optogenet'}          = 'ATP:0000145';
-  $datatypes{'otherexpr'}          = 'ATP:0000041';
-  $datatypes{'overexpr'}           = 'ATP:0000084';
-  # $datatypes{'picture'}            = 'no atp, skip';
-  $datatypes{'rnai'}               = 'ATP:0000082';
-  $datatypes{'rnaseq'}             = 'ATP:0000146';
-  $datatypes{'seqchange'}          = 'ATP:0000056';
-  $datatypes{'siteaction'}         = 'ATP:0000033';
-  # $datatypes{'strain'}             = 'ATP:0000027     not in WB';
-  $datatypes{'structcorr'}         = 'ATP:0000054';
-  # $datatypes{'timeaction'}         = 'no atp, skip';
-  $datatypes{'transporter'}        = 'ATP:0000062';
+  # &manualPopulateTopicToAtp();	# don't use this, Kimberly will manually maintain the file topic_to_atp
+  my $topic_to_atp_file = 'topic_to_atp';
+  open (IN, "$topic_to_atp_file") or die "Cannot open $topic_to_atp_file: $!";
+  while (my $line = <IN>) {
+    chomp $line;
+    my ($topic, $atp) = split/\t/, $line;
+    $datatypes{$topic} = $atp;
+  }
+  close(IN) or die "Cannot close $topic_to_atp_file : $!";
 
 #   &populateAbcXrefSample();
 # PUT THIS BACK, but change to read from db
@@ -910,6 +923,57 @@ sub populateDatatypesAndABC {
   &populatePapValid();
   &populatePapMerge();
 } # sub populateDatatypesAndABC
+
+sub manualPopulateTopicToAtp {	# don't use this, Kimberly will manually maintain the file topic_to_atp
+  $datatypes{'additionalexpr'}     = 'ATP:0000010';
+  $datatypes{'antibody'}           = 'ATP:0000096';
+# $datatypes{'blastomere'}         = 'ATP:0000143';	# correct mapping, curator doesn't want transferred
+  $datatypes{'catalyticact'}       = 'ATP:0000061';
+  $datatypes{'chemicals'}          = 'ATP:0000278';
+  $datatypes{'chemphen'}           = 'ATP:0000080';
+# $datatypes{'covalent'}           = 'ATP:0000061';	# kimberly says covered by catalyticact
+  $datatypes{'domanal'}            = 'ATP:0000019';
+  $datatypes{'envpheno'}           = 'ATP:0000080';
+  $datatypes{'expression'}         = 'ATP:0000041';
+# $datatypes{'expression_cluster'} = 'ATP:0000044';	# correct mapping, curator doesn't want transferred
+# $datatypes{'expmosaic'}          = 'ATP:0000034';	# correct mapping, curator doesn't want transferred
+  $datatypes{'extvariation'}       = 'ATP:0000285';
+  $datatypes{'funccomp'}           = 'ATP:0000071';
+  $datatypes{'geneint'}            = 'ATP:0000068';
+  $datatypes{'geneprod'}           = 'ATP:0000069';
+  $datatypes{'genereg'}            = 'ATP:0000070';
+  $datatypes{'genestudied'}        = 'ATP:0000005';
+  $datatypes{'genesymbol'}         = 'ATP:0000048'; 
+# $datatypes{'geneticablation'}    = 'ATP:0000032';	# correct mapping, curator doesn't want transferred
+# $datatypes{'geneticmosaic'}      = 'ATP:0000034';	# correct mapping, curator doesn't want transferred
+  $datatypes{'humandisease'}       = 'ATP:0000152';
+# $datatypes{'laserablation'}      = 'ATP:0000032';	# correct mapping, curator doesn't want transferred
+  $datatypes{'lsrnai'}             = 'ATP:0000082';
+  $datatypes{'marker'}             = 'ATP:0000010';	# additionalexpr ?
+  $datatypes{'newmutant'}          = 'ATP:0000083';
+  $datatypes{'newstrains'}         = 'ATP:0000027';	# not part of strain script
+# $datatypes{'optogenet'}          = 'ATP:0000145';	# correct mapping, curator doesn't want transferred
+  $datatypes{'otherantibody'}      = 'ATP:0000096';
+  $datatypes{'otherexpr'}          = 'ATP:0000041';	# 10 ?
+# $datatypes{'otherspecies'}       = 'ATP:0000123';	# part of species script
+# $datatypes{'otherstrain'}        = 'ATP:0000027';	# part of strain script
+# $datatypes{'othertransgene'}     = 'ATP:0000110';	# part of transgene script
+# $datatypes{'othervariation'}     = 'ATP:0000285';	# part of variation script
+  $datatypes{'overexpr'}           = 'ATP:0000084';
+# $datatypes{'picture'}            = 'no atp, skip';
+  $datatypes{'rnai'}               = 'ATP:0000082';
+# $datatypes{'rnaseq'}             = 'ATP:0000146';	# correct mapping, curator doesn't want transferred
+  $datatypes{'seqchange'}          = 'ATP:0000056';
+  $datatypes{'seqfeat'}            = 'ATP:0000055';
+  $datatypes{'siteaction'}         = 'ATP:0000033';
+# $datatypes{'species'}            = 'ATP:0000123';	# part of species script
+# $datatypes{'strain'}             = 'ATP:0000027';	# part of strain script
+  $datatypes{'structcorr'}         = 'ATP:0000054';
+# $datatypes{'timeaction'}         = 'no atp, skip';
+# $datatypes{'transgene'}          = 'ATP:0000110';	# part of transgene script
+  $datatypes{'transporter'}        = 'ATP:0000062';
+# $datatypes{'variation'}          = 'ATP:0000285';	# part of variation script
+} # sub manualPopulateTopicToAtp
 
 sub deriveValidPap {
   my ($joinkey) = @_;
