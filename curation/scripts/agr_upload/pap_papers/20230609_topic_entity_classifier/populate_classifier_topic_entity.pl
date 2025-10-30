@@ -702,6 +702,7 @@ sub populateCurSvmData {
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+    next if ($row[1] eq 'expression_cluster');	# Kimberly thinks Wen doesn't want this.  2025 10 30
     my ($joinkey) = &deriveValidPap($row[0]);
     next unless $papValid{$joinkey};
     $row[3] =~ s/\n/ /g; $row[3] =~ s/ $//g;
