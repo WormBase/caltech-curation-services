@@ -13,6 +13,9 @@
 # 
 # getting rid of mainphone labphone officephone otherphone fax, for privacy concerns
 # and because we don't use that data.  2022 10 28 
+#
+# Changed messaging about when changes will happen, because of WormBase moving to
+# Alliance.  For Cecilia.  2025 10 30
 
 
 use strict;
@@ -147,6 +150,7 @@ sub submit {
   my $tableSent = qq(<table border="0" cellspacing="5"><tr><td $tdstyle colspan=3>all data</td></tr>);
   my $tableDiff = qq(<table border="0" cellspacing="5"><tr><td $tdstyle>field</td><td $tdstyle></td><td $tdstyle>old</td><td $tdstyle>new</td></tr>);
   my @emails;
+  my $user_standard_name = '';
   foreach my $table (@normal_tables) {
     my $fields_amount = $lines_in_multiline;
     unless ($multiRow{$table}) { $fields_amount = 1; }
@@ -162,15 +166,23 @@ sub submit {
       if ($newData ne $oldData) {
         $dataDiff .= "$table\t$order\tOLD $oldData NEW $newData\n";
         $tableDiff .= "<tr><td $tdstyle>$table</td><td $tdstyle>$order</td><td $tdstyle>$oldData</td><td $tdstyle>$newData</td></tr>\n"; }
+      if ($table eq 'standardname') { 
+        if ($newData) { $user_standard_name = $newData; }
+        else { $user_standard_name = $oldData; } }
   } }
   ($oop, my $comment) = &getHtmlVar($query, 'comment');
   $dataSent  .= "comment\t\t$comment\n";
   my $html_comment = $comment; $html_comment =~ s/\n/<br>/g;
   $tableSent .= "<tr><td $tdstyle>comment</td><td $tdstyle></td><td $tdstyle>$html_comment</td></tr>\n";
-  print qq(Thank you for submitting this data.<br />\n);
-  print qq(Updates will show in the next release of WormBase.<br />\n);
-  print qq(The full release schedule is available here:<br />\n);
-  print qq(<a href="http://www.wormbase.org/about/release_schedule#01--10">http://www.wormbase.org/about/release_schedule#01--10</a><br/>\n);
+  print qq(Thank you for your updates.<br />\n);
+  print qq(Please note that WS298 will be the final major WormBase release. This release includes Person and person\_lineage data updated through August 19, 2025.<br />\n);
+  print qq(In lieu of generating new releases of WormBase, we will accelerate our efforts to incorporate existing data and services into the Alliance of Genome Resources.<br />\n);
+  print qq(Your updates will be available through the Alliance of Genome Resources in early 2026.<br />\n);
+  print qq(Thank you for your understanding.<br /><br />\n);
+#   print qq(Thank you for submitting this data.<br />\n);
+#   print qq(Updates will show in the next release of WormBase.<br />\n);
+#   print qq(The full release schedule is available here:<br />\n);
+#   print qq(<a href="http://www.wormbase.org/about/release_schedule#01--10">http://www.wormbase.org/about/release_schedule#01--10</a><br/>\n);
   print "$tableSent</table><br/>\n";
   print "$tableDiff</table>";
   my $user = 'person_form@' . $ENV{HOST_NAME};       # who sends mail
@@ -186,8 +198,9 @@ sub submit {
   my $body = "From IP $host sends :\n\n";
   $body .= "$dataSent\n";
   if ($joinkey) { $body .= "$person updates :\n$dataDiff\n"; }
-  $body .= "\n\nThank you very much for updating your contact information.\n\nUpdates will appear in the next release of WormBase in your WBPerson page under author/Person search http://www.wormbase.org . The full release schedule is available here:\n\nhttps://www.wormbase.org/about/release_schedule#0--10\n\nPlease do not hesitate to contact me if you have any questions.\n\nHave a great day,\n\nCecilia";
-
+#   $body .= "\n\nThank you very much for updating your contact information.\n\nUpdates will appear in the next release of WormBase in your WBPerson page under author/Person search http://www.wormbase.org . The full release schedule is available here:\n\nhttps://www.wormbase.org/about/release_schedule#0--10\n\nPlease do not hesitate to contact me if you have any questions.\n\nHave a great day,\n\nCecilia";
+  if ($user_standard_name) { $body .= "\n\nDear ${user_standard_name},"; }
+  $body .= "\n\nThank you for your updates.\n\nPlease note that WS298 will be the final major WormBase release. This release includes Person and person\_lineage data updated through August 19, 2025.\n\nIn lieu of generating new releases of WormBase, we will accelerate our efforts to incorporate existing data and services into the Alliance of Genome Resources.\n\nYour updates will be available through the Alliance of Genome Resources in early 2026.\n\nThank you for your understanding.\n\nThanks,\nCecilia\ncecnak\@wormbase.org";
   &mailer($user, $email, $subject, $body);    # email CGI to user
   &printHtmlFooter();
 } # sub submit
