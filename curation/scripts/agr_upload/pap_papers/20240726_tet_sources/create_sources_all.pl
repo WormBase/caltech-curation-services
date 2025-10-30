@@ -19,6 +19,9 @@
 # aggregate topic, gene, transgenic_allele into a single script for sources.  species are already on abc prod.  2024 07 26
 #
 # new topic source for genetics_g3_linking_curator.  2025 10 09
+#
+# Kimberly has manual descriptions for nnc and svm, copy pasted from https://docs.google.com/document/d/1xNnGLb1KO1ONrvTontgC1LTjpUc0JlfxrXWCvR_XIGA/edit?tab=t.0
+# into hashes, and ran against 4002, but not stage.  2025 10 30
 
 # ./create_sources.pl
 
@@ -178,11 +181,30 @@ unless ($source_id) {
   &createSource($source_json);
 }
 
+my %nnc_description_mappings;
+$nnc_description_mappings{'antibody'} = 'Neural network document classifier trained on manually validated C. elegans references to identify references describing production and/or use of antibodies.';
+$nnc_description_mappings{'catalyticact'} = 'Neural network document classifier trained on manually validated C. elegans references to identify references describing catalytic activities.';
+$nnc_description_mappings{'expression_cluster'} = 'Neural network document classifier trained on manually validated C. elegans references to identify references describing large-scale gene expression studies.';
+$nnc_description_mappings{'geneint'} = 'Neural network document classifier trained on manually validated C. elegans references to identify references describing genetic interactions.';
+$nnc_description_mappings{'geneprod'} = 'Neural network document classifier trained on manually validated C. elegans references to identify references describing physical interactions.';
+$nnc_description_mappings{'genereg'} = 'Neural network document classifier trained on manually validated C. elegans references to identify references describing regulation of gene expression.';
+$nnc_description_mappings{'genesymbol'} = 'Neural network document classifier trained on manually validated C. elegans references to identify references describing a new or changed gene name.';
+$nnc_description_mappings{'humandisease'} = 'Neural network document classifier trained on manually validated C. elegans references to identify references describing a human disease model.';
+$nnc_description_mappings{'newmutant'} = 'Neural network document classifier trained on manually validated C. elegans references to identify references describing variation phenotypes.';
+$nnc_description_mappings{'otherexpr'} = 'Neural network document classifier trained on manually validated C. elegans references to identify references describing gene expression in a wild-type background.';
+$nnc_description_mappings{'overexpr'} = 'Neural network document classifier trained on manually validated C. elegans references to identify references describing phenotypes from gene overexpression.';
+$nnc_description_mappings{'rnai'} = 'Neural network document classifier trained on manually validated C. elegans references to identify references describing RNAi experiments.';
+$nnc_description_mappings{'seqchange'} = 'Neural network document classifier trained on manually validated C. elegans references to identify variation sequence changes.';
+$nnc_description_mappings{'structcorr'} = 'Neural network document classifier trained on manually validated C. elegans references to identify gene model corrections.';
+$nnc_description_mappings{'transporter'} = 'Neural network document classifier trained on manually validated C. elegans references to identify transporter or channel activities.';
+
+
 # for each nnc/svm, we're creating a new source for each datatype
 $result = $dbh->prepare( "SELECT DISTINCT(cur_datatype) FROM cur_nncdata" );
 $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
 while (my @row = $result->fetchrow) { 
   print qq($row[0]\n);
+  unless ($nnc_description_mappings{$row[0]}) { print qq(ERROR $row[0] does not have nnc_ description\n); next; }
   $source_evidence_assertion = 'ECO:0008025';
   $source_method = 'nnc_' . $row[0];
   $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
@@ -191,7 +213,7 @@ while (my @row = $result->fetchrow) {
     delete $source_json{validation_type};
     $source_json{source_evidence_assertion}	= $source_evidence_assertion;
     $source_json{source_method}   		= $source_method;
-    $source_json{description}     		= 'Neural network document classifier trained on manually validated C. elegans references to identify references describing production and/or use of antibodies.';	# TODO  Kimberly will need to generate individual descriptions for each datatype ?
+    $source_json{description}     		= $nnc_description_mappings{$row[0]};
     my $source_json = encode_json \%source_json;
     &createSource($source_json);
   }
@@ -199,10 +221,28 @@ while (my @row = $result->fetchrow) {
 
 # That happens automatically from the API ?  Or you mean populate from another value ?
 
+my %svm_description_mappings;
+$svm_description_mappings{'antibody'} = 'Support vector machine document classifier trained on manually validated C. elegans references to identify references that describe production and/or use of antibodies.';
+$svm_description_mappings{'catalyticact'} = 'Support vector machine document classifier trained on manually validated C. elegans references to identify references that describe catalytic activities.';
+$svm_description_mappings{'geneint'} = 'Support vector machine document classifier trained on manually validated C. elegans references to identify references that describe genetic interactions.';
+$svm_description_mappings{'geneprod'} = 'Support vector machine document classifier trained on manually validated C. elegans references to identify references that describe physical interactions.';
+$svm_description_mappings{'genereg'} = 'Support vector machine document classifier trained on manually validated C. elegans references to identify references that describe regulation of gene expression.';
+$svm_description_mappings{'genesymbol'} = 'Support vector machine document classifier trained on manually validated C. elegans references to identify references that describe a new or changed gene name.';
+$svm_description_mappings{'newmutant'} = 'Support vector machine document classifier trained on manually validated C. elegans references to identify references that describe variation phenotypes.';
+$svm_description_mappings{'otherexpr'} = 'Support vector machine document classifier trained on manually validated C. elegans references to identify references that describe gene expression in a wild-type background.';
+$svm_description_mappings{'overexpr'} = 'Support vector machine document classifier trained on manually validated C. elegans references to identify references that describe phenotypes from gene overexpression.';
+$svm_description_mappings{'rnai'} = 'Support vector machine document classifier trained on manually validated C. elegans references to identify references that describe RNAi experiments.';
+$svm_description_mappings{'seqchange'} = 'Support vector machine document classifier trained on manually validated C. elegans references to identify variation sequence changes.';
+$svm_description_mappings{'structcorr'} = 'Support vector machine document classifier trained on manually validated C. elegans references to identify gene model corrections.';
+
+
+
 $result = $dbh->prepare( "SELECT DISTINCT(cur_datatype) FROM cur_svmdata" );
 $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
 while (my @row = $result->fetchrow) { 
   print qq($row[0]\n);
+  next if ($row[0] eq 'expression_cluster');	# Kimberly thinks Wen doesn't want this.  2025 10 30
+  unless ($svm_description_mappings{$row[0]}) { print qq(ERROR $row[0] does not have svm_ description\n); next; }
   $source_evidence_assertion = 'ECO:0008019';
   $source_method = 'svm_' . $row[0];
   $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
@@ -211,7 +251,7 @@ while (my @row = $result->fetchrow) {
     delete $source_json{validation_type};
     $source_json{source_evidence_assertion}	= $source_evidence_assertion;
     $source_json{source_method}   		= $source_method;
-    $source_json{description}     		= 'Support vector machine document classifier trained on manually validated C. elegans references to identify references that describe production and/or use of antibodies.';	# TODO  Kimberly will need to generate individual descriptions for each datatype ?
+    $source_json{description}     		= $svm_description_mappings{$row[0]};
     my $source_json = encode_json \%source_json;
     &createSource($source_json);
   }
