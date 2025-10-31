@@ -93,6 +93,9 @@
 # updated getPgHash() to skip invalid persons into aka_hash.  For Cecilia and Kimberly.  2022 01 06
 #
 # removing acefile in dockerized, Cecilia doesn't use it.  2023 03 01
+# 
+# Changed messaging about when changes will happen, because of WormBase moving to
+# Alliance.  For Cecilia.  2025 10 30
 
 
 # removing acefile in dockerized, Cecilia doesn't use it.  2023 03 01
@@ -269,7 +272,8 @@ sub process {			# see if anything clicked
               $body .= qq(Update : <span style="color:brown">WBPerson$val</span> into $role from $year1 to $year2<br>\n); }
           }
 
-          my $full_body = "Thank you very much for updating your lineage of C. elegans biologist and other nematologist.\n\nUpdates will appear in the next release of WormBase in your WBPerson page. The full release schedule is available here:\n\nhttps://www.wormbase.org/about/release_schedule#0--10\n\nYou will be contacted if there are any conflicts, or if people from your lineage have not been assigned a WBPerson ID.\n\nPlease do not hesitate to contact me if you have any questions.\n\nHave a great day,\n\nCecilia\n";
+#           my $full_body = "Thank you very much for updating your lineage of C. elegans biologist and other nematologist.\n\nUpdates will appear in the next release of WormBase in your WBPerson page. The full release schedule is available here:\n\nhttps://www.wormbase.org/about/release_schedule#0--10\n\nYou will be contacted if there are any conflicts, or if people from your lineage have not been assigned a WBPerson ID.\n\nPlease do not hesitate to contact me if you have any questions.\n\nHave a great day,\n\nCecilia\n";
+          my $full_body = "Thank you for updating your lineage of C. elegans biologists and other nematologists.\n\nYou will be contacted if there are any conflicts or if individuals in your lineage have not yet been assigned a WBPerson ID.\n\nPlease note that WS298 will be the final major WormBase release. This release includes Person and person_lineage data updated through August 19, 2025.\n\nIn lieu of generating new WormBase releases, we will be accelerating our efforts to incorporate existing data and services into the Alliance of Genome Resources. Your updates will be accessible through the Alliance of Genome Resources in early 2026.\n\nThank you for your understanding. Please do not hesitate to contact me if you have any questions.\n\nThanks,\nCecilia\ncecnak\@wormbase.org\n";
           $full_body .= "\n\n" . $body . "\n" . $ace_body;
           # print OUT "$ace_body\n";			# print to outfile
           # close (OUT) or die "cannot close $acefile : $!";
@@ -283,9 +287,14 @@ sub process {			# see if anything clicked
           print "BODY : <BR>$body<BR><BR>\n";
           print "ACE : <BR>$ace_body<BR><BR>\n";
 #           print "<P><P><P><H1>Thank you, your info will be updated shortly.</H1>\n";
-          print "<P><P><P>Thank you very much for updating your lineage of C. elegans biologist and other nematologist. Updates will appear in the next release of WormBase in your WBPerson page.<br/>\n";
-          print qq(The full release schedule is available here: <a href="http://www.wormbase.org/about/release_schedule#0--10" target="new">http://www.wormbase.org/about/release_schedule#0--10</a><br/>\n);
-          print "You will be contacted if there are any conflicts, or if people from your lineage have not been assigned a WBPerson ID.<br/>\n";
+#           print "<P><P><P>Thank you very much for updating your lineage of C. elegans biologist and other nematologist. Updates will appear in the next release of WormBase in your WBPerson page.<br/>\n";
+#           print qq(The full release schedule is available here: <a href="http://www.wormbase.org/about/release_schedule#0--10" target="new">http://www.wormbase.org/about/release_schedule#0--10</a><br/>\n);
+#           print "You will be contacted if there are any conflicts, or if people from your lineage have not been assigned a WBPerson ID.<br/>\n";
+          print "<p><p><p>Thank you for updating your lineage of C. elegans biologists and other nematologists.<br/>\n";
+          print "You will be contacted if there are any conflicts or if individuals in your lineage have not yet been assigned a WBPerson ID.<br/>\n";
+          print "Please note that WS298 will be the final major WormBase release. This release includes Person and person_lineage data updated through August 19, 2025.<br/>\n";
+          print "In lieu of generating new WormBase releases, we will be accelerating our efforts to incorporate existing data and services into the Alliance of Genome Resources. Your updates will be accessible through the Alliance of Genome Resources in early 2026.<br/>\n";
+          print "Thank you for your understanding<br/>\n";
           print "If you wish to modify your submitted information, please go back and resubmit.<BR><P> 
                  See all <A HREF=\"${baseUrl}/../data/person_lineage.ace\">new submissions</A>.<P>\n";
 #           print "If you wish to modify your submitted information, please go back and resubmit.<BR><P> 
