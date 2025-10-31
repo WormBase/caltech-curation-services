@@ -29,6 +29,9 @@
 # Added processing for extvariation.  Also afp_newstrains which does not have cfp or tfp.
 # Loading datatype to atp mappings from flatfile that Kimberly can manage, but manually updated the database delete command.
 # Fixed a bug that was looping getting the ABC source for each paper for a couple of sources.
+#
+# Added more datatypes to datatypesAfpCfp  removed a couple from the delete list.  some datatypes hasAfpButNoTfp or
+# hasAfpButNoCfp some datatypes have an afp table afpWithOnlyThreeColumns and need to be queried differently.  2025 10 31
 
 
 
@@ -94,7 +97,8 @@ my $okta_token = &generateOktaToken();
 # my @wbpapers = qw( 00057043 );
 # my @wbpapers = qw( 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 00037049 );
 # my @wbpapers = qw( 00004952 00031697 00032245 00032467 00032959 00033036 00033406 00034728 00035977 00040400 00053203 00059003 00059712 00060296 00065201 00067387 00067433 00068170 );	# SCRUM-5255
-my @wbpapers = qw( 00001084 00004952 00031697 00032245 00032467 00032959 00033036 00033406 00034728 00035977 00040400 00053203 00059003 00059712 00060296 00065201 00067387 00067433 00068170 00068343 );	# 2025 10 09
+# my @wbpapers = qw( 00001084 00004952 00031697 00032245 00032467 00032959 00033036 00033406 00034728 00035977 00040400 00053203 00059003 00059712 00060296 00065201 00067387 00067433 00068170 00068343 );	# 2025 10 09
+my @wbpapers = qw( 00067433 );	# 2025 10 31
 
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 00037049
@@ -196,7 +200,7 @@ sub outputOaData {
   }
 #   { "source_type": "professional_biocurator", "source_method": "wormbase_oa", "evidence": "eco_string", "description": "caltech curation tools", "mod_abbreviation": "WB" }
   foreach my $datatype (sort keys %oaData) {
-    unless ($datatypes{$datatype}) { 
+    unless ($datatypes{$datatype}) {
       print PERR qq(no topic for oaData $datatype\n); 
       next;
     }
@@ -327,8 +331,14 @@ sub populateAfpData {
   &populateTfpData();
   &populateAfpContributor();
   &populateAfpLasttouched();
+  my %afpWithOnlyThreeColumns;
+  $afpWithOnlyThreeColumns{'additionalexpr'}++;
+  $afpWithOnlyThreeColumns{'othergenefunc'}++;
+  $afpWithOnlyThreeColumns{'otherantibody'}++;
   foreach my $datatype (sort keys %datatypesAfpCfp) {
     $result = $dbh->prepare( "SELECT joinkey, afp_$datatypesAfpCfp{$datatype}, afp_timestamp AT TIME ZONE 'UTC', afp_curator, afp_approve, afp_cur_timestamp AT TIME ZONE 'UTC' FROM afp_$datatypesAfpCfp{$datatype}" );
+    if ($afpWithOnlyThreeColumns{$datatype}) {
+      $result = $dbh->prepare( "SELECT joinkey, afp_$datatypesAfpCfp{$datatype}, afp_timestamp AT TIME ZONE 'UTC' FROM afp_$datatypesAfpCfp{$datatype}" ); }
     $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
     while (my @row = $result->fetchrow) {
       next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
@@ -395,8 +405,12 @@ sub populateAfpLasttouched {
 # Valerio and Kimberly agreed there's no TFP data for topics, they'll be entities later.  But we do need the tfp_data to derive something about afp data.   2024 03 04
 sub populateTfpData {
   return if (%tfpData);		# this called for generating tfpdata but also for afpdata, but don't need to read it twice if already has data
+  my %hasAfpButNoTfp;
+  $hasAfpButNoTfp{'newstrains'}++;		# 2025 10 09
+  $hasAfpButNoTfp{'additionalexpr'}++;		# 2025 10 31
+  $hasAfpButNoTfp{'othergenefunc'}++;		# 2025 10 31
   foreach my $datatype (sort keys %datatypesAfpCfp) {
-    next if ($datatype eq 'newstrains');	# has afp but not tfp  2025 10 09
+    next if ($hasAfpButNoTfp{$datatype});	# has afp but not tfp
     $result = $dbh->prepare( "SELECT joinkey, tfp_$datatypesAfpCfp{$datatype}, tfp_timestamp FROM tfp_$datatypesAfpCfp{$datatype}" );
     $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
     while (my @row = $result->fetchrow) {
@@ -517,7 +531,12 @@ sub outputCfpData {
 
 sub populateCfpData {
   foreach my $datatype (sort keys %datatypesAfpCfp) {
-    next if ($datatype eq 'newstrains');	# has afp but not cfp  2025 10 09
+    my %hasAfpButNoCfp;
+    $hasAfpButNoCfp{'newstrains'}++;		# 2025 10 09
+    $hasAfpButNoCfp{'additionalexpr'}++;	# 2025 10 31
+    $hasAfpButNoCfp{'othergenefunc'}++;		# 2025 10 31
+    $hasAfpButNoCfp{'otherantibody'}++;		# 2025 10 31	this has a cfp table, but it has no data
+    next if ($hasAfpButNoCfp{$datatype});	# has afp but not cfp  2025 10 09
     $result = $dbh->prepare( "SELECT joinkey, cfp_$datatypesAfpCfp{$datatype}, cfp_curator, cfp_timestamp AT TIME ZONE 'UTC' FROM cfp_$datatypesAfpCfp{$datatype}" );
     $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
     while (my @row = $result->fetchrow) {
@@ -890,23 +909,31 @@ sub populateDatatypesAndABC {
   $result = $dbh->prepare( "SELECT DISTINCT(cur_datatype) FROM cur_nncdata" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) { $datatypesAfpCfp{$row[0]} = $row[0]; }
-  $datatypesAfpCfp{'chemicals'}     = 'chemicals';              # added for Karen 2013 10 02
-  $datatypesAfpCfp{'blastomere'}    = 'cellfunc';
-  $datatypesAfpCfp{'exprmosaic'}    = 'siteaction';
-  $datatypesAfpCfp{'geneticmosaic'} = 'mosaic';
-  $datatypesAfpCfp{'laserablation'} = 'ablationdata';
-  $datatypesAfpCfp{'humandisease'}  = 'humdis';                 # added mapping to correct table 2018 05 17
-  $datatypesAfpCfp{'rnaseq'}        = 'rnaseq';                 # for new afp form 2018 10 31
-  $datatypesAfpCfp{'chemphen'}      = 'chemphen';               # for new afp form 2018 10 31
-  $datatypesAfpCfp{'envpheno'}      = 'envpheno';               # for new afp form 2018 10 31
-  $datatypesAfpCfp{'timeaction'}    = 'timeaction';             # for new afp form 2018 11 13
-  $datatypesAfpCfp{'siteaction'}    = 'siteaction';             # for new afp form 2018 11 13
-  $datatypesAfpCfp{'extvariation'}  = 'extvariation';           # for genetics and g3 linking  2025 10 09
-  $datatypesAfpCfp{'newstrains'}    = 'newstrains';             # for genetics and g3 linking  does not have tfp cfp   2025 10 09
-  #   delete $datatypesAfpCfp{'catalyticact'};    # has svm but no afp / cfp      # afp got added, so cfp table also created.  2018 11 07
-  delete $datatypesAfpCfp{'expression_cluster'};        # has svm but no afp / cfp      # should have been removed 2017 07 08, fixed 2017 08 04
-  delete $datatypesAfpCfp{'genesymbol'};                # has svm but no afp / cfp      # added 2021 01 25
-  delete $datatypesAfpCfp{'transporter'};               # has svm but no afp / cfp      # added 2021 01 25
+  $datatypesAfpCfp{'chemicals'}      = 'chemicals';             # added for Karen 2013 10 02
+#   $datatypesAfpCfp{'blastomere'}    = 'cellfunc';		# raymond doesn't want this
+  $datatypesAfpCfp{'exprmosaic'}     = 'siteaction';
+#   $datatypesAfpCfp{'geneticmosaic'} = 'mosaic';		# raymond doesn't want this
+#   $datatypesAfpCfp{'laserablation'} = 'ablationdata';		# raymond doesn't want this
+  $datatypesAfpCfp{'humandisease'}   = 'humdis';                # added mapping to correct table 2018 05 17
+#   $datatypesAfpCfp{'rnaseq'}        = 'rnaseq';               # wen doesn't want this
+  $datatypesAfpCfp{'chemphen'}       = 'chemphen';              # for new afp form 2018 10 31
+  $datatypesAfpCfp{'envpheno'}       = 'envpheno';              # for new afp form 2018 10 31
+  $datatypesAfpCfp{'timeaction'}     = 'timeaction';            # for new afp form 2018 11 13
+  $datatypesAfpCfp{'siteaction'}     = 'siteaction';            # for new afp form 2018 11 13
+  $datatypesAfpCfp{'otherantibody'}  = 'otherantibody';         # for new afp form 2025 10 31
+  $datatypesAfpCfp{'seqfeat'}        = 'seqfeat';               # for new afp form 2025 10 31
+  $datatypesAfpCfp{'domanal'}        = 'domanal';               # for new afp form 2025 10 31
+  $datatypesAfpCfp{'funccomp'}       = 'funccomp';              # for new afp form 2025 10 31
+  $datatypesAfpCfp{'additionalexpr'} = 'additionalexpr';        # for new afp form 2025 10 31
+  $datatypesAfpCfp{'othergenefunc'}  = 'othergenefunc';         # for new afp form 2025 10 31
+  $datatypesAfpCfp{'marker'}         = 'marker';                # for new afp form 2025 10 31
+  $datatypesAfpCfp{'lsrnai'}         = 'lsrnai';                # for new afp form 2025 10 31
+  $datatypesAfpCfp{'extvariation'}   = 'extvariation';          # for genetics and g3 linking  2025 10 09
+  $datatypesAfpCfp{'newstrains'}     = 'newstrains';            # for genetics and g3 linking  does not have tfp cfp   2025 10 09
+  # delete $datatypesAfpCfp{'catalyticact'};     # has svm but no afp / cfp      # afp got added, so cfp table also created.  2018 11 07
+  delete $datatypesAfpCfp{'expression_cluster'}; # has svm but no afp / cfp      # should have been removed 2017 07 08, fixed 2017 08 04
+  # delete $datatypesAfpCfp{'genesymbol'};       # has svm but no afp / cfp      # added 2021 01 25	# no, it does have afp / cfp
+  delete $datatypesAfpCfp{'transporter'};        # has svm but no afp / cfp      # added 2021 01 25
   
   # &manualPopulateTopicToAtp();	# don't use this, Kimberly will manually maintain the file topic_to_atp
   my $topic_to_atp_file = 'topic_to_atp';
