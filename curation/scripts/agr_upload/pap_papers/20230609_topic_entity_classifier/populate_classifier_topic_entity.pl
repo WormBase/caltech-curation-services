@@ -32,6 +32,8 @@
 #
 # Added more datatypes to datatypesAfpCfp  removed a couple from the delete list.  some datatypes hasAfpButNoTfp or
 # hasAfpButNoCfp some datatypes have an afp table afpWithOnlyThreeColumns and need to be queried differently.  2025 10 31
+#
+# strData can have negated true if the data is an empty string.  2025 10 03
 
 
 
@@ -98,7 +100,8 @@ my $okta_token = &generateOktaToken();
 # my @wbpapers = qw( 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 00037049 );
 # my @wbpapers = qw( 00004952 00031697 00032245 00032467 00032959 00033036 00033406 00034728 00035977 00040400 00053203 00059003 00059712 00060296 00065201 00067387 00067433 00068170 );	# SCRUM-5255
 # my @wbpapers = qw( 00001084 00004952 00031697 00032245 00032467 00032959 00033036 00033406 00034728 00035977 00040400 00053203 00059003 00059712 00060296 00065201 00067387 00067433 00068170 00068343 );	# 2025 10 09
-my @wbpapers = qw( 00067433 );	# 2025 10 31
+# my @wbpapers = qw( 00067433 );	# 2025 10 31
+my @wbpapers = qw( 00068172 );	# 2025 11 03	# strData negated antibody
 
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 00037049
@@ -507,7 +510,8 @@ sub outputCfpData {
     foreach my $joinkey (sort keys %{ $cfpData{$datatype} }) {
       my $negated = FALSE;
       if ($cfpData{$datatype}{$joinkey}{data}) {
-        if ($cfpData{$datatype}{$joinkey}{data} =~ m/false positive/i) { $negated = TRUE; } }
+          if ($cfpData{$datatype}{$joinkey}{data} =~ m/false positive/i) { $negated = TRUE; } }
+        else { $negated = TRUE; }
       my %object;
       $object{'negated'}                    = $negated;
       $object{'force_insertion'}            = TRUE;
@@ -585,7 +589,9 @@ sub outputCurStrData {
       # my $source_id = $source_id_1;
       # my $tsdigits = &tsToDigits($strData{$datatype}{$joinkey}{timestamp});
       # if ($tsdigits > '20190322') { $source_id = $source_id_2; }
-      $object{'negated'}                    = FALSE;
+      my $negated = TRUE;
+      if ($strData{$datatype}{$joinkey}{data}) { $negated = FALSE; }
+      $object{'negated'}                    = $negated;
       $object{'force_insertion'}            = TRUE;
       if ($strData{$datatype}{$joinkey}{result}) {
         $object{'note'}                     = $strData{$datatype}{$joinkey}{result}; }
