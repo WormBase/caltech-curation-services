@@ -11,6 +11,8 @@
 # split tissues like topics.  2025 10 22
 #
 # wen created a file for counts by category, from Raymond sugggestion.  display in table now.  2025 11 02
+#
+# Add WormBase Processed Data for Wen.  2025 11 03
 
 # http://tazendra.caltech.edu/~azurebrd/cgi-bin/forms/expression_dataset_locator.cgi
 # https://caltech-curation.textpressolab.com/pub/cgi-bin/forms/expression_dataset_locator.cgi
@@ -87,11 +89,13 @@ sub querySpell {
   my @species               = $query->param('species');
   my @tissues               = $query->param('tissue');
   my @topics                = $query->param('topics');
+  my @wbProcessed           = $query->param('wbProcessed');
   my $anyTopicOk = 0;
-  unless (scalar @methods > 0) { (@methods) = sort keys %{ $hash{method}  };  }
-  unless (scalar @species > 0) { (@species) = sort keys %{ $hash{species} };  }
-  unless (scalar @tissues > 0) { (@tissues) = sort keys %{ $hash{tissues}  };  }
-  unless (scalar @topics > 0)  { (@topics)  = sort keys %{ $hash{topics}  }; $anyTopicOk++; }
+  unless (scalar @methods > 0)      { (@methods)      = sort keys %{ $hash{method}  };  }
+  unless (scalar @species > 0)      { (@species)      = sort keys %{ $hash{species} };  }
+  unless (scalar @tissues > 0)      { (@tissues)      = sort keys %{ $hash{tissues}  };  }
+  unless (scalar @topics > 0)       { (@topics)       = sort keys %{ $hash{topics}  }; $anyTopicOk++; }
+  unless (scalar @wbProcessed > 0)  { (@wbProcessed)  = sort keys %{ $hash{wbProcessed}  }; }
 #   if (scalar @methods > 0) { $requiredFields++; } else { (@methods) = sort keys %{ $hash{method}  };  }
 #   if (scalar @species > 0) { $requiredFields++; } else { (@species) = sort keys %{ $hash{species} };  }
 #   if (scalar @tissues > 0) { $requiredFields++; } else { (@tissues) = sort keys %{ $hash{tissues}  };  }
@@ -118,10 +122,13 @@ sub querySpell {
     foreach my $line (keys %{ $hash{tissues}{$tissue} }) { $lines{$line}{tissue}++; } }
   foreach my $topic (@topics) {   
     foreach my $line (keys %{ $hash{topics}{$topic} }) { $lines{$line}{topic}++; } }
+  foreach my $wbProcessed (@wbProcessed) {   
+    foreach my $line (keys %{ $hash{wbProcessed}{$wbProcessed} }) { $lines{$line}{wbProcessed}++; } }
   foreach my $line (sort keys %lines) {
 #     $output .= qq(REQ $requiredFields LINE $line V $lines{$line} E<br>\n); 
 #     if ($lines{$line} >= $requiredFields) {
-    if ( ($lines{$line}{method}) && ($lines{$line}{species}) && ($lines{$line}{tissue}) && ( ($lines{$line}{topic}) || $anyTopicOk ) ) {
+    if ( ($lines{$line}{method}) && ($lines{$line}{species}) && ($lines{$line}{tissue}) && ($lines{$line}{wbProcessed}) && 
+         ( ($lines{$line}{topic}) || $anyTopicOk ) ) {
       my $line = $hash{line}{$line};
       $output .= qq($line\n);
     }
@@ -204,6 +211,13 @@ sub showSpellForm {
     if ($topics) { 
       my $label = $topics; $label =~ s/Topic: //;
       print qq(<tr><td><input type="checkbox" name="topics" value="$topics"> $label</td><td>$hash{catcount}{$label}</td></tr>); } }
+  print qq(<tr><td>&nbsp;</td</tr>\n);
+
+  print qq(<tr><td>5. WormBase Processed Data</td><td>Count</td></tr>\n);
+  foreach my $wbProcessed (sort keys %{ $hash{wbProcessed} }) { 
+    if ($wbProcessed) { 
+      my $label = $wbProcessed;
+      print qq(<tr><td><input type="checkbox" name="wbProcessed" value="$wbProcessed"> $label</td><td>$hash{catcount}{$label}</td></tr>); } }
 
   print qq(</table>\n);
 
@@ -236,8 +250,8 @@ sub processFiles {
   open (IN, "<$file_category_count") or die "Cannot open $file_category_count : $!";
   while (my $line = <IN>) {
     chomp $line;
-    my ($topic, $count) = split/\t/, $line;
-    $hash{catcount}{$topic} = $count;
+    my ($category, $count) = split/\t/, $line;
+    $hash{catcount}{$category} = $count;
   }
   close (IN) or die "Cannot close $file_category_count : $!";
 
@@ -247,7 +261,7 @@ sub processFiles {
   while (my $line = <IN>) {
     chomp $line;
     $count++;
-    my ($dataid, $dataname, $paper, $method, $species, $tissues, $topics, $title, $url) = split/\t/, $line;
+    my ($dataid, $dataname, $paper, $method, $species, $tissues, $topics, $title, $wbProcessed, $url) = split/\t/, $line;
     if ($url) {
       $line =~ s/$url/<a href="$url">$url<\/a>/; }
     $hash{line}{$count} = $line;
@@ -260,6 +274,8 @@ sub processFiles {
 #     $hash{topics}{$topics}{$count}++;
     my (@topics) = split/\|/, $topics;
     foreach my $topic (@topics) { $hash{topics}{$topic}{$count}++; }
+    my (@wbProcessed) = split/\|/, $wbProcessed;
+    foreach my $wbProcessed (@wbProcessed) { $hash{wbProcessed}{$wbProcessed}{$count}++; }
   } # while (my $line = <IN>)
   close (IN) or die "Cannot close $file_source : $!";
   return $header;
