@@ -20,10 +20,18 @@
 # Converted for pap_ tables from wpa_
 # Now does lineage and labs at the same time
 # Also works recursively while there's data to connect.  2010 06 21
+#
+# Cecilia wants this to generate a log, and run every day on cronjob after the 
+# connect_single_match_authors_and_get_histogram.pl  2025 10 03
+
+
+# 15 5 * * tue,wed,thu,fri,sat /usr/caltech_curation_files/cecilia/new-upload/verify_by_labs_or_lineage.pl
+
 
 
 use strict;
 use diagnostics;
+use Jex;
 use DBI;
 use Dotenv -load => '/usr/lib/.env';
 
@@ -35,6 +43,12 @@ if ( !defined $dbh ) { die "Cannot connect to database!\n"; }
 my %hash;
 
 my $result;
+
+my $date = &getSimpleSecDate();
+
+my $outfile = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . "/cecilia/new-upload/logs/verify_by_labs_or_lineage.outfile.$date";
+# my $outfile = "connect_authors.outfile";
+open(OUT, ">$outfile") or die "Cannot create $outfile : $!";
 
 
 
@@ -102,7 +116,7 @@ my $depth = 0;			# recursive depth of searching (keep looping until no new resul
 sub processByLab {
   my ($depth) = @_;
   $depth++;
-  print "recursive depth $depth\n";
+  print OUT "recursive depth $depth\n";
   my %pgcommands;	
   foreach my $aid (sort keys %unver) {
     foreach my $join (sort keys %{ $unver{$aid} }) {
@@ -140,7 +154,7 @@ sub processByLab {
 
   foreach my $command (sort keys %pgcommands) {
     $again_flag++;
-    print "$command\n";
+    print OUT "$command\n";
 # UNCOMMENT THIS TO INSERT CONNECTIONS
     $result = $dbh->do( $command ); 
   } # foreach my $command (sort keys %pgcommands)
@@ -151,14 +165,15 @@ sub processByLab {
 
 } # sub processByLab
 
-print "\n\n";
+print OUT "\n\n";
 my $two_count = 0;
 foreach my $two (sort keys %sort) {
   $two_count++;
   foreach my $line (sort keys %{ $sort{$two}}) {
-    print "$line\n"; } }
-print "There are $two_count Person\n";
+    print OUT "$line\n"; } }
+print OUT "There are $two_count Person\n";
 
 
 
+close(OUT) or die "Cannot close $outfile : $!";
 
