@@ -20,7 +20,11 @@
 # got rid of pap_ignore , it no longer exists.  2011 06 04
 #
 # Changed 'functional_annotation' to 'non_nematode' to match change to postgres.  2013 12 05
+#
+# Cecilia wants this on a cronjob that runs every day and keeps a log.  2025 10 03
 
+
+# 0 5 * * tue,wed,thu,fri,sat /usr/caltech_curation_files/cecilia/new-upload/connect_single_match_authors_and_get_histogram.pl
 
 
 use strict;
@@ -41,8 +45,8 @@ my %authors;
 
 my $date = &getSimpleSecDate();
 
-# my $outfile = "connect_authors.outfile.$date";
-my $outfile = "connect_authors.outfile";
+my $outfile = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . "/cecilia/new-upload/logs/connect_authors.outfile.$date";
+# my $outfile = "connect_authors.outfile";
 open(OUT, ">$outfile") or die "Cannot create $outfile : $!";
 
 
