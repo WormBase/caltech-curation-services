@@ -9,6 +9,10 @@
 # Dockerized.  2023 09 15
 #
 # split tissues like topics.  2025 10 22
+#
+# wen created a file for counts by category, from Raymond sugggestion.  display in table now.  2025 11 02
+#
+# Add WormBase Processed Data for Wen.  2025 11 03
 
 # http://tazendra.caltech.edu/~azurebrd/cgi-bin/forms/expression_dataset_locator.cgi
 # https://caltech-curation.textpressolab.com/pub/cgi-bin/forms/expression_dataset_locator.cgi
@@ -40,8 +44,9 @@ my $host = $query->remote_host();		# get ip address
 
 # my $file_source = '/home/acedb/wen/simplemine/all_SPELL_datasets.csv';
 my $file_source = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} .  '/pub/wen/simplemine/expressionDatasetLocator/all_SPELL_datasets.csv';
+my $file_category_count = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} .  '/pub/wen/simplemine/expressionDatasetLocator/categoryCount.csv';
 my %hash;
-my ($dataHeader) = &processFile();
+my ($dataHeader) = &processFiles();
 
 &process();                     # see if anything clicked
 
@@ -84,11 +89,13 @@ sub querySpell {
   my @species               = $query->param('species');
   my @tissues               = $query->param('tissue');
   my @topics                = $query->param('topics');
+  my @wbProcessed           = $query->param('wbProcessed');
   my $anyTopicOk = 0;
-  unless (scalar @methods > 0) { (@methods) = sort keys %{ $hash{method}  };  }
-  unless (scalar @species > 0) { (@species) = sort keys %{ $hash{species} };  }
-  unless (scalar @tissues > 0) { (@tissues) = sort keys %{ $hash{tissues}  };  }
-  unless (scalar @topics > 0)  { (@topics)  = sort keys %{ $hash{topics}  }; $anyTopicOk++; }
+  unless (scalar @methods > 0)      { (@methods)      = sort keys %{ $hash{method}  };  }
+  unless (scalar @species > 0)      { (@species)      = sort keys %{ $hash{species} };  }
+  unless (scalar @tissues > 0)      { (@tissues)      = sort keys %{ $hash{tissues}  };  }
+  unless (scalar @topics > 0)       { (@topics)       = sort keys %{ $hash{topics}  }; $anyTopicOk++; }
+  unless (scalar @wbProcessed > 0)  { (@wbProcessed)  = sort keys %{ $hash{wbProcessed}  }; }
 #   if (scalar @methods > 0) { $requiredFields++; } else { (@methods) = sort keys %{ $hash{method}  };  }
 #   if (scalar @species > 0) { $requiredFields++; } else { (@species) = sort keys %{ $hash{species} };  }
 #   if (scalar @tissues > 0) { $requiredFields++; } else { (@tissues) = sort keys %{ $hash{tissues}  };  }
@@ -115,10 +122,13 @@ sub querySpell {
     foreach my $line (keys %{ $hash{tissues}{$tissue} }) { $lines{$line}{tissue}++; } }
   foreach my $topic (@topics) {   
     foreach my $line (keys %{ $hash{topics}{$topic} }) { $lines{$line}{topic}++; } }
+  foreach my $wbProcessed (@wbProcessed) {   
+    foreach my $line (keys %{ $hash{wbProcessed}{$wbProcessed} }) { $lines{$line}{wbProcessed}++; } }
   foreach my $line (sort keys %lines) {
 #     $output .= qq(REQ $requiredFields LINE $line V $lines{$line} E<br>\n); 
 #     if ($lines{$line} >= $requiredFields) {
-    if ( ($lines{$line}{method}) && ($lines{$line}{species}) && ($lines{$line}{tissue}) && ( ($lines{$line}{topic}) || $anyTopicOk ) ) {
+    if ( ($lines{$line}{method}) && ($lines{$line}{species}) && ($lines{$line}{tissue}) && ($lines{$line}{wbProcessed}) && 
+         ( ($lines{$line}{topic}) || $anyTopicOk ) ) {
       my $line = $hash{line}{$line};
       $output .= qq($line\n);
     }
@@ -166,37 +176,51 @@ sub showSpellForm {
 #   print qq(Gene mappings to gene identifiers, Tissue-LifeStage, RNAi-Phenotype, Allele-Phenotype, ConciseDescription.<br/><br/>);
   print qq(<form method="post" action="expression_dataset_locator.cgi" enctype="multipart/form-data">\n);
 
+  print qq(<table>\n);
 #   print qq(1. Method, optionally specify one or more methods.<br/>\n);
-  print qq(1. Choose platform<br/>\n);
+  print qq(<tr><td>1. Choose platform</td><td>Count</td></tr>\n);
 #   print qq(<select name="method"><option></option>);
 #   foreach my $method (sort keys %{ $hash{method} }) { print qq(<option>$method</option>); }
 #   print qq(</select><br/>);
   foreach my $method (sort keys %{ $hash{method} }) { 
     my $label = $method; $label =~ s/Method: //;
-    print qq(<input type="checkbox" name="method" value="$method"> $label<br/>); }
-  print qq(<br/>\n);
+    print qq(<tr><td><input type="checkbox" name="method" value="$method"> $label</td><td>$hash{catcount}{$label}</td></tr>); }
+  print qq(<tr><td>&nbsp;</td</tr>\n);
 
 #   print qq(2. Species, optionally specify one or more species.<br/>\n);
-  print qq(2. Choose Species<br/>\n);
+  print qq(<tr><td>2. Choose Species</td><td>Count</td></tr>\n);
 #   print qq(<select name="species"><option></option>);
 #   foreach my $species (sort keys %{ $hash{species} }) { print qq(<option>$species</option>); }
 #   print qq(</select><br/>);
   foreach my $species (sort keys %{ $hash{species} }) {
     my $label = $species; $label =~ s/Species: //;
-    print qq(<input type="checkbox" name="species" value="$species"> $label<br/>); }
-  print qq(<br/>\n);
+    print qq(<tr><td><input type="checkbox" name="species" value="$species"> $label</td><td>$hash{catcount}{$label}</td></tr>); }
+#   print qq(<br/>\n);
+  print qq(<tr><td>&nbsp;</td</tr>\n);
 
 #   print qq(3. Tissue, optionally specify Tissue Specific, Whole Animal, or Both.<br/>\n);
-  print qq(3. Choose Tissue Specificity<br/>\n);
-  foreach my $tissue (sort keys %{ $hash{tissues} }) { print qq(<input type="checkbox" name="tissue" value="$tissue"> $tissue<br/>); }
-  print qq(<br/>\n);
+  print qq(<tr><td>3. Choose Tissue Specificity</td><td>Count</td></tr>\n);
+  foreach my $tissue (sort keys %{ $hash{tissues} }) {
+    print qq(<tr><td><input type="checkbox" name="tissue" value="$tissue"> $tissue</td><td>$hash{catcount}{$tissue}</td></tr>); }
+#   print qq(<br/>\n);
+  print qq(<tr><td>&nbsp;</td</tr>\n);
 
 #   print qq(4. Topic, optionally choose one or more topics.<br/>\n);
-  print qq(4. Choose Topic<br/>\n);
+  print qq(<tr><td>4. Choose Topic</td><td>Count</td></tr>\n);
   foreach my $topics (sort keys %{ $hash{topics} }) { 
     if ($topics) { 
       my $label = $topics; $label =~ s/Topic: //;
-      print qq(<input type="checkbox" name="topics" value="$topics"> $label<br/>); } }
+      print qq(<tr><td><input type="checkbox" name="topics" value="$topics"> $label</td><td>$hash{catcount}{$label}</td></tr>); } }
+  print qq(<tr><td>&nbsp;</td</tr>\n);
+
+  print qq(<tr><td>5. WormBase Processed Data</td><td>Count</td></tr>\n);
+  foreach my $wbProcessed (sort keys %{ $hash{wbProcessed} }) { 
+    if ($wbProcessed) { 
+      my $label = $wbProcessed;
+      print qq(<tr><td><input type="checkbox" name="wbProcessed" value="$wbProcessed"> $label</td><td>$hash{catcount}{$label}</td></tr>); } }
+
+  print qq(</table>\n);
+
 
 #   print qq(Enter list of gene names here :<br/>);
 #   print qq(<textarea id="geneInput" name="geneInput" rows="20" cols="80"></textarea><br/>\n);
@@ -222,14 +246,22 @@ sub showSpellForm {
 
 } # sub showSpellForm
 
-sub processFile {
+sub processFiles {
+  open (IN, "<$file_category_count") or die "Cannot open $file_category_count : $!";
+  while (my $line = <IN>) {
+    chomp $line;
+    my ($category, $count) = split/\t/, $line;
+    $hash{catcount}{$category} = $count;
+  }
+  close (IN) or die "Cannot close $file_category_count : $!";
+
   open (IN, "<$file_source") or die "Cannot open $file_source : $!";
   my $header = <IN>;
   my $count = 0;
   while (my $line = <IN>) {
     chomp $line;
     $count++;
-    my ($dataid, $dataname, $paper, $method, $species, $tissues, $topics, $title, $url) = split/\t/, $line;
+    my ($dataid, $dataname, $paper, $method, $species, $tissues, $topics, $title, $wbProcessed, $url) = split/\t/, $line;
     if ($url) {
       $line =~ s/$url/<a href="$url">$url<\/a>/; }
     $hash{line}{$count} = $line;
@@ -242,10 +274,13 @@ sub processFile {
 #     $hash{topics}{$topics}{$count}++;
     my (@topics) = split/\|/, $topics;
     foreach my $topic (@topics) { $hash{topics}{$topic}{$count}++; }
+    my (@wbProcessed) = split/\|/, $wbProcessed;
+    foreach my $wbProcessed (@wbProcessed) { $hash{wbProcessed}{$wbProcessed}{$count}++; }
   } # while (my $line = <IN>)
   close (IN) or die "Cannot close $file_source : $!";
   return $header;
 # Dataset ID	Dataset Name	WormBase Paper ID	Method	Species	Tissue	Topics	Title	URL
-} # sub processFile
+
+} # sub processFiles
 
 
