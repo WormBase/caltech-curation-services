@@ -14,12 +14,13 @@
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
 
 # delete command
-# DELETE FROM topic_entity_tag WHERE topic = 'ATP:0000027' AND topic_entity_tag_source_id IN ( SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE secondary_data_provider_id = ( SELECT mod_id FROM mod WHERE abbreviation = 'WB' ));
+# DELETE FROM topic_entity_tag WHERE topic = 'ATP:0000027' AND topic_entity_tag_source_id IN ( SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE secondary_data_provider_id = ( SELECT mod_id FROM mod WHERE abbreviation = 'WB' )) AND created_by != 'default_user';
 
 # select command if wanting to check
-# SELECT * FROM topic_entity_tag WHERE topic = 'ATP:0000027' AND topic_entity_tag_source_id IN (
-#   SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE secondary_data_provider_id = (
-#   SELECT mod_id FROM mod WHERE abbreviation = 'WB' ));
+#  SELECT * FROM topic_entity_tag WHERE topic = 'ATP:0000027' AND topic_entity_tag_source_id IN (
+#    SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE secondary_data_provider_id = (
+#    SELECT mod_id FROM mod WHERE abbreviation = 'WB' ))
+#    AND created_by != 'default_user'
 
 
 use strict;
