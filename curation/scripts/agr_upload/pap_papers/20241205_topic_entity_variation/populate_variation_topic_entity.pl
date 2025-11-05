@@ -8,6 +8,8 @@
 # When reading afp variation or othervariation, always derive valid paper.  2025 06 04
 #
 # Commented out code for afpVersion, but variation doesn't need it.  removed timestamp requirement for tfp_ query.  2025 06 06
+#
+# Add data novelty but this explicitly processes afp_othervariation, so the code is different from strain and transgene, but the output should be the same.  2025 11 05
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -49,6 +51,9 @@ my $mod = 'WB';
 my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
 # my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
 my $okta_token = &generateOktaToken();
+
+my $dataNoveltyExisting = 'ATP:0000334';        # existing data
+my $dataNoveltyNewToDb =  'ATP:0000228';        # new to database
 
 my %variation;
 my %variationTaxon;
@@ -327,6 +332,7 @@ sub outputNegData {
               $object{'reference_curie'}              = $wbpToAgr{$joinkey};
 #               $object{'wbpaper_id'}                   = $joinkey;		# for debugging
 #               $object{'NEGATIVE ACK ENTITY'}          = $joinkey;		# for debugging
+              $object{'data_novelty'}                 = $dataNoveltyExisting;
               my $ts = $theHash{'ack'}{$joinkey}{$obj}{$aut}{timestamp};
               if ( $afpContributor{$joinkey}{$aut} ) { $ts = $afpContributor{$joinkey}{$aut}; }
               $object{'date_updated'}		  = $ts;
@@ -357,6 +363,7 @@ sub outputNegData {
       $object{'reference_curie'}              = $wbpToAgr{$joinkey};
 #       $object{'wbpaper_id'}                   = $joinkey;		# for debugging
 #       $object{'NEGATIVE TFP TOPIC'}           = $joinkey;		# for debugging
+      $object{'data_novelty'}                 = $dataNoveltyExisting;
       $object{'date_updated'}		      = $tfpVariation{$joinkey}{timestamp};
       $object{'date_created'}		      = $tfpVariation{$joinkey}{timestamp};
       $object{'created_by'}                   = 'ACKnowledge_pipeline';
@@ -387,6 +394,7 @@ sub outputNegData {
       $object{'reference_curie'}              = $wbpToAgr{$joinkey};
 #       $object{'wbpaper_id'}                   = $joinkey;		# for debugging
 #       $object{'NEGATIVE ACK TOPIC'}           = $joinkey;		# for debugging
+      $object{'data_novelty'}                 = $dataNoveltyExisting;
       my $ts = $afpContributor{$joinkey}{$aut};
       $object{'date_updated'}		  = $ts;
       $object{'date_created'}		  = $ts;
@@ -420,6 +428,7 @@ sub outputTfpData {
     $object{'negated'}                      = FALSE;
     $object{'reference_curie'}              = $wbpToAgr{$joinkey};
 #     $object{'wbpaper_id'}                   = $joinkey;		# for debugging
+    $object{'data_novelty'}                 = $dataNoveltyExisting;
     $object{'date_updated'}		    = $tfpVariation{$joinkey}{timestamp};
     $object{'date_created'}		    = $tfpVariation{$joinkey}{timestamp};
     $object{'created_by'}                   = 'ACKnowledge_pipeline';
@@ -484,6 +493,7 @@ sub outputAfpData {
           $object{'negated'}                      = FALSE;
           $object{'reference_curie'}              = $wbpToAgr{$joinkey};
 #           $object{'wbpaper_id'}                   = $joinkey;		# for debugging
+          $object{'data_novelty'}                 = $dataNoveltyExisting;
           $object{'topic'}                        = 'ATP:0000285';
           $object{'entity_type'}                  = 'ATP:0000285';
           $object{'entity_id_validation'}         = 'alliance';
@@ -519,6 +529,7 @@ sub outputAfpData {
       $object{'reference_curie'}              = $wbpToAgr{$joinkey};
 #       $object{'wbpaper_id'}                   = $joinkey;		# for debugging
 #       $object{'AFP OTHER VARIATION POSITIVE TOPIC'}                   = $joinkey;		# for debugging
+      $object{'data_novelty'}                 = $dataNoveltyNewToDb;
       $object{'topic'}                        = 'ATP:0000285';
       if ($afpOthervariation{$joinkey}{$curator}{note}) {
         my $note = $afpOthervariation{$joinkey}{$curator}{note};
