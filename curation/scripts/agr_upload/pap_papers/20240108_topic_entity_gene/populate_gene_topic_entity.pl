@@ -41,7 +41,8 @@
 #
 # Use afp_version to determine ACK instead of timestamp.  2025 06 06
 #
-# All data_novelty is existing  334  2025 11 05
+# All data_novelty is existing  334
+# Using UTC in timestamp queries to work with ABC timestamp API schema.  2025 11 05
 
 
 
@@ -325,7 +326,7 @@ sub outputTheHash {
 } } # sub outputTheHash
 
 sub populateTfpGenestudied {
-  my $result = $dbh->prepare( "SELECT * FROM tfp_genestudied;" );
+  my $result = $dbh->prepare( "SELECT joinkey, tfp_genestudied, tfp_timestamp AT TIME ZONE 'UTC' FROM tfp_genestudied;" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     my ($joinkey, $trText, $ts) = @row;
@@ -556,7 +557,7 @@ sub outputNegativeData {
 
 sub populateNegativeData {
 #   $result = $dbh->prepare( "SELECT * FROM afp_genestudied WHERE afp_genestudied != '' AND afp_timestamp > '2019-03-22 00:00' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2019-03-22 00:00'); " );
-  $result = $dbh->prepare( "SELECT * FROM afp_genestudied WHERE afp_genestudied != ''; " );
+  $result = $dbh->prepare( "SELECT joinkey, afp_genestudied, afp_timestamp AT TIME ZONE 'UTC' FROM afp_genestudied WHERE afp_genestudied != ''; " );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
@@ -569,7 +570,7 @@ sub populateNegativeData {
       $ackPapGene{$row[0]}{genes}{$geneInt}++;
       $ackPapGene{$row[0]}{timestamp} = $row[2]; } }
 #   $result = $dbh->prepare( "SELECT * FROM tfp_genestudied WHERE tfp_genestudied != '' AND tfp_timestamp > '2019-03-22 00:00' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2019-03-22 00:00');" );
-  $result = $dbh->prepare( "SELECT * FROM tfp_genestudied WHERE tfp_genestudied != '';" );
+  $result = $dbh->prepare( "SELECT joinkey, tfp_genestudied, tfp_timestamp AT TIME ZONE 'UTC' FROM tfp_genestudied WHERE tfp_genestudied != '';" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
@@ -583,7 +584,7 @@ sub populateNegativeData {
 
 
 #   $result = $dbh->prepare( "SELECT * FROM afp_genestudied WHERE afp_genestudied = '' AND afp_timestamp > '2019-03-22 00:00' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2019-03-22 00:00');" );
-  $result = $dbh->prepare( "SELECT * FROM afp_genestudied WHERE afp_genestudied = '';" );
+  $result = $dbh->prepare( "SELECT joinkey, afp_genestudied, afp_timestamp AT TIME ZONE 'UTC' FROM afp_genestudied WHERE afp_genestudied = '';" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
@@ -591,7 +592,7 @@ sub populateNegativeData {
     next unless (exists $afpLasttouched{$row[0]});
     $ackNegGeneTopic{$row[0]} = $row[2]; }
 #   $result = $dbh->prepare( "SELECT * FROM tfp_genestudied WHERE tfp_genestudied = '' AND tfp_timestamp > '2019-03-22 00:00';" );
-  $result = $dbh->prepare( "SELECT * FROM tfp_genestudied WHERE tfp_genestudied = '';" );
+  $result = $dbh->prepare( "SELECT joinkey, tfp_genestudied, tfp_timestamp AT TIME ZONE 'UTC' FROM tfp_genestudied WHERE tfp_genestudied = '';" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
@@ -611,21 +612,21 @@ sub populateNegativeData {
 } # sub populateNegativeData
 
 sub populateAfpContributor {
-  my $result = $dbh->prepare( "SELECT joinkey, pap_curator, pap_timestamp FROM pap_species WHERE pap_evidence ~ 'from author first pass'" );
+  my $result = $dbh->prepare( "SELECT joinkey, pap_curator, pap_timestamp AT TIME ZONE 'UTC' FROM pap_species WHERE pap_evidence ~ 'from author first pass'" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
 #     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
     next unless ($row[1]);
     my $who = $row[1]; $who =~ s/two/WBPerson/;
     $afpContributor{$row[0]}{$who} = $row[2]; }
-  $result = $dbh->prepare( "SELECT joinkey, pap_curator, pap_timestamp FROM pap_gene WHERE pap_evidence ~ 'from author first pass'" );
+  $result = $dbh->prepare( "SELECT joinkey, pap_curator, pap_timestamp AT TIME ZONE 'UTC' FROM pap_gene WHERE pap_evidence ~ 'from author first pass'" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
 #     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
     next unless ($row[1]);
     my $who = $row[1]; $who =~ s/two/WBPerson/;
     $afpContributor{$row[0]}{$who} = $row[2]; }
-  $result = $dbh->prepare( "SELECT joinkey, afp_contributor, afp_timestamp FROM afp_contributor ORDER BY afp_timestamp" );
+  $result = $dbh->prepare( "SELECT joinkey, afp_contributor, afp_timestamp AT TIME ZONE 'UTC' FROM afp_contributor ORDER BY afp_timestamp" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
 #     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
@@ -644,7 +645,7 @@ sub populateAfpVersion {
 } }
 
 sub populateAfpLasttouched {
-  my $result = $dbh->prepare( "SELECT joinkey, afp_timestamp FROM afp_lasttouched" );
+  my $result = $dbh->prepare( "SELECT joinkey, afp_timestamp AT TIME ZONE 'UTC' FROM afp_lasttouched" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
 #     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
@@ -682,7 +683,7 @@ sub populateGinValidation {
     
 
 sub populatePapGene {
-  $result = $dbh->prepare( "SELECT joinkey, pap_gene, pap_timestamp, pap_curator, pap_evidence FROM pap_gene WHERE pap_evidence ~ 'Manually_connected'" );
+  $result = $dbh->prepare( "SELECT joinkey, pap_gene, pap_timestamp AT TIME ZONE 'UTC', pap_curator, pap_evidence FROM pap_gene WHERE pap_evidence ~ 'Manually_connected'" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   # this is happening twice, because we need to know what is manConn before processing all data, to bin based on manConn
   while (my @row = $result->fetchrow) {
@@ -692,7 +693,7 @@ sub populatePapGene {
     if ($evi =~ m/(Manually_connected.*".*")/) {
       $manConn{$joinkey}{$gene} = $1; }
   }
-  $result = $dbh->prepare( "SELECT joinkey, pap_gene, pap_timestamp, pap_curator, pap_evidence FROM pap_gene" );
+  $result = $dbh->prepare( "SELECT joinkey, pap_gene, pap_timestamp AT TIME ZONE 'UTC', pap_curator, pap_evidence FROM pap_gene" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
