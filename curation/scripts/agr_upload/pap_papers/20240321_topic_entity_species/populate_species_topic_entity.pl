@@ -45,7 +45,7 @@
 # added data_novelty for ABC  but not sure if we should populate this on cronjob tomorrow, so commented out.  2025 09 12
 
 
-# cronjob (TODO change when)
+# cronjob
 # 0 13 * * 6 /usr/lib/scripts/agr_upload/pap_papers/20240321_topic_entity_species/populate_species_topic_entity.pl
 
 
