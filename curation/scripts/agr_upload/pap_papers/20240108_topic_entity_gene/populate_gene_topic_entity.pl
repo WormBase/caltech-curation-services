@@ -40,6 +40,8 @@
 # when doing output deriveValidPap.  2025 06 04
 #
 # Use afp_version to determine ACK instead of timestamp.  2025 06 06
+#
+# All data_novelty is existing  334  2025 11 05
 
 
 
@@ -87,6 +89,8 @@ my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
 # my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
 my $okta_token = &generateOktaToken();
 # my $okta_token = 'use_above_when_live';
+
+my $dataNoveltyExisting = 'ATP:0000334';        # existing data
 
 # my @wbpapers = qw( 00004952 00005199 00026609 00030933 00035427 );
 # my @wbpapers = qw( 00004952 00005199 00046571 00057043 00064676 );
@@ -297,7 +301,7 @@ sub outputTheHash {
           $object{'entity_type'}                = $entityType;
           $object{'entity_id_validation'}       = $entity_id_validation;
           $object{'topic_entity_tag_source_id'} = $datatypeToSourceId{$datatype};
-          $object{'data_novelty'}               = 'ATP:0000335';	# stub for now
+          $object{'data_novelty'}               = $dataNoveltyExisting;
           $object{'entity'}                     = "WB:WBGene$gene";
           if ($geneToTaxon{$gene}) {
             $object{'species'}                  = $geneToTaxon{$gene}; }
@@ -351,6 +355,7 @@ sub outputTfpData {
     $object{'negated'}                      = FALSE;
     $object{'reference_curie'}              = $wbpToAgr{$joinkey};
 #     $object{'wbpaper_id'}                   = $joinkey;               # for debugging
+    $object{'data_novelty'}                 = $dataNoveltyExisting;
     $object{'date_updated'}                 = $tfpGene{$joinkey}{timestamp};
     $object{'date_created'}                 = $tfpGene{$joinkey}{timestamp};
     $object{'created_by'}                   = 'ACKnowledge_pipeline';
@@ -435,6 +440,7 @@ sub outputNegativeData {
         $object{'negated'}                    = TRUE;
         $object{'force_insertion'}            = TRUE;
         $object{'reference_curie'}            = $wbpToAgr{$joinkey};
+        $object{'data_novelty'}               = $dataNoveltyExisting;
         $object{'topic'}                      = 'ATP:0000005';
         $object{'entity_type'}                = 'ATP:0000005';
         $object{'entity_id_validation'}       = 'alliance';
@@ -474,6 +480,7 @@ sub outputNegativeData {
     $object{'topic_entity_tag_source_id'}   = $source_id_tfp;
     $object{'force_insertion'}              = TRUE;
     $object{'negated'}                      = TRUE;
+    $object{'data_novelty'}                 = $dataNoveltyExisting;
     $object{'reference_curie'}              = $wbpToAgr{$joinkey};
     # $object{'wbpaper_id'}                   = $joinkey;               # for debugging
     $object{'date_updated'}                 = $ts;
@@ -506,6 +513,7 @@ sub outputNegativeData {
       $object{'force_insertion'}              = TRUE;
       $object{'negated'}                      = TRUE;
       $object{'reference_curie'}              = $wbpToAgr{$joinkey};
+      $object{'data_novelty'}                 = $dataNoveltyExisting;
       # $object{'wbpaper_id'}                   = $joinkey;               # for debugging
       $object{'date_updated'}                 = $ts;
       $object{'date_created'}                 = $ts;
@@ -530,6 +538,7 @@ sub outputNegativeData {
     $object{'force_insertion'}              = TRUE;
     $object{'negated'}                      = TRUE;
     $object{'reference_curie'}              = $wbpToAgr{$joinkey};
+    $object{'data_novelty'}                 = $dataNoveltyExisting;
     # $object{'wbpaper_id'}                   = $joinkey;               # for debugging
     $object{'date_updated'}                 = $curNegGeneTopic{$joinkey}{timestamp};
     $object{'date_created'}                 = $curNegGeneTopic{$joinkey}{timestamp};
