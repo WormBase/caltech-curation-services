@@ -53,6 +53,8 @@
 # When reading afp transgene or othertransgene, always derive valid paper, and skip regardless of ack vs old afp.  2025 06 04
 #
 # use afp_version to determine ACK vs afp instead of timestamp.  removed timestamp requirement for tfp_ query.  2025 06 06
+#
+# process afp_othertransgene the same as we're processing afp_otherstrain.  add data novelty same as strain.  2025 11 05
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -94,6 +96,9 @@ my $mod = 'WB';
 my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
 # my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
 my $okta_token = &generateOktaToken();
+
+my $dataNoveltyExisting = 'ATP:0000334';        # existing data
+my $dataNoveltyNewToDb =  'ATP:0000228';        # new to database
 
 my %trp;
 my %trpTaxon;
@@ -254,6 +259,18 @@ sub populateAfpOthertransgene {
     next unless ($afpLasttouched{$joinkey});
     my $who = $row[1]; $who =~ s/two/WBPerson/;
     $afpOthertransgene{$joinkey} = $row[1];
+    my @auts;
+    if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
+    if (scalar @auts < 1) { push @auts, 'unknown_author'; }
+    foreach my $aut (@auts) {
+      my $obj = 'NOENTITY';
+      if ($afpContributor{$joinkey}{$aut}) {
+        $theHash{'ack'}{$joinkey}{$obj}{$aut}{timestamp} = $afpContributor{$joinkey}{$aut}; }
+      else {
+        $theHash{'ack'}{$joinkey}{$obj}{$aut}{timestamp} = $row[2]; }
+      $theHash{'ack'}{$joinkey}{$obj}{$aut}{newToDatabase} = 'true';
+      push @{ $theHash{'ack'}{$joinkey}{$obj}{$aut}{note} }, $row[1];
+    }
 } }
 
 sub deriveValidPap {
@@ -393,6 +410,7 @@ sub outputNegData {
     $object{'negated'}                      = TRUE;
     $object{'reference_curie'}              = $wbpToAgr{$joinkey};
 #     $object{'wbpaper_id'}                   = $joinkey;		# for debugging
+    $object{'data_novelty'}                 = $dataNoveltyExisting;
     $object{'topic'}                        = 'ATP:0000110';
 # Do not want negative topic data for old afp, because of how that form worked.  2025 06 02
 #     if ( (!exists $afpTransgene{$joinkey}) && (!exists $afpOthertransgene{$joinkey}) ) {	# old afp, pre-acknowledge
@@ -448,6 +466,7 @@ sub outputNegData {
     $object{'force_insertion'}              = TRUE;
     $object{'negated'}                      = TRUE;
     $object{'reference_curie'}              = $wbpToAgr{$joinkey};
+    $object{'data_novelty'}                 = $dataNoveltyExisting;
 #     $object{'wbpaper_id'}                   = $joinkey;               # for debugging
     $object{'date_updated'}                 = $ts;
     $object{'date_created'}                 = $ts;
@@ -483,6 +502,7 @@ sub outputNegData {
         $object{'force_insertion'}            = TRUE;
         $object{'reference_curie'}            = $wbpToAgr{$joinkey};
 #         $object{'wbpaper_id'}                 = $joinkey;		# for debugging
+        $object{'data_novelty'}               = $dataNoveltyExisting;
         $object{'topic'}                      = 'ATP:0000110';
         $object{'entity_type'}                = 'ATP:0000110';
         $object{'entity_id_validation'}       = 'alliance';
@@ -523,6 +543,7 @@ sub outputTfpData {
     $object{'topic_entity_tag_source_id'}   = $source_id_tfp;
     $object{'force_insertion'}              = TRUE;
     $object{'negated'}                      = FALSE;
+    $object{'data_novelty'}                 = $dataNoveltyExisting;
     $object{'reference_curie'}              = $wbpToAgr{$joinkey};
 #     $object{'wbpaper_id'}                   = $joinkey;		# for debugging
     $object{'date_updated'}		    = $tfpTransgene{$joinkey}{timestamp};
@@ -607,6 +628,7 @@ sub outputAfpData {
           $object{'negated'}                      = FALSE;
           $object{'reference_curie'}              = $wbpToAgr{$joinkey};
 #           $object{'wbpaper_id'}                   = $joinkey;		# for debugging
+          $object{'data_novelty'}                 = $dataNoveltyExisting;
           $object{'topic'}                        = 'ATP:0000110';
 
           $object{'entity_type'}                  = 'ATP:0000110';
@@ -616,6 +638,8 @@ sub outputAfpData {
           if ($trpTaxon{$obj}) { 			# if there's a trp taxon, go with that value instead of default
             $object{'species'}                    = $trpTaxon{$obj}; }
           if ($obj eq 'NOENTITY') {
+            if ($theHash{$datatype}{$joinkey}{$obj}{$curator}{newToDatabase} eq 'true') {
+              $object{'data_novelty'}             = $dataNoveltyNewToDb; }
             delete $object{'entity_type'};
             delete $object{'entity_id_validation'};
             delete $object{'entity'};
