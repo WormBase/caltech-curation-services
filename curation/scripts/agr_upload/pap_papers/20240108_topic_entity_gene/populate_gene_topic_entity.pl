@@ -48,12 +48,13 @@
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
 
 # delete command
-# DELETE FROM topic_entity_tag WHERE topic = 'ATP:0000005' AND topic_entity_tag_source_id IN ( SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE secondary_data_provider_id = ( SELECT mod_id FROM mod WHERE abbreviation = 'WB' ));
+# DELETE FROM topic_entity_tag WHERE topic = 'ATP:0000005' AND topic_entity_tag_source_id IN ( SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE secondary_data_provider_id = ( SELECT mod_id FROM mod WHERE abbreviation = 'WB' )) AND created_by != 'default_user';
 
 # select command if wanting to check
-# SELECT * FROM topic_entity_tag WHERE topic = 'ATP:0000005' AND topic_entity_tag_source_id IN (
-#   SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE secondary_data_provider_id = (
-#   SELECT mod_id FROM mod WHERE abbreviation = 'WB' ));
+#  SELECT * FROM topic_entity_tag WHERE topic = 'ATP:0000005' AND topic_entity_tag_source_id IN (
+#    SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE secondary_data_provider_id = (
+#    SELECT mod_id FROM mod WHERE abbreviation = 'WB' ))
+#    AND created_by != 'default_user';
 
 
 # Run like
@@ -117,7 +118,7 @@ my $dataNoveltyExisting = 'ATP:0000334';        # existing data
 # my @wbpapers = qw( 00003000 00003823 00004455 00004952 00005199 00005707 00006103 00006202 00006320 00017095 00018874 00025176 00027230 00044280 00046571 00057043 00063127 00064676 00064771 00065877 00066211 );		# kimberly 2024 04 18 set
 # my @wbpapers = qw( 00000119 00000465 00003000 00003823 00004455 00004952 00005199 00005707 00005988 00006103 00006202 00006320 00013393 00017095 00024745 00025176 00027230 00038491 00044280 00046571 00057043 00063127 00064676 00064771 00065877 00066211 );		# kimberly 2024 05 13 set
 # my @wbpapers = qw( 00065553 00065560 00066296 00066355 00066405 00066410 00066411 00066419 00066461 00066469 00066891 00066862 00066767 00053843 );	# kimberly negative gene set  2024 10 02
-my @wbpapers = qw( 00065553 00065560 00066296 00066355 00066405 00066410 00066411 00066419 00066461 00066469 00066891 00066862 00066767 00053843 00004452 00017615 00005440 00005870 00006533 00025104 00027167 );	# kimberly negative gene set  2025 02 07
+# my @wbpapers = qw( 00065553 00065560 00066296 00066355 00066405 00066410 00066411 00066419 00066461 00066469 00066891 00066862 00066767 00053843 00004452 00017615 00005440 00005870 00006533 00025104 00027167 );	# kimberly negative gene set  2025 02 07
 my @wbpapers = qw( 00065553 00065560 00066296 00066355 00066405 00066410 00066411 00066419 00066461 00066469 00066891 00066862 00066767 00053843 00004452 00017615 00005440 00005870 00006533 00025104 00027167 00033206 00054648 );	# old afp notes, doublecheck concatenating notes from afp + textarea_comment  2025 11 05
 
 
