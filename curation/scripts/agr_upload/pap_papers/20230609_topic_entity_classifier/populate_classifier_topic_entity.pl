@@ -40,15 +40,15 @@
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
 
 # delete command  2024 08 14 - if more ATP get added later, this needs to be modified.
-# DELETE FROM topic_entity_tag WHERE topic IN ('ATP:0000005', 'ATP:0000027', 'ATP:0000033', 'ATP:0000041', 'ATP:0000048', 'ATP:0000054', 'ATP:0000055', 'ATP:0000056', 'ATP:0000060', 'ATP:0000061', 'ATP:0000062', 'ATP:0000068', 'ATP:0000069', 'ATP:0000070', 'ATP:0000071', 'ATP:0000082', 'ATP:0000083', 'ATP:0000084', 'ATP:0000089', 'ATP:0000096', 'ATP:0000110', 'ATP:0000123', 'ATP:0000152', 'ATP:0000278', 'ATP:0000285', 'ATP:0000349', 'ATP:0000350', 'ATP:0000351', 'ATP:0000352') AND topic_entity_tag_source_id IN ( SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE secondary_data_provider_id = ( SELECT mod_id FROM mod WHERE abbreviation = 'WB' )) AND topic_entity_tag_source_id NOT IN (SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE source_method = 'abc_document_classifier') AND created_by != 'default_user';
+# DELETE FROM topic_entity_tag WHERE topic IN ('ATP:0000005', 'ATP:0000027', 'ATP:0000033', 'ATP:0000041', 'ATP:0000048', 'ATP:0000054', 'ATP:0000055', 'ATP:0000056', 'ATP:0000060', 'ATP:0000061', 'ATP:0000062', 'ATP:0000068', 'ATP:0000069', 'ATP:0000070', 'ATP:0000071', 'ATP:0000082', 'ATP:0000083', 'ATP:0000084', 'ATP:0000089', 'ATP:0000096', 'ATP:0000110', 'ATP:0000152', 'ATP:0000278', 'ATP:0000285', 'ATP:0000349', 'ATP:0000350', 'ATP:0000351', 'ATP:0000352') AND topic_entity_tag_source_id IN ( SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE secondary_data_provider_id = ( SELECT mod_id FROM mod WHERE abbreviation = 'WB' )) AND topic_entity_tag_source_id NOT IN (SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE source_method = 'abc_document_classifier') AND created_by != 'default_user';
 
 # select command if wanting to check
-#  SELECT * FROM topic_entity_tag WHERE topic IN ('ATP:0000005', 'ATP:0000027', 'ATP:0000033', 'ATP:0000041', 'ATP:0000048', 'ATP:0000054', 'ATP:0000055', 'ATP:0000056', 'ATP:0000060', 'ATP:0000061', 'ATP:0000062', 'ATP:0000068', 'ATP:0000069', 'ATP:0000070', 'ATP:0000071', 'ATP:0000082', 'ATP:0000083', 'ATP:0000084', 'ATP:0000089', 'ATP:0000096', 'ATP:0000110', 'ATP:0000123', 'ATP:0000152', 'ATP:0000278', 'ATP:0000285', 'ATP:0000349', 'ATP:0000350', 'ATP:0000351', 'ATP:0000352')
-#    AND topic_entity_tag_source_id IN (
-#    SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE secondary_data_provider_id = (
-#    SELECT mod_id FROM mod WHERE abbreviation = 'WB' ))
-#    AND topic_entity_tag_source_id NOT IN (SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE source_method = 'abc_document_classifier')
-#    AND created_by != 'default_user';
+#   SELECT * FROM topic_entity_tag WHERE topic IN ('ATP:0000005', 'ATP:0000027', 'ATP:0000033', 'ATP:0000041', 'ATP:0000048', 'ATP:0000054', 'ATP:0000055', 'ATP:0000056', 'ATP:0000060', 'ATP:0000061', 'ATP:0000062', 'ATP:0000068', 'ATP:0000069', 'ATP:0000070', 'ATP:0000071', 'ATP:0000082', 'ATP:0000083', 'ATP:0000084', 'ATP:0000089', 'ATP:0000096', 'ATP:0000110', 'ATP:0000152', 'ATP:0000278', 'ATP:0000285', 'ATP:0000349', 'ATP:0000350', 'ATP:0000351', 'ATP:0000352')
+#     AND topic_entity_tag_source_id IN (
+#     SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE secondary_data_provider_id = (
+#     SELECT mod_id FROM mod WHERE abbreviation = 'WB' ))
+#     AND topic_entity_tag_source_id NOT IN (SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE source_method = 'abc_document_classifier')
+#     AND created_by != 'default_user';
 
 
 
