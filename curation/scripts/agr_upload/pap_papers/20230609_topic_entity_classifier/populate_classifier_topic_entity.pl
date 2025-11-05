@@ -1349,6 +1349,11 @@ sub populateOaData {
 } # sub populateOaData
 
 __END__
+
+
+# 2025 11 05   Kimbery and I no longer think we need anything below this line.  We looked into it, and aren't really sure what it's for, but keeping it just in case.
+
+
 # SELECT cur_selcomment, COUNT(cur_selcomment) FROM cur_curdata GROUP BY cur_selcomment ORDER BY COUNT(cur_selcomment) DESC;
 #   $premadeComments{"15"} = "Toxicology";
 #   $premadeComments{"16"} = "Host-pathogen/virulence";
