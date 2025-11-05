@@ -302,7 +302,8 @@ sub populateAfpTransgene {
 #         print qq(NO PERSON for paper : $joinkey\temail : $email\n); }
       $theHash{'afp'}{$joinkey}{'NOENTITY'}{$wbperson}{timestamp} = $ts;
       push @{ $theHash{'afp'}{$joinkey}{'NOENTITY'}{$wbperson}{note} }, $trText;
-# TODO  future self  do not add ATP that means it's new to database   added this newToDatabase to theHash, but not changed the processing when posting to ABC
+# DONE  future self  do not add ATP that means it's new to database   added this newToDatabase to theHash, but not changed the processing when posting to ABC
+# probably done, we don't remember why we wrote this comment, but we don't see the ATP:0000228 new to database in the output logs
       $theHash{'afp'}{$joinkey}{'NOENTITY'}{$wbperson}{newToDatabase} = 'false';
 
       $trText =~ s/\[[^\]]*\]//g;
@@ -350,7 +351,7 @@ sub populateAfpTransgene {
 #
 # # check tfp_transgene - if empty, make negated, if data, send the data.  source ECO:0008021 + ACKnowledge_pipeline
 
-# TODO
+# DONE
 # output an error log if running against API.
 
 
