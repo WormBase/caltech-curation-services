@@ -35,7 +35,7 @@
 
 
 
-# cronjob (TODO change when)
+# cronjob
 # 0 13 * * 6 /usr/lib/scripts/agr_upload/pap_papers/20240321_topic_entity_species/populate_species_topic_entity.pl
 
 
@@ -598,7 +598,7 @@ sub populateTfpSpecies {
 # # we do not have 	    pap_curation_done = 'genestudied' paper not in pap_gene
 
 sub populateNegativeData {
-# TODO  for incorporating into main script, limit with    afp_timestamp > now() - interval '2 weeks'
+# DONE  for incorporating into main script, limit with    afp_timestamp > now() - interval '2 weeks'
 #   $result = $dbh->prepare( "SELECT * FROM afp_species WHERE afp_species = '' AND afp_timestamp > now() - interval '2 weeks' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2019-03-22 00:00');" );
   $result = $dbh->prepare( "SELECT * FROM afp_species WHERE afp_species = '' AND afp_timestamp > '2019-03-22 00:00' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2019-03-22 00:00');" );
 $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
@@ -606,7 +606,7 @@ while (my @row = $result->fetchrow) {
   next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
   $ackNegSpeciesTopic{$row[0]} = $row[2]; }
 
-# TODO  for incorporating into main script, limit with    tfp_timestamp > now() - interval '2 weeks'
+# DONE  for incorporating into main script, limit with    tfp_timestamp > now() - interval '2 weeks'
 #   $result = $dbh->prepare( "SELECT * FROM tfp_species WHERE tfp_species = '' AND tfp_timestamp > now() - interval '2 weeks';" );
   $result = $dbh->prepare( "SELECT * FROM tfp_species WHERE tfp_species = '' AND tfp_timestamp > '2019-03-22 00:00';" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
@@ -625,7 +625,7 @@ while (my @row = $result->fetchrow) {
 
   my %afpSpeciesForNegation;
   # get all papers that have an afp_lasttouched in the last couple of weeks.
-# TODO  for incorporating into main script, limit with    afp_timestamp > now() - interval '2 weeks'
+# DONE  for incorporating into main script, limit with    afp_timestamp > now() - interval '2 weeks'
 #   $result = $dbh->prepare( "SELECT * FROM afp_species WHERE afp_species != '' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > now() - interval '2 weeks');" );
   $result = $dbh->prepare( "SELECT * FROM afp_species WHERE afp_species != '' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2019-03-22 00:00');" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
