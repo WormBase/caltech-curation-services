@@ -7,6 +7,8 @@
 # output negative data processing all negative data.  skip strains without a taxon.  2025 06 04
 #
 # Commented out code for afpVersion, but strain doesn't need it.  removed timestamp requirement for tfp_ query.  2025 06 06
+#
+# Added data_novelty.  2025 11 05
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -49,6 +51,9 @@ my $mod = 'WB';
 # my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
 my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
 my $okta_token = &generateOktaToken();
+
+my $dataNoveltyExisting = 'ATP:0000334';        # existing data
+my $dataNoveltyNewToDb =  'ATP:0000228';        # new to database
 
 my %strain;
 my %strainTaxon;
@@ -97,8 +102,8 @@ if ($output_format eq 'api') {
 &populateTfpStrain();
 
 
-# &outputAfpData();
-# &outputTfpData();
+&outputAfpData();
+&outputTfpData();
 &outputNegData();
 
 if ($output_format eq 'json') {
@@ -299,16 +304,18 @@ sub populateAfpStrain {
 sub outputNegData {
   my $data_provider = $mod;
   my $secondary_data_provider = $mod;
-  my $source_evidence_assertion = 'ATP:0000035';
-  my $source_method = 'author_first_pass';
-  my $source_id_afp = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
-  unless ($source_id_afp) {
-    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
-    return;
-  }
 
-  $source_evidence_assertion = 'ATP:0000035';
-  $source_method = 'ACKnowledge_form';
+# strain does not have old afp data
+#   $source_evidence_assertion = 'ATP:0000035';
+#   $source_method = 'author_first_pass';
+#   my $source_id_afp = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+#   unless ($source_id_afp) {
+#     print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+#     return;
+#   }
+
+  my $source_evidence_assertion = 'ATP:0000035';
+  my $source_method = 'ACKnowledge_form';
   my $source_id_ack = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
   unless ($source_id_ack) {
     print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
@@ -334,6 +341,7 @@ sub outputNegData {
     $object{'reference_curie'}              = $wbpToAgr{$joinkey};
 #     $object{'wbpaper_id'}                   = $joinkey;		# for debugging
     $object{'topic'}                        = 'ATP:0000027';
+    $object{'data_novelty'}                 = $dataNoveltyExisting;
 # Do not want negative topic data for old afp, because of how that form worked.  2025 06 02
 #     if ( (!exists $afpStrain{$joinkey}) && (!exists $afpOtherstrain{$joinkey}) ) {
 #       my $email = $afpToEmail{$joinkey};
@@ -396,6 +404,7 @@ sub outputNegData {
     $object{'created_by'}                   = 'ACKnowledge_pipeline';
     $object{'updated_by'}                   = 'ACKnowledge_pipeline';
     $object{'topic'}                        = 'ATP:0000110';
+    $object{'data_novelty'}                 = $dataNoveltyExisting;
     if ($output_format eq 'json') {
       push @output_json, \%object; }
     else {
@@ -452,6 +461,7 @@ sub outputNegData {
         $object{'date_updated'}               = $ts;
         # $object{'datatype'}                 = 'ack neg entity data';  # for debugging
         $object{'entity'}                     = $obj;
+        $object{'data_novelty'}               = $dataNoveltyExisting;
         $object{'species'}                    = 'NCBITaxon:6239';
         if ($strainTaxon{$obj}) {
           $object{'species'}                  = $strainTaxon{$obj}; }
@@ -510,6 +520,7 @@ sub outputTfpData {
             else { print PERR qq($joinkey $word not a WBStrain ID\n); } } }
         next unless ($obj);
         unless ($strainTaxon{$obj}) { print qq(ERROR paper $joinkey tfpStrain $obj has no taxon\n); next; }
+        $object{'data_novelty'}                 = $dataNoveltyExisting;
         $object{'entity_type'}               = 'ATP:0000027';
         $object{'entity_id_validation'}      = 'alliance';
         $object{'entity'}                    = $obj;
@@ -532,16 +543,18 @@ sub outputTfpData {
 sub outputAfpData {
   my $data_provider = $mod;
   my $secondary_data_provider = $mod;
-  my $source_evidence_assertion = 'ATP:0000035';
-  my $source_method = 'author_first_pass';
-  my $source_id_afp = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
-  unless ($source_id_afp) {
-    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
-    return;
-  }
 
-  $source_evidence_assertion = 'ATP:0000035';
-  $source_method = 'ACKnowledge_form';
+# strain does not have old afp data
+#   $source_evidence_assertion = 'ATP:0000035';
+#   $source_method = 'author_first_pass';
+#   my $source_id_afp = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+#   unless ($source_id_afp) {
+#     print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+#     return;
+#   }
+
+  my $source_evidence_assertion = 'ATP:0000035';
+  my $source_method = 'ACKnowledge_form';
   my $source_id_ack = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
   unless ($source_id_ack) {
     print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
@@ -567,8 +580,9 @@ sub outputAfpData {
         foreach my $curator (sort keys %{ $theHash{$datatype}{$joinkey}{$obj} }) {
           my %object;
           $object{'topic_entity_tag_source_id'}   = $source_id_ack;
-          if ($datatype eq 'afp') {
-            $object{'topic_entity_tag_source_id'} = $source_id_afp; }
+# strain does not have old afp data
+#           if ($datatype eq 'afp') {
+#             $object{'topic_entity_tag_source_id'} = $source_id_afp; }
           if ($datatype eq 'afpx') {
             $object{'entity_published_as'}	  = $theHash{$datatype}{$joinkey}{$obj}{$curator}{published_as};
             $object{'topic_entity_tag_source_id'} = $source_id_afpx; }
@@ -581,13 +595,13 @@ sub outputAfpData {
           $object{'entity_type'}                  = 'ATP:0000027';
           $object{'entity_id_validation'}         = 'alliance';
           $object{'entity'}                       = $obj;
+          $object{'data_novelty'}                 = $dataNoveltyExisting;
 #           $object{'species'}                      = 'NCBITaxon:6239';	# used to have a default, now skip if no taxon
           if ($strainTaxon{$obj}) { 		# if there's a strain taxon, go with that value instead of default
             $object{'species'}                    = $strainTaxon{$obj}; }
           if ($obj eq 'NOENTITY') {
-# TODO   future self add ATP that means it's new to database
-            if ($theHash{$datatype}{$joinkey}{$obj}{$curator}{newToDatabase} eq 'true') { 1; }	# use atp that means newToDatabase
-#             $object{'NOENTITY'} = $theHash{$datatype}{$joinkey}{$obj}{$curator}{newToDatabase};
+            if ($theHash{$datatype}{$joinkey}{$obj}{$curator}{newToDatabase} eq 'true') {
+              $object{'data_novelty'}             = $dataNoveltyNewToDb; }
             delete $object{'entity_type'};
             delete $object{'entity_id_validation'};
             delete $object{'entity'};
