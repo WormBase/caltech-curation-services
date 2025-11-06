@@ -441,7 +441,7 @@ sub outputNegData {
       next unless ($wbstrain);  				# must have a wbstrain
       my $obj = 'WB:' . $wbstrain;
       next if ($theHash{'ack'}{$joinkey}{$obj});		# if author sent this entity, don't create a negative entity
-      unless ($strainTaxon{$obj}) { print qq(ERROR paper $joinkey negative ack strain $obj has no taxon\n); next; }
+      unless ($strainTaxon{$obj}) { print PERR qq(ERROR paper $joinkey negative ack strain $obj has no taxon\n); next; }
       my @auts;
       if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
       if (scalar @auts < 1) { push @auts, 'unknown_author'; }
@@ -521,7 +521,7 @@ sub outputTfpData {
             if ($strain{$word}) { $obj = 'WB:' . $strain{$word}; }
             else { print PERR qq($joinkey $word not a WBStrain ID\n); } } }
         next unless ($obj);
-        unless ($strainTaxon{$obj}) { print qq(ERROR paper $joinkey tfpStrain $obj has no taxon\n); next; }
+        unless ($strainTaxon{$obj}) { print PERR qq(ERROR paper $joinkey tfpStrain $obj has no taxon\n); next; }
         $object{'data_novelty'}                 = $dataNoveltyExisting;
         $object{'entity_type'}               = 'ATP:0000027';
         $object{'entity_id_validation'}      = 'alliance';
@@ -576,7 +576,7 @@ sub outputAfpData {
       unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
 #       next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
       foreach my $obj (sort keys %{ $theHash{$datatype}{$joinkey} }) {
-        unless ($strainTaxon{$obj}) { print qq(ERROR paper $joinkey $datatype strain $obj has no taxon\n); next; }
+        unless ($strainTaxon{$obj}) { print PERR qq(ERROR paper $joinkey $datatype strain $obj has no taxon\n); next; }
         if ($obj ne 'NOENTITY') {
           unless ($strainTaxon{$obj}) { print PERR qq(ERROR paper $joinkey strain $obj has no taxon\n); next; } }
         foreach my $curator (sort keys %{ $theHash{$datatype}{$joinkey}{$obj} }) {
