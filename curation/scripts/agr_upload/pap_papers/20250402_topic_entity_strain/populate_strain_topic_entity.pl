@@ -8,7 +8,8 @@
 #
 # Commented out code for afpVersion, but strain doesn't need it.  removed timestamp requirement for tfp_ query.  2025 06 06
 #
-# Added data_novelty.  2025 11 05
+# Added data_novelty.
+# Using UTC in timestamp queries to work with ABC timestamp API schema.  2025 11 05
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -182,21 +183,21 @@ sub populateEmailToWbperson {
 # } }
 
 sub populateAfpContributor {
-  my $result = $dbh->prepare( "SELECT joinkey, pap_curator, pap_timestamp FROM pap_species WHERE pap_evidence ~ 'from author first pass'" );
+  my $result = $dbh->prepare( "SELECT joinkey, pap_curator, pap_timestamp AT TIME ZONE 'UTC' FROM pap_species WHERE pap_evidence ~ 'from author first pass'" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
 #     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
     next unless ($row[1]);
     my $who = $row[1]; $who =~ s/two/WBPerson/;
     $afpContributor{$row[0]}{$who} = $row[2]; }
-  $result = $dbh->prepare( "SELECT joinkey, pap_curator, pap_timestamp FROM pap_gene WHERE pap_evidence ~ 'from author first pass'" );
+  $result = $dbh->prepare( "SELECT joinkey, pap_curator, pap_timestamp AT TIME ZONE 'UTC' FROM pap_gene WHERE pap_evidence ~ 'from author first pass'" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
 #     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
     next unless ($row[1]);
     my $who = $row[1]; $who =~ s/two/WBPerson/;
     $afpContributor{$row[0]}{$who} = $row[2]; }
-  $result = $dbh->prepare( "SELECT joinkey, afp_contributor, afp_timestamp FROM afp_contributor ORDER BY afp_timestamp" );
+  $result = $dbh->prepare( "SELECT joinkey, afp_contributor, afp_timestamp AT TIME ZONE 'UTC' FROM afp_contributor ORDER BY afp_timestamp" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
 #     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
@@ -206,7 +207,7 @@ sub populateAfpContributor {
 } }
 
 sub populateAfpLasttouched {
-  my $result = $dbh->prepare( "SELECT joinkey, afp_timestamp FROM afp_lasttouched" );
+  my $result = $dbh->prepare( "SELECT joinkey, afp_timestamp AT TIME ZONE 'UTC' FROM afp_lasttouched" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
 #     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
@@ -216,7 +217,7 @@ sub populateAfpLasttouched {
 } }
 
 sub populateAfpOtherstrain {
-  my $result = $dbh->prepare( "SELECT * FROM afp_otherstrain" );
+  my $result = $dbh->prepare( "SELECT joinkey, afp_otherstrain, afp_timestamp AT TIME ZONE 'UTC' FROM afp_otherstrain" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
 #     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
@@ -252,7 +253,7 @@ sub deriveValidPap {
 } # sub deriveValidPap
 
 sub populateTfpStrain {
-  my $result = $dbh->prepare( "SELECT * FROM tfp_strain;" );
+  my $result = $dbh->prepare( "SELECT joinkey, tfp_strain, tfp_timestamp AT TIME ZONE 'UTC' FROM tfp_strain;" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     my ($joinkey, $trText, $ts) = @row;
@@ -263,7 +264,7 @@ sub populateTfpStrain {
 
 sub populateAfpStrain {
 #   my $result = $dbh->prepare( "SELECT * FROM afp_transgene WHERE afp_timestamp < '2019-03-22 00:00';" );
-  my $result = $dbh->prepare( "SELECT * FROM afp_strain;" );
+  my $result = $dbh->prepare( "SELECT joinkey, afp_strain, afp_timestamp AT TIME ZONE 'UTC' FROM afp_strain;" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     my ($joinkey, $trText, $ts) = @row;
