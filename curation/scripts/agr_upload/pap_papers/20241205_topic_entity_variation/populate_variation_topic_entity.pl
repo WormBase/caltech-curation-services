@@ -9,7 +9,7 @@
 #
 # Commented out code for afpVersion, but variation doesn't need it.  removed timestamp requirement for tfp_ query.  2025 06 06
 #
-# Add data novelty but this explicitly processes afp_othervariation, so the code is different from strain and transgene, but the output should be the same.
+# Add data novelty but this explicitly processes afp_othervariation, so the code is different from strain and transgene, but the output should be the same.  remove novel_topic_data.
 # Using UTC in timestamp queries to work with ABC timestamp API schema.  2025 11 05
 
 
@@ -526,7 +526,7 @@ sub outputAfpData {
       my %object;
       $object{'topic_entity_tag_source_id'}   = $source_id_ack;
       $object{'force_insertion'}              = TRUE;
-      $object{'novel_topic_data'}             = TRUE;
+#       $object{'novel_topic_data'}             = TRUE;
       $object{'negated'}                      = FALSE;
       $object{'reference_curie'}              = $wbpToAgr{$joinkey};
 #       $object{'wbpaper_id'}                   = $joinkey;		# for debugging
