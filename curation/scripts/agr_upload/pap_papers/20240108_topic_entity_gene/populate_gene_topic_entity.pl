@@ -43,6 +43,9 @@
 #
 # All data_novelty is existing  334
 # Using UTC in timestamp queries to work with ABC timestamp API schema.  2025 11 05
+#
+# Additional logging of api results.
+# curl is unsafe if json payload has singlequotes, updated to use LWP::UserAgent and HTTP::Request 2025 11 09
 
 
 
@@ -67,6 +70,8 @@ use strict;
 use diagnostics;
 use DBI;
 use JSON;
+use LWP::UserAgent;
+use HTTP::Request;
 use Jex;
 use Encode qw( from_to is_utf8 );
 use Dotenv -load => '/usr/lib/.env';
@@ -83,6 +88,10 @@ my $result;
 my $output_format = 'json';
 # my $output_format = 'api';
 my $tag_counter = 0;
+my $success_counter = 0;
+my $exists_counter = 0;
+my $unexpected_counter = 0;
+my $failure_counter = 0;
 
 my @output_json;
 
@@ -895,13 +904,35 @@ sub createTag {
     }
   }
   my $url = $baseUrl . 'topic_entity_tag/';
-# PUT THIS BACK
-  my $api_json = `curl -X 'POST' $url -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json' --data '$object_json'`;
+
+  my $ua = LWP::UserAgent->new;
+  my $req = HTTP::Request->new(POST => $url);
+  $req->header('accept' => 'application/json');
+  $req->header('Authorization' => "Bearer $okta_token");
+  $req->header('Content-Type' => 'application/json');
+  $req->content($object_json);
+  my $res = $ua->request($req);
+
   print OUT qq(create $object_json\n);
+  my $api_json = $res->decoded_content;
   print OUT qq($api_json\n);
-  if ($api_json !~ /success/) {
-    print ERR qq(create $object_json\n);
-    print ERR qq($api_json\n);
+  if ($res->is_success) {
+    if ($api_json =~ /"status":"success"/) {
+      $success_counter++;
+    }
+    elsif ($api_json =~ /"status":"exists"/) {
+      $exists_counter++;
+      print ERR qq(create $object_json\n);
+      print ERR qq($api_json\n);
+    }
+    else {
+      $unexpected_counter++;
+      print ERR qq(create $object_json\n);
+      print ERR qq($api_json\n);
+    }
+  } else {
+    $failure_counter++;
+    print ERR qq(HTTP Error: $res->status_line\n);
   }
 }
 
