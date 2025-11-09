@@ -10,6 +10,11 @@
 #
 # Added data_novelty.
 # Using UTC in timestamp queries to work with ABC timestamp API schema.  2025 11 05
+#
+# Added data_novelty for tfp, which was missing that.
+# Additional logging of api results.
+# curl is unsafe if json payload has singlequotes, updated to use LWP::UserAgent and HTTP::Request
+# removed retry, because we haven't been having an issue with that anymore, and this standardizes things.  2025 11 09
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -29,6 +34,8 @@ use diagnostics;
 use DBI;
 use JSON;
 use Jex;
+use LWP::UserAgent;
+use HTTP::Request;
 use Encode qw( from_to is_utf8 );
 use Dotenv -load => '/usr/lib/.env';
 
@@ -43,6 +50,10 @@ my $result;
 my $output_format = 'json';
 # my $output_format = 'api';
 my $tag_counter = 0;
+my $success_counter = 0;
+my $exists_counter = 0;
+my $unexpected_counter = 0;
+my $failure_counter = 0;
 my $retry_counter = 0;
 
 my @output_json;
@@ -499,6 +510,7 @@ sub outputTfpData {
     $object{'created_by'}                   = 'ACKnowledge_pipeline';
     $object{'updated_by'}                   = 'ACKnowledge_pipeline';
     $object{'topic'}                        = 'ATP:0000027';
+    $object{'data_novelty'}                 = $dataNoveltyExisting;	# TODO CONFIRM
     if ($data eq '') {
       $object{'negated'}                    = TRUE;
 #       $object{'BLAH'}                       = 'TFP neg';
@@ -656,36 +668,67 @@ sub createTag {
   my $url = $baseUrl . 'topic_entity_tag/';
 #   my $api_json = `curl -X 'POST' $url -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json' --data '$object_json'`;	# this has issues with how the shell interprets special characters like parentheses ( and ) when passed directly in the command line.  instead avoid the shell and run the command through a pipe like  open my $fh, "-|", @args
 
-  my @curl_cmd = (
-    "curl", "-X", "POST", $url,
-    "-H", "accept: application/json",
-    "-H", "Authorization: Bearer $okta_token",
-    "-H", "Content-Type: application/json",
-    "--data", $object_json,
-  );
-  my $api_json = '';
-  open my $fh, "-|", @curl_cmd or die "Could not run curl: $!";
-  while (my $line = <$fh>) {
-    $api_json .= $line;
-  }
-  close $fh;
-  if ($? != 0 || $api_json !~ /success/) {
-    print ERR qq(create $object_json\n);
-    print ERR qq($api_json\n);
-  }
+  my $ua = LWP::UserAgent->new;
+  my $req = HTTP::Request->new(POST => $url);
+  $req->header('accept' => 'application/json');
+  $req->header('Authorization' => "Bearer $okta_token");
+  $req->header('Content-Type' => 'application/json');
+  $req->content($object_json);
+  my $res = $ua->request($req);
+
   print OUT qq(create $object_json\n);
+  my $api_json = $res->decoded_content;
   print OUT qq($api_json\n);
-  # $? is the exit status of the last command (0 is success).
-  unless ($api_json) {
-    $retry_counter++;
-    if ($retry_counter > 4) {
-      print ERR qq(api failed without response $retry_counter times, giving up\n);
-      $retry_counter = 0; }
+  if ($res->is_success) {
+    if ($api_json =~ /"status":"success"/) {
+      $success_counter++;
+    }
+    elsif ($api_json =~ /"status":"exists"/) {
+      $exists_counter++;
+      print ERR qq(create $object_json\n);
+      print ERR qq($api_json\n);
+    }
     else {
-      print ERR qq(api failed $retry_counter times, retrying\n);
-      my $sleep_amount = 4 ** $retry_counter;
-      sleep $sleep_amount;
-      &createTag($object_json); } }
+      $unexpected_counter++;
+      print ERR qq(create $object_json\n);
+      print ERR qq($api_json\n);
+    }
+  } else {
+    $failure_counter++;
+    print ERR qq(HTTP Error: $res->status_line\n);
+  }
+  
+# no longer having api retry failures, trying to standardize with other scripts using LWP::UserAgent HTTP::Request
+#   my @curl_cmd = (
+#     "curl", "-X", "POST", $url,
+#     "-H", "accept: application/json",
+#     "-H", "Authorization: Bearer $okta_token",
+#     "-H", "Content-Type: application/json",
+#     "--data", $object_json,
+#   );
+#   my $api_json = '';
+#   open my $fh, "-|", @curl_cmd or die "Could not run curl: $!";
+#   while (my $line = <$fh>) {
+#     $api_json .= $line;
+#   }
+#   close $fh;
+#   if ($? != 0 || $api_json !~ /success/) {
+#     print ERR qq(create $object_json\n);
+#     print ERR qq($api_json\n);
+#   }
+#   print OUT qq(create $object_json\n);
+#   print OUT qq($api_json\n);
+#   # $? is the exit status of the last command (0 is success).
+#   unless ($api_json) {
+#     $retry_counter++;
+#     if ($retry_counter > 4) {
+#       print ERR qq(api failed without response $retry_counter times, giving up\n);
+#       $retry_counter = 0; }
+#     else {
+#       print ERR qq(api failed $retry_counter times, retrying\n);
+#       my $sleep_amount = 4 ** $retry_counter;
+#       sleep $sleep_amount;
+#       &createTag($object_json); } }
 }
 
 sub getSourceId {
