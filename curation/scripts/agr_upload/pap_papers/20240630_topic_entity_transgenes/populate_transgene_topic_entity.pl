@@ -56,6 +56,8 @@
 #
 # process afp_othertransgene the same as we're processing afp_otherstrain.  add data novelty same as strain.
 # Using UTC in timestamp queries to work with ABC timestamp API schema.  2025 11 05
+#
+# curl is unsafe if json payload has singlequotes, updated to use LWP::UserAgent and HTTP::Request  2025 11 09
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -75,6 +77,8 @@ use diagnostics;
 use DBI;
 use JSON;
 use Jex;
+use LWP::UserAgent;
+use HTTP::Request;
 use Encode qw( from_to is_utf8 );
 use Dotenv -load => '/usr/lib/.env';
 
@@ -728,15 +732,29 @@ sub createTag {
     }
   }
   my $url = $baseUrl . 'topic_entity_tag/';
-# PUT THIS BACK
-  my $api_json = `curl -X 'POST' $url -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json' --data '$object_json'`;
+
+# Unsafe for json with ' in there
+#   my $api_json = `curl -X 'POST' $url -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json' --data '$object_json'`;
+
+  my $ua = LWP::UserAgent->new;
+  my $req = HTTP::Request->new(POST => $url);
+  $req->header('accept' => 'application/json');
+  $req->header('Authorization' => "Bearer $okta_token");
+  $req->header('Content-Type' => 'application/json');
+  $req->content($object_json);
+  my $res = $ua->request($req);
+
   print OUT qq(create $object_json\n);
+  my $api_json = $res->decoded_content;
   print OUT qq($api_json\n);
-  if ($api_json !~ /success/) {
+  if ($api_json !~ /"status":"success"/) {
     print ERR qq(create $object_json\n);
     print ERR qq($api_json\n);
   }
-}
+  if (!($res->is_success)) {
+    print ERR qq(HTTP Error: $res->status_line\n);
+  }
+} # sub createTag
 
 sub getSourceId {
   my ($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider) = @_;
