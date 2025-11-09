@@ -93,6 +93,10 @@ my $result;
 my $output_format = 'json';
 # my $output_format = 'api';
 my $tag_counter = 0;
+my $success_counter = 0;
+my $exists_counter = 0;
+my $unexpected_counter = 0;
+my $failure_counter = 0;
 
 my @output_json;
 
@@ -165,11 +169,13 @@ if ($output_format eq 'json') {
   print OUT qq($json);                            # for single json file output
 }
 
-close (OUT) or die "Cannot close $outfile : $!";
-close (PERR) or die "Cannot close $errfile : $!";
 if ($output_format eq 'api') {
+  print OUT qq(Tags\t$tag_counter\tSuccess\t$success_counter\tExists\t$exists_counter\tUnexpected\t$unexpected_counter\tFailure\t$failure_counter\n);
+  print ERR qq(Tags\t$tag_counter\tSuccess\t$success_counter\tExists\t$exists_counter\tUnexpected\t$unexpected_counter\tFailure\t$failure_counter\n);
   close (ERR) or die "Cannot close $errfile : $!";
 }
+close (OUT) or die "Cannot close $outfile : $!";
+close (PERR) or die "Cannot close $errfile : $!";
 
 
 sub populateTrp {
@@ -747,11 +753,22 @@ sub createTag {
   print OUT qq(create $object_json\n);
   my $api_json = $res->decoded_content;
   print OUT qq($api_json\n);
-  if ($api_json !~ /"status":"success"/) {
-    print ERR qq(create $object_json\n);
-    print ERR qq($api_json\n);
-  }
-  if (!($res->is_success)) {
+  if ($res->is_success) {
+    if ($api_json =~ /"status":"success"/) {
+      $success_counter++;
+    }
+    elsif ($api_json =~ /"status":"exists"/) {
+      $exists_counter++;
+      print ERR qq(create $object_json\n);
+      print ERR qq($api_json\n);
+    }
+    else {
+      $unexpected_counter++;
+      print ERR qq(create $object_json\n);
+      print ERR qq($api_json\n);
+    }
+  } else {
+    $failure_counter++;
     print ERR qq(HTTP Error: $res->status_line\n);
   }
 } # sub createTag
