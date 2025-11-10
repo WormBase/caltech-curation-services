@@ -57,6 +57,7 @@
 # process afp_othertransgene the same as we're processing afp_otherstrain.  add data novelty same as strain.
 # Using UTC in timestamp queries to work with ABC timestamp API schema.  2025 11 05
 #
+# Additional logging.
 # curl is unsafe if json payload has singlequotes, updated to use LWP::UserAgent and HTTP::Request  2025 11 09
 
 

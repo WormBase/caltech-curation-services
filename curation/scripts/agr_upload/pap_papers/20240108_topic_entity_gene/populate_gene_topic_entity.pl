@@ -238,10 +238,12 @@ if ($output_format eq 'json') {
   print OUT qq($json\n);				# for single json file output
 }
 
-close (OUT) or die "Cannot close $outfile : $!";
 if ($output_format eq 'api') {
+  print OUT qq(Tags\t$tag_counter\tSuccess\t$success_counter\tExists\t$exists_counter\tUnexpected\t$unexpected_counter\tFailure\t$failure_counter\n);
+  print ERR qq(Tags\t$tag_counter\tSuccess\t$success_counter\tExists\t$exists_counter\tUnexpected\t$unexpected_counter\tFailure\t$failure_counter\n);
   close (ERR) or die "Cannot close $errfile : $!";
 }
+close (OUT) or die "Cannot close $outfile : $!";
 close (PERR) or die "Cannot close $perrfile : $!";
 
 # foreach my $oj (@output_json) {
