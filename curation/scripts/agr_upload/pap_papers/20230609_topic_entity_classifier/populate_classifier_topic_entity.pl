@@ -43,7 +43,9 @@
 #
 # strData was looking at wrong hash value and making it always negated true, now correct.
 # outputAfpAutData  antibody has special data novelty, everything else the same.
-# now if author says something, that's data and note, else it's negated, regardless of what tfp says.  2025 11 10
+# now if author says something, that's data and note, else it's negated, regardless of what tfp says.
+# if afp has json that means no data, treat it like an empty string.
+# if strData is negated, confidence_level is NEG.  2025 11 10
 
 
 
@@ -177,21 +179,21 @@ if ($output_format eq 'api') {
 }
 
 # PUT THIS BACK
-# &populateCurCurData();
-# &outputCurCurData();
-# &populateCurSvmData();
-# &outputCurSvmData();
-# &populateCurNncData();
-# &outputCurNncData();
-# &populateCurStrData();
-# &outputCurStrData();
-# &populateCfpData();
-# &outputCfpData();
-# &populateAfpData();
-# &outputAfpAutData();
-# &outputAfpCurData();
-# &populateOaData();
-# &outputOaData();
+ &populateCurCurData();
+ &outputCurCurData();
+ &populateCurSvmData();
+ &outputCurSvmData();
+ &populateCurNncData();
+ &outputCurNncData();
+ &populateCurStrData();
+ &outputCurStrData();
+ &populateCfpData();
+ &outputCfpData();
+ &populateAfpData();
+ &outputAfpAutData();
+ &outputAfpCurData();
+ &populateOaData();
+ &outputOaData();
 
 
 if ($output_format eq 'json') {
@@ -369,6 +371,8 @@ sub populateAfpData {
       my ($joinkey) = &deriveValidPap($row[0]);
       next unless $papValid{$joinkey};
       my $data = ''; my $negated = 0;
+      if ($row[1] eq '[{"id":1,"name":"","publicationId":""}]') { $row[1] = ''; }
+      if ($row[1] eq '[{"id":1,"name":""}]') { $row[1] = ''; }
 # previously author negative was based on tfp having some value, now we're treating author negative independent of tfp.  2025 11 10
 #       if ($row[1]) { $data = $row[1]; }
 #         elsif ($tfpData{$datatype}{$joinkey}{data}) { $negated = 1; }
@@ -616,6 +620,8 @@ sub outputCurStrData {
       if ($strData{$datatype}{$joinkey}{result}) { $negated = FALSE; }
       $object{'negated'}                    = $negated;
       $object{'force_insertion'}            = TRUE;
+      if ($negated == TRUE) {
+        $object{'confidence_level'}         = 'NEG'; }
       if ($strData{$datatype}{$joinkey}{result}) {
         $object{'note'}                     = $strData{$datatype}{$joinkey}{result}; }
       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
