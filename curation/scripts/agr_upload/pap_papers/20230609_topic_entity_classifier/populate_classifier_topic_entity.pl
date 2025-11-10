@@ -40,6 +40,8 @@
 #
 # Additional logging of api results.
 # curl is unsafe if json payload has singlequotes, updated to use LWP::UserAgent and HTTP::Request 2025 11 09
+#
+# strData was looking at wrong hash value and making it always negated true, now correct.  2025 11 10
 
 
 
@@ -605,7 +607,7 @@ sub outputCurStrData {
       # my $tsdigits = &tsToDigits($strData{$datatype}{$joinkey}{timestamp});
       # if ($tsdigits > '20190322') { $source_id = $source_id_2; }
       my $negated = TRUE;
-      if ($strData{$datatype}{$joinkey}{data}) { $negated = FALSE; }
+      if ($strData{$datatype}{$joinkey}{result}) { $negated = FALSE; }
       $object{'negated'}                    = $negated;
       $object{'force_insertion'}            = TRUE;
       if ($strData{$datatype}{$joinkey}{result}) {
