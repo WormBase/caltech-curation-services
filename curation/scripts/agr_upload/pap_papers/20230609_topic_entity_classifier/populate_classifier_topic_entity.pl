@@ -41,7 +41,9 @@
 # Additional logging of api results.
 # curl is unsafe if json payload has singlequotes, updated to use LWP::UserAgent and HTTP::Request 2025 11 09
 #
-# strData was looking at wrong hash value and making it always negated true, now correct.  2025 11 10
+# strData was looking at wrong hash value and making it always negated true, now correct.
+# outputAfpAutData  antibody has special data novelty, everything else the same.
+# now if author says something, that's data and note, else it's negated, regardless of what tfp says.  2025 11 10
 
 
 
@@ -334,6 +336,8 @@ sub outputAfpAutData {
         $object{'topic'}                      = $datatypes{$datatype};
         $object{'topic_entity_tag_source_id'} = $source_id;
         $object{'data_novelty'}               = 'ATP:0000335';
+        if ($datatype eq 'antibody') {
+          $object{'data_novelty'}               = 'ATP:0000229'; }	# otherantibody still 335
         $object{'created_by'}                 = $aut;
         $object{'updated_by'}                 = $aut;
         $object{'date_created'}               = $afpAutData{$datatype}{$joinkey}{timestamp};
@@ -365,9 +369,11 @@ sub populateAfpData {
       my ($joinkey) = &deriveValidPap($row[0]);
       next unless $papValid{$joinkey};
       my $data = ''; my $negated = 0;
-      if ($row[1]) { $data = $row[1]; }
-        elsif ($tfpData{$datatype}{$joinkey}{data}) { $negated = 1; }
-        else { next; }						# skip entry if no author data and no tfp_ data.
+# previously author negative was based on tfp having some value, now we're treating author negative independent of tfp.  2025 11 10
+#       if ($row[1]) { $data = $row[1]; }
+#         elsif ($tfpData{$datatype}{$joinkey}{data}) { $negated = 1; }
+#         else { next; }						# skip entry if no author data and no tfp_ data.
+      if ($row[1]) { $data = $row[1]; } else { $negated = 1; }		# if author says something, that's data and note, else it's negated
       # my $row = join"\t", @row;
       # print qq($datatype\tafp_$datatypesAfpCfp{$datatype}\t$row\n);
       my $tsdigits = &tsToDigits($row[2]);
