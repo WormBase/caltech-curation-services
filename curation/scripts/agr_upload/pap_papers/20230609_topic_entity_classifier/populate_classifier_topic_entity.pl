@@ -46,7 +46,8 @@
 # now if author says something, that's data and note, else it's negated, regardless of what tfp says.
 # if afp has json that means no data, treat it like an empty string.
 # if strData is negated, confidence_level is NEG.  2025 11 10
-
+#
+# ranjana wants to skip old afp for human disease  2025 11 11
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -383,6 +384,7 @@ sub populateAfpData {
       my $tsdigits = &tsToDigits($row[2]);
       $data =~ s/\n/ /g; $data =~ s/ $//g;
       if ($tsdigits < '20190322') { 
+        next if ( ($datatype eq 'humdis') || ($datatype eq 'humandisease') );	# ranjana wants to skip old afp for human disease
         $afpAutData{$datatype}{$joinkey}{note}      = $data;
         $afpAutData{$datatype}{$joinkey}{negated}   = 0;		# there was no tfp_ data to validate old afp
         $afpAutData{$datatype}{$joinkey}{source}    = 'author_first_pass';
@@ -404,6 +406,7 @@ sub populateAfpData {
       unless ($afpAutData{$datatype}{$joinkey}) {
         my $tsdigits = &tsToDigits($afpLasttouched{$joinkey});
         next unless ($tsdigits < '20190322');
+        next if ( ($datatype eq 'humdis') || ($datatype eq 'humandisease') );	# ranjana wants to skip old afp for human disease
         $afpAutData{$datatype}{$joinkey}{note}      = "no data entered by author";
         $afpAutData{$datatype}{$joinkey}{negated}   = 1;	# inferred negative by afp
         $afpAutData{$datatype}{$joinkey}{source}    = 'author_first_pass';
