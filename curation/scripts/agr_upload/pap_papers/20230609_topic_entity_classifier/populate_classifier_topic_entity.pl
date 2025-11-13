@@ -384,7 +384,7 @@ sub populateAfpData {
       my $tsdigits = &tsToDigits($row[2]);
       $data =~ s/\n/ /g; $data =~ s/ $//g;
       if ($tsdigits < '20190322') { 
-        if ($datatype eq 'humdis') {	# ranjana wants to treat old afp_humdis as parent level disease  2025 11 11
+        if ( ($datatype eq 'humandisease') || ($datatype eq 'humdis') ) {	# ranjana wants to treat old afp_humdis as parent level disease  2025 11 11
           $afpAutData{'disease'}{$joinkey}{note}      = $data;
           $afpAutData{'disease'}{$joinkey}{negated}   = 0;		# there was no tfp_ data to validate old afp
           $afpAutData{'disease'}{$joinkey}{source}    = 'author_first_pass';
@@ -411,7 +411,7 @@ sub populateAfpData {
       unless ($afpAutData{$datatype}{$joinkey}) {
         my $tsdigits = &tsToDigits($afpLasttouched{$joinkey});
         next unless ($tsdigits < '20190322');
-        if ($datatype eq 'humdis') {	# ranjana wants to treat old afp_humdis as parent level disease  2025 11 11
+        if ( ($datatype eq 'humandisease') || ($datatype eq 'humdis') ) {	# ranjana wants to treat old afp_humdis as parent level disease  2025 11 11
           $afpAutData{'disease'}{$joinkey}{note}      = "no data entered by author";
           $afpAutData{'disease'}{$joinkey}{negated}   = 1;	# inferred negative by afp
           $afpAutData{'disease'}{$joinkey}{source}    = 'author_first_pass';
