@@ -47,14 +47,17 @@
 # if afp has json that means no data, treat it like an empty string.
 # if strData is negated, confidence_level is NEG.  2025 11 10
 #
-# ranjana wants to treat old afp and cfp humdis as parent level disease  2025 11 11
+# ranjana wants to treat old afp and cfp humdis as parent level disease  2025 11 12
+#
+# when populating afp and ack also make sure ack becomes humandisease which is disease model.  also cfp from afp is always disease.
+# add disease atp 11 to the delete query.  2025 11 13
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
 
-#    DELETE FROM topic_entity_tag WHERE topic IN ('ATP:0000033', 'ATP:0000041', 'ATP:0000048', 'ATP:0000054', 'ATP:0000055', 'ATP:0000056', 'ATP:0000060', 'ATP:0000061', 'ATP:0000062', 'ATP:0000068', 'ATP:0000069', 'ATP:0000070', 'ATP:0000071', 'ATP:0000082', 'ATP:0000083', 'ATP:0000084', 'ATP:0000089', 'ATP:0000096', 'ATP:0000152', 'ATP:0000278', 'ATP:0000349', 'ATP:0000350', 'ATP:0000351', 'ATP:0000352') AND topic_entity_tag_source_id IN ( SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE secondary_data_provider_id = ( SELECT mod_id FROM mod WHERE abbreviation = 'WB' )) AND topic_entity_tag_source_id NOT IN (SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE source_method = 'abc_document_classifier') AND created_by != 'default_user';
+#    DELETE FROM topic_entity_tag WHERE topic IN ('ATP:0000011', 'ATP:0000033', 'ATP:0000041', 'ATP:0000048', 'ATP:0000054', 'ATP:0000055', 'ATP:0000056', 'ATP:0000060', 'ATP:0000061', 'ATP:0000062', 'ATP:0000068', 'ATP:0000069', 'ATP:0000070', 'ATP:0000071', 'ATP:0000082', 'ATP:0000083', 'ATP:0000084', 'ATP:0000089', 'ATP:0000096', 'ATP:0000152', 'ATP:0000278', 'ATP:0000349', 'ATP:0000350', 'ATP:0000351', 'ATP:0000352') AND topic_entity_tag_source_id IN ( SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE secondary_data_provider_id = ( SELECT mod_id FROM mod WHERE abbreviation = 'WB' )) AND topic_entity_tag_source_id NOT IN (SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE source_method = 'abc_document_classifier') AND created_by != 'default_user';
 
-#    SELECT COUNT(*) FROM topic_entity_tag WHERE topic IN ('ATP:0000033', 'ATP:0000041', 'ATP:0000048', 'ATP:0000054', 'ATP:0000055', 'ATP:0000056', 'ATP:0000060', 'ATP:0000061', 'ATP:0000062', 'ATP:0000068', 'ATP:0000069', 'ATP:0000070', 'ATP:0000071', 'ATP:0000082', 'ATP:0000083', 'ATP:0000084', 'ATP:0000089', 'ATP:0000096', 'ATP:0000152', 'ATP:0000278', 'ATP:0000349', 'ATP:0000350', 'ATP:0000351', 'ATP:0000352')
+#    SELECT COUNT(*) FROM topic_entity_tag WHERE topic IN ('ATP:0000011', 'ATP:0000033', 'ATP:0000041', 'ATP:0000048', 'ATP:0000054', 'ATP:0000055', 'ATP:0000056', 'ATP:0000060', 'ATP:0000061', 'ATP:0000062', 'ATP:0000068', 'ATP:0000069', 'ATP:0000070', 'ATP:0000071', 'ATP:0000082', 'ATP:0000083', 'ATP:0000084', 'ATP:0000089', 'ATP:0000096', 'ATP:0000152', 'ATP:0000278', 'ATP:0000349', 'ATP:0000350', 'ATP:0000351', 'ATP:0000352')
 #      AND topic_entity_tag_source_id IN (
 #      SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE secondary_data_provider_id = (
 #      SELECT mod_id FROM mod WHERE abbreviation = 'WB' ))
@@ -395,17 +398,28 @@ sub populateAfpData {
           $afpAutData{$datatype}{$joinkey}{source}    = 'author_first_pass';
           $afpAutData{$datatype}{$joinkey}{timestamp} = $row[2]; } }
       else {
-        $afpAutData{$datatype}{$joinkey}{note}      = $data;  
-        $afpAutData{$datatype}{$joinkey}{negated}   = $negated;
-        $afpAutData{$datatype}{$joinkey}{source}    = 'ack';
-        $afpAutData{$datatype}{$joinkey}{timestamp} = $row[2]; }
+        if ( ($datatype eq 'disease') || ($datatype eq 'humdis') ) {	# ranjana wants to treat old afp_humdis as parent level disease  2025 11 11
+          $afpAutData{'humandisease'}{$joinkey}{note}      = $data;  
+          $afpAutData{'humandisease'}{$joinkey}{negated}   = $negated;
+          $afpAutData{'humandisease'}{$joinkey}{source}    = 'ack';
+          $afpAutData{'humandisease'}{$joinkey}{timestamp} = $row[2]; }
+        else {
+          $afpAutData{$datatype}{$joinkey}{note}      = $data;  
+          $afpAutData{$datatype}{$joinkey}{negated}   = $negated;
+          $afpAutData{$datatype}{$joinkey}{source}    = 'ack';
+          $afpAutData{$datatype}{$joinkey}{timestamp} = $row[2]; } }
       if ($row[3]) {
         my $curator = $row[3]; $curator =~ s/two/WBPerson/;
         my $negated = 0;
         if ($row[4] eq 'rejected') { $negated = 1; }
-        $afpCurData{$datatype}{$joinkey}{curator}   = $curator;
-        $afpCurData{$datatype}{$joinkey}{negated}   = $negated;
-        $afpCurData{$datatype}{$joinkey}{timestamp} = $row[5]; }
+        if ( ($datatype eq 'humandisease') || ($datatype eq 'humdis') ) {	# ranjana wants to treat old afp_humdis as parent level disease  2025 11 11
+          $afpCurData{'disease'}{$joinkey}{curator}   = $curator;
+          $afpCurData{'disease'}{$joinkey}{negated}   = $negated;
+          $afpCurData{'disease'}{$joinkey}{timestamp} = $row[5]; }
+        else {
+          $afpCurData{$datatype}{$joinkey}{curator}   = $curator;
+          $afpCurData{$datatype}{$joinkey}{negated}   = $negated;
+          $afpCurData{$datatype}{$joinkey}{timestamp} = $row[5]; } }
     }
     foreach my $joinkey (sort keys %afpLasttouched) {
       unless ($afpAutData{$datatype}{$joinkey}) {
