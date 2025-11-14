@@ -7,6 +7,7 @@ seqfeat	ATP:0000055
 extvariation	ATP:0000285
 othervariation	ATP:0000285
 variation	ATP:0000285
+disease	ATP:0000011
 humdis	ATP:0000152
 humandisease	ATP:0000152
 domanal	ATP:0000089
