@@ -51,6 +51,8 @@
 #
 # when populating afp and ack also make sure ack becomes humandisease which is disease model.  also cfp from afp is always disease.
 # add disease atp 11 to the delete query.  2025 11 13
+#
+# kimberly and daniela want ack json from afp_ to extract name and publicationId to join with ; and objects with | .  2025 11 17
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -356,6 +358,23 @@ sub outputAfpAutData {
           &createTag($object_json); }
 } } } }
 
+sub convertAckToNote {
+  my $origdata = shift;
+  my $json = eval { decode_json($origdata) };
+  return ('', 1) if $@ or ref($json) ne 'ARRAY';
+  my @parts;
+  for my $entry (@$json) {
+    next unless ref($entry) eq 'HASH';
+    my @fields;
+    push @fields, $entry->{name}          if defined $entry->{name}          && $entry->{name} ne '';
+    push @fields, $entry->{publicationId} if defined $entry->{publicationId} && $entry->{publicationId} ne '';
+    next unless @fields;  # skip if no non-empty fields
+    push @parts, join('; ', @fields);
+  }
+  my $data = join(' | ', @parts);
+  my $negated = $data eq '' ? 1 : 0;
+  return ($data, $negated);
+} # sub convertAckToNote
 
 sub populateAfpData {
   &populateTfpData();
@@ -374,14 +393,15 @@ sub populateAfpData {
       next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
       my ($joinkey) = &deriveValidPap($row[0]);
       next unless $papValid{$joinkey};
-      my $data = ''; my $negated = 0;
-      if ($row[1] eq '[{"id":1,"name":"","publicationId":""}]') { $row[1] = ''; }
-      if ($row[1] eq '[{"id":1,"name":""}]') { $row[1] = ''; }
+#       my $data = ''; my $negated = 0;
+#       if ($row[1] eq '[{"id":1,"name":"","publicationId":""}]') { $row[1] = ''; }
+#       if ($row[1] eq '[{"id":1,"name":""}]') { $row[1] = ''; }
 # previously author negative was based on tfp having some value, now we're treating author negative independent of tfp.  2025 11 10
 #       if ($row[1]) { $data = $row[1]; }
 #         elsif ($tfpData{$datatype}{$joinkey}{data}) { $negated = 1; }
 #         else { next; }						# skip entry if no author data and no tfp_ data.
-      if ($row[1]) { $data = $row[1]; } else { $negated = 1; }		# if author says something, that's data and note, else it's negated
+#       if ($row[1]) { $data = $row[1]; } else { $negated = 1; }		# if author says something, that's data and note, else it's negated
+      my ($data, $negated) = &convertAckToNote($row[1]);
       # my $row = join"\t", @row;
       # print qq($datatype\tafp_$datatypesAfpCfp{$datatype}\t$row\n);
       my $tsdigits = &tsToDigits($row[2]);
