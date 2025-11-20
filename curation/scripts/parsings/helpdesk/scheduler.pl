@@ -79,6 +79,7 @@ use Time::Local;
 
 my @ppl;
 
+push @ppl, "Cecilia Nakamura";
 push @ppl, "Gary Schindelman";
 push @ppl, "Daniel Wang";
 push @ppl, "Todd Harris";
@@ -93,7 +94,6 @@ push @ppl, "Paulo Nuin";		# 2025 09 22  maybe replacing scott
 push @ppl, "Karen Yook";
 push @ppl, "Wen Chen";
 push @ppl, "Juancarlos Chan";
-push @ppl, "Cecilia Nakamura";
 
 # push @ppl, "Matthew Russell";		# 2016 03 15			(removed 2020 06 01)
 # push @ppl, "Marie-Claire Harrison";	# 2018 09 10  new person	(removed late 2020 01 15)
