@@ -14,6 +14,10 @@
 #
 # Additional logging of api results.
 # curl is unsafe if json payload has singlequotes, updated to use LWP::UserAgent and HTTP::Request 2025 11 09
+#
+# No longer skip negative topics if there's afp variation data.  Instead separate data checks for separate 
+# ABC data rows for dataNoveltyExisting vs dataNoveltyNewToDb based off of afpVariation and afpOthervariation
+# 2025 12 01
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -394,31 +398,55 @@ sub outputNegData {
   foreach my $joinkey (sort keys %afpLasttouched) {
     # next unless ($afpContributor{$joinkey});	# explicitly okay to have submissions with unknown author
     unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
-    next if ($afpVariation{$joinkey}{data});						# skip if any author sent any variation
     my @auts;
     if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
     if (scalar @auts < 1) { push @auts, 'unknown_author'; }
     foreach my $aut (@auts) {
-      next unless ($afpOthervariation{$joinkey}{$aut}{data} eq '[{"id":1,"name":""}]');	# skip if that author sent any other variation
-      my %object;
-      $object{'topic_entity_tag_source_id'}   = $source_id_ack;
-      $object{'force_insertion'}              = TRUE;
-      $object{'negated'}                      = TRUE;
-      $object{'reference_curie'}              = $wbpToAgr{$joinkey};
-#       $object{'wbpaper_id'}                   = $joinkey;		# for debugging
-#       $object{'NEGATIVE ACK TOPIC'}           = $joinkey;		# for debugging
-      $object{'data_novelty'}                 = $dataNoveltyExisting;
-      my $ts = $afpContributor{$joinkey}{$aut};
-      $object{'date_updated'}		  = $ts;
-      $object{'date_created'}		  = $ts;
-      $object{'created_by'}                   = $aut;
-      $object{'updated_by'}                   = $aut;
-      $object{'topic'}                        = 'ATP:0000285';
-      if ($output_format eq 'json') {
-        push @output_json, \%object; }
-      else {
-        my $object_json = encode_json \%object;
-        &createTag($object_json); } }
+      print qq(AUT $aut $joinkey\n);
+      # separate data checks for separate ABC data rows for dataNoveltyExisting vs dataNoveltyNewToDb based off of afpVariation and afpOthervariation
+      print qq(afpVariation $afpVariation{$joinkey}{data}\n);
+      unless ($afpVariation{$joinkey}{data}) {	# author did not sent afpVariation, so create negative topic for existing data
+        my %object;
+        $object{'topic_entity_tag_source_id'}   = $source_id_ack;
+        $object{'force_insertion'}              = TRUE;
+        $object{'negated'}                      = TRUE;
+        $object{'reference_curie'}              = $wbpToAgr{$joinkey};
+#         $object{'wbpaper_id'}                   = $joinkey;		# for debugging
+#         $object{'NEGATIVE ACK TOPIC EXISTING'}  = $joinkey;		# for debugging
+        $object{'data_novelty'}                 = $dataNoveltyExisting;
+        my $ts = $afpContributor{$joinkey}{$aut};
+        $object{'date_updated'}		  = $ts;
+        $object{'date_created'}		  = $ts;
+        $object{'created_by'}                   = $aut;
+        $object{'updated_by'}                   = $aut;
+        $object{'topic'}                        = 'ATP:0000285';
+        if ($output_format eq 'json') {
+          push @output_json, \%object; }
+        else {
+          my $object_json = encode_json \%object;
+          &createTag($object_json); } }
+#       next unless ($afpOthervariation{$joinkey}{$aut}{data} eq '[{"id":1,"name":""}]');	# skip if that author sent any other variation -- don't negate new data
+      print qq(afpOthervariation $afpOthervariation{$joinkey}{$aut}{data}\n);
+      if ($afpOthervariation{$joinkey}{$aut}{data} eq '[{"id":1,"name":""}]') {	# author did not send other variation, so create negative topic for new data
+        my %object;
+        $object{'topic_entity_tag_source_id'}   = $source_id_ack;
+        $object{'force_insertion'}              = TRUE;
+        $object{'negated'}                      = TRUE;
+        $object{'reference_curie'}              = $wbpToAgr{$joinkey};
+#         $object{'wbpaper_id'}                   = $joinkey;		# for debugging
+#         $object{'NEGATIVE ACK TOPIC NEW TO DB'} = $joinkey;		# for debugging
+        $object{'data_novelty'}                 = $dataNoveltyNewToDb;
+        my $ts = $afpContributor{$joinkey}{$aut};
+        $object{'date_updated'}		  = $ts;
+        $object{'date_created'}		  = $ts;
+        $object{'created_by'}                   = $aut;
+        $object{'updated_by'}                   = $aut;
+        $object{'topic'}                        = 'ATP:0000285';
+        if ($output_format eq 'json') {
+          push @output_json, \%object; }
+        else {
+          my $object_json = encode_json \%object;
+          &createTag($object_json); } } }
   }
 } # sub outputNegData
 
