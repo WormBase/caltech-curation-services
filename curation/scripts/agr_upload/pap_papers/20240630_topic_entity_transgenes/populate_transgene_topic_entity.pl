@@ -497,7 +497,7 @@ sub outputNegData {
         else {
           my $object_json = encode_json { %object };
           &createTag($object_json); } } }
-  } foreach my $joinkey (sort keys %afpLasttouched)
+  } # foreach my $joinkey (sort keys %afpLasttouched)
   # END this is negative ack topic data, no longer doing negative afp topic data
 
   # This is negative tfp topic data where tfp is empty
