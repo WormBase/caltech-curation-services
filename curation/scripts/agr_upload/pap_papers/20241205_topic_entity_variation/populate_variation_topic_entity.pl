@@ -402,9 +402,7 @@ sub outputNegData {
     if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
     if (scalar @auts < 1) { push @auts, 'unknown_author'; }
     foreach my $aut (@auts) {
-      print qq(AUT $aut $joinkey\n);
       # separate data checks for separate ABC data rows for dataNoveltyExisting vs dataNoveltyNewToDb based off of afpVariation and afpOthervariation
-      print qq(afpVariation $afpVariation{$joinkey}{data}\n);
       unless ($afpVariation{$joinkey}{data}) {	# author did not sent afpVariation, so create negative topic for existing data
         my %object;
         $object{'topic_entity_tag_source_id'}   = $source_id_ack;
@@ -425,8 +423,6 @@ sub outputNegData {
         else {
           my $object_json = encode_json \%object;
           &createTag($object_json); } }
-#       next unless ($afpOthervariation{$joinkey}{$aut}{data} eq '[{"id":1,"name":""}]');	# skip if that author sent any other variation -- don't negate new data
-      print qq(afpOthervariation $afpOthervariation{$joinkey}{$aut}{data}\n);
       if ($afpOthervariation{$joinkey}{$aut}{data} eq '[{"id":1,"name":""}]') {	# author did not send other variation, so create negative topic for new data
         my %object;
         $object{'topic_entity_tag_source_id'}   = $source_id_ack;
