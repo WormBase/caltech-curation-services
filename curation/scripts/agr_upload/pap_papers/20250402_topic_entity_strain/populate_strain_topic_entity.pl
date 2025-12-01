@@ -15,6 +15,9 @@
 # Additional logging of api results.
 # curl is unsafe if json payload has singlequotes, updated to use LWP::UserAgent and HTTP::Request
 # removed retry, because we haven't been having an issue with that anymore, and this standardizes things.  2025 11 09
+#
+# Negative ack topic data now has separate data checks for separate ABC data rows for dataNoveltyExisting vs dataNoveltyNewToDb
+# based off of afpStrain and afpOtherstrain, like Transgene  2025 12 01
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -350,13 +353,6 @@ sub outputNegData {
     ($joinkey) = &deriveValidPap($joinkey);
     next unless $papValid{$joinkey};
     unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
-    my %object;
-    $object{'force_insertion'}              = TRUE;
-    $object{'negated'}                      = TRUE;
-    $object{'reference_curie'}              = $wbpToAgr{$joinkey};
-#     $object{'wbpaper_id'}                   = $joinkey;		# for debugging
-    $object{'topic'}                        = 'ATP:0000027';
-    $object{'data_novelty'}                 = $dataNoveltyExisting;
 # Do not want negative topic data for old afp, because of how that form worked.  2025 06 02
 #     if ( (!exists $afpStrain{$joinkey}) && (!exists $afpOtherstrain{$joinkey}) ) {
 #       my $email = $afpToEmail{$joinkey};
@@ -376,8 +372,17 @@ sub outputNegData {
 #         my $object_json = encode_json \%object;
 #         &createTag($object_json); }
 #       }
-    next if ( (!exists $afpStrain{$joinkey}) && (!exists $afpOtherstrain{$joinkey}) );	#  old afp, pre-acknowledge
-    if ( ($afpStrain{$joinkey}{data} eq '') && ($afpOtherstrain{$joinkey} eq '[{"id":1,"name":""}]') ) {	# acknowledge
+#     next if ( (!exists $afpStrain{$joinkey}) && (!exists $afpOtherstrain{$joinkey}) );	#  old afp, pre-acknowledge
+
+    # separate data checks for separate ABC data rows for dataNoveltyExisting vs dataNoveltyNewToDb based off of afpTransgene and afpOthertransgene
+    unless ($afpStrain{$joinkey}) {  # author did not sent afpStrain, so create negative topic for existing data
+      my %object;
+      $object{'force_insertion'}              = TRUE;
+      $object{'negated'}                      = TRUE;
+      $object{'reference_curie'}              = $wbpToAgr{$joinkey};
+#       $object{'wbpaper_id'}                   = $joinkey;		# for debugging
+      $object{'topic'}                        = 'ATP:0000027';
+      $object{'data_novelty'}                 = $dataNoveltyExisting;
       $object{'topic_entity_tag_source_id'}   = $source_id_ack;
       my @auts;
       if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
@@ -396,10 +401,36 @@ sub outputNegData {
           push @output_json, \%object; }
         else {
           my $object_json = encode_json \%object;
-          &createTag($object_json); }
-      }
-    }
-  }
+          &createTag($object_json); } } }
+
+    if ($afpOtherstrain{$joinkey} eq '[{"id":1,"name":""}]') {       # author did not send other strain, so create negative topic for new data
+      my %object;
+      $object{'force_insertion'}              = TRUE;
+      $object{'negated'}                      = TRUE;
+      $object{'reference_curie'}              = $wbpToAgr{$joinkey};
+#       $object{'wbpaper_id'}                   = $joinkey;		# for debugging
+      $object{'topic'}                        = 'ATP:0000027';
+      $object{'data_novelty'}                 = $dataNoveltyNewToDb;
+      $object{'topic_entity_tag_source_id'}   = $source_id_ack;
+      my @auts;
+      if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
+      if (scalar @auts < 1) { push @auts, 'unknown_author'; }
+      foreach my $aut (@auts) {
+        $object{'created_by'}   = $aut;
+        $object{'updated_by'}   = $aut;
+        if ($afpContributor{$joinkey}{$aut}) {
+          $object{'date_updated'} = $afpContributor{$joinkey}{$aut};
+          $object{'date_created'} = $afpContributor{$joinkey}{$aut}; }
+        else {
+          $object{'date_updated'} = $afpStrain{$joinkey}{timestamp};
+          $object{'date_created'} = $afpStrain{$joinkey}{timestamp}; }
+        if ($output_format eq 'json') {
+          push @output_json, \%object; }
+        else {
+          my $object_json = encode_json \%object;
+          &createTag($object_json); } } }
+  } # foreach my $joinkey (sort keys %afpLasttouched)
+  # END this is negative ack topic data, no longer doing negative afp topic data
 
   # This is negative tfp topic data where tfp is empty
   foreach my $joinkey (sort keys %tfpStrain) {
