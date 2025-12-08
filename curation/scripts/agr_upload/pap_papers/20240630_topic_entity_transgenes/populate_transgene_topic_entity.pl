@@ -62,6 +62,9 @@
 #
 # Negative ack topic data now has separate data checks for separate ABC data rows for dataNoveltyExisting vs dataNoveltyNewToDb 
 # based off of afpTransgene and afpOthertransgene, like Variation  2025 12 01
+#
+# There can be only one note, and when outputting positive topics, skip if note is empty json string [{"id":1,"name":""}].
+# needs cognito token now, will have to figure that out later.  2025 12 08
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -285,7 +288,7 @@ sub populateAfpOthertransgene {
       else {
         $theHash{'ack'}{$joinkey}{$obj}{$aut}{timestamp} = $row[2]; }
       $theHash{'ack'}{$joinkey}{$obj}{$aut}{newToDatabase} = 'true';
-      push @{ $theHash{'ack'}{$joinkey}{$obj}{$aut}{note} }, $row[1];
+      $theHash{'ack'}{$joinkey}{$obj}{$aut}{note} = $row[1];	# there can be only one entry for a given paper afp_othertransgene
     }
 } }
 
@@ -334,7 +337,7 @@ sub populateAfpTransgene {
 #         unless ($email) { $email = 'NOEMAIL'; }
 #         print qq(NO PERSON for paper : $joinkey\temail : $email\n); }
       $theHash{'afp'}{$joinkey}{'NOENTITY'}{$wbperson}{timestamp} = $ts;
-      push @{ $theHash{'afp'}{$joinkey}{'NOENTITY'}{$wbperson}{note} }, $trText;
+      $theHash{'afp'}{$joinkey}{'NOENTITY'}{$wbperson}{note} = $trText;	# there can be only one entry for a given paper afp_othertransgene
 # DONE  future self  do not add ATP that means it's new to database   added this newToDatabase to theHash, but not changed the processing when posting to ABC
 # probably done, we don't remember why we wrote this comment, but we don't see the ATP:0000228 new to database in the output logs
       $theHash{'afp'}{$joinkey}{'NOENTITY'}{$wbperson}{newToDatabase} = 'false';
@@ -368,7 +371,7 @@ sub populateAfpTransgene {
             $theHash{'ack'}{$joinkey}{$obj}{$aut}{timestamp} = $afpContributor{$joinkey}{$aut}; }
           else {
             $theHash{'ack'}{$joinkey}{$obj}{$aut}{timestamp} = $ts; }
-          push @{ $theHash{'ack'}{$joinkey}{$obj}{$aut}{note} }, $trText;
+          $theHash{'ack'}{$joinkey}{$obj}{$aut}{note} = $trText;	# there can be only one entry for a given paper afp_othertransgene
     } } }
   }
 } # sub populateAfpTransgene
@@ -663,7 +666,10 @@ sub outputAfpData {
 #       next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
       foreach my $obj (sort keys %{ $theHash{$datatype}{$joinkey} }) {
         foreach my $curator (sort keys %{ $theHash{$datatype}{$joinkey}{$obj} }) {
-          my %object;
+          my %object; my $note = '';
+          if ($theHash{$datatype}{$joinkey}{$obj}{$curator}{note}) {
+            $note = $theHash{$datatype}{$joinkey}{$obj}{$curator}{note}; }
+          next if ($note eq '[{"id":1,"name":""}]');
           $object{'topic_entity_tag_source_id'}   = $source_id_ack;
           if ($datatype eq 'afp') {
             $object{'topic_entity_tag_source_id'} = $source_id_afp; }
@@ -691,9 +697,7 @@ sub outputAfpData {
             delete $object{'entity'};
             delete $object{'species'}; }
 
-          if ($theHash{$datatype}{$joinkey}{$obj}{$curator}{note}) {
-            my $note = join' | ', @{ $theHash{$datatype}{$joinkey}{$obj}{$curator}{note} };
-            $object{'note'}                     = $note; }
+          $object{'note'}                       = $note;
           $object{'created_by'}                 = $curator;
           $object{'updated_by'}                 = $curator;
           $object{'date_created'}               = $theHash{$datatype}{$joinkey}{$obj}{$curator}{timestamp};
