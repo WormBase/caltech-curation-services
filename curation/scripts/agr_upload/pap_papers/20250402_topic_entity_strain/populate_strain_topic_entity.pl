@@ -18,6 +18,8 @@
 #
 # Negative ack topic data now has separate data checks for separate ABC data rows for dataNoveltyExisting vs dataNoveltyNewToDb
 # based off of afpStrain and afpOtherstrain, like Transgene  2025 12 01
+#
+# was mistakenly skipping when NOENTITY didn't have a taxon, but that never does.  extract names from json.  2025 12 08
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -254,7 +256,9 @@ sub populateAfpOtherstrain {
       else {
         $theHash{'ack'}{$joinkey}{$obj}{$aut}{timestamp} = $row[2]; }
       $theHash{'ack'}{$joinkey}{$obj}{$aut}{newToDatabase} = 'true';
-      push @{ $theHash{'ack'}{$joinkey}{$obj}{$aut}{note} }, $row[1];
+      my (@names) = $row[1] =~ m/"name":"(.*?)"/g;
+      my $note = join"\n", @names;
+      push @{ $theHash{'ack'}{$joinkey}{$obj}{$aut}{note} }, $note;
     }
   }
 }
@@ -621,7 +625,6 @@ sub outputAfpData {
       unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
 #       next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
       foreach my $obj (sort keys %{ $theHash{$datatype}{$joinkey} }) {
-        unless ($strainTaxon{$obj}) { print PERR qq(ERROR paper $joinkey $datatype strain $obj has no taxon\n); next; }
         if ($obj ne 'NOENTITY') {
           unless ($strainTaxon{$obj}) { print PERR qq(ERROR paper $joinkey strain $obj has no taxon\n); next; } }
         foreach my $curator (sort keys %{ $theHash{$datatype}{$joinkey}{$obj} }) {
