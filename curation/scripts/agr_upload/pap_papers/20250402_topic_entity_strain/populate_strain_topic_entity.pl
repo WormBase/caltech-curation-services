@@ -257,7 +257,7 @@ sub populateAfpOtherstrain {
         $theHash{'ack'}{$joinkey}{$obj}{$aut}{timestamp} = $row[2]; }
       $theHash{'ack'}{$joinkey}{$obj}{$aut}{newToDatabase} = 'true';
       my (@names) = $row[1] =~ m/"name":"(.*?)"/g;
-      my $note = join"\n", @names;
+      my $note = join" || \n", @names;
       push @{ $theHash{'ack'}{$joinkey}{$obj}{$aut}{note} }, $note;
     }
   }
