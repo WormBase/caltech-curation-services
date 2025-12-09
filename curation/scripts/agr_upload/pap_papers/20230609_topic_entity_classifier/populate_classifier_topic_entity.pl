@@ -116,7 +116,6 @@ my $mod = 'WB';
 my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
 # my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
 # my $okta_token = &generateOktaToken();
-# my $okta_token = 'use_above_when_live';
 my $cognito_token = &generateCognitoToken();
 
 # my @wbpapers = qw( 00004952 00005199 00026609 00030933 00035427 );
@@ -959,6 +958,13 @@ sub createTag {
   }
 }
 
+sub generateCognitoToken {
+  my $cognito_result = `curl -X POST "$ENV{COGNITO_TOKEN_URL}" \ -H "Content-Type: application/x-www-form-urlencoded" \ -d "grant_type=client_credentials" \ -d "client_id=$ENV{COGNITO_ADMIN_CLIENT_ID}" \ -d "client_secret=$ENV{COGNITO_ADMIN_CLIENT_SECRET}"`;
+  my $hash_ref = decode_json $cognito_result;
+  my $cognito_token = $$hash_ref{'access_token'};
+#   print $cognito_token;
+  return $cognito_token;
+}
 
 sub generateOktaToken {
 #   my $okta_token = `curl -s --request POST --url https://$ENV{OKTA_DOMAIN}/v1/token \    --header 'accept: application/json' \    --header 'cache-control: no-cache' \    --header 'content-type: application/x-www-form-urlencoded' \    --data "grant_type=client_credentials&scope=admin&client_id=$ENV{OKTA_CLIENT_ID}&client_secret=$ENV{OKTA_CLIENT_SECRET}" \      | jq '.access_token' | tr -d '"'`;
@@ -971,7 +977,7 @@ sub generateOktaToken {
 
 # sub generateXrefJsonFile {
 #   my $okta_token = &generateOktaToken();
-#   `curl -X 'GET' 'https://stage-literature-rest.alliancegenome.org/bulk_download/references/external_ids/' -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json'  > $xref_file_path`;
+#   `curl -X 'GET' 'https://stage-literature-rest.alliancegenome.org/bulk_download/references/external_ids/' -H 'accept: application/json' -H 'Authorization: Bearer $cognito_token' -H 'Content-Type: application/json'  > $xref_file_path`;
 # }
 
 sub tsToDigits {
