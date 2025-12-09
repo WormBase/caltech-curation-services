@@ -64,7 +64,8 @@
 # based off of afpTransgene and afpOthertransgene, like Variation  2025 12 01
 #
 # There can be only one note, and when outputting positive topics, skip if note is empty json string [{"id":1,"name":""}].
-# needs cognito token now, will have to figure that out later.  2025 12 08
+# needs cognito token now, will have to figure that out later.
+# Extract names from json for notes, separate with linebreak.  2025 12 08
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -288,7 +289,9 @@ sub populateAfpOthertransgene {
       else {
         $theHash{'ack'}{$joinkey}{$obj}{$aut}{timestamp} = $row[2]; }
       $theHash{'ack'}{$joinkey}{$obj}{$aut}{newToDatabase} = 'true';
-      $theHash{'ack'}{$joinkey}{$obj}{$aut}{note} = $row[1];	# there can be only one entry for a given paper afp_othertransgene
+      my (@names) = $row[1] =~ m/"name":"(.*?)"/g;
+      my $note = join" || \n", @names;
+      $theHash{'ack'}{$joinkey}{$obj}{$aut}{note} = $note;	# there can be only one entry for a given paper afp_othertransgene
     }
 } }
 
