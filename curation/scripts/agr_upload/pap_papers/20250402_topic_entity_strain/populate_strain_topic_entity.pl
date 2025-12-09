@@ -20,6 +20,8 @@
 # based off of afpStrain and afpOtherstrain, like Transgene  2025 12 01
 #
 # was mistakenly skipping when NOENTITY didn't have a taxon, but that never does.  extract names from json.  2025 12 08
+#
+# Use cognito token instead of okta.  2025 12 09
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -68,7 +70,8 @@ my $pgDate = &getPgDate();
 my $mod = 'WB';
 my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
 # my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
-my $okta_token = &generateOktaToken();
+# my $okta_token = &generateOktaToken();
+my $cognito_token = &generateCognitoToken();
 
 my $dataNoveltyExisting = 'ATP:0000334';        # existing data
 my $dataNoveltyNewToDb =  'ATP:0000228';        # new to database
@@ -680,6 +683,15 @@ sub tsToDigits {
   return $tsdigits;
 }
 
+sub generateCognitoToken {
+  my $cognito_result = `curl -X POST "$ENV{COGNITO_TOKEN_URL}" \ -H "Content-Type: application/x-www-form-urlencoded" \ -d "grant_type=clie
+t_credentials" \ -d "client_id=$ENV{COGNITO_ADMIN_CLIENT_ID}" \ -d "client_secret=$ENV{COGNITO_ADMIN_CLIENT_SECRET}"`;
+  my $hash_ref = decode_json $cognito_result;
+  my $cognito_token = $$hash_ref{'access_token'};
+#   print $cognito_token;
+  return $cognito_token;
+}
+
 sub generateOktaToken {
 #   my $okta_token = `curl -s --request POST --url https://$ENV{OKTA_DOMAIN}/v1/token \    --header 'accept: application/json' \    --header 'cache-control: no-cache' \    --header 'content-type: application/x-www-form-urlencoded' \    --data "grant_type=client_credentials&scope=admin&client_id=$ENV{OKTA_CLIENT_ID}&client_secret=$ENV{OKTA_CLIENT_SECRET}" \      | jq '.access_token' | tr -d '"'`;
   my $okta_result = `curl -s --request POST --url https://$ENV{OKTA_DOMAIN}/v1/token \    --header 'accept: application/json' \    --header 'cache-control: no-cache' \    --header 'content-type: application/x-www-form-urlencoded' \    --data "grant_type=client_credentials&scope=admin&client_id=$ENV{OKTA_CLIENT_ID}&client_secret=$ENV{OKTA_CLIENT_SECRET}"`;
@@ -697,17 +709,17 @@ sub createTag {
     print qq(counter\t$tag_counter\t$date\n);
     my $now = time;
     if ($now - $start_time > 82800) {           # if 23 hours went by, update okta token
-      $okta_token = &generateOktaToken();
+      $cognito_token = &generateCognitoToken();
       $start_time = $now;
     }
   }
   my $url = $baseUrl . 'topic_entity_tag/';
-#   my $api_json = `curl -X 'POST' $url -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json' --data '$object_json'`;	# this has issues with how the shell interprets special characters like parentheses ( and ) when passed directly in the command line.  instead avoid the shell and run the command through a pipe like  open my $fh, "-|", @args
+#   my $api_json = `curl -X 'POST' $url -H 'accept: application/json' -H 'Authorization: Bearer $cognito_token' -H 'Content-Type: application/json' --data '$object_json'`;	# this has issues with how the shell interprets special characters like parentheses ( and ) when passed directly in the command line.  instead avoid the shell and run the command through a pipe like  open my $fh, "-|", @args
 
   my $ua = LWP::UserAgent->new;
   my $req = HTTP::Request->new(POST => $url);
   $req->header('accept' => 'application/json');
-  $req->header('Authorization' => "Bearer $okta_token");
+  $req->header('Authorization' => "Bearer $cognito_token");
   $req->header('Content-Type' => 'application/json');
   $req->content($object_json);
   my $res = $ua->request($req);
@@ -738,7 +750,7 @@ sub createTag {
 #   my @curl_cmd = (
 #     "curl", "-X", "POST", $url,
 #     "-H", "accept: application/json",
-#     "-H", "Authorization: Bearer $okta_token",
+#     "-H", "Authorization: Bearer $cognito_token",
 #     "-H", "Content-Type: application/json",
 #     "--data", $object_json,
 #   );
@@ -773,7 +785,7 @@ sub getSourceId {
 #   my ($source_type, $source_method) = @_;
 #   my $url = $baseUrl . 'topic_entity_tag/source/' . $source_type . '/' . $source_method . '/' . $mod;
   # print qq($url\n);
-  my $api_json = `curl -X 'GET' $url -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json'`;
+  my $api_json = `curl -X 'GET' $url -H 'accept: application/json' -H 'Authorization: Bearer $cognito_token' -H 'Content-Type: application/json'`;
   my $hash_ref = decode_json $api_json;
   if ($$hash_ref{'topic_entity_tag_source_id'}) {
     my $source_id = $$hash_ref{'topic_entity_tag_source_id'};

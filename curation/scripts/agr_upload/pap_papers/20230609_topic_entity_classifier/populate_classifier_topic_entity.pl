@@ -53,6 +53,8 @@
 # add disease atp 11 to the delete query.  2025 11 13
 #
 # kimberly and daniela want ack json from afp_ to extract name and publicationId to join with ; and objects with | .  2025 11 17
+#
+# Use cognito token instead of okta.  2025 12 09
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -113,8 +115,9 @@ my @output_json;
 my $mod = 'WB';
 my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
 # my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
-my $okta_token = &generateOktaToken();
+# my $okta_token = &generateOktaToken();
 # my $okta_token = 'use_above_when_live';
+my $cognito_token = &generateCognitoToken();
 
 # my @wbpapers = qw( 00004952 00005199 00026609 00030933 00035427 );
 # my @wbpapers = qw( 00004952 00005199 00046571 00057043 00064676 );	# SCRUM-3775
@@ -902,7 +905,7 @@ sub getSourceId {
 #   my ($source_type, $source_method) = @_;
 #   my $url = $baseUrl . 'topic_entity_tag/source/' . $source_type . '/' . $source_method . '/' . $mod;
 #   print qq($url\n);
-  my $api_json = `curl -X 'GET' $url -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json'`;
+  my $api_json = `curl -X 'GET' $url -H 'accept: application/json' -H 'Authorization: Bearer $cognito_token' -H 'Content-Type: application/json'`;
   # print qq($api_json\n);
   my $hash_ref = decode_json $api_json;
   if ($$hash_ref{'topic_entity_tag_source_id'}) {
@@ -911,20 +914,6 @@ sub getSourceId {
     return $source_id; }
   else { return ''; }
 }
-# sub getSourceId {
-#   my ($source_type, $source_method) = @_;
-#   my $url = $baseUrl . 'topic_entity_tag/source/' . $source_type . '/' . $source_method . '/' . $mod;
-# #   print qq($url\n);
-#   my $api_json = `curl -X 'GET' $url -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json'`;
-#   my $hash_ref = decode_json $api_json;
-#   my $source_id = $$hash_ref{'topic_entity_tag_source_id'};
-#   if ($$hash_ref{'topic_entity_tag_source_id'}) {
-#     my $source_id = $$hash_ref{'topic_entity_tag_source_id'};
-#     # print qq($source_id\n);
-#     return $source_id; }
-#   else { return ''; }
-# #   print qq($source_id\n);
-# }
 
 sub createTag {
   my ($object_json) = @_;
@@ -933,8 +922,8 @@ sub createTag {
     my $date = &getSimpleSecDate();
     print qq(counter\t$tag_counter\t$date\n);
     my $now = time;
-    if ($now - $start_time > 82800) {		# if 23 hours went by, update okta token
-      $okta_token = &generateOktaToken();
+    if ($now - $start_time > 82800) {		# if 23 hours went by, update cognito token
+      $cognito_token = &generateCognitoToken();
       $start_time = $now;
     }
   }
@@ -942,7 +931,7 @@ sub createTag {
   my $ua = LWP::UserAgent->new;
   my $req = HTTP::Request->new(POST => $url);
   $req->header('accept' => 'application/json');
-  $req->header('Authorization' => "Bearer $okta_token");
+  $req->header('Authorization' => "Bearer $cognito_token");
   $req->header('Content-Type' => 'application/json');
   $req->content($object_json);
   my $res = $ua->request($req);
