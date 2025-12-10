@@ -68,6 +68,8 @@
 # Extract names from json for notes, separate with linebreak.  2025 12 08
 #
 # Update to use cognito token.  2025 12 09
+#
+# note object delimiter is just linebreak.  don't output note unless there's a string, api will reject it.  2025 12 10
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -293,7 +295,7 @@ sub populateAfpOthertransgene {
         $theHash{'ack'}{$joinkey}{$obj}{$aut}{timestamp} = $row[2]; }
       $theHash{'ack'}{$joinkey}{$obj}{$aut}{newToDatabase} = 'true';
       my (@names) = $row[1] =~ m/"name":"(.*?)"/g;
-      my $note = join" || \n", @names;
+      my $note = join"\n", @names;
       $theHash{'ack'}{$joinkey}{$obj}{$aut}{note} = $note;	# there can be only one entry for a given paper afp_othertransgene
     }
 } }
@@ -703,7 +705,8 @@ sub outputAfpData {
             delete $object{'entity'};
             delete $object{'species'}; }
 
-          $object{'note'}                       = $note;
+          if ($note) {
+            $object{'note'}                       = $note; }
           $object{'created_by'}                 = $curator;
           $object{'updated_by'}                 = $curator;
           $object{'date_created'}               = $theHash{$datatype}{$joinkey}{$obj}{$curator}{timestamp};
