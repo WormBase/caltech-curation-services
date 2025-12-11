@@ -22,6 +22,9 @@
 #
 # Kimberly has manual descriptions for nnc and svm, copy pasted from https://docs.google.com/document/d/1xNnGLb1KO1ONrvTontgC1LTjpUc0JlfxrXWCvR_XIGA/edit?tab=t.0
 # into hashes, and ran against 4002, but not stage.  2025 10 30
+#
+# modified to use cognito token.  tried to make a perl module for common functions, but it was too much hassle rewriting global
+# variables to be passed into subroutines as paramteres, this whole script thing is almost done.  2025 12 11
 
 # ./create_sources.pl
 
@@ -45,6 +48,7 @@ my $mod = 'WB';
 my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
 # my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
 my $okta_token = &generateOktaToken();
+my $cognito_token = &generateCognitoToken();
 # my $okta_token = 'use_above_when_live';
 
 
@@ -523,7 +527,7 @@ unless ($source_id) {
 sub createSource {
   my ($source_json) = @_;
   my $url = $baseUrl . 'topic_entity_tag/source';
-  my $api_json = `curl -X 'POST' $url -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json' --data '$source_json'`;
+  my $api_json = `curl -X 'POST' $url -H 'accept: application/json' -H 'Authorization: Bearer $cognito_token' -H 'Content-Type: application/json' --data '$source_json'`;
 #   print qq(create $source_json\n);
 #   print qq($api_json\n);
 }
@@ -534,13 +538,21 @@ sub getSourceId {
 #   my ($source_type, $source_method) = @_;
 #   my $url = $baseUrl . 'topic_entity_tag/source/' . $source_type . '/' . $source_method . '/' . $mod;
   # print qq($url\n);
-  my $api_json = `curl -X 'GET' $url -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json'`;
+  my $api_json = `curl -X 'GET' $url -H 'accept: application/json' -H 'Authorization: Bearer $cognito_token' -H 'Content-Type: application/json'`;
   my $hash_ref = decode_json $api_json;
   if ($$hash_ref{'topic_entity_tag_source_id'}) {
     my $source_id = $$hash_ref{'topic_entity_tag_source_id'};
     # print qq($source_id\n);
     return $source_id; }
   else { return ''; }
+}
+
+sub generateCognitoToken {
+  my $cognito_result = `curl -X POST "$ENV{COGNITO_TOKEN_URL}" \ -H "Content-Type: application/x-www-form-urlencoded" \ -d "grant_type=client_credentials" \ -d "client_id=$ENV{COGNITO_ADMIN_CLIENT_ID}" \ -d "client_secret=$ENV{COGNITO_ADMIN_CLIENT_SECRET}"`;
+  my $hash_ref = decode_json $cognito_result;
+  my $cognito_token = $$hash_ref{'access_token'};
+#   print $cognito_token;
+  return $cognito_token;
 }
 
 sub generateOktaToken {
