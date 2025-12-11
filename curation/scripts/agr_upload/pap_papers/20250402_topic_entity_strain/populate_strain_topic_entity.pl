@@ -22,6 +22,8 @@
 # was mistakenly skipping when NOENTITY didn't have a taxon, but that never does.  extract names from json.  2025 12 08
 #
 # Use cognito token instead of okta.  2025 12 09
+#
+# note object delimiter is now linebreak.  don't output note if there's no string.  2025 12 10
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -260,7 +262,7 @@ sub populateAfpOtherstrain {
         $theHash{'ack'}{$joinkey}{$obj}{$aut}{timestamp} = $row[2]; }
       $theHash{'ack'}{$joinkey}{$obj}{$aut}{newToDatabase} = 'true';
       my (@names) = $row[1] =~ m/"name":"(.*?)"/g;
-      my $note = join" || \n", @names;
+      my $note = join"\n", @names;
       push @{ $theHash{'ack'}{$joinkey}{$obj}{$aut}{note} }, $note;
     }
   }
@@ -662,6 +664,7 @@ sub outputAfpData {
 
           if ($theHash{$datatype}{$joinkey}{$obj}{$curator}{note}) {
             my $note = join' | ', @{ $theHash{$datatype}{$joinkey}{$obj}{$curator}{note} };
+            next unless $note;
             $object{'note'}                     = $note; }
           $object{'created_by'}                 = $curator;
           $object{'updated_by'}                 = $curator;
