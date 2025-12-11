@@ -14,6 +14,8 @@
 #
 # Add  heenam@caltech.edu  to email recepients.  2024 05 28
 # heenam should not be on this form.  2024 06 11
+# 
+# no one at hinxton, wen will keep track but not curate.  2025 12 11
 
 
 use Jex;			# untaint, getHtmlVar, cshlNew
@@ -982,7 +984,8 @@ sub submit {
           # my $user = 'allele_sequence_form@' . $hostfqdn;	# who sends mail
           my $user = 'allele_sequence_form@' . $ENV{HOST_NAME};	# who sends mail
 #           my $email = 'cgrove@caltech.edu, maryann.tuli@wormbase.org ';
-          my $email = 'genenames@wormbase.org, draciti@caltech.edu, daniela@wormbase.org';
+          my $email = 'wen@wormbase.org';	# 2025 12 11  no one at hinxton, wen will keep track but not curate
+#           my $email = 'genenames@wormbase.org, draciti@caltech.edu, daniela@wormbase.org';
 #           my $email = 'genenames@wormbase.org';
 #           my $email = 'azurebrd@tazendra.caltech.edu';
 #           my $email = 'closertothewake@gmail.com, azurebrd@tazendra.caltech.edu';
