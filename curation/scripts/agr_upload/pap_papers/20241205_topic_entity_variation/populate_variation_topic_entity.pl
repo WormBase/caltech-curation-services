@@ -20,6 +20,8 @@
 # 2025 12 01
 #
 # Use cognito token instead of okta.  2025 12 09
+#
+# note object delimiter is now linebreak.  2025 12 10
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -301,7 +303,7 @@ sub populateAfpOthervariation {
     if (scalar @auts < 1) { push @auts, 'unknown_author'; }
     foreach my $aut (@auts) {
       my (@names) = $row[1] =~ m/"name":"(.*?)"/g;
-      my $note = join", ", @names;
+      my $note = join"\n", @names;
       $afpOthervariation{$joinkey}{$aut}{note} = $note;
       $afpOthervariation{$joinkey}{$aut}{data} = $row[1];
       $afpOthervariation{$joinkey}{$aut}{timestamp} = $row[2]; }
