@@ -43,6 +43,8 @@
 # species only in ACK, not old afp, do not need afp_version nor timestamp restriction.  2025 06 06
 #
 # added data_novelty for ABC  but not sure if we should populate this on cronjob tomorrow, so commented out.  2025 09 12
+#
+# use cognito instead of okta.  enhanced retry and error logging.  query timestamps as UTC for api.  2025 12 12
 
 
 # cronjob
@@ -80,6 +82,7 @@ my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST}
 my $result;
 
 my $outDir = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . "/postgres/agr_upload/pap_papers/20240321_topic_entity_species/cron_files/";
+# my $outDir = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . "/postgres/agr_upload/pap_papers/20240321_topic_entity_species/logs_manual/";
 # my $outfile = $outDir . 'test_outfile';
 # open (OUT, ">>$outfile") or die "Cannot append to $outfile : $!";
 # print OUT qq($start_time\n);
@@ -103,6 +106,12 @@ if ($ENV{ENV_STATE} ne 'prod') { die; }		# cronjob should only run from caltech 
 # my $output_format = 'json';
 my $output_format = 'api';
 my $tag_counter = 0;
+my $success_counter = 0;
+my $exists_counter = 0;
+my $invalid_counter = 0;
+my $unexpected_counter = 0;
+my $failure_counter = 0;
+my $retry_counter = 0;
 
 my $logfile = ''; my $jsonfile = '';
 my $simpledate = &getSimpleDate;
@@ -123,8 +132,9 @@ my $api_error_body = '';
 
 
 my $mod = 'WB';
-my $okta_token = &generateOktaToken();
+# my $okta_token = &generateOktaToken();
 # my $okta_token = 'use_above_when_live';
+my $cognito_token = &generateCognitoToken();
 
 # my @wbpapers = qw( 00004952 00005199 00026609 00030933 00035427 );
 # my @wbpapers = qw( 00004952 00005199 00046571 00057043 00064676 );
@@ -510,21 +520,21 @@ sub populatePapValid {
 }
 
 sub populateAfpContributor {
-  my $result = $dbh->prepare( "SELECT joinkey, pap_curator, pap_timestamp FROM pap_species WHERE pap_evidence ~ 'from author first pass'" );
+  my $result = $dbh->prepare( "SELECT joinkey, pap_curator, pap_timestamp AT TIME ZONE 'UTC' FROM pap_species WHERE pap_evidence ~ 'from author first pass'" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
 #     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
     next unless ($row[1]);
     my $who = $row[1]; $who =~ s/two/WBPerson/;
     $afpContributor{$row[0]}{$who} = $row[2]; }
-  $result = $dbh->prepare( "SELECT joinkey, pap_curator, pap_timestamp FROM pap_gene WHERE pap_evidence ~ 'from author first pass'" );
+  $result = $dbh->prepare( "SELECT joinkey, pap_curator, pap_timestamp AT TIME ZONE 'UTC' FROM pap_gene WHERE pap_evidence ~ 'from author first pass'" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
 #     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
     next unless ($row[1]);
     my $who = $row[1]; $who =~ s/two/WBPerson/;
     $afpContributor{$row[0]}{$who} = $row[2]; }
-  $result = $dbh->prepare( "SELECT joinkey, afp_contributor, afp_timestamp FROM afp_contributor ORDER BY afp_timestamp" );
+  $result = $dbh->prepare( "SELECT joinkey, afp_contributor, afp_timestamp AT TIME ZONE 'UTC' FROM afp_contributor ORDER BY afp_timestamp" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
 #     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
@@ -534,7 +544,7 @@ sub populateAfpContributor {
 } }
 
 sub populateAfpLasttouched {
-  my $result = $dbh->prepare( "SELECT joinkey, afp_timestamp FROM afp_lasttouched" );
+  my $result = $dbh->prepare( "SELECT joinkey, afp_timestamp AT TIME ZONE 'UTC' FROM afp_lasttouched" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
 #     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
@@ -545,11 +555,11 @@ sub populateAfpLasttouched {
 
 sub populatePapSpecies {
 #  joinkey | pap_species | pap_order | pap_curator | pap_timestamp | pap_evidence
-#   $result = $dbh->prepare( "SELECT joinkey, pap_species, pap_timestamp, pap_curator, pap_evidence FROM pap_species WHERE pap_timestamp > now() - interval '1 week'");
+#   $result = $dbh->prepare( "SELECT joinkey, pap_species, pap_timestamp AT TIME ZONE 'UTC', pap_curator, pap_evidence FROM pap_species WHERE pap_timestamp > now() - interval '1 week'");
 # PUT THIS BACK
-  $result = $dbh->prepare( "SELECT joinkey, pap_species, pap_timestamp, pap_curator, pap_evidence FROM pap_species WHERE pap_timestamp > now() - interval '2 weeks'");
-#   $result = $dbh->prepare( "SELECT joinkey, pap_species, pap_timestamp, pap_curator, pap_evidence FROM pap_species WHERE pap_timestamp > '2025-08-02 00:00:01'");
-#   $result = $dbh->prepare( "SELECT joinkey, pap_species, pap_timestamp, pap_curator, pap_evidence FROM pap_species ");
+  $result = $dbh->prepare( "SELECT joinkey, pap_species, pap_timestamp AT TIME ZONE 'UTC', pap_curator, pap_evidence FROM pap_species WHERE pap_timestamp > now() - interval '2 weeks'");
+#   $result = $dbh->prepare( "SELECT joinkey, pap_species, pap_timestamp AT TIME ZONE 'UTC', pap_curator, pap_evidence FROM pap_species WHERE pap_timestamp > '2025-08-02 00:00:01'");
+#   $result = $dbh->prepare( "SELECT joinkey, pap_species, pap_timestamp AT TIME ZONE 'UTC', pap_curator, pap_evidence FROM pap_species ");
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
@@ -602,11 +612,11 @@ sub populateTaxonNameToId {
 
 sub populateTfpSpecies {
   my %noTaxon;
-#   $result = $dbh->prepare( "SELECT joinkey, tfp_species, tfp_timestamp FROM tfp_species WHERE tfp_timestamp > now() - interval '1 week'");
+#   $result = $dbh->prepare( "SELECT joinkey, tfp_species, tfp_timestamp AT TIME ZONE 'UTC' FROM tfp_species WHERE tfp_timestamp > now() - interval '1 week'");
 # PUT THIS BACK
-  $result = $dbh->prepare( "SELECT joinkey, tfp_species, tfp_timestamp FROM tfp_species WHERE tfp_timestamp > now() - interval '2 weeks'");
-#   $result = $dbh->prepare( "SELECT joinkey, tfp_species, tfp_timestamp FROM tfp_species WHERE tfp_timestamp > '2025-08-02 00:00:01'");
-#   $result = $dbh->prepare( "SELECT joinkey, tfp_species, tfp_timestamp FROM tfp_species");
+  $result = $dbh->prepare( "SELECT joinkey, tfp_species, tfp_timestamp AT TIME ZONE 'UTC' FROM tfp_species WHERE tfp_timestamp > now() - interval '2 weeks'");
+#   $result = $dbh->prepare( "SELECT joinkey, tfp_species, tfp_timestamp AT TIME ZONE 'UTC' FROM tfp_species WHERE tfp_timestamp > '2025-08-02 00:00:01'");
+#   $result = $dbh->prepare( "SELECT joinkey, tfp_species, tfp_timestamp AT TIME ZONE 'UTC' FROM tfp_species");
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
@@ -635,36 +645,36 @@ sub populateTfpSpecies {
 # # we do not have          pap_curation_done = 'genestudied' paper not in pap_gene
 
 sub populateNegativeData {
-#   $result = $dbh->prepare( "SELECT * FROM afp_species WHERE afp_species = '' AND afp_timestamp > '2019-03-22 00:00' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2019-03-22 00:00');" );
-#   $result = $dbh->prepare( "SELECT * FROM afp_species WHERE afp_species = '' AND afp_timestamp > now() - interval '2 weeks' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2019-03-22 00:00');" );
+#   $result = $dbh->prepare( "SELECT joinkey, afp_species, afp_timestamp AT TIME ZONE 'UTC' FROM afp_species WHERE afp_species = '' AND afp_timestamp > '2019-03-22 00:00' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2019-03-22 00:00');" );
+#   $result = $dbh->prepare( "SELECT joinkey, afp_species, afp_timestamp AT TIME ZONE 'UTC' FROM afp_species WHERE afp_species = '' AND afp_timestamp > now() - interval '2 weeks' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2019-03-22 00:00');" );
 # PUT THIS BACK
-  $result = $dbh->prepare( "SELECT * FROM afp_species WHERE afp_species = '' AND afp_timestamp > now() - interval '2 weeks' AND joinkey IN (SELECT joinkey FROM afp_lasttouched);" );
-#   $result = $dbh->prepare( "SELECT * FROM afp_species WHERE afp_species = '' AND afp_timestamp > '2025-08-02 00:00:01' AND joinkey IN (SELECT joinkey FROM afp_lasttouched);" );
-#   $result = $dbh->prepare( "SELECT * FROM afp_species WHERE afp_species = '' AND joinkey IN (SELECT joinkey FROM afp_lasttouched);" );
+  $result = $dbh->prepare( "SELECT joinkey, afp_species, afp_timestamp AT TIME ZONE 'UTC' FROM afp_species WHERE afp_species = '' AND afp_timestamp > now() - interval '2 weeks' AND joinkey IN (SELECT joinkey FROM afp_lasttouched);" );
+#   $result = $dbh->prepare( "SELECT joinkey, afp_species, afp_timestamp AT TIME ZONE 'UTC' FROM afp_species WHERE afp_species = '' AND afp_timestamp > '2025-08-02 00:00:01' AND joinkey IN (SELECT joinkey FROM afp_lasttouched);" );
+#   $result = $dbh->prepare( "SELECT joinkey, afp_species, afp_timestamp AT TIME ZONE 'UTC' FROM afp_species WHERE afp_species = '' AND joinkey IN (SELECT joinkey FROM afp_lasttouched);" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
     $ackNegSpeciesTopic{$row[0]} = $row[2]; }
 
 # PUT THIS BACK
-  $result = $dbh->prepare( "SELECT * FROM tfp_species WHERE tfp_species = '' AND tfp_timestamp > now() - interval '2 weeks';" );
-#   $result = $dbh->prepare( "SELECT * FROM tfp_species WHERE tfp_species = '' AND tfp_timestamp > '2025-08-02 00:00:01';" );
-#   $result = $dbh->prepare( "SELECT * FROM tfp_species WHERE tfp_species = '';" );
+  $result = $dbh->prepare( "SELECT joinkey, tfp_species, tfp_timestamp AT TIME ZONE 'UTC' FROM tfp_species WHERE tfp_species = '' AND tfp_timestamp > now() - interval '2 weeks';" );
+#   $result = $dbh->prepare( "SELECT joinkey, tfp_species, tfp_timestamp AT TIME ZONE 'UTC' FROM tfp_species WHERE tfp_species = '' AND tfp_timestamp > '2025-08-02 00:00:01';" );
+#   $result = $dbh->prepare( "SELECT joinkey, tfp_species, tfp_timestamp AT TIME ZONE 'UTC' FROM tfp_species WHERE tfp_species = '';" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
     $tfpNegSpeciesTopic{$row[0]} = $row[2]; }
 
   # we don't need this, this was only to compare recent ack author data to tfp all time, but we're not doing that anymore.  2025 06 03
-  # $result = $dbh->prepare( "SELECT * FROM tfp_species WHERE tfp_species = '' AND tfp_timestamp > '2019-03-22 00:00';" );
+  # $result = $dbh->prepare( "SELECT joinkey, afp_timestamp AT TIME ZONE 'UTC' FROM tfp_species WHERE tfp_species = '' AND tfp_timestamp > '2019-03-22 00:00';" );
   # $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   # while (my @row = $result->fetchrow) {
   #   next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
   #   $tfpNegSpeciesTopicAlltime{$row[0]} = $row[2]; }
 
   my %tfpSpeciesForNegation;    # this is always for all time, not just the last couple of weeks
-#   $result = $dbh->prepare( "SELECT * FROM tfp_species WHERE tfp_species != '' AND tfp_timestamp > '2019-03-22 00:00' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2019-03-22 00:00');" );
-  $result = $dbh->prepare( "SELECT * FROM tfp_species WHERE tfp_species != '';" );
+#   $result = $dbh->prepare( "SELECT joinkey, tfp_species, tfp_timestamp AT TIME ZONE 'UTC' FROM tfp_species WHERE tfp_species != '' AND tfp_timestamp > '2019-03-22 00:00' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2019-03-22 00:00');" );
+  $result = $dbh->prepare( "SELECT joinkey, tfp_species, tfp_timestamp AT TIME ZONE 'UTC' FROM tfp_species WHERE tfp_species != '';" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
@@ -672,12 +682,12 @@ sub populateNegativeData {
     foreach my $data (@data) { $tfpSpeciesForNegation{$row[0]}{$data}++; } }
 
   my %afpSpeciesForNegation;
-#   $result = $dbh->prepare( "SELECT * FROM afp_species WHERE afp_species != '' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2019-03-22 00:00');" );
+#   $result = $dbh->prepare( "SELECT joinkey, afp_species, afp_timestamp AT TIME ZONE 'UTC' FROM afp_species WHERE afp_species != '' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2019-03-22 00:00');" );
   # get all papers that have an afp_lasttouched in the last couple of weeks.
 # PUT THIS BACK
-  $result = $dbh->prepare( "SELECT * FROM afp_species WHERE afp_species != '' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > now() - interval '2 weeks');" );
-#   $result = $dbh->prepare( "SELECT * FROM afp_species WHERE afp_species != '' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2025-08-02 00:00:01');" );
-#   $result = $dbh->prepare( "SELECT * FROM afp_species WHERE afp_species != '' AND joinkey IN (SELECT joinkey FROM afp_lasttouched);" );
+  $result = $dbh->prepare( "SELECT joinkey, afp_species, afp_timestamp AT TIME ZONE 'UTC' FROM afp_species WHERE afp_species != '' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > now() - interval '2 weeks');" );
+#   $result = $dbh->prepare( "SELECT joinkey, afp_species, afp_timestamp AT TIME ZONE 'UTC' FROM afp_species WHERE afp_species != '' AND joinkey IN (SELECT joinkey FROM afp_lasttouched WHERE afp_timestamp > '2025-08-02 00:00:01');" );
+#   $result = $dbh->prepare( "SELECT joinkey, afp_species, afp_timestamp AT TIME ZONE 'UTC' FROM afp_species WHERE afp_species != '' AND joinkey IN (SELECT joinkey FROM afp_lasttouched);" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
@@ -710,7 +720,7 @@ sub getSourceId {
 #   my ($source_type, $source_method) = @_;
 #   my $url = $baseUrl . 'topic_entity_tag/source/' . $source_type . '/' . $source_method . '/' . $mod;
   # print qq($url\n);
-  my $api_json = `curl -X 'GET' $url -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json'`;
+  my $api_json = `curl -X 'GET' $url -H 'accept: application/json' -H 'Authorization: Bearer $cognito_token' -H 'Content-Type: application/json'`;
   my $hash_ref = decode_json $api_json;
   if ($$hash_ref{'topic_entity_tag_source_id'}) {
     my $source_id = $$hash_ref{'topic_entity_tag_source_id'};
@@ -724,7 +734,7 @@ sub getSourceId {
 #   my ($source_type, $source_method) = @_;
 #   my $url = $baseUrl . 'topic_entity_tag/source/' . $source_type . '/' . $source_method . '/' . $mod;
 # #   print qq($url\n);
-#   my $api_json = `curl -X 'GET' $url -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json'`;
+#   my $api_json = `curl -X 'GET' $url -H 'accept: application/json' -H 'Authorization: Bearer $cognito_token' -H 'Content-Type: application/json'`;
 #   my $hash_ref = decode_json $api_json;
 #   my $source_id = $$hash_ref{'topic_entity_tag_source_id'};
 #   if ($$hash_ref{'topic_entity_tag_source_id'}) {
@@ -735,35 +745,121 @@ sub getSourceId {
 # #   print qq($source_id\n);
 # }
 
+# sub createTag {
+#   my ($object_json) = @_;
+#   $tag_counter++;
+#   if ($tag_counter % 1000 == 0) { 
+#     my $date = &getSimpleSecDate();
+# #     print qq(counter\t$tag_counter\t$date\n);
+#     my $now = time;
+#     if ($now - $start_time > 82800) {		# if 23 hours went by, update cognito token
+#       $cognito_token = &generateCognitoToken();
+#       $start_time = $now;
+#     }
+#   }
+#   my $url = $baseUrl . 'topic_entity_tag/';
+# # PUT THIS BACK
+#   my $api_json = `curl -X 'POST' $url -H 'accept: application/json' -H 'Authorization: Bearer $cognito_token' -H 'Content-Type: application/json' --data '$object_json'`;
+#   print LOG qq(create $object_json\n);
+#   if ( ($api_json !~ '"status":"exists"') && ($api_json !~ '"status":"success"') ) { $api_error_body .= qq($api_json\n); }
+#   print LOG qq($api_json\n);
+# }
+
 sub createTag {
   my ($object_json) = @_;
   $tag_counter++;
-  if ($tag_counter % 1000 == 0) { 
+  if ($tag_counter % 1000 == 0) {
     my $date = &getSimpleSecDate();
-#     print qq(counter\t$tag_counter\t$date\n);
+    print qq(counter\t$tag_counter\t$date\n);
     my $now = time;
-    if ($now - $start_time > 82800) {		# if 23 hours went by, update okta token
-      $okta_token = &generateOktaToken();
+    if ($now - $start_time > 82800) {           # if 23 hours went by, update okta token
+      $cognito_token = &generateCognitoToken();
       $start_time = $now;
     }
   }
   my $url = $baseUrl . 'topic_entity_tag/';
-# PUT THIS BACK
-  my $api_json = `curl -X 'POST' $url -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json' --data '$object_json'`;
+#   my $api_json = `curl -X 'POST' $url -H 'accept: application/json' -H 'Authorization: Bearer $cognito_token' -H 'Content-Type: application/json' --data '$object_json'`;	# this has issues with how the shell interprets special characters like parentheses ( and ) when passed directly in the command line.  instead avoid the shell and run the command through a pipe like  open my $fh, "-|", @args
+
+  my $ua = LWP::UserAgent->new;
+  my $req = HTTP::Request->new(POST => $url);
+  $req->header('accept' => 'application/json');
+  $req->header('Authorization' => "Bearer $cognito_token");
+  $req->header('Content-Type' => 'application/json');
+  $req->content($object_json);
+  my $res = $ua->request($req);
+
   print LOG qq(create $object_json\n);
-  if ( ($api_json !~ '"status":"exists"') && ($api_json !~ '"status":"success"') ) { $api_error_body .= qq($api_json\n); }
+  my $api_json = $res->decoded_content;
   print LOG qq($api_json\n);
-}
+  if ($res->is_success) {
+    if ($api_json =~ /"status":"success"/) {
+      $success_counter++;
+      $retry_counter = 0;
+    }
+    elsif ($api_json =~ /"status":"exists"/) {
+      $exists_counter++;
+      print LOG qq(ERROR_API create $object_json\n);
+      print LOG qq(EXISTS	$api_json\n);
+      $retry_counter = 0;
+    }
+    elsif ($api_json =~ /"detail":"Invalid or expired token: Signature has expired."/) {
+      print LOG qq(ERROR_API create $object_json\n);
+      print LOG qq(EXPIRED TOKEN	$api_json\n);
+      $cognito_token = &generateCognitoToken();
+      print LOG qq(NEW TOKEN	$cognito_token\n);
+      &retryCreateTag($object_json);
+    }
+    elsif ($api_json =~ /"detail":"invalid request"/) {
+      $invalid_counter++;
+      print LOG qq(ERROR_API create $object_json\n);
+      print LOG qq(INVALID	$api_json\n);
+      $retry_counter = 0;
+    }
+    else {
+      $unexpected_counter++;
+      print LOG qq(ERROR_API create $object_json\n);
+      print LOG qq(UNEXPECTED	$api_json\n);
+      &retryCreateTag($object_json);
+    }
+  } else {
+    $failure_counter++;
+    print LOG qq(ERROR_API create $object_json\n);
+    print LOG "HTTP Error: ", $res->status_line, "\n", $api_json, "\n";
+    &retryCreateTag($object_json);
+  }
+} # sub createTag
+
+sub retryCreateTag {
+  my ($object_json) = @_;
+  $retry_counter++;
+  if ($retry_counter > 4) {
+    print LOG qq(api failed without response $retry_counter times, giving up\n);
+    $retry_counter = 0; }
+  else {
+    print LOG qq(api failed $retry_counter times, retrying\n);
+    my $sleep_amount = 4 ** $retry_counter;
+    sleep $sleep_amount;
+    &createTag($object_json); }
+} # sub retryCreateTag
 
 
-sub generateOktaToken {
-#   my $okta_token = `curl -s --request POST --url https://$ENV{OKTA_DOMAIN}/v1/token \    --header 'accept: application/json' \    --header 'cache-control: no-cache' \    --header 'content-type: application/x-www-form-urlencoded' \    --data "grant_type=client_credentials&scope=admin&client_id=$ENV{OKTA_CLIENT_ID}&client_secret=$ENV{OKTA_CLIENT_SECRET}" \      | jq '.access_token' | tr -d '"'`;
-  my $okta_result = `curl -s --request POST --url https://$ENV{OKTA_DOMAIN}/v1/token \    --header 'accept: application/json' \    --header 'cache-control: no-cache' \    --header 'content-type: application/x-www-form-urlencoded' \    --data "grant_type=client_credentials&scope=admin&client_id=$ENV{OKTA_CLIENT_ID}&client_secret=$ENV{OKTA_CLIENT_SECRET}"`;
-  my $hash_ref = decode_json $okta_result;
-  my $okta_token = $$hash_ref{'access_token'};
-#   print $okta_token;
-  return $okta_token;
+sub generateCognitoToken {
+  my $cognito_result = `curl -X POST "$ENV{COGNITO_TOKEN_URL}" \ -H "Content-Type: application/x-www-form-urlencoded" \ -d "grant_type=client_credentials" \ -d "client_id=$ENV{COGNITO_ADMIN_CLIENT_ID}" \ -d "client_secret=$ENV{COGNITO_ADMIN_CLIENT_SECRET}"`;
+  my $hash_ref = decode_json $cognito_result;
+  my $cognito_token = $$hash_ref{'access_token'};
+  print qq(GENERATE TOKEN $cognito_token\n);
+  print LOG qq(GENERATE TOKEN $cognito_token\n);
+  return $cognito_token;
 }
+
+# sub generateOktaToken {
+# #   my $okta_token = `curl -s --request POST --url https://$ENV{OKTA_DOMAIN}/v1/token \    --header 'accept: application/json' \    --header 'cache-control: no-cache' \    --header 'content-type: application/x-www-form-urlencoded' \    --data "grant_type=client_credentials&scope=admin&client_id=$ENV{OKTA_CLIENT_ID}&client_secret=$ENV{OKTA_CLIENT_SECRET}" \      | jq '.access_token' | tr -d '"'`;
+#   my $okta_result = `curl -s --request POST --url https://$ENV{OKTA_DOMAIN}/v1/token \    --header 'accept: application/json' \    --header 'cache-control: no-cache' \    --header 'content-type: application/x-www-form-urlencoded' \    --data "grant_type=client_credentials&scope=admin&client_id=$ENV{OKTA_CLIENT_ID}&client_secret=$ENV{OKTA_CLIENT_SECRET}"`;
+#   my $hash_ref = decode_json $okta_result;
+#   my $okta_token = $$hash_ref{'access_token'};
+# #   print $okta_token;
+#   return $okta_token;
+# }
 
 # sub generateXrefJsonFile {
 #   my $okta_token = &generateOktaToken();
