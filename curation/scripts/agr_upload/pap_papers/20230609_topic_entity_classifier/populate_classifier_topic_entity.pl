@@ -56,7 +56,8 @@
 #
 # Use cognito token instead of okta.  2025 12 09
 #
-# Expanded api failure handling and retry to API.  2025 12 12
+# Expanded api failure handling and retry to API.
+# More checks on reference_curie before sending to API.  2025 12 12
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -246,6 +247,7 @@ sub outputOaData {
       next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
       my ($joinkey) = &deriveValidPap($joinkey);
       next unless $papValid{$joinkey};
+      unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
       my %object;
       $object{'negated'}                    = FALSE;
       $object{'force_insertion'}            = TRUE;
@@ -281,6 +283,10 @@ sub outputAfpCurData {
       next;
     }
     foreach my $joinkey (sort keys %{ $afpCurData{$datatype} }) {
+      next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
+      my ($joinkey) = &deriveValidPap($joinkey);
+      next unless $papValid{$joinkey};
+      unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
       my $negated = FALSE;
       if ($afpCurData{$datatype}{$joinkey}{negated}) { $negated = TRUE; }
       my %object;
@@ -334,6 +340,10 @@ sub outputAfpAutData {
       next;
     }
     foreach my $joinkey (sort keys %{ $afpAutData{$datatype} }) {
+      next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
+      my ($joinkey) = &deriveValidPap($joinkey);
+      next unless $papValid{$joinkey};
+      unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
       my @auts;
       if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
       if (scalar @auts < 1) { push @auts, 'unknown_author'; }
@@ -591,6 +601,10 @@ sub outputCfpData {
       next;
     }
     foreach my $joinkey (sort keys %{ $cfpData{$datatype} }) {
+      next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
+      my ($joinkey) = &deriveValidPap($joinkey);
+      next unless $papValid{$joinkey};
+      unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
       my $negated = FALSE;
       if ($cfpData{$datatype}{$joinkey}{data}) {
           if ($cfpData{$datatype}{$joinkey}{data} =~ m/false positive/i) { $negated = TRUE; } }
@@ -673,6 +687,10 @@ sub outputCurStrData {
     #   return;
     # }
     foreach my $joinkey (sort keys %{ $strData{$datatype} }) {
+      next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
+      my ($joinkey) = &deriveValidPap($joinkey);
+      next unless $papValid{$joinkey};
+      unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
       my %object;
       # my $source_id = $source_id_1;
       # my $tsdigits = &tsToDigits($strData{$datatype}{$joinkey}{timestamp});
@@ -733,6 +751,10 @@ sub outputCurNncData {
     }
 
     foreach my $joinkey (sort keys %{ $nncData{$datatype} }) {
+      next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
+      my ($joinkey) = &deriveValidPap($joinkey);
+      next unless $papValid{$joinkey};
+      unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
       my %object;
       my $negated = FALSE;  
       if ($nncData{$datatype}{$joinkey}{result} eq 'NEG') { $negated = TRUE; }
@@ -790,6 +812,10 @@ sub outputCurSvmData {
       return;
     }
     foreach my $joinkey (sort keys %{ $svmData{$datatype} }) {
+      next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
+      my ($joinkey) = &deriveValidPap($joinkey);
+      next unless $papValid{$joinkey};
+      unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
       my %object;
       my $negated = FALSE;  
       if ($svmData{$datatype}{$joinkey}{result} eq 'NEG') { $negated = TRUE; }
@@ -852,6 +878,10 @@ sub outputCurCurData {
     foreach my $joinkey (sort keys %{ $curData{$datatype} }) {
 # next unless ($joinkey eq '00005199');	# selcomment + txtcomment
 # next unless ($joinkey eq '00037049');	# timestamp with timezone to utc different date 2018-06-27 17:31:33.510441-07 -> 2018-06-28 00:31:33.510441
+      next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
+      my ($joinkey) = &deriveValidPap($joinkey);
+      next unless $papValid{$joinkey};
+      unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
       my %object;
       my $negated = FALSE;  
       if ($curData{$datatype}{$joinkey}{donposneg} eq 'negative') { $negated = TRUE; }
