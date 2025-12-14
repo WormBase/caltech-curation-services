@@ -58,6 +58,9 @@
 #
 # Expanded api failure handling and retry to API.
 # More checks on reference_curie before sending to API.  2025 12 12
+#
+# Error handling to recreate token is not on success detail, it's on lack of success detail.
+# If reference is not valid, don't retry, move on.  Log more different types of API responses in different counter.  2025 12 13
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -112,8 +115,10 @@ my $output_format = 'json';
 my $tag_counter = 0;
 my $success_counter = 0;
 my $exists_counter = 0;
-my $invalid_counter = 0;
-my $unexpected_counter = 0;
+my $invalid_request_counter = 0;
+my $invalid_reference_counter = 0;
+my $unexpected_success_counter = 0;
+my $unexpected_failure_counter = 0;
 my $failure_counter = 0;
 my $retry_counter = 0;
 
@@ -217,8 +222,8 @@ if ($output_format eq 'json') {
 }
 
 if ($output_format eq 'api') {
-  print OUT qq(Tags\t$tag_counter\tSuccess\t$success_counter\tExists\t$exists_counter\tUnexpected\t$unexpected_counter\tFailure\t$failure_counter\n);
-  print ERR qq(Tags\t$tag_counter\tSuccess\t$success_counter\tExists\t$exists_counter\tUnexpected\t$unexpected_counter\tFailure\t$failure_counter\n);
+  print OUT qq(Tags\t$tag_counter\tSuccess\t$success_counter\tExists\t$exists_counter\tInvalid Request\t$invalid_request_counter\tInvalid Reference\t$invalid_reference_counter\tUnexpected Success\t$unexpected_success_counter\tUnexpected Failure\t$unexpected_failure_counter\tFailure\t$failure_counter\n);
+  print ERR qq(Tags\t$tag_counter\tSuccess\t$success_counter\tExists\t$exists_counter\tInvalid Request\t$invalid_request_counter\tInvalid Reference\t$invalid_reference_counter\tUnexpected Success\t$unexpected_success_counter\tUnexpected Failure\t$unexpected_failure_counter\tFailure\t$failure_counter\n);
   close (ERR) or die "Cannot close $errfile : $!";
 }
 close (OUT) or die "Cannot close $outfile : $!";
@@ -1002,7 +1007,17 @@ sub createTag {
       print ERR qq(EXISTS	$api_json\n);
       $retry_counter = 0;
     }
-    elsif ($api_json =~ /"detail":"Invalid or expired token: Signature has expired."/) {
+    else {
+      $unexpected_success_counter++;
+      print ERR qq(create $object_json\n);
+      print ERR qq(UNEXPECTED SUCCESS	$api_json\n);
+      &retryCreateTag($object_json);
+    }
+  } else {
+    $failure_counter++;
+    print ERR qq(create $object_json\n);
+    print ERR "HTTP Error: ", $res->status_line, "\n", $api_json, "\n";
+    if ($api_json =~ /"detail":"Invalid or expired token: Signature has expired."/) {	# this never happens, it's not is_success
       print ERR qq(create $object_json\n);
       print ERR qq(EXPIRED TOKEN	$api_json\n);
       $cognito_token = &generateCognitoToken();
@@ -1010,22 +1025,23 @@ sub createTag {
       &retryCreateTag($object_json);
     }
     elsif ($api_json =~ /"detail":"invalid request"/) {
-      $invalid_counter++;
+      $invalid_request_counter++;
       print ERR qq(create $object_json\n);
-      print ERR qq(INVALID	$api_json\n);
+      print ERR qq(INVALID REQUEST	$api_json\n);
+      $retry_counter = 0;
+    }
+    elsif ($api_json =~ /"detail":"Reference with the reference_id or curie"/) {
+      $invalid_reference_counter++;
+      print ERR qq(create $object_json\n);
+      print ERR qq(INVALID REFERENCE	$api_json\n);
       $retry_counter = 0;
     }
     else {
-      $unexpected_counter++;
+      $unexpected_failure_counter++;
       print ERR qq(create $object_json\n);
-      print ERR qq(UNEXPECTED	$api_json\n);
+      print ERR qq(UNEXPECTED FAILURE	$api_json\n);
       &retryCreateTag($object_json);
     }
-  } else {
-    $failure_counter++;
-    print ERR qq(create $object_json\n);
-    print ERR "HTTP Error: ", $res->status_line, "\n", $api_json, "\n";
-    &retryCreateTag($object_json);
   }
 } # sub createTag
 
