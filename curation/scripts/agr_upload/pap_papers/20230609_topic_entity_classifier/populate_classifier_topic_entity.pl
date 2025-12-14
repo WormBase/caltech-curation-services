@@ -60,7 +60,8 @@
 # More checks on reference_curie before sending to API.  2025 12 12
 #
 # Error handling to recreate token is not on success detail, it's on lack of success detail.
-# If reference is not valid, don't retry, move on.  Log more different types of API responses in different counter.  2025 12 13
+# If reference is not valid, don't retry, move on.  Log more different types of API responses in different counter.
+# Typo in invalid reference handling.  2025 12 13
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -136,6 +137,7 @@ my $mod = 'WB';
 # my @wbpapers = qw( 00001084 00004952 00031697 00032245 00032467 00032959 00033036 00033406 00034728 00035977 00040400 00053203 00059003 00059712 00060296 00065201 00067387 00067433 00068170 00068343 );	# 2025 10 09
 # my @wbpapers = qw( 00067433 );	# 2025 10 31
 # my @wbpapers = qw( 00068172 );	# 2025 11 03	# strData negated antibody
+# my @wbpapers = qw( 00068715 );	# 2025 12 13	# not on stage
 my @wbpapers = qw( 00001084 00004952 00031697 00032245 00032467 00032959 00033036 00033206 00033406 00034728 00035977 00040400 00053203 00054648 00059003 00059712 00060296 00065201 00067387 00067433 00068170 00068172 00068343 );	# 2025 11 07
 
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 
@@ -1030,7 +1032,7 @@ sub createTag {
       print ERR qq(INVALID REQUEST	$api_json\n);
       $retry_counter = 0;
     }
-    elsif ($api_json =~ /"detail":"Reference with the reference_id or curie"/) {
+    elsif ($api_json =~ /"detail":"Reference with the reference_id or curie/) {
       $invalid_reference_counter++;
       print ERR qq(create $object_json\n);
       print ERR qq(INVALID REFERENCE	$api_json\n);
