@@ -62,6 +62,8 @@
 # Error handling to recreate token is not on success detail, it's on lack of success detail.
 # If reference is not valid, don't retry, move on.  Log more different types of API responses in different counter.
 # Typo in invalid reference handling.  2025 12 13
+#
+# Ranjana no longer wants human disease old afp nor cfp.  2025 12 15
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -138,6 +140,8 @@ my $mod = 'WB';
 # my @wbpapers = qw( 00067433 );	# 2025 10 31
 # my @wbpapers = qw( 00068172 );	# 2025 11 03	# strData negated antibody
 # my @wbpapers = qw( 00068715 );	# 2025 12 13	# not on stage
+# my @wbpapers = qw( 00037758 );	# 2025 12 15	# API creating psycopg2.errors.UniqueViolation
+# my @wbpapers = qw( 00036433 );	# 2025 12 15	# hum dis changes test paper
 my @wbpapers = qw( 00001084 00004952 00031697 00032245 00032467 00032959 00033036 00033206 00033406 00034728 00035977 00040400 00053203 00054648 00059003 00059712 00060296 00065201 00067387 00067433 00068170 00068172 00068343 );	# 2025 11 07
 
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 
@@ -432,18 +436,19 @@ sub populateAfpData {
       my $tsdigits = &tsToDigits($row[2]);
       $data =~ s/\n/ /g; $data =~ s/ $//g;
       if ($tsdigits < '20190322') { 
-        if ( ($datatype eq 'humandisease') || ($datatype eq 'humdis') ) {	# ranjana wants to treat old afp_humdis as parent level disease  2025 11 11
-          $afpAutData{'disease'}{$joinkey}{note}      = $data;
-          $afpAutData{'disease'}{$joinkey}{negated}   = 0;		# there was no tfp_ data to validate old afp
-          $afpAutData{'disease'}{$joinkey}{source}    = 'author_first_pass';
-          $afpAutData{'disease'}{$joinkey}{timestamp} = $row[2]; }
+        if ( ($datatype eq 'humandisease') || ($datatype eq 'humdis') ) {	# ranjana doesn't want old afp disease data 2025 12 15
+#           $afpAutData{'disease'}{$joinkey}{note}      = $data;
+#           $afpAutData{'disease'}{$joinkey}{negated}   = 0;		# there was no tfp_ data to validate old afp
+#           $afpAutData{'disease'}{$joinkey}{source}    = 'author_first_pass';
+#           $afpAutData{'disease'}{$joinkey}{timestamp} = $row[2];
+          1; }	# ranjana doesn't want old afp disease data 2025 12 15
         else {
           $afpAutData{$datatype}{$joinkey}{note}      = $data;
           $afpAutData{$datatype}{$joinkey}{negated}   = 0;		# there was no tfp_ data to validate old afp
           $afpAutData{$datatype}{$joinkey}{source}    = 'author_first_pass';
           $afpAutData{$datatype}{$joinkey}{timestamp} = $row[2]; } }
       else {
-        if ( ($datatype eq 'disease') || ($datatype eq 'humdis') ) {	# ranjana wants to treat old afp_humdis as parent level disease  2025 11 11
+        if ( ($datatype eq 'disease') || ($datatype eq 'humdis') ) {	# ranjana wants to treat ACK afp_humdis as parent level disease  2025 11 11
           $afpAutData{'humandisease'}{$joinkey}{note}      = $data;  
           $afpAutData{'humandisease'}{$joinkey}{negated}   = $negated;
           $afpAutData{'humandisease'}{$joinkey}{source}    = 'ack';
@@ -457,10 +462,11 @@ sub populateAfpData {
         my $curator = $row[3]; $curator =~ s/two/WBPerson/;
         my $negated = 0;
         if ($row[4] eq 'rejected') { $negated = 1; }
-        if ( ($datatype eq 'humandisease') || ($datatype eq 'humdis') ) {	# ranjana wants to treat old afp_humdis as parent level disease  2025 11 11
-          $afpCurData{'disease'}{$joinkey}{curator}   = $curator;
-          $afpCurData{'disease'}{$joinkey}{negated}   = $negated;
-          $afpCurData{'disease'}{$joinkey}{timestamp} = $row[5]; }
+        if ( ($datatype eq 'humandisease') || ($datatype eq 'humdis') ) {	# ranjana doesn't want old afp disease data 2025 12 15
+#           $afpCurData{'disease'}{$joinkey}{curator}   = $curator;
+#           $afpCurData{'disease'}{$joinkey}{negated}   = $negated;
+#           $afpCurData{'disease'}{$joinkey}{timestamp} = $row[5];
+          1; }
         else {
           $afpCurData{$datatype}{$joinkey}{curator}   = $curator;
           $afpCurData{$datatype}{$joinkey}{negated}   = $negated;
@@ -470,17 +476,11 @@ sub populateAfpData {
       unless ($afpAutData{$datatype}{$joinkey}) {
         my $tsdigits = &tsToDigits($afpLasttouched{$joinkey});
         next unless ($tsdigits < '20190322');
-        if ( ($datatype eq 'humandisease') || ($datatype eq 'humdis') ) {	# ranjana wants to treat old afp_humdis as parent level disease  2025 11 11
-          $afpAutData{'disease'}{$joinkey}{note}      = "no data entered by author";
-          $afpAutData{'disease'}{$joinkey}{negated}   = 1;	# inferred negative by afp
-          $afpAutData{'disease'}{$joinkey}{source}    = 'author_first_pass';
-          $afpAutData{'disease'}{$joinkey}{timestamp} = $afpLasttouched{$joinkey}; }
-        else {
-          $afpAutData{$datatype}{$joinkey}{note}      = "no data entered by author";
-          $afpAutData{$datatype}{$joinkey}{negated}   = 1;	# inferred negative by afp
-          $afpAutData{$datatype}{$joinkey}{source}    = 'author_first_pass';
-          $afpAutData{$datatype}{$joinkey}{timestamp} = $afpLasttouched{$joinkey}; } }
-    }
+        next if ( ($datatype eq 'humandisease') || ($datatype eq 'humdis') );	# ranjana doesn't want old afp disease data 2025 12 15
+        $afpAutData{$datatype}{$joinkey}{note}      = "no data entered by author";
+        $afpAutData{$datatype}{$joinkey}{negated}   = 1;	# inferred negative by afp
+        $afpAutData{$datatype}{$joinkey}{source}    = 'author_first_pass';
+        $afpAutData{$datatype}{$joinkey}{timestamp} = $afpLasttouched{$joinkey}; } }
 } }
 
 sub populateAfpContributor {
@@ -654,14 +654,10 @@ sub populateCfpData {
       next unless $papValid{$joinkey};
       my $curator = $row[2]; $curator =~ s/two/WBPerson/;
       $row[1] =~ s/\n/ /g; $row[1] =~ s/ $//g;
-      if ($datatype eq 'humdis') {	# ranjana wants to treat cfp_humdis as parent level disease  2025 11 11
-        $cfpData{'disease'}{$joinkey}{data} = $row[1];
-        $cfpData{'disease'}{$joinkey}{curator} = $curator;
-        $cfpData{'disease'}{$joinkey}{timestamp} = $row[3]; }
-      else {
-        $cfpData{$datatype}{$joinkey}{data} = $row[1];
-        $cfpData{$datatype}{$joinkey}{curator} = $curator;
-        $cfpData{$datatype}{$joinkey}{timestamp} = $row[3]; }
+      next if ( ($datatype eq 'humandisease') || ($datatype eq 'humdis') );	# ranjana doesn't want cfp disease data 2025 12 15
+      $cfpData{$datatype}{$joinkey}{data} = $row[1];
+      $cfpData{$datatype}{$joinkey}{curator} = $curator;
+      $cfpData{$datatype}{$joinkey}{timestamp} = $row[3];
 #       my $row = join"\t", @row;
 #       print qq($datatype\tcfp_$datatypesAfpCfp{$datatype}\t$row\n);
 } } }
@@ -1125,7 +1121,7 @@ sub populateDatatypesAndABC {
   $datatypesAfpCfp{'lsrnai'}         = 'lsrnai';                # for new afp form 2025 10 31
   $datatypesAfpCfp{'extvariation'}   = 'extvariation';          # for genetics and g3 linking  2025 10 09
   $datatypesAfpCfp{'newstrains'}     = 'newstrains';            # for genetics and g3 linking  does not have tfp cfp   2025 10 09
-  $datatypesAfpCfp{'disease'}        = 'humdis';                # for old afp/cfp humdis that ranjana wants treated differently  2025 11 11
+#   $datatypesAfpCfp{'disease'}        = 'humdis';                # for old afp/cfp humdis that ranjana wants treated differently  2025 11 11	ranjana no longer wants old afp nor cfp  2025 12 15
   # delete $datatypesAfpCfp{'catalyticact'};     # has svm but no afp / cfp      # afp got added, so cfp table also created.  2018 11 07
   delete $datatypesAfpCfp{'expression_cluster'}; # has svm but no afp / cfp      # should have been removed 2017 07 08, fixed 2017 08 04
   # delete $datatypesAfpCfp{'genesymbol'};       # has svm but no afp / cfp      # added 2021 01 25	# no, it does have afp / cfp
