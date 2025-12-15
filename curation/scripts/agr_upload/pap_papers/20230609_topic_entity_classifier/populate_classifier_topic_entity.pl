@@ -63,7 +63,8 @@
 # If reference is not valid, don't retry, move on.  Log more different types of API responses in different counter.
 # Typo in invalid reference handling.  2025 12 13
 #
-# Ranjana no longer wants human disease old afp nor cfp.  2025 12 15
+# Ranjana no longer wants human disease old afp nor cfp.
+# Converting ACK data to note and deriving negated from json is only for otherantibody, everything else uses the string.  2025 12 15
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -142,6 +143,7 @@ my $mod = 'WB';
 # my @wbpapers = qw( 00068715 );	# 2025 12 13	# not on stage
 # my @wbpapers = qw( 00037758 );	# 2025 12 15	# API creating psycopg2.errors.UniqueViolation
 # my @wbpapers = qw( 00036433 );	# 2025 12 15	# hum dis changes test paper
+# my @wbpapers = qw( 00059003 );	# 2025 12 15	# hum dis negative ack test paper
 my @wbpapers = qw( 00001084 00004952 00031697 00032245 00032467 00032959 00033036 00033206 00033406 00034728 00035977 00040400 00053203 00054648 00059003 00059712 00060296 00065201 00067387 00067433 00068170 00068172 00068343 );	# 2025 11 07
 
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 
@@ -388,21 +390,26 @@ sub outputAfpAutData {
 } } } }
 
 sub convertAckToNote {
-  my $origdata = shift;
-  my $json = eval { decode_json($origdata) };
-  return ('', 1) if $@ or ref($json) ne 'ARRAY';
-  my @parts;
-  for my $entry (@$json) {
-    next unless ref($entry) eq 'HASH';
-    my @fields;
-    push @fields, $entry->{name}          if defined $entry->{name}          && $entry->{name} ne '';
-    push @fields, $entry->{publicationId} if defined $entry->{publicationId} && $entry->{publicationId} ne '';
-    next unless @fields;  # skip if no non-empty fields
-    push @parts, join('; ', @fields);
-  }
-  my $data = join(' | ', @parts);
-  my $negated = $data eq '' ? 1 : 0;
-  return ($data, $negated);
+  my ($origdata, $datatype) = @_;
+  if ($datatype ne 'otherantibody') {	# most data is just the data, but otherantibody needs to process json
+    my $negated = 1;
+    if ($origdata) { $negated = 0; }
+    return ($origdata, $negated); }
+  else {
+    my $json = eval { decode_json($origdata) };
+    return ('', 1) if $@ or ref($json) ne 'ARRAY';
+    my @parts;
+    for my $entry (@$json) {
+      next unless ref($entry) eq 'HASH';
+      my @fields;
+      push @fields, $entry->{name}          if defined $entry->{name}          && $entry->{name} ne '';
+      push @fields, $entry->{publicationId} if defined $entry->{publicationId} && $entry->{publicationId} ne '';
+      next unless @fields;  # skip if no non-empty fields
+      push @parts, join('; ', @fields);
+    }
+    my $data = join(' | ', @parts);
+    my $negated = $data eq '' ? 1 : 0;
+    return ($data, $negated); }
 } # sub convertAckToNote
 
 sub populateAfpData {
@@ -430,7 +437,7 @@ sub populateAfpData {
 #         elsif ($tfpData{$datatype}{$joinkey}{data}) { $negated = 1; }
 #         else { next; }						# skip entry if no author data and no tfp_ data.
 #       if ($row[1]) { $data = $row[1]; } else { $negated = 1; }		# if author says something, that's data and note, else it's negated
-      my ($data, $negated) = &convertAckToNote($row[1]);
+      my ($data, $negated) = &convertAckToNote($row[1], $datatype);
       # my $row = join"\t", @row;
       # print qq($datatype\tafp_$datatypesAfpCfp{$datatype}\t$row\n);
       my $tsdigits = &tsToDigits($row[2]);
