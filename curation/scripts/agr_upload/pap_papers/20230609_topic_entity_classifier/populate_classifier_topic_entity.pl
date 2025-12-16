@@ -64,7 +64,8 @@
 # Typo in invalid reference handling.  2025 12 13
 #
 # Ranjana no longer wants human disease old afp nor cfp.
-# Converting ACK data to note and deriving negated from json is only for otherantibody, everything else uses the string.  2025 12 15
+# Converting ACK data to note and deriving negated from json is only for otherantibody, everything else uses the string.
+# Send WB:WBPaper IDs instead of AGRKB.  2025 12 15
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -151,7 +152,7 @@ my @wbpapers = qw( 00001084 00004952 00031697 00032245 00032467 00032959 0003303
 
 my %datatypesAfpCfp;
 my %datatypes;
-my %wbpToAgr;
+# my %wbpToAgr;
 my %papValid;
 my %papMerge;
 
@@ -260,11 +261,12 @@ sub outputOaData {
       next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
       my ($joinkey) = &deriveValidPap($joinkey);
       next unless $papValid{$joinkey};
-      unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
+#       unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
       my %object;
       $object{'negated'}                    = FALSE;
       $object{'force_insertion'}            = TRUE;
-      $object{'reference_curie'}            = $wbpToAgr{$joinkey};
+      $object{'reference_curie'}            = "WB:WBPaper$joinkey";
+#       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $datatypes{$datatype};
       $object{'topic_entity_tag_source_id'} = $source_id;
       $object{'data_novelty'}               = 'ATP:0000335';
@@ -299,13 +301,14 @@ sub outputAfpCurData {
       next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
       my ($joinkey) = &deriveValidPap($joinkey);
       next unless $papValid{$joinkey};
-      unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
+#       unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
       my $negated = FALSE;
       if ($afpCurData{$datatype}{$joinkey}{negated}) { $negated = TRUE; }
       my %object;
       $object{'negated'}                    = $negated;
       $object{'force_insertion'}            = TRUE;
-      $object{'reference_curie'}            = $wbpToAgr{$joinkey};
+      $object{'reference_curie'}            = "WB:WBPaper$joinkey";
+#       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $datatypes{$datatype};
       $object{'topic_entity_tag_source_id'} = $source_id;
       $object{'data_novelty'}               = 'ATP:0000335';
@@ -356,7 +359,7 @@ sub outputAfpAutData {
       next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
       my ($joinkey) = &deriveValidPap($joinkey);
       next unless $papValid{$joinkey};
-      unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
+#       unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
       my @auts;
       if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
       if (scalar @auts < 1) { push @auts, 'unknown_author'; }
@@ -371,7 +374,8 @@ sub outputAfpAutData {
           $object{'note'}                     = $afpAutData{$datatype}{$joinkey}{note}; }
         $object{'negated'}                    = $negated;
         $object{'force_insertion'}            = TRUE;
-        $object{'reference_curie'}            = $wbpToAgr{$joinkey};
+        $object{'reference_curie'}            = "WB:WBPaper$joinkey";
+#         $object{'reference_curie'}            = $wbpToAgr{$joinkey};
         $object{'topic'}                      = $datatypes{$datatype};
         $object{'topic_entity_tag_source_id'} = $source_id;
         $object{'data_novelty'}               = 'ATP:0000335';
@@ -618,7 +622,7 @@ sub outputCfpData {
       next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
       my ($joinkey) = &deriveValidPap($joinkey);
       next unless $papValid{$joinkey};
-      unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
+#       unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
       my $negated = FALSE;
       if ($cfpData{$datatype}{$joinkey}{data}) {
           if ($cfpData{$datatype}{$joinkey}{data} =~ m/false positive/i) { $negated = TRUE; } }
@@ -628,7 +632,8 @@ sub outputCfpData {
       $object{'force_insertion'}            = TRUE;
       if ($cfpData{$datatype}{$joinkey}{data}) {
         $object{'note'}                     = $cfpData{$datatype}{$joinkey}{data}; }
-      $object{'reference_curie'}            = $wbpToAgr{$joinkey};
+      $object{'reference_curie'}            = "WB:WBPaper$joinkey";
+#       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $datatypes{$datatype};
       $object{'topic_entity_tag_source_id'} = $source_id;
       $object{'data_novelty'}               = 'ATP:0000335';
@@ -700,7 +705,7 @@ sub outputCurStrData {
       next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
       my ($joinkey) = &deriveValidPap($joinkey);
       next unless $papValid{$joinkey};
-      unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
+#       unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
       my %object;
       # my $source_id = $source_id_1;
       # my $tsdigits = &tsToDigits($strData{$datatype}{$joinkey}{timestamp});
@@ -713,7 +718,8 @@ sub outputCurStrData {
         $object{'confidence_level'}         = 'NEG'; }
       if ($strData{$datatype}{$joinkey}{result}) {
         $object{'note'}                     = $strData{$datatype}{$joinkey}{result}; }
-      $object{'reference_curie'}            = $wbpToAgr{$joinkey};
+      $object{'reference_curie'}            = "WB:WBPaper$joinkey";
+#       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $datatypes{$datatype};
       $object{'topic_entity_tag_source_id'} = $source_id;
       $object{'data_novelty'}               = 'ATP:0000335';
@@ -764,14 +770,15 @@ sub outputCurNncData {
       next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
       my ($joinkey) = &deriveValidPap($joinkey);
       next unless $papValid{$joinkey};
-      unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
+#       unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
       my %object;
       my $negated = FALSE;  
       if ($nncData{$datatype}{$joinkey}{result} eq 'NEG') { $negated = TRUE; }
       $object{'negated'}                    = $negated;
       $object{'force_insertion'}            = TRUE;
       $object{'confidence_level'}           = uc($nncData{$datatype}{$joinkey}{result});
-      $object{'reference_curie'}            = $wbpToAgr{$joinkey};
+      $object{'reference_curie'}            = "WB:WBPaper$joinkey";
+#       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $datatypes{$datatype};
       $object{'topic_entity_tag_source_id'} = $source_id;
       $object{'data_novelty'}               = 'ATP:0000335';
@@ -825,14 +832,15 @@ sub outputCurSvmData {
       next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
       my ($joinkey) = &deriveValidPap($joinkey);
       next unless $papValid{$joinkey};
-      unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
+#       unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
       my %object;
       my $negated = FALSE;  
       if ($svmData{$datatype}{$joinkey}{result} eq 'NEG') { $negated = TRUE; }
       $object{'negated'}                    = $negated;
       $object{'force_insertion'}            = TRUE;
       $object{'confidence_level'}           = uc($svmData{$datatype}{$joinkey}{result});
-      $object{'reference_curie'}            = $wbpToAgr{$joinkey};
+      $object{'reference_curie'}            = "WB:WBPaper$joinkey";
+#       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $datatypes{$datatype};
       $object{'topic_entity_tag_source_id'} = $source_id;
       $object{'data_novelty'}               = 'ATP:0000335';
@@ -891,7 +899,7 @@ sub outputCurCurData {
       next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
       my ($joinkey) = &deriveValidPap($joinkey);
       next unless $papValid{$joinkey};
-      unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
+#       unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
       my %object;
       my $negated = FALSE;  
       if ($curData{$datatype}{$joinkey}{donposneg} eq 'negative') { $negated = TRUE; }
@@ -903,7 +911,8 @@ sub outputCurCurData {
       $object{'force_insertion'}            = TRUE;
       if ($note) {
         $object{'note'}                     = $note; }
-      $object{'reference_curie'}            = $wbpToAgr{$joinkey};
+      $object{'reference_curie'}            = "WB:WBPaper$joinkey";
+#       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
       $object{'topic'}                      = $datatypes{$datatype};
       $object{'topic_entity_tag_source_id'} = $source_id;
       $object{'data_novelty'}               = 'ATP:0000335';
@@ -1145,8 +1154,7 @@ sub populateDatatypesAndABC {
   close(IN) or die "Cannot close $topic_to_atp_file : $!";
 
 #   &populateAbcXrefSample();
-# PUT THIS BACK, but change to read from db
-  &populateAbcXref();
+#   &populateAbcXref();		# if sending AGRKB
   &populatePapValid();
   &populatePapMerge();
 } # sub populateDatatypesAndABC
@@ -1225,37 +1233,37 @@ sub populatePapMerge {
     $papMerge{$row[1]} = $row[0]; }
 }
 
-sub populateAbcXref {
-  $result = $dbh->prepare( "SELECT * FROM pap_identifier WHERE pap_identifier ~ 'AGRKB';" );
-  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 	# only molecules with papers are curated
-  while (my @row = $result->fetchrow) { 
-    next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
-    $wbpToAgr{$row[0]} = $row[1]; }
-} # sub populateAbcXref
-
-sub populateAbcXrefFlatfile {
-  # generated by get_pap_identifier_agrkb.pl  but make sure to get newest xrefs from correct ABC db first, then run it to update file.
-  my $infile = 'files/wb_abc';
-  open (IN, "<$infile") or die "Cannot open $infile : $!";
-  while (my $line = <IN>) {
-    chomp $line;
-    my ($wb, $agr) = split/\t/, $line;
-    $wbpToAgr{$wb} = $agr;
-  }
-  close (IN) or die "Cannot close $infile : $!";
-} # sub populateAbcXrefFlatfile
-
-sub populateAbcXrefSample {
-  $wbpToAgr{'00004952'} = 'AGRKB:101000000618370';
-  $wbpToAgr{'00005199'} = 'AGRKB:101000000618566';
-  $wbpToAgr{'00026609'} = 'AGRKB:101000000620861';
-  $wbpToAgr{'00030933'} = 'AGRKB:101000000622619';
-  $wbpToAgr{'00035427'} = 'AGRKB:101000000624596';
-  $wbpToAgr{'00046571'} = 'AGRKB:101000000630958';
-  $wbpToAgr{'00057043'} = 'AGRKB:101000000390100';
-  $wbpToAgr{'00064676'} = 'AGRKB:101000000947815';
-  $wbpToAgr{'00037049'} = 'AGRKB:101000000625405';
-}
+# sub populateAbcXref {
+#   $result = $dbh->prepare( "SELECT * FROM pap_identifier WHERE pap_identifier ~ 'AGRKB';" );
+#   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n"; 	# only molecules with papers are curated
+#   while (my @row = $result->fetchrow) { 
+#     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+#     $wbpToAgr{$row[0]} = $row[1]; }
+# } # sub populateAbcXref
+# 
+# sub populateAbcXrefFlatfile {
+#   # generated by get_pap_identifier_agrkb.pl  but make sure to get newest xrefs from correct ABC db first, then run it to update file.
+#   my $infile = 'files/wb_abc';
+#   open (IN, "<$infile") or die "Cannot open $infile : $!";
+#   while (my $line = <IN>) {
+#     chomp $line;
+#     my ($wb, $agr) = split/\t/, $line;
+#     $wbpToAgr{$wb} = $agr;
+#   }
+#   close (IN) or die "Cannot close $infile : $!";
+# } # sub populateAbcXrefFlatfile
+# 
+# sub populateAbcXrefSample {
+#   $wbpToAgr{'00004952'} = 'AGRKB:101000000618370';
+#   $wbpToAgr{'00005199'} = 'AGRKB:101000000618566';
+#   $wbpToAgr{'00026609'} = 'AGRKB:101000000620861';
+#   $wbpToAgr{'00030933'} = 'AGRKB:101000000622619';
+#   $wbpToAgr{'00035427'} = 'AGRKB:101000000624596';
+#   $wbpToAgr{'00046571'} = 'AGRKB:101000000630958';
+#   $wbpToAgr{'00057043'} = 'AGRKB:101000000390100';
+#   $wbpToAgr{'00064676'} = 'AGRKB:101000000947815';
+#   $wbpToAgr{'00037049'} = 'AGRKB:101000000625405';
+# }
 
 sub populateOaData {
   my %chosenDatatypes;
