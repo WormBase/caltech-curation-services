@@ -66,6 +66,8 @@
 # Ranjana no longer wants human disease old afp nor cfp.
 # Converting ACK data to note and deriving negated from json is only for otherantibody, everything else uses the string.
 # Send WB:WBPaper IDs instead of AGRKB.  2025 12 15
+#
+# antibody from old afp should only have data novelty 335 not 229   2025 12 16
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -145,7 +147,8 @@ my $mod = 'WB';
 # my @wbpapers = qw( 00037758 );	# 2025 12 15	# API creating psycopg2.errors.UniqueViolation
 # my @wbpapers = qw( 00036433 );	# 2025 12 15	# hum dis changes test paper
 # my @wbpapers = qw( 00059003 );	# 2025 12 15	# hum dis negative ack test paper
-my @wbpapers = qw( 00001084 00004952 00031697 00032245 00032467 00032959 00033036 00033206 00033406 00034728 00035977 00040400 00053203 00054648 00059003 00059712 00060296 00065201 00067387 00067433 00068170 00068172 00068343 );	# 2025 11 07
+# my @wbpapers = qw( 00001084 00004952 00031697 00032245 00032467 00032959 00033036 00033206 00033406 00034728 00035977 00040400 00053203 00054648 00059003 00059712 00060296 00065201 00067387 00067433 00068170 00068172 00068343 );	# 2025 11 07
+my @wbpapers = qw( 00034728 );	# 2025 12 16	# antibody from old afp should only have data novelty 335 not 229
 
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 00037049
@@ -379,8 +382,8 @@ sub outputAfpAutData {
         $object{'topic'}                      = $datatypes{$datatype};
         $object{'topic_entity_tag_source_id'} = $source_id;
         $object{'data_novelty'}               = 'ATP:0000335';
-        if ($datatype eq 'antibody') {
-          $object{'data_novelty'}               = 'ATP:0000229'; }	# otherantibody still 335
+        if ( ($afpAutData{$datatype}{$joinkey}{source} eq 'ack') && ($datatype eq 'antibody') ) {
+          $object{'data_novelty'}               = 'ATP:0000229'; }	# otherantibody still 335, 229 only for ack antibody
         $object{'created_by'}                 = $aut;
         $object{'updated_by'}                 = $aut;
         $object{'date_created'}               = $afpAutData{$datatype}{$joinkey}{timestamp};
