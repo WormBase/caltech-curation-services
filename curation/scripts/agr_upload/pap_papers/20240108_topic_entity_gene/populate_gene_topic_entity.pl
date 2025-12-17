@@ -753,14 +753,14 @@ sub populatePapGene {
       elsif ($evi =~ m/Inferred_automatically\s+"(from curator first pass .*?)"/) {
         $theHash{'cfp'}{$joinkey}{$gene}{$two}{timestamp} = $ts;
         push @{ $theHash{'cfp'}{$joinkey}{$gene}{$two}{note} }, $1; }
-      elsif ($evi =~ m/Inferred_automatically\s+"(from author first pass .*?)"/) {
+      elsif ($evi =~ m/Inferred_automatically\s+"from author first pass (.*?)"/) {
         my $tsdigits = &tsToDigits($ts);
         if (exists $afpVersion{$joinkey}) {
           $theHash{'ack'}{$joinkey}{$gene}{$two}{timestamp} = $ts;
-          push @{ $theHash{'ack'}{$joinkey}{$gene}{$two}{note} }, $1; }
+          push @{ $theHash{'ack'}{$joinkey}{$gene}{$two}{note} }, "from ACKnowledge $1"; }
         else {
           $theHash{'afp'}{$joinkey}{$gene}{$two}{timestamp} = $ts;
-          push @{ $theHash{'afp'}{$joinkey}{$gene}{$two}{note} }, $1; } }
+          push @{ $theHash{'afp'}{$joinkey}{$gene}{$two}{note} }, "from author first pass $1"; } }
       elsif ($evi =~ m/Inferred_automatically\s+"(abstract2aceCGC.pl.*)"/) {
         $theHash{'abs2aceCgc'}{$joinkey}{$gene}{$two}{timestamp} = $ts;
         push @{ $theHash{'abs2aceCgc'}{$joinkey}{$gene}{$two}{note} }, $1; }
