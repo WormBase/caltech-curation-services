@@ -22,6 +22,8 @@
 # Use cognito token instead of okta.  2025 12 09
 #
 # note object delimiter is now linebreak.  2025 12 10
+#
+# note parsing to be more readable at ABC.  2025 12 17
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -268,11 +270,17 @@ sub populateAfpVariation {
     next unless ($afpLasttouched{$joinkey});
 #     my (@wbvars) = $varText =~ m/(WBVar\d+)/g;
     my (@pairs) = split/ \| /, $varText;
+    my @notes;
+    foreach my $pair (@pairs) {
+      my ($wbvar, $name) = split/;%;/, $pair;
+      push @notes, "$name ( WB:$wbvar )";
+    }
     my @auts;
     if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
     if (scalar @auts < 1) { push @auts, 'unknown_author'; }
 #       foreach my $wbvar (@wbvars) { # }
 #         my $obj = 'WB:' . $wbvar;
+    my $note = join"\n", @notes;
     foreach my $aut (@auts) {
       foreach my $pair (@pairs) {
         my ($wbvar, $name) = split(/;%;/, $pair);
@@ -282,6 +290,7 @@ sub populateAfpVariation {
         else {
           $theHash{'ack'}{$joinkey}{$obj}{$aut}{timestamp} = $ts; }
         $theHash{'ack'}{$joinkey}{$obj}{$aut}{name} = $name;
+        $theHash{'ack'}{$joinkey}{$obj}{$aut}{note} = $note;  # there can be only one entry for a given paper afp_variation
 #         my $note = $varText; $note =~ s/;%;/; /g;
 #         push @{ $theHash{'ack'}{$joinkey}{$obj}{$aut}{note} }, $note;
     } }
@@ -546,9 +555,8 @@ sub outputAfpData {
           else {
             print PERR qq(ERROR no taxon for WBPaper$joinkey Variation $obj\n);
             next; }
-#           if ($theHash{$datatype}{$joinkey}{$obj}{$curator}{note}) {
-#             my $note = join' | ', @{ $theHash{$datatype}{$joinkey}{$obj}{$curator}{note} };
-#             $object{'note'}                     = $note; }
+          if ($theHash{$datatype}{$joinkey}{$obj}{$curator}{note}) {
+            $object{'note'}                     = $theHash{$datatype}{$joinkey}{$obj}{$curator}{note}; }
           $object{'created_by'}                 = $curator;
           $object{'updated_by'}                 = $curator;
           $object{'date_created'}               = $theHash{$datatype}{$joinkey}{$obj}{$curator}{timestamp};
@@ -574,8 +582,7 @@ sub outputAfpData {
       $object{'data_novelty'}                 = $dataNoveltyNewToDb;
       $object{'topic'}                        = 'ATP:0000285';
       if ($afpOthervariation{$joinkey}{$curator}{note}) {
-        my $note = $afpOthervariation{$joinkey}{$curator}{note};
-        $object{'note'}                     = $note; }
+        $object{'note'}                     = $afpOthervariation{$joinkey}{$curator}{note}; }
       $object{'created_by'}                 = $curator;
       $object{'updated_by'}                 = $curator;
       $object{'date_created'}               = $afpOthervariation{$joinkey}{$curator}{timestamp};

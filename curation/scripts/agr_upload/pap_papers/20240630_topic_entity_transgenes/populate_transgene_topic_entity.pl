@@ -70,6 +70,8 @@
 # Update to use cognito token.  2025 12 09
 #
 # note object delimiter is just linebreak.  don't output note unless there's a string, api will reject it.  2025 12 10
+#
+# note parsing to be more readable at ABC.  2025 12 17
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -368,18 +370,25 @@ sub populateAfpTransgene {
       } } }
     }
     else {				# acknowledge
-      my (@wbtransgenes) = $trText =~ m/(WBTransgene\d+)/g;
+      my (@pairs) = split/ \| /, $trText;
+      my @notes;
+      foreach my $pair (@pairs) {
+        my ($wbtr, $name) = split/;%;/, $pair;
+        push @notes, "$name ( WB:$wbtr )";
+      }
+      my $note = join"\n", @notes;
       my @auts;
       if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
       if (scalar @auts < 1) { push @auts, 'unknown_author'; }
       foreach my $aut (@auts) {
-        foreach my $wbtr (@wbtransgenes) {
+        foreach my $pair (@pairs) {
+          my ($wbtr, $name) = split/;%;/, $pair;
           my $obj = 'WB:' . $wbtr;
           if ($afpContributor{$joinkey}{$aut}) {
             $theHash{'ack'}{$joinkey}{$obj}{$aut}{timestamp} = $afpContributor{$joinkey}{$aut}; }
           else {
             $theHash{'ack'}{$joinkey}{$obj}{$aut}{timestamp} = $ts; }
-          $theHash{'ack'}{$joinkey}{$obj}{$aut}{note} = $trText;	# there can be only one entry for a given paper afp_othertransgene
+          $theHash{'ack'}{$joinkey}{$obj}{$aut}{note} = $note;	# there can be only one entry for a given paper afp_transgene
     } } }
   }
 } # sub populateAfpTransgene

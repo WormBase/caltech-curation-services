@@ -27,6 +27,8 @@
 #
 # additional handling for different API responses.  retry 4 times if unexpected failure from API.  regenerate token and retry
 # if token expires.  2025 12 11
+#
+# note parsing to be more readable at ABC.  2025 12 17
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -62,8 +64,8 @@ my $result;
 my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
 # my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
 
-# my $output_format = 'json';
-my $output_format = 'api';
+my $output_format = 'json';
+# my $output_format = 'api';
 my $tag_counter = 0;
 my $success_counter = 0;
 my $exists_counter = 0;
@@ -306,6 +308,16 @@ sub populateAfpStrain {
     next unless $papValid{$joinkey};
     next unless $trText;
 #     my $tsdigits = &tsToDigits($ts);
+    my (@stuff) = split/ \| /, $trText;
+    my @notes;
+    foreach my $stuff (@stuff) {
+      if ($stuff =~ m/WBStrain/) {
+        my ($wbstrain, $name) = split/;%;/, $stuff;
+        push @notes, "$name ( WB:$wbstrain )"; }
+      else { push @notes, $stuff; }
+    }
+
+    my $note = join"\n", @notes;
     my @wbstrains = ();
     if ($trText =~ m/WBStrain/) {
       (@wbstrains) = $trText =~ m/(WBStrain\d+)/g; }
@@ -327,7 +339,7 @@ sub populateAfpStrain {
           $theHash{'ack'}{$joinkey}{$obj}{$aut}{timestamp} = $afpContributor{$joinkey}{$aut}; }
         else {
           $theHash{'ack'}{$joinkey}{$obj}{$aut}{timestamp} = $ts; }
-        push @{ $theHash{'ack'}{$joinkey}{$obj}{$aut}{note} }, $trText;
+        push @{ $theHash{'ack'}{$joinkey}{$obj}{$aut}{note} }, $note;
     } }
   }
 } # sub populateAfpStrain
