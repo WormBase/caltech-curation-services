@@ -49,7 +49,8 @@
 # 
 # Use cognito token instead of okta.
 # better error handling
-# no longer getting AGRKB, just sending WB:WBPaper to ABC  2025 12 17
+# no longer getting AGRKB, just sending WB:WBPaper to ABC
+# better note attribution to ack vs old afp.  2025 12 17
 
 
 
