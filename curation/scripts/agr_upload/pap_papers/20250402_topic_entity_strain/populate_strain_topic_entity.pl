@@ -28,8 +28,8 @@
 # additional handling for different API responses.  retry 4 times if unexpected failure from API.  regenerate token and retry
 # if token expires.  2025 12 11
 #
-# note parsing to be more readable at ABC.  2025 12 17
-
+# note parsing to be more readable at ABC.
+# Use cognito token instead of okta.  better api handling.  2025 12 17
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
 
@@ -69,10 +69,13 @@ my $output_format = 'json';
 my $tag_counter = 0;
 my $success_counter = 0;
 my $exists_counter = 0;
-my $invalid_counter = 0;
-my $unexpected_counter = 0;
+my $invalid_request_counter = 0;
+my $invalid_reference_counter = 0;
+my $unexpected_success_counter = 0;
+my $unexpected_failure_counter = 0;
 my $failure_counter = 0;
 my $retry_counter = 0;
+
 
 my @output_json;
 
@@ -146,8 +149,8 @@ if ($output_format eq 'json') {
 }
 
 if ($output_format eq 'api') {
-  print OUT qq(Tags\t$tag_counter\tSuccess\t$success_counter\tExists\t$exists_counter\tInvalid\t$invalid_counter\tUnexpected\t$unexpected_counter\tFailure\t$failure_counter\n);
-  print ERR qq(Tags\t$tag_counter\tSuccess\t$success_counter\tExists\t$exists_counter\tInvalid\t$invalid_counter\tUnexpected\t$unexpected_counter\tFailure\t$failure_counter\n);
+  print OUT qq(Tags\t$tag_counter\tSuccess\t$success_counter\tExists\t$exists_counter\tInvalid Request\t$invalid_request_counter\tInvalid Reference\t$invalid_reference_counter\tUnexpected Success\t$unexpected_success_counter\tUnexpected Failure\t$unexpected_failure_counter\tFailure\t$failure_counter\n);
+  print ERR qq(Tags\t$tag_counter\tSuccess\t$success_counter\tExists\t$exists_counter\tInvalid Request\t$invalid_request_counter\tInvalid Reference\t$invalid_reference_counter\tUnexpected Success\t$unexpected_success_counter\tUnexpected Failure\t$unexpected_failure_counter\tFailure\t$failure_counter\n);
   close (ERR) or die "Cannot close $errfile : $!";
 }
 close (OUT) or die "Cannot close $outfile : $!";
@@ -708,10 +711,12 @@ sub generateCognitoToken {
   my $cognito_result = `curl -X POST "$ENV{COGNITO_TOKEN_URL}" \ -H "Content-Type: application/x-www-form-urlencoded" \ -d "grant_type=client_credentials" \ -d "client_id=$ENV{COGNITO_ADMIN_CLIENT_ID}" \ -d "client_secret=$ENV{COGNITO_ADMIN_CLIENT_SECRET}"`;
   my $hash_ref = decode_json $cognito_result;
   my $cognito_token = $$hash_ref{'access_token'};
+#   print $cognito_token;
   print qq(GENERATE TOKEN $cognito_token\n);
   print OUT qq(GENERATE TOKEN $cognito_token\n);
   return $cognito_token;
 }
+
 
 sub generateOktaToken {
 #   my $okta_token = `curl -s --request POST --url https://$ENV{OKTA_DOMAIN}/v1/token \    --header 'accept: application/json' \    --header 'cache-control: no-cache' \    --header 'content-type: application/x-www-form-urlencoded' \    --data "grant_type=client_credentials&scope=admin&client_id=$ENV{OKTA_CLIENT_ID}&client_secret=$ENV{OKTA_CLIENT_SECRET}" \      | jq '.access_token' | tr -d '"'`;
@@ -720,6 +725,22 @@ sub generateOktaToken {
   my $okta_token = $$hash_ref{'access_token'};
 #   print $okta_token;
   return $okta_token;
+}
+
+sub getSourceId {
+  my ($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider) = @_;
+  my $url = $baseUrl . 'topic_entity_tag/source/' . $source_evidence_assertion . '/' . $source_method . '/' . $data_provider . '/' . $secondary_data_provider;
+#   my ($source_type, $source_method) = @_;
+#   my $url = $baseUrl . 'topic_entity_tag/source/' . $source_type . '/' . $source_method . '/' . $mod;
+#   print qq($url\n);
+  my $api_json = `curl -X 'GET' $url -H 'accept: application/json' -H 'Authorization: Bearer $cognito_token' -H 'Content-Type: application/json'`;
+  # print qq($api_json\n);
+  my $hash_ref = decode_json $api_json;
+  if ($$hash_ref{'topic_entity_tag_source_id'}) {
+    my $source_id = $$hash_ref{'topic_entity_tag_source_id'};
+    # print qq($source_id\n);
+    return $source_id; }
+  else { return ''; }
 }
 
 sub retryCreateTag {
@@ -774,7 +795,17 @@ sub createTag {
       print ERR qq(EXISTS	$api_json\n);
       $retry_counter = 0;
     }
-    elsif ($api_json =~ /"detail":"Invalid or expired token: Signature has expired."/) {
+    else {
+      $unexpected_success_counter++;
+      print ERR qq(create $object_json\n);
+      print ERR qq(UNEXPECTED SUCCESS	$api_json\n);
+      &retryCreateTag($object_json);
+    }
+  } else {
+    $failure_counter++;
+    print ERR qq(create $object_json\n);
+    print ERR "HTTP Error: ", $res->status_line, "\n", $api_json, "\n";
+    if ($api_json =~ /"detail":"Invalid or expired token: Signature has expired."/) {	# this never happens, it's not is_success
       print ERR qq(create $object_json\n);
       print ERR qq(EXPIRED TOKEN	$api_json\n);
       $cognito_token = &generateCognitoToken();
@@ -782,71 +813,25 @@ sub createTag {
       &retryCreateTag($object_json);
     }
     elsif ($api_json =~ /"detail":"invalid request"/) {
-      $invalid_counter++;
+      $invalid_request_counter++;
       print ERR qq(create $object_json\n);
-      print ERR qq(INVALID	$api_json\n);
+      print ERR qq(INVALID REQUEST	$api_json\n);
+      $retry_counter = 0;
+    }
+    elsif ($api_json =~ /"detail":"Reference with the reference_id or curie/) {
+      $invalid_reference_counter++;
+      print ERR qq(create $object_json\n);
+      print ERR qq(INVALID REFERENCE	$api_json\n);
       $retry_counter = 0;
     }
     else {
-      $unexpected_counter++;
+      $unexpected_failure_counter++;
       print ERR qq(create $object_json\n);
-      print ERR qq(UNEXPECTED	$api_json\n);
+      print ERR qq(UNEXPECTED FAILURE	$api_json\n);
       &retryCreateTag($object_json);
     }
-  } else {
-    $failure_counter++;
-    print ERR qq(create $object_json\n);
-    print ERR "HTTP Error: ", $res->status_line, "\n", $api_json, "\n";
-    &retryCreateTag($object_json);
   }
-  
-# no longer having api retry failures, trying to standardize with other scripts using LWP::UserAgent HTTP::Request
-#   my @curl_cmd = (
-#     "curl", "-X", "POST", $url,
-#     "-H", "accept: application/json",
-#     "-H", "Authorization: Bearer $cognito_token",
-#     "-H", "Content-Type: application/json",
-#     "--data", $object_json,
-#   );
-#   my $api_json = '';
-#   open my $fh, "-|", @curl_cmd or die "Could not run curl: $!";
-#   while (my $line = <$fh>) {
-#     $api_json .= $line;
-#   }
-#   close $fh;
-#   if ($? != 0 || $api_json !~ /success/) {
-#     print ERR qq(create $object_json\n);
-#     print ERR qq($api_json\n);
-#   }
-#   print OUT qq(create $object_json\n);
-#   print OUT qq($api_json\n);
-#   # $? is the exit status of the last command (0 is success).
-#   unless ($api_json) {
-#     $retry_counter++;
-#     if ($retry_counter > 4) {
-#       print ERR qq(api failed without response $retry_counter times, giving up\n);
-#       $retry_counter = 0; }
-#     else {
-#       print ERR qq(api failed $retry_counter times, retrying\n);
-#       my $sleep_amount = 4 ** $retry_counter;
-#       sleep $sleep_amount;
-#       &createTag($object_json); } }
-}
-
-sub getSourceId {
-  my ($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider) = @_;
-  my $url = $baseUrl . 'topic_entity_tag/source/' . $source_evidence_assertion . '/' . $source_method . '/' . $data_provider . '/' . $secondary_data_provider;
-#   my ($source_type, $source_method) = @_;
-#   my $url = $baseUrl . 'topic_entity_tag/source/' . $source_type . '/' . $source_method . '/' . $mod;
-  # print qq($url\n);
-  my $api_json = `curl -X 'GET' $url -H 'accept: application/json' -H 'Authorization: Bearer $cognito_token' -H 'Content-Type: application/json'`;
-  my $hash_ref = decode_json $api_json;
-  if ($$hash_ref{'topic_entity_tag_source_id'}) {
-    my $source_id = $$hash_ref{'topic_entity_tag_source_id'};
-    # print qq($source_id\n);
-    return $source_id; }
-  else { return ''; }
-}
+} # sub createTag
 
 sub populatePapValid {
   $result = $dbh->prepare( "SELECT * FROM pap_status WHERE pap_status = 'valid';" );
@@ -869,5 +854,4 @@ sub populateAbcXref {
 #     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
     $wbpToAgr{$row[0]} = $row[1]; }
 } # sub populateAbcXref
-
 

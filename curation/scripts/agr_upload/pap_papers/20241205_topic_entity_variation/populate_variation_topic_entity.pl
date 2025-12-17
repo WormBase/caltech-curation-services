@@ -23,7 +23,8 @@
 #
 # note object delimiter is now linebreak.  2025 12 10
 #
-# note parsing to be more readable at ABC.  2025 12 17
+# note parsing to be more readable at ABC.
+# Use cognito token instead of okta.  better api handling.  2025 12 17
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -61,8 +62,12 @@ my $output_format = 'json';
 my $tag_counter = 0;
 my $success_counter = 0;
 my $exists_counter = 0;
-my $unexpected_counter = 0;
+my $invalid_request_counter = 0;
+my $invalid_reference_counter = 0;
+my $unexpected_success_counter = 0;
+my $unexpected_failure_counter = 0;
 my $failure_counter = 0;
+my $retry_counter = 0;
 
 my @output_json;
 
@@ -71,8 +76,6 @@ my $pgDate = &getPgDate();
 my $mod = 'WB';
 my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
 # my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
-# my $okta_token = &generateOktaToken();
-my $cognito_token = &generateCognitoToken();
 
 my $dataNoveltyExisting = 'ATP:0000334';        # existing data
 my $dataNoveltyNewToDb =  'ATP:0000228';        # new to database
@@ -124,6 +127,9 @@ if ($output_format eq 'api') {
   open (ERR, ">$errfile") or die "Cannot create $outfile : $!";
 }
 
+# my $okta_token = &generateOktaToken();
+my $cognito_token = &generateCognitoToken();
+
 &outputAfpData();
 &outputTfpData();
 &outputNegData();
@@ -137,10 +143,11 @@ if ($output_format eq 'json') {
 }
 
 if ($output_format eq 'api') {
-  print OUT qq(Tags\t$tag_counter\tSuccess\t$success_counter\tExists\t$exists_counter\tUnexpected\t$unexpected_counter\tFailure\t$failure_counter\n);
-  print ERR qq(Tags\t$tag_counter\tSuccess\t$success_counter\tExists\t$exists_counter\tUnexpected\t$unexpected_counter\tFailure\t$failure_counter\n);
+  print OUT qq(Tags\t$tag_counter\tSuccess\t$success_counter\tExists\t$exists_counter\tInvalid Request\t$invalid_request_counter\tInvalid Reference\t$invalid_reference_counter\tUnexpected Success\t$unexpected_success_counter\tUnexpected Failure\t$unexpected_failure_counter\tFailure\t$failure_counter\n);
+  print ERR qq(Tags\t$tag_counter\tSuccess\t$success_counter\tExists\t$exists_counter\tInvalid Request\t$invalid_request_counter\tInvalid Reference\t$invalid_reference_counter\tUnexpected Success\t$unexpected_success_counter\tUnexpected Failure\t$unexpected_failure_counter\tFailure\t$failure_counter\n);
   close (ERR) or die "Cannot close $errfile : $!";
 }
+
 close (OUT) or die "Cannot close $outfile : $!";
 close (PERR) or die "Cannot close $errfile : $!";
 
@@ -608,6 +615,8 @@ sub generateCognitoToken {
   my $hash_ref = decode_json $cognito_result;
   my $cognito_token = $$hash_ref{'access_token'};
 #   print $cognito_token;
+  print qq(GENERATE TOKEN $cognito_token\n);
+  print OUT qq(GENERATE TOKEN $cognito_token\n);
   return $cognito_token;
 }
 
@@ -670,8 +679,9 @@ sub getSourceId {
   my $url = $baseUrl . 'topic_entity_tag/source/' . $source_evidence_assertion . '/' . $source_method . '/' . $data_provider . '/' . $secondary_data_provider;
 #   my ($source_type, $source_method) = @_;
 #   my $url = $baseUrl . 'topic_entity_tag/source/' . $source_type . '/' . $source_method . '/' . $mod;
-  # print qq($url\n);
+#   print qq($url\n);
   my $api_json = `curl -X 'GET' $url -H 'accept: application/json' -H 'Authorization: Bearer $cognito_token' -H 'Content-Type: application/json'`;
+  # print qq($api_json\n);
   my $hash_ref = decode_json $api_json;
   if ($$hash_ref{'topic_entity_tag_source_id'}) {
     my $source_id = $$hash_ref{'topic_entity_tag_source_id'};
@@ -679,6 +689,96 @@ sub getSourceId {
     return $source_id; }
   else { return ''; }
 }
+
+sub retryCreateTag {
+  my ($object_json) = @_;
+  $retry_counter++;
+  if ($retry_counter > 4) {
+    print ERR qq(api failed without response $retry_counter times, giving up\n);
+    print OUT qq(api failed without response $retry_counter times, giving up\n);
+    $retry_counter = 0; }
+  else {
+    print ERR qq(api failed $retry_counter times, retrying\n);
+    print OUT qq(api failed $retry_counter times, retrying\n);
+    my $sleep_amount = 4 ** $retry_counter;
+    sleep $sleep_amount;
+    &createTag($object_json); }
+} # sub retryCreateTag
+
+sub createTag {
+  my ($object_json) = @_;
+  $tag_counter++;
+  if ($tag_counter % 1000 == 0) {
+    my $date = &getSimpleSecDate();
+    print qq(counter\t$tag_counter\t$date\n);
+    my $now = time;
+    if ($now - $start_time > 82800) {           # if 23 hours went by, update okta token
+      $cognito_token = &generateCognitoToken();
+      $start_time = $now;
+    }
+  }
+  my $url = $baseUrl . 'topic_entity_tag/';
+#   my $api_json = `curl -X 'POST' $url -H 'accept: application/json' -H 'Authorization: Bearer $cognito_token' -H 'Content-Type: application/json' --data '$object_json'`;	# this has issues with how the shell interprets special characters like parentheses ( and ) when passed directly in the command line.  instead avoid the shell and run the command through a pipe like  open my $fh, "-|", @args
+
+  my $ua = LWP::UserAgent->new;
+  my $req = HTTP::Request->new(POST => $url);
+  $req->header('accept' => 'application/json');
+  $req->header('Authorization' => "Bearer $cognito_token");
+  $req->header('Content-Type' => 'application/json');
+  $req->content($object_json);
+  my $res = $ua->request($req);
+
+  print OUT qq(create $object_json\n);
+  my $api_json = $res->decoded_content;
+  print OUT qq($api_json\n);
+  if ($res->is_success) {
+    if ($api_json =~ /"status":"success"/) {
+      $success_counter++;
+      $retry_counter = 0;
+    }
+    elsif ($api_json =~ /"status":"exists"/) {
+      $exists_counter++;
+      print ERR qq(create $object_json\n);
+      print ERR qq(EXISTS	$api_json\n);
+      $retry_counter = 0;
+    }
+    else {
+      $unexpected_success_counter++;
+      print ERR qq(create $object_json\n);
+      print ERR qq(UNEXPECTED SUCCESS	$api_json\n);
+      &retryCreateTag($object_json);
+    }
+  } else {
+    $failure_counter++;
+    print ERR qq(create $object_json\n);
+    print ERR "HTTP Error: ", $res->status_line, "\n", $api_json, "\n";
+    if ($api_json =~ /"detail":"Invalid or expired token: Signature has expired."/) {	# this never happens, it's not is_success
+      print ERR qq(create $object_json\n);
+      print ERR qq(EXPIRED TOKEN	$api_json\n);
+      $cognito_token = &generateCognitoToken();
+      print ERR qq(NEW TOKEN	$cognito_token\n);
+      &retryCreateTag($object_json);
+    }
+    elsif ($api_json =~ /"detail":"invalid request"/) {
+      $invalid_request_counter++;
+      print ERR qq(create $object_json\n);
+      print ERR qq(INVALID REQUEST	$api_json\n);
+      $retry_counter = 0;
+    }
+    elsif ($api_json =~ /"detail":"Reference with the reference_id or curie/) {
+      $invalid_reference_counter++;
+      print ERR qq(create $object_json\n);
+      print ERR qq(INVALID REFERENCE	$api_json\n);
+      $retry_counter = 0;
+    }
+    else {
+      $unexpected_failure_counter++;
+      print ERR qq(create $object_json\n);
+      print ERR qq(UNEXPECTED FAILURE	$api_json\n);
+      &retryCreateTag($object_json);
+    }
+  }
+} # sub createTag
 
 sub populatePapValid {
   $result = $dbh->prepare( "SELECT * FROM pap_status WHERE pap_status = 'valid';" );
@@ -701,5 +801,4 @@ sub populateAbcXref {
 #     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
     $wbpToAgr{$row[0]} = $row[1]; }
 } # sub populateAbcXref
-
 
