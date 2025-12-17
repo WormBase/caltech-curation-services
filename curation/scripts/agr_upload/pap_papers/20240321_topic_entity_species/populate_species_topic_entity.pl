@@ -45,6 +45,8 @@
 # added data_novelty for ABC  but not sure if we should populate this on cronjob tomorrow, so commented out.  2025 09 12
 #
 # use cognito instead of okta.  enhanced retry and error logging.  query timestamps as UTC for api.  2025 12 12
+#
+# pap_species from author first pass should have a note that it's from ACKnowledge  2025 12 17
 
 
 # cronjob
@@ -574,6 +576,7 @@ sub populatePapSpecies {
       $papEditor{$joinkey}{$taxon}{curator} = $two;
       $papEditor{$joinkey}{$taxon}{timestamp} = $ts; }
     elsif ($evi =~ m/Inferred_automatically.*from author first pass/) {
+      $papAck{$joinkey}{$taxon}{note} = "from ACKnowledge";
       $papAck{$joinkey}{$taxon}{curator} = $two;
       $papAck{$joinkey}{$taxon}{timestamp} = $ts; }
     elsif ( ($ts =~ m/2016-05-20/) || ($ts =~ m/2017-08-01/) || ($ts =~ m/2019-09-19/) || ($ts =~ m/2022-04-08/) ) {
@@ -848,7 +851,7 @@ sub generateCognitoToken {
   my $hash_ref = decode_json $cognito_result;
   my $cognito_token = $$hash_ref{'access_token'};
   print qq(GENERATE TOKEN $cognito_token\n);
-  print LOG qq(GENERATE TOKEN $cognito_token\n);
+  # print LOG qq(GENERATE TOKEN $cognito_token\n);	# there is no LOG in json mode
   return $cognito_token;
 }
 
