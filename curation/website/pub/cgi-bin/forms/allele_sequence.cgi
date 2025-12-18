@@ -16,6 +16,8 @@
 # heenam should not be on this form.  2024 06 11
 # 
 # no one at hinxton, wen will keep track but not curate.  2025 12 11
+#
+# Wen would like flatfile storage to parse later.  2025 12 18
 
 
 use Jex;			# untaint, getHtmlVar, cshlNew
@@ -983,9 +985,10 @@ sub submit {
           print qq(<br/>Return to the <a href="allele_sequence.cgi">Allele-Sequence Form</a>.<br/>\n);
           # my $user = 'allele_sequence_form@' . $hostfqdn;	# who sends mail
           my $user = 'allele_sequence_form@' . $ENV{HOST_NAME};	# who sends mail
-#           my $email = 'cgrove@caltech.edu, maryann.tuli@wormbase.org ';
           my $email = 'wen@wormbase.org';	# 2025 12 11  no one at hinxton, wen will keep track but not curate
+#           my $email = 'juancarlos@wormbase.org';
 #           my $email = 'genenames@wormbase.org, draciti@caltech.edu, daniela@wormbase.org';
+#           my $email = 'cgrove@caltech.edu, maryann.tuli@wormbase.org ';
 #           my $email = 'genenames@wormbase.org';
 #           my $email = 'azurebrd@tazendra.caltech.edu';
 #           my $email = 'closertothewake@gmail.com, azurebrd@tazendra.caltech.edu';
@@ -996,10 +999,13 @@ sub submit {
           $body .= $form_data;						# form data
 #         UNCOMMENT send general emails
           &mailSendmail($user, $email, $subject, $body);
-
+          my $outfile = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/pub/cgi-bin/data/allele_sequence_user_data.txt';
+          open (OUT, ">>$outfile") or die "Cannot append to $outfile : $!";
+          print OUT qq($body\n\n);                                    # write whole file over again including new data
+          close (OUT) or die "Cannot close $outfile : $!";
         }
     }
-    elsif ($submit_flag eq 'preview') { 
+    elsif ($submit_flag eq 'preview') {
       my $mandatoryFail = &checkMandatoryFields();
 #       print qq(<br/><b>Preview -</b> scroll down to continue filling out the form<br/><br/>\n);
       print $form_data;
