@@ -57,6 +57,9 @@ my $start_time = time;
 my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST};port=$ENV{PSQL_PORT}", "$ENV{PSQL_USERNAME}", "$ENV{PSQL_PASSWORD}") or die "Cannot connect to database!\n";
 my $result;
 
+my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
+# my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
+
 my $output_format = 'json';
 # my $output_format = 'api';
 my $tag_counter = 0;
@@ -74,8 +77,6 @@ my @output_json;
 my $pgDate = &getPgDate();
 
 my $mod = 'WB';
-my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
-# my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
 
 my $dataNoveltyExisting = 'ATP:0000334';        # existing data
 my $dataNoveltyNewToDb =  'ATP:0000228';        # new to database
@@ -627,51 +628,6 @@ sub generateOktaToken {
   my $okta_token = $$hash_ref{'access_token'};
 #   print $okta_token;
   return $okta_token;
-}
-
-sub createTag {
-  my ($object_json) = @_;
-  $tag_counter++;
-  if ($tag_counter % 1000 == 0) {
-    my $date = &getSimpleSecDate();
-    print qq(counter\t$tag_counter\t$date\n);
-    my $now = time;
-    if ($now - $start_time > 82800) {           # if 23 hours went by, update cognito token
-      $cognito_token = &generateCognitoToken();
-      $start_time = $now;
-    }
-  }
-  my $url = $baseUrl . 'topic_entity_tag/';
-
-  my $ua = LWP::UserAgent->new;
-  my $req = HTTP::Request->new(POST => $url);
-  $req->header('accept' => 'application/json');
-  $req->header('Authorization' => "Bearer $cognito_token");
-  $req->header('Content-Type' => 'application/json');
-  $req->content($object_json);
-  my $res = $ua->request($req);
-
-  print OUT qq(create $object_json\n);
-  my $api_json = $res->decoded_content;
-  print OUT qq($api_json\n);
-  if ($res->is_success) {
-    if ($api_json =~ /"status":"success"/) {
-      $success_counter++;
-    }
-    elsif ($api_json =~ /"status":"exists"/) {
-      $exists_counter++;
-      print ERR qq(create $object_json\n);
-      print ERR qq($api_json\n);
-    }
-    else {
-      $unexpected_counter++;
-      print ERR qq(create $object_json\n);
-      print ERR qq($api_json\n);
-    }
-  } else {
-    $failure_counter++;
-    print ERR qq(HTTP Error: $res->status_line\n);
-  }
 }
 
 sub getSourceId {
