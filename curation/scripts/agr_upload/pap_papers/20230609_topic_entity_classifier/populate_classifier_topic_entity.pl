@@ -69,7 +69,8 @@
 #
 # antibody from old afp should only have data novelty 335 not 229   2025 12 16
 #
-# afp_newstrains was creating negated for genetics, but we should skip it because it was never part of old afp.  2026 01 07 
+# afp_newstrains was creating negated for genetics, but we should skip it because it was never part of old afp.
+# skip datatypes that didn't exist in old afp if source is old afp, currently only othergenefunc.  2026 01 07
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -376,6 +377,7 @@ sub outputAfpAutData {
         my $source_id = $source_id_afp;
         if ($afpAutData{$datatype}{$joinkey}{source} eq 'ack') { $source_id = $source_id_ack; }
         if ( ($datatype eq 'extvariation') || ($datatype eq 'newstrains') ) { $source_id = $source_id_genetics; }
+        if ( ($source_id eq $source_id_afp) && ($datatype eq 'othergenefunc') ) { next; }	# skip datatypes that didn't exist in old afp if source is old afp  2026 01 07
         if ($afpAutData{$datatype}{$joinkey}{note}) {
           $object{'note'}                     = $afpAutData{$datatype}{$joinkey}{note}; }
         $object{'negated'}                    = $negated;
