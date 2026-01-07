@@ -30,6 +30,9 @@
 #
 # note parsing to be more readable at ABC.
 # Use cognito token instead of okta.  better api handling.  2025 12 17
+#
+# When creating negative data from ACK, first check that it's not from before the ACK timestamp.  2026 01 07
+
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
 
@@ -380,9 +383,12 @@ sub outputNegData {
 
   # this is negative ack topic data, no longer doing negative afp topic data
   foreach my $joinkey (sort keys %afpLasttouched) {
-    ($joinkey) = &deriveValidPap($joinkey);
+    my $tsdigits = &tsToDigits($afpLasttouched{$joinkey});
+    next if ($tsdigits < '20190322');		# skip things from before ACKnowledge
+    ($joinkey) = &deriveValidPap($joinkey);	# get valid paper after getting its timestamp
     next unless $papValid{$joinkey};
     unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
+
 # Do not want negative topic data for old afp, because of how that form worked.  2025 06 02
 #     if ( (!exists $afpStrain{$joinkey}) && (!exists $afpOtherstrain{$joinkey}) ) {
 #       my $email = $afpToEmail{$joinkey};
@@ -520,6 +526,10 @@ sub outputNegData {
       if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
       if (scalar @auts < 1) { push @auts, 'unknown_author'; }
       foreach my $aut (@auts) {
+        my $ts = $theHash{'ack'}{$joinkey}{$obj}{$aut}{timestamp};
+        if ( $afpContributor{$joinkey}{$aut} ) { $ts = $afpContributor{$joinkey}{$aut}; }
+        my $tsdigits = &tsToDigits($afpLasttouched{$joinkey});
+        next if ($tsdigits < '20190322');		# skip things from before ACKnowledge
         my %object;
         $object{'negated'}                    = TRUE;
         $object{'force_insertion'}            = TRUE;
@@ -531,8 +541,6 @@ sub outputNegData {
         $object{'topic_entity_tag_source_id'} = $source_id_ack;
         $object{'created_by'}                 = $aut;
         $object{'updated_by'}                 = $aut;
-        my $ts = $theHash{'ack'}{$joinkey}{$obj}{$aut}{timestamp};
-        if ( $afpContributor{$joinkey}{$aut} ) { $ts = $afpContributor{$joinkey}{$aut}; }
         $object{'date_created'}               = $ts;
         $object{'date_updated'}               = $ts;
         # $object{'datatype'}                 = 'ack neg entity data';  # for debugging
