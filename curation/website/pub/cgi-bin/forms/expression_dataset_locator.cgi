@@ -13,6 +13,8 @@
 # wen created a file for counts by category, from Raymond sugggestion.  display in table now.  2025 11 02
 #
 # Add WormBase Processed Data for Wen.  2025 11 03
+#
+# Get description of website from flatfile for Wen.
 
 # http://tazendra.caltech.edu/~azurebrd/cgi-bin/forms/expression_dataset_locator.cgi
 # https://caltech-curation.textpressolab.com/pub/cgi-bin/forms/expression_dataset_locator.cgi
@@ -45,6 +47,7 @@ my $host = $query->remote_host();		# get ip address
 # my $file_source = '/home/acedb/wen/simplemine/all_SPELL_datasets.csv';
 my $file_source = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} .  '/pub/wen/simplemine/expressionDatasetLocator/all_SPELL_datasets.csv';
 my $file_category_count = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} .  '/pub/wen/simplemine/expressionDatasetLocator/categoryCount.csv';
+my $file_description = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} .  '/pub/wen/simplemine/expressionDatasetLocator/description.txt';
 my %hash;
 my ($dataHeader) = &processFiles();
 
@@ -165,7 +168,8 @@ sub showSpellForm {
 #   print qq(<h3>Genomic Expression Data Download</h3><br/>\n);
   print qq(<h3>Expression Dataset Locator</h3><br/>\n);
 
-  print qq(This tool allows browsing and downloading of data from ~7,000 genomic expression analyses published in ~400 nematode research articles. The search may combine specific platforms, species, tissues and research topics. For example, choosing 'RNAseq', 'C. elegans', 'Whole Animal' and 'aging' will return C. elegans RNAseq datasets related to aging, done in whole animals. Not making any selection is equivalent to choosing all. For example, if no "Platform" is specified, results from all platforms will be displayed. Likewise, choosing 'RNAseq' and 'proteomics' will return both RNAseq and proteomics datasets.<br/><br/>);
+#   print qq(This tool allows browsing and downloading of data from ~7,000 genomic expression analyses published in ~400 nematode research articles. The search may combine specific platforms, species, tissues and research topics. For example, choosing 'RNAseq', 'C. elegans', 'Whole Animal' and 'aging' will return C. elegans RNAseq datasets related to aging, done in whole animals. Not making any selection is equivalent to choosing all. For example, if no "Platform" is specified, results from all platforms will be displayed. Likewise, choosing 'RNAseq' and 'proteomics' will return both RNAseq and proteomics datasets.<br/><br/>);
+  print qq($hash{description}\n);
 
   print qq(Our complete dataset collection is available for direct <a target="_blank" href="ftp://caltech.wormbase.org/pub/wormbase/spell_download/datasets/AllDatasetsDownload.tgz">download</a>.<br/><br/>);  
 
@@ -252,6 +256,13 @@ sub processFiles {
     chomp $line;
     my ($category, $count) = split/\t/, $line;
     $hash{catcount}{$category} = $count;
+  }
+  close (IN) or die "Cannot close $file_category_count : $!";
+
+  open (IN, "<$file_description") or die "Cannot open $file_description : $!";
+  while (my $line = <IN>) {
+    chomp $line;
+    $hash{description} .= $line . '<br/>';
   }
   close (IN) or die "Cannot close $file_category_count : $!";
 
