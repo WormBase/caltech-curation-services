@@ -68,6 +68,9 @@
 # Send WB:WBPaper IDs instead of AGRKB.  2025 12 15
 #
 # antibody from old afp should only have data novelty 335 not 229   2025 12 16
+#
+# afp_newstrains was creating negated for genetics, but we should skip it because it was never part of old afp.
+# skip datatypes that didn't exist in old afp if source is old afp, currently only othergenefunc.  2026 01 07
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -148,6 +151,7 @@ my $mod = 'WB';
 # my @wbpapers = qw( 00036433 );	# 2025 12 15	# hum dis changes test paper
 # my @wbpapers = qw( 00059003 );	# 2025 12 15	# hum dis negative ack test paper
 # my @wbpapers = qw( 00034728 );	# 2025 12 16	# antibody from old afp should only have data novelty 335 not 229
+# my @wbpapers = qw( 00031697 );	# 2026 01 07	# afp_newstrains was creating negated for genetics, but we should skip it instead 
 my @wbpapers = qw( 00001084 00004952 00031697 00032245 00032467 00032959 00033036 00033206 00033406 00034728 00035977 00040400 00053203 00054648 00059003 00059712 00060296 00065201 00067387 00067433 00068170 00068172 00068343 );	# 2025 11 07
 
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 
@@ -373,6 +377,7 @@ sub outputAfpAutData {
         my $source_id = $source_id_afp;
         if ($afpAutData{$datatype}{$joinkey}{source} eq 'ack') { $source_id = $source_id_ack; }
         if ( ($datatype eq 'extvariation') || ($datatype eq 'newstrains') ) { $source_id = $source_id_genetics; }
+        if ( ($source_id eq $source_id_afp) && ($datatype eq 'othergenefunc') ) { next; }	# skip datatypes that didn't exist in old afp if source is old afp  2026 01 07
         if ($afpAutData{$datatype}{$joinkey}{note}) {
           $object{'note'}                     = $afpAutData{$datatype}{$joinkey}{note}; }
         $object{'negated'}                    = $negated;
@@ -491,6 +496,7 @@ sub populateAfpData {
         my $tsdigits = &tsToDigits($afpLasttouched{$joinkey});
         next unless ($tsdigits < '20190322');
         next if ( ($datatype eq 'humandisease') || ($datatype eq 'humdis') );	# ranjana doesn't want old afp disease data 2025 12 15
+        next if ($datatype eq 'newstrains');					# this was not part of afp  2026 01 07
         $afpAutData{$datatype}{$joinkey}{note}      = "no data entered by author";
         $afpAutData{$datatype}{$joinkey}{negated}   = 1;	# inferred negative by afp
         $afpAutData{$datatype}{$joinkey}{source}    = 'author_first_pass';
