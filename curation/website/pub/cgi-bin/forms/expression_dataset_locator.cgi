@@ -14,7 +14,8 @@
 #
 # Add WormBase Processed Data for Wen.  2025 11 03
 #
-# Get description of website from flatfile for Wen.  2026 01 13
+# Get description of website from flatfile for Wen.
+# New textarea for keyword, comma-separated, using any substring match against source file.  2026 01 13
 
 # http://tazendra.caltech.edu/~azurebrd/cgi-bin/forms/expression_dataset_locator.cgi
 # https://caltech-curation.textpressolab.com/pub/cgi-bin/forms/expression_dataset_locator.cgi
@@ -99,6 +100,10 @@ sub querySpell {
   unless (scalar @tissues > 0)      { (@tissues)      = sort keys %{ $hash{tissues}  };  }
   unless (scalar @topics > 0)       { (@topics)       = sort keys %{ $hash{topics}  }; $anyTopicOk++; }
   unless (scalar @wbProcessed > 0)  { (@wbProcessed)  = sort keys %{ $hash{wbProcessed}  }; }
+  ($var, my $keywords)      = &getHtmlVar($query, 'keywords');
+  my (@keywords) = split/,/, $keywords;
+  s/^\s+|\s+$//g for @keywords;
+  my $anyKeywordOk = @keywords ? 0 : 1;
 #   if (scalar @methods > 0) { $requiredFields++; } else { (@methods) = sort keys %{ $hash{method}  };  }
 #   if (scalar @species > 0) { $requiredFields++; } else { (@species) = sort keys %{ $hash{species} };  }
 #   if (scalar @tissues > 0) { $requiredFields++; } else { (@tissues) = sort keys %{ $hash{tissues}  };  }
@@ -127,10 +132,19 @@ sub querySpell {
     foreach my $line (keys %{ $hash{topics}{$topic} }) { $lines{$line}{topic}++; } }
   foreach my $wbProcessed (@wbProcessed) {   
     foreach my $line (keys %{ $hash{wbProcessed}{$wbProcessed} }) { $lines{$line}{wbProcessed}++; } }
+
+  foreach my $keyword (@keywords) {
+    foreach my $text (keys %{ $hash{keyword} }) {
+      if ($text =~ /\Q$keyword\E/i) {
+        foreach my $line (keys %{ $hash{keyword}{$text} }) {
+          $lines{$line}{keyword}++; } } } }
+  # $hash{keyword}{$url}{$count}++;
+
   foreach my $line (sort keys %lines) {
 #     $output .= qq(REQ $requiredFields LINE $line V $lines{$line} E<br>\n); 
-#     if ($lines{$line} >= $requiredFields) {
+#     if ($lines{$line} >= $requiredFields) { # }
     if ( ($lines{$line}{method}) && ($lines{$line}{species}) && ($lines{$line}{tissue}) && ($lines{$line}{wbProcessed}) && 
+         ( ($lines{$line}{keyword}) || $anyKeywordOk ) &&
          ( ($lines{$line}{topic}) || $anyTopicOk ) ) {
       my $line = $hash{line}{$line};
       $output .= qq($line\n);
@@ -222,6 +236,11 @@ sub showSpellForm {
     if ($wbProcessed) { 
       my $label = $wbProcessed;
       print qq(<tr><td><input type="checkbox" name="wbProcessed" value="$wbProcessed"> $label</td><td>$hash{catcount}{$label}</td></tr>); } }
+  print qq(<tr><td>&nbsp;</td</tr>\n);
+
+  print qq(<tr><td>6. Contain keywords or accession numbers</td></tr>\n);
+  print qq(<tr><td>comma-separated keywords, e.g. GSE280222, daf-2</td></tr>\n);
+  print qq(<tr><td colspan=2><textarea id="keywords" name="keywords" rows="10" cols="60"></textarea></td></tr>\n);
 
   print qq(</table>\n);
 
@@ -274,7 +293,17 @@ sub processFiles {
     $count++;
     my ($dataid, $dataname, $paper, $method, $species, $tissues, $topics, $title, $wbProcessed, $url) = split/\t/, $line;
     if ($url) {
+      $hash{keyword}{$url}{$count}++;
       $line =~ s/$url/<a href="$url">$url<\/a>/; }
+    $hash{keyword}{$dataid}{$count}++;
+    $hash{keyword}{$dataname}{$count}++;
+    $hash{keyword}{$paper}{$count}++;
+    $hash{keyword}{$method}{$count}++;
+    $hash{keyword}{$species}{$count}++;
+    $hash{keyword}{$tissues}{$count}++;
+    $hash{keyword}{$topics}{$count}++;
+    $hash{keyword}{$title}{$count}++;
+    $hash{keyword}{$wbProcessed}{$count}++;
     $hash{line}{$count} = $line;
     $hash{method}{$method}{$count}++;
     $hash{species}{$species}{$count}++;
