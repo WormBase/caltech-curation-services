@@ -71,6 +71,8 @@
 #
 # afp_newstrains was creating negated for genetics, but we should skip it because it was never part of old afp.
 # skip datatypes that didn't exist in old afp if source is old afp, currently only othergenefunc.  2026 01 07
+#
+# add more datatype envpheno chemphen to list to skip if old afp.  2026 01 28
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -119,6 +121,7 @@ my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST}
 my $result;
 
 my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
+# my $baseUrl = 'https://dev4005-literature-rest.alliancegenome.org/';
 # my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
 my $output_format = 'json';
 # my $output_format = 'api';
@@ -356,6 +359,11 @@ sub outputAfpAutData {
     print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider\n);
     return;
   }
+
+  my %noOldAfp;
+  $noOldAfp{'chemphen'}++;
+  $noOldAfp{'envpheno'}++;
+  $noOldAfp{'othergenefunc'}++;
 #   { "source_type": "professional_biocurator", "source_method": "wormbase_curation_status", "evidence": "eco_string", "description": "cur_curdata", "mod_abbreviation": "WB" }
   foreach my $datatype (sort keys %afpAutData) {
     unless ($datatypes{$datatype}) { 
@@ -377,7 +385,8 @@ sub outputAfpAutData {
         my $source_id = $source_id_afp;
         if ($afpAutData{$datatype}{$joinkey}{source} eq 'ack') { $source_id = $source_id_ack; }
         if ( ($datatype eq 'extvariation') || ($datatype eq 'newstrains') ) { $source_id = $source_id_genetics; }
-        if ( ($source_id eq $source_id_afp) && ($datatype eq 'othergenefunc') ) { next; }	# skip datatypes that didn't exist in old afp if source is old afp  2026 01 07
+        if ( ($source_id eq $source_id_afp) && ($noOldAfp{$datatype}) ) { next; }	# skip datatypes that didn't exist in old afp if source is old afp  2026 01 07
+
         if ($afpAutData{$datatype}{$joinkey}{note}) {
           $object{'note'}                     = $afpAutData{$datatype}{$joinkey}{note}; }
         $object{'negated'}                    = $negated;
