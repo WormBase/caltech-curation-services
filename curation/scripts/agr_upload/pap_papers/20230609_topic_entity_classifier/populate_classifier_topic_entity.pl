@@ -94,6 +94,38 @@
 #      AND topic_entity_tag_source_id NOT IN (SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE source_method = 'abc_document_classifier')
 #      AND created_by != 'default_user';
 
+# with reference
+# SELECT COUNT(*)
+# FROM topic_entity_tag tet
+# JOIN reference r
+#   ON tet.reference_id = r.reference_id
+# WHERE tet.topic IN ( 'ATP:0000011', 'ATP:0000033', 'ATP:0000041', 'ATP:0000048', 'ATP:0000054', 'ATP:0000055', 'ATP:0000056', 'ATP:0000060', 'ATP:0000061', 'ATP:0000062', 'ATP:0000068', 'ATP:0000069', 'ATP:0000070', 'ATP:0000071', 'ATP:0000082', 'ATP:0000083', 'ATP:0000084', 'ATP:0000089', 'ATP:0000096', 'ATP:0000152', 'ATP:0000278', 'ATP:0000349', 'ATP:0000350', 'ATP:0000351', 'ATP:0000352')
+# AND tet.topic_entity_tag_source_id IN (
+#     SELECT topic_entity_tag_source_id
+#     FROM topic_entity_tag_source
+#     WHERE secondary_data_provider_id = ( SELECT mod_id FROM mod WHERE abbreviation = 'WB'))
+# AND tet.topic_entity_tag_source_id NOT IN (
+#     SELECT topic_entity_tag_source_id
+#     FROM topic_entity_tag_source
+#     WHERE source_method = 'abc_document_classifier')
+# AND tet.created_by != 'default_user'
+# AND r.curie = 'AGRKB:101000000623227';
+# 
+# DELETE FROM topic_entity_tag tet
+# USING reference r
+# WHERE tet.reference_id = r.reference_id
+#   AND tet.topic IN ( 'ATP:0000011', 'ATP:0000033', 'ATP:0000041', 'ATP:0000048', 'ATP:0000054', 'ATP:0000055', 'ATP:0000056', 'ATP:0000060', 'ATP:0000061', 'ATP:0000062', 'ATP:0000068', 'ATP:0000069', 'ATP:0000070', 'ATP:0000071', 'ATP:0000082', 'ATP:0000083', 'ATP:0000084', 'ATP:0000089', 'ATP:0000096', 'ATP:0000152', 'ATP:0000278', 'ATP:0000349', 'ATP:0000350', 'ATP:0000351', 'ATP:0000352')
+#   AND tet.topic_entity_tag_source_id IN (
+#       SELECT topic_entity_tag_source_id
+#       FROM topic_entity_tag_source
+#       WHERE secondary_data_provider_id = ( SELECT mod_id FROM mod WHERE abbreviation = 'WB'))
+#   AND tet.topic_entity_tag_source_id NOT IN (
+#       SELECT topic_entity_tag_source_id
+#       FROM topic_entity_tag_source
+#       WHERE source_method = 'abc_document_classifier')
+#   AND tet.created_by != 'default_user'
+#   AND r.curie = 'AGRKB:101000000623227';
+
 # Do not delete ATP:0000005 gene.  ATP:0000123 species.  ATP:0000110 transgene.  ATP:0000285 variation.  ATP:0000027 strain
 
 
