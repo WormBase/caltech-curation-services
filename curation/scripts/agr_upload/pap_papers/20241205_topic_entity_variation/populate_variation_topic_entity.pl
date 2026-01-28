@@ -25,6 +25,8 @@
 #
 # note parsing to be more readable at ABC.
 # Use cognito token instead of okta.  better api handling.  2025 12 17
+#
+# Check timestamp of ACKnowledge_form negative data and topic to skip if before ACK existed.  2026 01 28 
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -364,6 +366,11 @@ sub outputNegData {
           my $obj = 'WB:' . $wbvar;
           unless ($theHash{'ack'}{$joinkey}{$obj}) {
             foreach my $aut (@auts) {
+              my $ts = $theHash{'ack'}{$joinkey}{$obj}{$aut}{timestamp};
+              if ( $afpContributor{$joinkey}{$aut} ) { $ts = $afpContributor{$joinkey}{$aut}; }
+unless ($ts) { print qq(J $joinkey A $aut O $obj NO TS\n); }
+              my $tsdigits = &tsToDigits($ts);
+              next if ($tsdigits < '20190322');		# date is before acknowledge form, skip it 
               my %object;
               $object{'topic_entity_tag_source_id'}   = $source_id_ack;
               $object{'force_insertion'}              = TRUE;
@@ -372,17 +379,15 @@ sub outputNegData {
 #               $object{'wbpaper_id'}                   = $joinkey;		# for debugging
 #               $object{'NEGATIVE ACK ENTITY'}          = $joinkey;		# for debugging
               $object{'data_novelty'}                 = $dataNoveltyExisting;
-              my $ts = $theHash{'ack'}{$joinkey}{$obj}{$aut}{timestamp};
-              if ( $afpContributor{$joinkey}{$aut} ) { $ts = $afpContributor{$joinkey}{$aut}; }
-              $object{'date_updated'}		  = $ts;
-              $object{'date_created'}		  = $ts;
+              $object{'date_updated'}		      = $ts;
+              $object{'date_created'}		      = $ts;
               $object{'created_by'}                   = $aut;
               $object{'updated_by'}                   = $aut;
               $object{'topic'}                        = 'ATP:0000285';
               $object{'entity_type'}                  = 'ATP:0000285';
               $object{'entity_id_validation'}         = 'alliance';
               $object{'entity'}                       = $obj;
-              $object{'entity_published_as'}       = $name;
+              $object{'entity_published_as'}          = $name;
               if ($variationTaxon{$obj}) { 	    # if there's a variation taxon, go with that value instead of default
                 $object{'species'}                    = $variationTaxon{$obj}; }
               else {
@@ -425,6 +430,9 @@ sub outputNegData {
     if (scalar @auts < 1) { push @auts, 'unknown_author'; }
     foreach my $aut (@auts) {
       # separate data checks for separate ABC data rows for dataNoveltyExisting vs dataNoveltyNewToDb based off of afpVariation and afpOthervariation
+      my $ts = $afpContributor{$joinkey}{$aut} || $afpLasttouched{$joinkey};
+      my $tsdigits = &tsToDigits($ts);
+      next if ($tsdigits < '20190322');		# date is before acknowledge form, skip it 
       unless ($afpVariation{$joinkey}{data}) {	# author did not sent afpVariation, so create negative topic for existing data
         my %object;
         $object{'topic_entity_tag_source_id'}   = $source_id_ack;
@@ -434,7 +442,6 @@ sub outputNegData {
 #         $object{'wbpaper_id'}                   = $joinkey;		# for debugging
 #         $object{'NEGATIVE ACK TOPIC EXISTING'}  = $joinkey;		# for debugging
         $object{'data_novelty'}                 = $dataNoveltyExisting;
-        my $ts = $afpContributor{$joinkey}{$aut};
         $object{'date_updated'}		  = $ts;
         $object{'date_created'}		  = $ts;
         $object{'created_by'}                   = $aut;
@@ -445,7 +452,8 @@ sub outputNegData {
         else {
           my $object_json = encode_json \%object;
           &createTag($object_json); } }
-      if ($afpOthervariation{$joinkey}{$aut}{data} eq '[{"id":1,"name":""}]') {	# author did not send other variation, so create negative topic for new data
+      if ( defined $afpOthervariation{$joinkey}{$aut}{data} &&
+           $afpOthervariation{$joinkey}{$aut}{data} eq '[{"id":1,"name":""}]' ) {	# author did not send other variation, so create negative topic for new data
         my %object;
         $object{'topic_entity_tag_source_id'}   = $source_id_ack;
         $object{'force_insertion'}              = TRUE;
@@ -454,9 +462,8 @@ sub outputNegData {
 #         $object{'wbpaper_id'}                   = $joinkey;		# for debugging
 #         $object{'NEGATIVE ACK TOPIC NEW TO DB'} = $joinkey;		# for debugging
         $object{'data_novelty'}                 = $dataNoveltyNewToDb;
-        my $ts = $afpContributor{$joinkey}{$aut};
-        $object{'date_updated'}		  = $ts;
-        $object{'date_created'}		  = $ts;
+        $object{'date_updated'}		        = $ts;
+        $object{'date_created'}		        = $ts;
         $object{'created_by'}                   = $aut;
         $object{'updated_by'}                   = $aut;
         $object{'topic'}                        = 'ATP:0000285';
