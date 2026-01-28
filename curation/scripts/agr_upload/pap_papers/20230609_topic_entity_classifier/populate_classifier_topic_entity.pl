@@ -72,7 +72,15 @@
 # afp_newstrains was creating negated for genetics, but we should skip it because it was never part of old afp.
 # skip datatypes that didn't exist in old afp if source is old afp, currently only othergenefunc.  2026 01 07
 #
-# add more datatype envpheno chemphen to list to skip if old afp.  2026 01 28
+# add more datatype envpheno chemphen to list to skip if old afp.
+# skip extvariation when there is no author data.
+# when reading from db for all sources besides OA, sort by timestamp, so when a paper is invalid and merged with
+# another paper, the most recent paper's data is kept.
+# previously was deriving valid paper and skipping at time of db query and abc output, which meant when testing
+# merged paper were not in the chosen set because the valid paper had been derived but not in the valid set.
+# OA papers are not getting derived until abc output because there's no significant data to extract, and there's
+# too many queries to modify to derive the winning paper from.  and there's only one case of a merged paper still
+# having oa data, and the winning paper also has that data.  2026 01 28
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -155,6 +163,7 @@ my $mod = 'WB';
 # my @wbpapers = qw( 00059003 );	# 2025 12 15	# hum dis negative ack test paper
 # my @wbpapers = qw( 00034728 );	# 2025 12 16	# antibody from old afp should only have data novelty 335 not 229
 # my @wbpapers = qw( 00031697 );	# 2026 01 07	# afp_newstrains was creating negated for genetics, but we should skip it instead 
+# my @wbpapers = qw( 00033469 00034702 00034707 );	# 2026 01 28	# afp_extvariation has entries but empty string for first two and note for third
 my @wbpapers = qw( 00001084 00004952 00031697 00032245 00032467 00032959 00033036 00033206 00033406 00034728 00035977 00040400 00053203 00054648 00059003 00059712 00060296 00065201 00067387 00067433 00068170 00068172 00068343 );	# 2025 11 07
 
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 
@@ -268,6 +277,11 @@ sub outputOaData {
       next;
     }
     foreach my $joinkey (sort keys %{ $oaData{$datatype} }) {
+      # oaData reading from a lot of places, working differently from other datatypes, doing the mapping to valid paper at time of output to ABC
+      # but other datatypes are mapping at time of reading from database from a single query.
+      # we don't need curation timestamp, so it's easier to derive paper at time of ABC output.
+      # we manually checked there's only one case where curation case where data was not removed from the invalid paper, but it was re-curated to
+      # the winning paper.
       next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
       my ($joinkey) = &deriveValidPap($joinkey);
       next unless $papValid{$joinkey};
@@ -308,9 +322,6 @@ sub outputAfpCurData {
       next;
     }
     foreach my $joinkey (sort keys %{ $afpCurData{$datatype} }) {
-      next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
-      my ($joinkey) = &deriveValidPap($joinkey);
-      next unless $papValid{$joinkey};
 #       unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
       my $negated = FALSE;
       if ($afpCurData{$datatype}{$joinkey}{negated}) { $negated = TRUE; }
@@ -371,9 +382,6 @@ sub outputAfpAutData {
       next;
     }
     foreach my $joinkey (sort keys %{ $afpAutData{$datatype} }) {
-      next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
-      my ($joinkey) = &deriveValidPap($joinkey);
-      next unless $papValid{$joinkey};
 #       unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
       my @auts;
       if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
@@ -385,8 +393,8 @@ sub outputAfpAutData {
         my $source_id = $source_id_afp;
         if ($afpAutData{$datatype}{$joinkey}{source} eq 'ack') { $source_id = $source_id_ack; }
         if ( ($datatype eq 'extvariation') || ($datatype eq 'newstrains') ) { $source_id = $source_id_genetics; }
+        if ( ($datatype eq 'extvariation') && ($afpAutData{$datatype}{$joinkey}{note} eq '') ) { next; }	# skip extvariation when there is no author data  2026 01 28
         if ( ($source_id eq $source_id_afp) && ($noOldAfp{$datatype}) ) { next; }	# skip datatypes that didn't exist in old afp if source is old afp  2026 01 07
-
         if ($afpAutData{$datatype}{$joinkey}{note}) {
           $object{'note'}                     = $afpAutData{$datatype}{$joinkey}{note}; }
         $object{'negated'}                    = $negated;
@@ -442,9 +450,9 @@ sub populateAfpData {
   $afpWithOnlyThreeColumns{'othergenefunc'}++;
   $afpWithOnlyThreeColumns{'otherantibody'}++;
   foreach my $datatype (sort keys %datatypesAfpCfp) {
-    $result = $dbh->prepare( "SELECT joinkey, afp_$datatypesAfpCfp{$datatype}, afp_timestamp AT TIME ZONE 'UTC', afp_curator, afp_approve, afp_cur_timestamp AT TIME ZONE 'UTC' FROM afp_$datatypesAfpCfp{$datatype}" );
+    $result = $dbh->prepare( "SELECT joinkey, afp_$datatypesAfpCfp{$datatype}, afp_timestamp AT TIME ZONE 'UTC', afp_curator, afp_approve, afp_cur_timestamp AT TIME ZONE 'UTC' FROM afp_$datatypesAfpCfp{$datatype} ORDER BY afp_timestamp" );
     if ($afpWithOnlyThreeColumns{$datatype}) {
-      $result = $dbh->prepare( "SELECT joinkey, afp_$datatypesAfpCfp{$datatype}, afp_timestamp AT TIME ZONE 'UTC' FROM afp_$datatypesAfpCfp{$datatype}" ); }
+      $result = $dbh->prepare( "SELECT joinkey, afp_$datatypesAfpCfp{$datatype}, afp_timestamp AT TIME ZONE 'UTC' FROM afp_$datatypesAfpCfp{$datatype} ORDER BY afp_timestamp" ); }
     $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
     while (my @row = $result->fetchrow) {
       next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
@@ -513,7 +521,7 @@ sub populateAfpData {
 } }
 
 sub populateAfpContributor {
-  $result = $dbh->prepare( "SELECT joinkey, afp_contributor FROM afp_contributor" );
+  $result = $dbh->prepare( "SELECT joinkey, afp_contributor FROM afp_contributor ORDER BY afp_timestamp" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
@@ -525,7 +533,7 @@ sub populateAfpContributor {
 } }
 
 sub populateAfpLasttouched {
-  $result = $dbh->prepare( "SELECT joinkey, afp_lasttouched, afp_timestamp  AT TIME ZONE 'UTC' FROM afp_lasttouched WHERE afp_timestamp < '2019-03-22 00:00:01'" );
+  $result = $dbh->prepare( "SELECT joinkey, afp_lasttouched, afp_timestamp  AT TIME ZONE 'UTC' FROM afp_lasttouched WHERE afp_timestamp < '2019-03-22 00:00:01' ORDER BY afp_timestamp" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
@@ -543,7 +551,7 @@ sub populateTfpData {
   $hasAfpButNoTfp{'disease'}++;			# 2025 11 11	# not a real afp, mapping old afp/cfp for humdis to disease
   foreach my $datatype (sort keys %datatypesAfpCfp) {
     next if ($hasAfpButNoTfp{$datatype});	# has afp but not tfp
-    $result = $dbh->prepare( "SELECT joinkey, tfp_$datatypesAfpCfp{$datatype}, tfp_timestamp AT TIME ZONE 'UTC' FROM tfp_$datatypesAfpCfp{$datatype}" );
+    $result = $dbh->prepare( "SELECT joinkey, tfp_$datatypesAfpCfp{$datatype}, tfp_timestamp AT TIME ZONE 'UTC' FROM tfp_$datatypesAfpCfp{$datatype} ORDER BY tfp_timestamp" );
     $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
     while (my @row = $result->fetchrow) {
       next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
@@ -637,9 +645,6 @@ sub outputCfpData {
       next;
     }
     foreach my $joinkey (sort keys %{ $cfpData{$datatype} }) {
-      next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
-      my ($joinkey) = &deriveValidPap($joinkey);
-      next unless $papValid{$joinkey};
 #       unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
       my $negated = FALSE;
       if ($cfpData{$datatype}{$joinkey}{data}) {
@@ -675,7 +680,7 @@ sub populateCfpData {
     $hasAfpButNoCfp{'othergenefunc'}++;		# 2025 10 31
     $hasAfpButNoCfp{'otherantibody'}++;		# 2025 10 31	this has a cfp table, but it has no data
     next if ($hasAfpButNoCfp{$datatype});	# has afp but not cfp  2025 10 09
-    $result = $dbh->prepare( "SELECT joinkey, cfp_$datatypesAfpCfp{$datatype}, cfp_curator, cfp_timestamp AT TIME ZONE 'UTC' FROM cfp_$datatypesAfpCfp{$datatype}" );
+    $result = $dbh->prepare( "SELECT joinkey, cfp_$datatypesAfpCfp{$datatype}, cfp_curator, cfp_timestamp AT TIME ZONE 'UTC' FROM cfp_$datatypesAfpCfp{$datatype} ORDER BY cfp_timestamp" );
     $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
     while (my @row = $result->fetchrow) {
       next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
@@ -720,9 +725,6 @@ sub outputCurStrData {
     #   return;
     # }
     foreach my $joinkey (sort keys %{ $strData{$datatype} }) {
-      next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
-      my ($joinkey) = &deriveValidPap($joinkey);
-      next unless $papValid{$joinkey};
 #       unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
       my %object;
       # my $source_id = $source_id_1;
@@ -785,9 +787,6 @@ sub outputCurNncData {
     }
 
     foreach my $joinkey (sort keys %{ $nncData{$datatype} }) {
-      next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
-      my ($joinkey) = &deriveValidPap($joinkey);
-      next unless $papValid{$joinkey};
 #       unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
       my %object;
       my $negated = FALSE;  
@@ -847,9 +846,6 @@ sub outputCurSvmData {
       return;
     }
     foreach my $joinkey (sort keys %{ $svmData{$datatype} }) {
-      next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
-      my ($joinkey) = &deriveValidPap($joinkey);
-      next unless $papValid{$joinkey};
 #       unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
       my %object;
       my $negated = FALSE;  
@@ -914,9 +910,6 @@ sub outputCurCurData {
     foreach my $joinkey (sort keys %{ $curData{$datatype} }) {
 # next unless ($joinkey eq '00005199');	# selcomment + txtcomment
 # next unless ($joinkey eq '00037049');	# timestamp with timezone to utc different date 2018-06-27 17:31:33.510441-07 -> 2018-06-28 00:31:33.510441
-      next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
-      my ($joinkey) = &deriveValidPap($joinkey);
-      next unless $papValid{$joinkey};
 #       unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
       my %object;
       my $negated = FALSE;  
