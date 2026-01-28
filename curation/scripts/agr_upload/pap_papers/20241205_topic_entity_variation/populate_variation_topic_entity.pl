@@ -26,7 +26,8 @@
 # note parsing to be more readable at ABC.
 # Use cognito token instead of okta.  better api handling.  2025 12 17
 #
-# Check timestamp of ACKnowledge_form negative data and topic to skip if before ACK existed.  2026 01 28 
+# Check timestamp of ACKnowledge_form negative data and topic to skip if before ACK existed.
+# Allow posting to 4005.  2026 01 28
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -61,6 +62,7 @@ my $result;
 
 my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
 # my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
+# my $baseUrl = 'https://dev4005-literature-rest.alliancegenome.org/';
 
 my $output_format = 'json';
 # my $output_format = 'api';
@@ -116,6 +118,7 @@ my %ackNeg;
 
 my $abc_location = 'stage';
 if ($baseUrl =~ m/dev4002/) { $abc_location = '4002'; }
+elsif ($baseUrl =~ m/dev4005/) { $abc_location = '4005'; }
 elsif ($baseUrl =~ m/prod/) { $abc_location = 'prod'; }
 
 my $date = &getSimpleSecDate();
