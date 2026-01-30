@@ -81,6 +81,8 @@
 # OA papers are not getting derived until abc output because there's no significant data to extract, and there's
 # too many queries to modify to derive the winning paper from.  and there's only one case of a merged paper still
 # having oa data, and the winning paper also has that data.  2026 01 28
+#
+# missing code to use 4005.  2026 01 29
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -240,6 +242,7 @@ my %objsCurated;
 
 my $abc_location = 'stage';
 if ($baseUrl =~ m/dev4002/) { $abc_location = '4002'; }
+elsif ($baseUrl =~ m/dev4005/) { $abc_location = '4005'; }
 elsif ($baseUrl =~ m/prod/) { $abc_location = 'prod'; }
 
 my $date = &getSimpleSecDate();
