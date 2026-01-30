@@ -83,11 +83,18 @@
 # having oa data, and the winning paper also has that data.  2026 01 28
 #
 # missing code to use 4005.  2026 01 29
+#
+# new deletion queries for db reset.  it should also remove tet with a source with source_evidence_assertion 
+# ATP:0000036, source_method any of "genetics_g3_linking_curator" "curator_first_pass" "author_first_pass", and 
+# not created by default_user just in case.  2026 01 30
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
 
 #    DELETE FROM topic_entity_tag WHERE topic IN ('ATP:0000011', 'ATP:0000033', 'ATP:0000041', 'ATP:0000048', 'ATP:0000054', 'ATP:0000055', 'ATP:0000056', 'ATP:0000060', 'ATP:0000061', 'ATP:0000062', 'ATP:0000068', 'ATP:0000069', 'ATP:0000070', 'ATP:0000071', 'ATP:0000082', 'ATP:0000083', 'ATP:0000084', 'ATP:0000089', 'ATP:0000096', 'ATP:0000152', 'ATP:0000278', 'ATP:0000349', 'ATP:0000350', 'ATP:0000351', 'ATP:0000352') AND topic_entity_tag_source_id IN ( SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE secondary_data_provider_id = ( SELECT mod_id FROM mod WHERE abbreviation = 'WB' )) AND topic_entity_tag_source_id NOT IN (SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE source_method = 'abc_document_classifier') AND created_by != 'default_user';
+# 
+#    DELETE FROM topic_entity_tag tet USING reference r, topic_entity_tag_source tets WHERE tet.reference_id = r.reference_id AND tet.topic_entity_tag_source_id = tets.topic_entity_tag_source_id AND tet.topic IN ('ATP:0000285', 'ATP:0000027') AND tets.source_evidence_assertion = 'ATP:0000036' AND tets.source_method IN ( 'genetics_g3_linking_curator', 'curator_first_pass', 'author_first_pass') AND tet.created_by != 'default_user'
+
 
 #    SELECT COUNT(*) FROM topic_entity_tag WHERE topic IN ('ATP:0000011', 'ATP:0000033', 'ATP:0000041', 'ATP:0000048', 'ATP:0000054', 'ATP:0000055', 'ATP:0000056', 'ATP:0000060', 'ATP:0000061', 'ATP:0000062', 'ATP:0000068', 'ATP:0000069', 'ATP:0000070', 'ATP:0000071', 'ATP:0000082', 'ATP:0000083', 'ATP:0000084', 'ATP:0000089', 'ATP:0000096', 'ATP:0000152', 'ATP:0000278', 'ATP:0000349', 'ATP:0000350', 'ATP:0000351', 'ATP:0000352')
 #      AND topic_entity_tag_source_id IN (
@@ -95,6 +102,20 @@
 #      SELECT mod_id FROM mod WHERE abbreviation = 'WB' ))
 #      AND topic_entity_tag_source_id NOT IN (SELECT topic_entity_tag_source_id FROM topic_entity_tag_source WHERE source_method = 'abc_document_classifier')
 #      AND created_by != 'default_user';
+
+# also need to delete all TET from variation and strain that come from genetics_g3_linking_curator, curator_first_pass, author_first_pass that are by professional_biocurator
+# SELECT COUNT(*)
+# FROM topic_entity_tag tet
+# JOIN reference r
+#   ON tet.reference_id = r.reference_id
+# JOIN topic_entity_tag_source tets
+#   ON tet.topic_entity_tag_source_id = tets.topic_entity_tag_source_id
+# WHERE tet.topic IN ('ATP:0000285', 'ATP:0000027')
+#   AND tets.source_evidence_assertion = 'ATP:0000036'
+#   AND tets.source_method IN ( 'genetics_g3_linking_curator', 'curator_first_pass', 'author_first_pass')
+#   AND tet.created_by != 'default_user'
+
+
 
 # with reference
 # SELECT COUNT(*)
@@ -125,6 +146,29 @@
 #       SELECT topic_entity_tag_source_id
 #       FROM topic_entity_tag_source
 #       WHERE source_method = 'abc_document_classifier')
+#   AND tet.created_by != 'default_user'
+#   AND r.curie = 'AGRKB:101000000623227';
+
+# also need to delete all TET from variation and strain that come from genetics_g3_linking_curator, curator_first_pass, author_first_pass that are by professional_biocurator
+# SELECT COUNT(*)
+# FROM topic_entity_tag tet
+# JOIN reference r
+#   ON tet.reference_id = r.reference_id
+# JOIN topic_entity_tag_source tets
+#   ON tet.topic_entity_tag_source_id = tets.topic_entity_tag_source_id
+# WHERE tet.topic IN ('ATP:0000285', 'ATP:0000027')
+#   AND tets.source_evidence_assertion = 'ATP:0000036'
+#   AND tets.source_method IN ( 'genetics_g3_linking_curator', 'curator_first_pass', 'author_first_pass')
+#   AND tet.created_by != 'default_user'
+#   AND r.curie = 'AGRKB:101000000623227';
+# 
+# DELETE FROM topic_entity_tag tet
+# USING reference r, topic_entity_tag_source tets
+# WHERE tet.reference_id = r.reference_id
+#   AND tet.topic_entity_tag_source_id = tets.topic_entity_tag_source_id
+#   AND tet.topic IN ('ATP:0000285', 'ATP:0000027')
+#   AND tets.source_evidence_assertion = 'ATP:0000036'
+#   AND tets.source_method IN ( 'genetics_g3_linking_curator', 'curator_first_pass', 'author_first_pass')
 #   AND tet.created_by != 'default_user'
 #   AND r.curie = 'AGRKB:101000000623227';
 
@@ -162,8 +206,8 @@ my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST}
 # my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n"; 
 my $result;
 
-my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
-# my $baseUrl = 'https://dev4005-literature-rest.alliancegenome.org/';
+# my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
+my $baseUrl = 'https://dev4005-literature-rest.alliancegenome.org/';
 # my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
 my $output_format = 'json';
 # my $output_format = 'api';
@@ -198,6 +242,7 @@ my $mod = 'WB';
 # my @wbpapers = qw( 00034728 );	# 2025 12 16	# antibody from old afp should only have data novelty 335 not 229
 # my @wbpapers = qw( 00031697 );	# 2026 01 07	# afp_newstrains was creating negated for genetics, but we should skip it instead 
 # my @wbpapers = qw( 00033469 00034702 00034707 );	# 2026 01 28	# afp_extvariation has entries but empty string for first two and note for third
+# my @wbpapers = qw( 00000499 );	# 2026 01 30	# topic variation ATP:0000285 and method curation status form, where is it coming from
 my @wbpapers = qw( 00001084 00004952 00031697 00032245 00032467 00032959 00033036 00033206 00033406 00034728 00035977 00040400 00053203 00054648 00059003 00059712 00060296 00065201 00067387 00067433 00068170 00068172 00068343 );	# 2025 11 07
 
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 
