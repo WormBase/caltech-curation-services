@@ -51,6 +51,8 @@
 # better error handling
 # no longer getting AGRKB, just sending WB:WBPaper to ABC
 # better note attribution to ack vs old afp.  2025 12 17
+#
+# query old afp topics from afp_genestudied, output as topics only.  2026 02 24
 
 
 
@@ -91,8 +93,9 @@ my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST}
 # my $dbh = DBI->connect ( "dbi:Pg:dbname=testdb", "", "") or die "Cannot connect to database!\n"; 
 my $result;
 
-my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
+# my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
 # my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
+my $baseUrl = 'https://dev4005-literature-rest.alliancegenome.org/';
 
 my $output_format = 'json';
 # my $output_format = 'api';
@@ -110,6 +113,7 @@ my @output_json;
 
 my $mod = 'WB';
 
+my $dataNoveltyParent =   'ATP:0000335';        # parent term, basically null
 my $dataNoveltyExisting = 'ATP:0000334';        # existing data
 
 # my @wbpapers = qw( 00004952 00005199 00026609 00030933 00035427 );
@@ -176,6 +180,7 @@ my %ginValidation;
 # my %ginTaxon;
 
 my %theHash;
+my %afpTopicOldAfp;
 my %infOther;
 my %curConfMan;
 my %curConfNoMan;
@@ -197,6 +202,7 @@ my %curNegGeneTopic;
 
 my $abc_location = 'stage';
 if ($baseUrl =~ m/dev4002/) { $abc_location = '4002'; }
+elsif ($baseUrl =~ m/dev4005/) { $abc_location = '4005'; }
 elsif ($baseUrl =~ m/prod/) { $abc_location = 'prod'; }
 
 my $date = &getSimpleSecDate();
@@ -231,9 +237,11 @@ foreach my $joinkey (@wbpapers) { $chosenPapers{$joinkey}++; }
 &populatePapValid();
 &populatePapMerge();
 &populateMeetings();
+&populateAfpOldAfp();
 &populateAfpVersion();
 &populateAfpContributor();
 &populateAfpLasttouched();
+&populateAfpOldAfp();
 &populateGeneTaxon();
 &populatePapGene();
 &populateGinValidation();
@@ -245,6 +253,7 @@ foreach my $joinkey (@wbpapers) { $chosenPapers{$joinkey}++; }
 &outputTfpData();
 &outputTheHash();
 &outputNegativeData();
+&outputTopicOldAfp();
 
 if ($output_format eq 'json') {
   my $json = to_json( \@output_json, { pretty => 1 } );
@@ -263,6 +272,48 @@ close (PERR) or die "Cannot close $perrfile : $!";
 #   print qq(OJ $oj\n);
 # } 
 
+
+sub outputTopicOldAfp {
+  my $data_provider = $mod;
+  my $secondary_data_provider = $mod;
+  my $source_evidence_assertion = 'ATP:0000035';
+  my $source_method = 'author_first_pass';
+  my $source_id_afp = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+  unless ($source_id_afp) {
+    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+    return;
+  }
+  foreach my $joinkey (sort keys %afpTopicOldAfp) {
+    my ($joinkey) = &deriveValidPap($joinkey);
+    next unless $papValid{$joinkey};
+#     unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
+    my @auts;
+    if ($afpContributor{$joinkey}) { foreach my $who (sort keys %{ $afpContributor{$joinkey} }) { push @auts, $who; } }
+    if (scalar @auts < 1) { push @auts, 'unknown_author'; }
+    foreach my $aut (@auts) {
+      my %object;
+      $object{'topic_entity_tag_source_id'}   = $source_id_afp;
+      $object{'force_insertion'}              = TRUE;
+      $object{'negated'}                      = FALSE;
+      $object{'reference_curie'}              = "WB:WBPaper$joinkey";
+#       $object{'reference_curie'}              = $wbpToAgr{$joinkey};
+#       $object{'wbpaper_id'}                   = $joinkey;               # for debugging
+      $object{'data_novelty'}                 = $dataNoveltyParent;
+      my $ts = $afpTopicOldAfp{$joinkey}{timestamp};
+      if ( $afpContributor{$joinkey}{$aut} ) { $ts = $afpContributor{$joinkey}{$aut}; }
+      $object{'date_created'}                 = $ts;
+      $object{'date_updated'}                 = $ts;
+      $object{'created_by'}                   = $aut;
+      $object{'updated_by'}                   = $aut;
+      $object{'topic'}                        = $geneTopic;
+      if ($afpTopicOldAfp{$joinkey}{note}) {
+        $object{'note'}                       = $afpTopicOldAfp{$joinkey}{note}; }
+      if ($output_format eq 'json') {
+        push @output_json, \%object; }
+      else {
+        my $object_json = encode_json \%object;
+        &createTag($object_json); } } }
+} # sub outputTopicOldAfp
 
 sub outputTheHash {
   # my $source_type = 'script';
@@ -351,7 +402,7 @@ sub outputTheHash {
 } } # sub outputTheHash
 
 sub populateTfpGenestudied {
-  my $result = $dbh->prepare( "SELECT joinkey, tfp_genestudied, tfp_timestamp AT TIME ZONE 'UTC' FROM tfp_genestudied;" );
+  $result = $dbh->prepare( "SELECT joinkey, tfp_genestudied, tfp_timestamp AT TIME ZONE 'UTC' FROM tfp_genestudied;" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     my ($joinkey, $trText, $ts) = @row;
@@ -642,7 +693,7 @@ sub populateNegativeData {
 } # sub populateNegativeData
 
 sub populateAfpContributor {
-  my $result = $dbh->prepare( "SELECT joinkey, pap_curator, pap_timestamp AT TIME ZONE 'UTC' FROM pap_species WHERE pap_evidence ~ 'from author first pass'" );
+  $result = $dbh->prepare( "SELECT joinkey, pap_curator, pap_timestamp AT TIME ZONE 'UTC' FROM pap_species WHERE pap_evidence ~ 'from author first pass'" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
 #     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
@@ -665,8 +716,18 @@ sub populateAfpContributor {
     $afpContributor{$row[0]}{$who} = $row[2];
 } }
 
+sub populateAfpOldAfp {
+  $result = $dbh->prepare( "SELECT joinkey, afp_genestudied, afp_timestamp AT TIME ZONE 'UTC' FROM afp_genestudied WHERE afp_timestamp < '2019-03-22 00:00:00';" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) {
+#     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
+    next unless ($row[1]);
+    $afpTopicOldAfp{$row[0]}{timestamp} = $row[2];
+    $afpTopicOldAfp{$row[0]}{note} = $row[1];
+} }
+
 sub populateAfpVersion {
-  my $result = $dbh->prepare( "SELECT joinkey, afp_version FROM afp_version" );
+  $result = $dbh->prepare( "SELECT joinkey, afp_version FROM afp_version" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
 #     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
@@ -675,7 +736,7 @@ sub populateAfpVersion {
 } }
 
 sub populateAfpLasttouched {
-  my $result = $dbh->prepare( "SELECT joinkey, afp_timestamp AT TIME ZONE 'UTC' FROM afp_lasttouched" );
+  $result = $dbh->prepare( "SELECT joinkey, afp_timestamp AT TIME ZONE 'UTC' FROM afp_lasttouched" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
 #     next unless ($chosenPapers{$row[0]} || $chosenPapers{all});
@@ -685,7 +746,7 @@ sub populateAfpLasttouched {
 } }
 
 sub populateGinTaxon {
-  my $result = $dbh->prepare( "SELECT * FROM gin_species;" );
+  $result = $dbh->prepare( "SELECT * FROM gin_species;" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     $gin{$row[0]} = $row[1];
