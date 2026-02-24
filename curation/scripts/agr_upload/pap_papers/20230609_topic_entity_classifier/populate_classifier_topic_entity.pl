@@ -87,6 +87,8 @@
 # new deletion queries for db reset.  it should also remove tet with a source with source_evidence_assertion 
 # ATP:0000036, source_method any of "genetics_g3_linking_curator" "curator_first_pass" "author_first_pass", and 
 # not created by default_user just in case.  2026 01 30
+#
+# genetics should not generate negated data for afp_ extvariation or newstrains.  2026 02 24
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -472,8 +474,10 @@ sub outputAfpAutData {
         if ($afpAutData{$datatype}{$joinkey}{negated}) { $negated = TRUE; }
         my $source_id = $source_id_afp;
         if ($afpAutData{$datatype}{$joinkey}{source} eq 'ack') { $source_id = $source_id_ack; }
-        if ( ($datatype eq 'extvariation') || ($datatype eq 'newstrains') ) { $source_id = $source_id_genetics; }
-        if ( ($datatype eq 'extvariation') && ($afpAutData{$datatype}{$joinkey}{note} eq '') ) { next; }	# skip extvariation when there is no author data  2026 01 28
+        if ( ($datatype eq 'extvariation') || ($datatype eq 'newstrains') ) {
+          if ($afpAutData{$datatype}{$joinkey}{negated}) { next; }
+            else { $source_id = $source_id_genetics; } }
+        if ( ( ($datatype eq 'extvariation') || ($datatype eq 'newstrains') ) && ($afpAutData{$datatype}{$joinkey}{note} eq '') ) { next; }	# skip extvariation or newstrains when there is no author data  2026 01 28
         if ( ($source_id eq $source_id_afp) && ($noOldAfp{$datatype}) ) { next; }	# skip datatypes that didn't exist in old afp if source is old afp  2026 01 07
         if ($afpAutData{$datatype}{$joinkey}{note}) {
           $object{'note'}                     = $afpAutData{$datatype}{$joinkey}{note}; }
