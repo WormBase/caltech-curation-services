@@ -284,6 +284,7 @@ sub outputTopicOldAfp {
     return;
   }
   foreach my $joinkey (sort keys %afpTopicOldAfp) {
+    next unless ($chosenPapers{$joinkey} || $chosenPapers{all});
     my ($joinkey) = &deriveValidPap($joinkey);
     next unless $papValid{$joinkey};
 #     unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
