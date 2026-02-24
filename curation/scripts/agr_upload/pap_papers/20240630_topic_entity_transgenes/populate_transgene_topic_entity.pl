@@ -73,6 +73,8 @@
 #
 # note parsing to be more readable at ABC.
 # Use cognito token instead of okta.  better api handling.  2025 12 17
+#
+# afp data for old afp should use data_novelty of parent, not existing.  2026 02 24
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -105,8 +107,9 @@ my $start_time = time;
 my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST};port=$ENV{PSQL_PORT}", "$ENV{PSQL_USERNAME}", "$ENV{PSQL_PASSWORD}") or die "Cannot connect to database!\n";
 my $result;
 
-my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
+# my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
 # my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
+my $baseUrl = 'https://dev4005-literature-rest.alliancegenome.org/';
 
 my $output_format = 'json';
 # my $output_format = 'api';
@@ -126,6 +129,7 @@ my $pgDate = &getPgDate();
 
 my $mod = 'WB';
 
+my $dataNoveltyParent =   'ATP:0000335';        # parent term, basically null
 my $dataNoveltyExisting = 'ATP:0000334';        # existing data
 my $dataNoveltyNewToDb =  'ATP:0000228';        # new to database
 
@@ -661,7 +665,6 @@ sub outputAfpData {
   my $source_evidence_assertion = 'ATP:0000035';
   my $source_method = 'author_first_pass';
   my $source_id_afp = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
-
   unless ($source_id_afp) {
     print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
     return;
@@ -670,7 +673,6 @@ sub outputAfpData {
   $source_evidence_assertion = 'ATP:0000035';
   $source_method = 'ACKnowledge_form';
   my $source_id_ack = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
-
   unless ($source_id_ack) {
     print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
     return;
@@ -679,7 +681,6 @@ sub outputAfpData {
   $source_evidence_assertion = 'ECO:0008021';
   $source_method = 'free_text_to_entity_id_script';
   my $source_id_afpx = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
-
   unless ($source_id_afpx) {
     print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
     return;
@@ -696,7 +697,9 @@ sub outputAfpData {
             $note = $theHash{$datatype}{$joinkey}{$obj}{$curator}{note}; }
           next if ($note eq '[{"id":1,"name":""}]');
           $object{'topic_entity_tag_source_id'}   = $source_id_ack;
+          $object{'data_novelty'}                 = $dataNoveltyExisting;
           if ($datatype eq 'afp') {
+            $object{'data_novelty'}               = $dataNoveltyParent;
             $object{'topic_entity_tag_source_id'} = $source_id_afp; }
           if ($datatype eq 'afpx') {
             $object{'entity_published_as'}	  = $theHash{$datatype}{$joinkey}{$obj}{$curator}{published_as};
@@ -705,7 +708,6 @@ sub outputAfpData {
           $object{'negated'}                      = FALSE;
           $object{'reference_curie'}              = $wbpToAgr{$joinkey};
 #           $object{'wbpaper_id'}                   = $joinkey;		# for debugging
-          $object{'data_novelty'}                 = $dataNoveltyExisting;
           $object{'topic'}                        = 'ATP:0000110';
 
           $object{'entity_type'}                  = 'ATP:0000110';
