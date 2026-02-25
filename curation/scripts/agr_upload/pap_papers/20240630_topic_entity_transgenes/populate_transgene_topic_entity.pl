@@ -166,6 +166,7 @@ my %ackNeg;
 
 my $abc_location = 'stage';
 if ($baseUrl =~ m/dev4002/) { $abc_location = '4002'; }
+elsif ($baseUrl =~ m/dev4005/) { $abc_location = '4005'; }
 elsif ($baseUrl =~ m/prod/) { $abc_location = 'prod'; }
 
 my $date = &getSimpleSecDate();
