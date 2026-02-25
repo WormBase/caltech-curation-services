@@ -471,6 +471,22 @@ function removeSelectAllOptions(elSel) {	                        	// remove sele
  */
 
 function resizeSelectField(elSel) { if (elSel.length > 0) { elSel.size = elSel.length; } else { elSel.size = 1; } }
+// chrome does not like size=1 select to be multiple, it adds a checkbox.  this fix turns it into a dropdown on firefox, so seems worse.  2026 02 23
+// function resizeSelectField(elSel) {
+//   if (!elSel) return;
+//   if (elSel.options.length > 1) {
+//     // Multiple values, allow multi-select
+//     elSel.multiple = true;
+//     elSel.size = elSel.options.length; // show all options or adjust as needed
+//   } else {
+//     // Only one value, single-select dropdown
+//     elSel.multiple = false;
+//     elSel.size = 1;
+//     // Ensure the only option is selected
+//     if (elSel.options.length === 1) { elSel.options[0].selected = true; }
+//   }
+// }
+ 
 
 
 /**
