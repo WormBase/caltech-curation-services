@@ -89,6 +89,10 @@
 # not created by default_user just in case.  2026 01 30
 #
 # genetics should not generate negated data for afp_ extvariation or newstrains.  2026 02 24
+# 
+# ack  otherantibody  data_novelty  should be ATP:0000334
+# otherexpr confirmed  ATP:0000041  marker switched from 10 to 41
+# ack no longer wants additionalexpr 2026 03 18
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -489,7 +493,9 @@ sub outputAfpAutData {
         $object{'topic_entity_tag_source_id'} = $source_id;
         $object{'data_novelty'}               = 'ATP:0000335';
         if ( ($afpAutData{$datatype}{$joinkey}{source} eq 'ack') && ($datatype eq 'antibody') ) {
-          $object{'data_novelty'}               = 'ATP:0000229'; }	# otherantibody still 335, 229 only for ack antibody
+          $object{'data_novelty'}               = 'ATP:0000229'; }	# 229 new to field  for ack antibody
+        if ( ($afpAutData{$datatype}{$joinkey}{source} eq 'ack') && ($datatype eq 'otherantibody') ) {
+          $object{'data_novelty'}               = 'ATP:0000334'; }	# 334 existing data  for ack otherantibody
         $object{'created_by'}                 = $aut;
         $object{'updated_by'}                 = $aut;
         $object{'date_created'}               = $afpAutData{$datatype}{$joinkey}{timestamp};
@@ -530,7 +536,7 @@ sub populateAfpData {
   &populateAfpContributor();
   &populateAfpLasttouched();
   my %afpWithOnlyThreeColumns;
-  $afpWithOnlyThreeColumns{'additionalexpr'}++;
+#   $afpWithOnlyThreeColumns{'additionalexpr'}++;	# ack no longer wants additionalexpr 2026 03 18
   $afpWithOnlyThreeColumns{'othergenefunc'}++;
   $afpWithOnlyThreeColumns{'otherantibody'}++;
   foreach my $datatype (sort keys %datatypesAfpCfp) {
@@ -630,7 +636,7 @@ sub populateTfpData {
   return if (%tfpData);		# this called for generating tfpdata but also for afpdata, but don't need to read it twice if already has data
   my %hasAfpButNoTfp;
   $hasAfpButNoTfp{'newstrains'}++;		# 2025 10 09
-  $hasAfpButNoTfp{'additionalexpr'}++;		# 2025 10 31
+#   $hasAfpButNoTfp{'additionalexpr'}++;	# 2025 10 31	# ack no longer wants additionalexpr 2026 03 18
   $hasAfpButNoTfp{'othergenefunc'}++;		# 2025 10 31
   $hasAfpButNoTfp{'disease'}++;			# 2025 11 11	# not a real afp, mapping old afp/cfp for humdis to disease
   foreach my $datatype (sort keys %datatypesAfpCfp) {
@@ -760,7 +766,7 @@ sub populateCfpData {
   foreach my $datatype (sort keys %datatypesAfpCfp) {
     my %hasAfpButNoCfp;
     $hasAfpButNoCfp{'newstrains'}++;		# 2025 10 09
-    $hasAfpButNoCfp{'additionalexpr'}++;	# 2025 10 31
+#     $hasAfpButNoCfp{'additionalexpr'}++;	# 2025 10 31	# ack no longer wants additionalexpr 2026 03 18
     $hasAfpButNoCfp{'othergenefunc'}++;		# 2025 10 31
     $hasAfpButNoCfp{'otherantibody'}++;		# 2025 10 31	this has a cfp table, but it has no data
     next if ($hasAfpButNoCfp{$datatype});	# has afp but not cfp  2025 10 09
@@ -1226,7 +1232,7 @@ sub populateDatatypesAndABC {
   $datatypesAfpCfp{'seqfeat'}        = 'seqfeat';               # for new afp form 2025 10 31
   $datatypesAfpCfp{'domanal'}        = 'domanal';               # for new afp form 2025 10 31
   $datatypesAfpCfp{'funccomp'}       = 'funccomp';              # for new afp form 2025 10 31
-  $datatypesAfpCfp{'additionalexpr'} = 'additionalexpr';        # for new afp form 2025 10 31
+#   $datatypesAfpCfp{'additionalexpr'} = 'additionalexpr';      # for new afp form 2025 10 31	# ack no longer wants additionalexpr 2026 03 18
   $datatypesAfpCfp{'othergenefunc'}  = 'othergenefunc';         # for new afp form 2025 10 31
   $datatypesAfpCfp{'marker'}         = 'marker';                # for new afp form 2025 10 31
   $datatypesAfpCfp{'lsrnai'}         = 'lsrnai';                # for new afp form 2025 10 31
@@ -1255,7 +1261,7 @@ sub populateDatatypesAndABC {
 } # sub populateDatatypesAndABC
 
 sub manualPopulateTopicToAtp {	# don't use this, Kimberly will manually maintain the file topic_to_atp
-  $datatypes{'additionalexpr'}     = 'ATP:0000010';
+#   $datatypes{'additionalexpr'}     = 'ATP:0000010';	# ack no longer wants additionalexpr 2026 03 18
   $datatypes{'antibody'}           = 'ATP:0000096';
 # $datatypes{'blastomere'}         = 'ATP:0000143';	# correct mapping, curator doesn't want transferred
   $datatypes{'catalyticact'}       = 'ATP:0000061';
@@ -1279,12 +1285,12 @@ sub manualPopulateTopicToAtp {	# don't use this, Kimberly will manually maintain
   $datatypes{'humandisease'}       = 'ATP:0000152';
 # $datatypes{'laserablation'}      = 'ATP:0000032';	# correct mapping, curator doesn't want transferred
   $datatypes{'lsrnai'}             = 'ATP:0000082';
-  $datatypes{'marker'}             = 'ATP:0000010';	# additionalexpr ?
+  $datatypes{'marker'}             = 'ATP:0000041';	# correct mapping
   $datatypes{'newmutant'}          = 'ATP:0000083';
   $datatypes{'newstrains'}         = 'ATP:0000027';	# not part of strain script
 # $datatypes{'optogenet'}          = 'ATP:0000145';	# correct mapping, curator doesn't want transferred
   $datatypes{'otherantibody'}      = 'ATP:0000096';
-  $datatypes{'otherexpr'}          = 'ATP:0000041';	# 10 ?
+  $datatypes{'otherexpr'}          = 'ATP:0000041';	# correct mapping
 # $datatypes{'otherspecies'}       = 'ATP:0000123';	# part of species script
 # $datatypes{'otherstrain'}        = 'ATP:0000027';	# part of strain script
 # $datatypes{'othertransgene'}     = 'ATP:0000110';	# part of transgene script
