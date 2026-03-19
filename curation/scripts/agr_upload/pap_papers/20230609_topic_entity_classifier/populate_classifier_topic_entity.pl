@@ -93,6 +93,8 @@
 # ack  otherantibody  data_novelty  should be ATP:0000334
 # otherexpr confirmed  ATP:0000041  marker switched from 10 to 41
 # ack no longer wants additionalexpr 2026 03 18
+#
+# getCurrentDate instead of getPgDate  pg date doesn't zero pad hours, and API rejects it.  2026 03 19
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -344,6 +346,25 @@ close (OUT) or die "Cannot close $outfile : $!";
 close (PERR) or die "Cannot close $perrfile : $!";
 
 
+sub getCurrentDate {                         # begin getCurrentDate
+  my $time = time;                      # set time
+  my ($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) =
+          localtime($time);             # get time
+  if ($sec < 10) { $sec = "0$sec"; }    # add a zero if needed
+  if ($min < 10) { $min = "0$min"; }    # add a zero if needed
+  if ($hour < 10) { $min = "0$hour"; }  # add a zero if needed
+  if ($mday < 10) { $mday = "0$mday"; } # add a zero if needed
+  my $sam = $mon+1;                     # get right month
+  if ($sam < 10) { $sam = "0$sam"; }    # add a zero if needed
+  $year = 1900+$year;                   # get right year in 4 digit form
+  my $todaydate = "${year}-${sam}-${mday}";
+                                        # set current date
+  my $date = $todaydate . " $hour\:$min\:$sec";
+                                        # set final date
+  return $date;
+} # sub getCurrentDate                       # end getCurrentDate
+
+
 # TODO - need to figure out how to get curator and timestamp
 sub outputOaData {
   my $data_provider = $mod;
@@ -351,7 +372,7 @@ sub outputOaData {
   my $source_evidence_assertion = 'ATP:0000036';
   my $source_method = 'ontology_annotator';
   my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
-  my $timestamp = &getPgDate();
+  my $timestamp = &getCurrentDate();
   unless ($source_id) {
     print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider\n);
     return;
