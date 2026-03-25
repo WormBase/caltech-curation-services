@@ -95,6 +95,8 @@
 # ack no longer wants additionalexpr 2026 03 18
 #
 # getCurrentDate instead of getPgDate  pg date doesn't zero pad hours, and API rejects it.  2026 03 19
+# 
+# get rid of  outputAfpCurData  we've moved the afp cur data into cfp entries on caltech prod, don't need this anymore  2026 03 25
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -327,7 +329,7 @@ my $cognito_token = &generateCognitoToken();
  &outputCfpData();
  &populateAfpData();
  &outputAfpAutData();
- &outputAfpCurData();
+#  &outputAfpCurData(); # we've moved the afp cur data into cfp entries on caltech prod, don't need this anymore  2026 03 25
  &populateOaData();
  &outputOaData();
 
@@ -412,44 +414,45 @@ sub outputOaData {
         &createTag($object_json); }
 } } }
 
-sub outputAfpCurData {
-  my $data_provider = $mod;
-  my $secondary_data_provider = $mod;
-  my $source_evidence_assertion = 'ATP:0000036';
-  my $source_method = 'author_first_pass';
-  my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
-  unless ($source_id) {
-    print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider\n);
-    return;
-  }
-#   { "source_type": "professional_biocurator", "source_method": "wormbase_curation_status", "evidence": "eco_string", "description": "cur_curdata", "mod_abbreviation": "WB" }
-  foreach my $datatype (sort keys %afpCurData) {
-    unless ($datatypes{$datatype}) { 
-      print PERR qq(no topic for afpCurData $datatype\n); 
-      next;
-    }
-    foreach my $joinkey (sort keys %{ $afpCurData{$datatype} }) {
-#       unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
-      my $negated = FALSE;
-      if ($afpCurData{$datatype}{$joinkey}{negated}) { $negated = TRUE; }
-      my %object;
-      $object{'negated'}                    = $negated;
-      $object{'force_insertion'}            = TRUE;
-      $object{'reference_curie'}            = "WB:WBPaper$joinkey";
-#       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
-      $object{'topic'}                      = $datatypes{$datatype};
-      $object{'topic_entity_tag_source_id'} = $source_id;
-      $object{'data_novelty'}               = 'ATP:0000335';
-      $object{'created_by'}                 = $afpCurData{$datatype}{$joinkey}{curator};
-      $object{'updated_by'}                 = $afpCurData{$datatype}{$joinkey}{curator};
-      $object{'date_created'}               = $afpCurData{$datatype}{$joinkey}{timestamp};
-      $object{'date_updated'}               = $afpCurData{$datatype}{$joinkey}{timestamp};
-      if ($output_format eq 'json') {
-        push @output_json, \%object; }
-      else {
-        my $object_json = encode_json \%object;
-        &createTag($object_json); }
-} } }
+# we've moved the afp cur data into cfp entries on caltech prod, don't need this anymore  2026 03 25
+# sub outputAfpCurData {
+#   my $data_provider = $mod;
+#   my $secondary_data_provider = $mod;
+#   my $source_evidence_assertion = 'ATP:0000036';
+#   my $source_method = 'author_first_pass';
+#   my $source_id = &getSourceId($source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider);
+#   unless ($source_id) {
+#     print PERR qq(ERROR no source_id for $source_evidence_assertion, $source_method, $data_provider, $secondary_data_provider\n);
+#     return;
+#   }
+# #   { "source_type": "professional_biocurator", "source_method": "wormbase_curation_status", "evidence": "eco_string", "description": "cur_curdata", "mod_abbreviation": "WB" }
+#   foreach my $datatype (sort keys %afpCurData) {
+#     unless ($datatypes{$datatype}) { 
+#       print PERR qq(no topic for afpCurData $datatype\n); 
+#       next;
+#     }
+#     foreach my $joinkey (sort keys %{ $afpCurData{$datatype} }) {
+# #       unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
+#       my $negated = FALSE;
+#       if ($afpCurData{$datatype}{$joinkey}{negated}) { $negated = TRUE; }
+#       my %object;
+#       $object{'negated'}                    = $negated;
+#       $object{'force_insertion'}            = TRUE;
+#       $object{'reference_curie'}            = "WB:WBPaper$joinkey";
+# #       $object{'reference_curie'}            = $wbpToAgr{$joinkey};
+#       $object{'topic'}                      = $datatypes{$datatype};
+#       $object{'topic_entity_tag_source_id'} = $source_id;
+#       $object{'data_novelty'}               = 'ATP:0000335';
+#       $object{'created_by'}                 = $afpCurData{$datatype}{$joinkey}{curator};
+#       $object{'updated_by'}                 = $afpCurData{$datatype}{$joinkey}{curator};
+#       $object{'date_created'}               = $afpCurData{$datatype}{$joinkey}{timestamp};
+#       $object{'date_updated'}               = $afpCurData{$datatype}{$joinkey}{timestamp};
+#       if ($output_format eq 'json') {
+#         push @output_json, \%object; }
+#       else {
+#         my $object_json = encode_json \%object;
+#         &createTag($object_json); }
+# } } }
 
 sub outputAfpAutData {
   my $data_provider = $mod;
