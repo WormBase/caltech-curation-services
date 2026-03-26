@@ -354,7 +354,7 @@ sub getCurrentDate {                         # begin getCurrentDate
           localtime($time);             # get time
   if ($sec < 10) { $sec = "0$sec"; }    # add a zero if needed
   if ($min < 10) { $min = "0$min"; }    # add a zero if needed
-  if ($hour < 10) { $min = "0$hour"; }  # add a zero if needed
+  if ($hour < 10) { $hour = "0$hour"; }  # add a zero if needed
   if ($mday < 10) { $mday = "0$mday"; } # add a zero if needed
   my $sam = $mon+1;                     # get right month
   if ($sam < 10) { $sam = "0$sam"; }    # add a zero if needed
