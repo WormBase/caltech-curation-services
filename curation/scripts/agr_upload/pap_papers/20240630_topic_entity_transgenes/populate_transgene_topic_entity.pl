@@ -75,6 +75,9 @@
 # Use cognito token instead of okta.  better api handling.  2025 12 17
 #
 # afp data for old afp should use data_novelty of parent, not existing.  2026 02 24
+#
+# ack author form data is extracting note from name entries, so the check against empty note has a different format.
+# typo on author sent nothing check, should have been negated keys instead of just keys.  2026 04 08
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -566,7 +569,7 @@ sub outputNegData {
     ($joinkey) = &deriveValidPap($joinkey);
     next unless $papValid{$joinkey};
     unless ($wbpToAgr{$joinkey}) { print PERR qq(ERROR paper $joinkey NOT AGRKB\n); next; }
-    next if (exists $theHash{'ack'}{$joinkey} && keys %{ $theHash{'ack'}{$joinkey} });	# if author sent nothing, don't create a negative entity
+    next if (exists $theHash{'ack'}{$joinkey} && !keys %{ $theHash{'ack'}{$joinkey} });	# if author sent nothing, don't create a negative entity
     my (@tfpTransgenes) = $tfpTransgene{$joinkey}{data} =~ m/(WBTransgene\d+)/g;
     foreach my $wbtransgene (@tfpTransgenes) {
       next unless ($wbtransgene);				# must have a wbtransgene
@@ -696,7 +699,7 @@ sub outputAfpData {
           my %object; my $note = '';
           if ($theHash{$datatype}{$joinkey}{$obj}{$curator}{note}) {
             $note = $theHash{$datatype}{$joinkey}{$obj}{$curator}{note}; }
-          next if ($note eq '[{"id":1,"name":""}]');
+          next if ( ($note eq '[{"id":1,"name":""}]') || ($note eq '') );	# note is now always blank because it extracts from json name field  2026 04 08
           $object{'topic_entity_tag_source_id'}   = $source_id_ack;
           $object{'data_novelty'}                 = $dataNoveltyExisting;
           if ($datatype eq 'afp') {
