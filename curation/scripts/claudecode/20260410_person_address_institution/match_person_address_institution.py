@@ -1,12 +1,18 @@
 #!/usr/bin/env python3
 """
-Match persons in caltech_curation to ROR institutions via two independent methods:
-  Method A: Match two_institution field against ROR org names
-  Method B: Match two_street/city/state/post/country against ROR org names
-Cross-compare results at the end.
+Match persons in caltech_curation to institutions from 3 sources:
+  1. ROR (Research Organization Registry)
+  2. OpenAlex
+  3. Wikidata
 
-Output files written to WORK_DIR (8 TSV/TXT files).
-Requires: Python 3.7+, psql on PATH, network access for ROR download.
+For each source, runs two independent methods:
+  Method A: Match two_institution field against org names
+  Method B: Match two_street/city/state/post/country against org names
+
+Writes per-source output to ror/, openalex/, wikidata/ subdirs,
+plus a combined_summary.txt comparing all 3.
+
+Requires: Python 3.7+, psql on PATH, network access.
 """
 
 import csv
@@ -52,10 +58,30 @@ COUNTRY_ALIASES = {
     'ivory coast': "cote d'ivoire",
 }
 
-# Populated after ROR load: set of lowercase ROR country names
-_ror_countries = set()
-# Cache: input country string -> normalized ROR country string
+# Populated by all source parsers: set of lowercase country names
+_known_countries = set()
+# Cache: input country string -> normalized country string
 _country_cache = {}
+
+# SSL context for older Python/container environments
+_ssl_ctx = ssl.create_default_context()
+_ssl_ctx.check_hostname = False
+_ssl_ctx.verify_mode = ssl.CERT_NONE
+
+
+def _url_fetch(url, headers=None):
+    """Fetch a URL, return bytes. Handles SSL and wget fallback."""
+    hdrs = headers or {}
+    try:
+        req = urllib.request.Request(url, headers=hdrs)
+        with urllib.request.urlopen(req, timeout=120, context=_ssl_ctx) as resp:
+            return resp.read()
+    except Exception as e:
+        print("    urllib failed ({}), trying wget...".format(e), flush=True)
+        tmp = os.path.join(WORK_DIR, '_tmp_fetch')
+        subprocess.run(['wget', '-q', '-O', tmp, url], check=True)
+        with open(tmp, 'rb') as f:
+            return f.read()
 
 
 # ============================================================
@@ -85,7 +111,6 @@ def run_query(sql):
 
 
 def load_institutions():
-    """Return list of (two_institution, person_count)."""
     print("Loading institutions from DB...")
     rows = run_query(
         "SELECT two_institution, COUNT(DISTINCT joinkey) "
@@ -97,7 +122,6 @@ def load_institutions():
 
 
 def load_person_institutions():
-    """Return dict joinkey -> two_institution (latest per person)."""
     print("Loading person -> institution mapping...")
     rows = run_query(
         "SELECT DISTINCT ON (joinkey) joinkey, two_institution "
@@ -109,125 +133,76 @@ def load_person_institutions():
 
 
 def load_addresses():
-    """Return dict joinkey -> {street_lines, city, state, post, country}."""
     print("Loading addresses from DB...")
     addresses = defaultdict(lambda: {
         'street_lines': [], 'city': '', 'state': '', 'post': '', 'country': ''
     })
-
     print("  Street lines...")
     for r in run_query("SELECT joinkey, two_order, two_street FROM two_street ORDER BY joinkey, two_order"):
         if len(r) >= 3:
             addresses[r[0]]['street_lines'].append((int(r[1]), r[2]))
-
     print("  Cities...")
     for r in run_query("SELECT DISTINCT ON (joinkey) joinkey, two_city FROM two_city ORDER BY joinkey, two_order DESC"):
         if len(r) >= 2:
             addresses[r[0]]['city'] = r[1]
-
     print("  States...")
     for r in run_query("SELECT DISTINCT ON (joinkey) joinkey, two_state FROM two_state ORDER BY joinkey, two_order DESC"):
         if len(r) >= 2:
             addresses[r[0]]['state'] = r[1]
-
     print("  Postal codes...")
     for r in run_query("SELECT DISTINCT ON (joinkey) joinkey, two_post FROM two_post ORDER BY joinkey, two_order DESC"):
         if len(r) >= 2:
             addresses[r[0]]['post'] = r[1]
-
     print("  Countries...")
     for r in run_query("SELECT DISTINCT ON (joinkey) joinkey, two_country FROM two_country ORDER BY joinkey, two_order DESC"):
         if len(r) >= 2:
             addresses[r[0]]['country'] = r[1]
-
     print("  {} persons with address data".format(len(addresses)))
     return dict(addresses)
 
 
 # ============================================================
-# ROR download and parse
+# Source: ROR
 # ============================================================
 
 def download_ror():
-    """Download latest ROR data dump from Zenodo. Return path to JSON."""
     ror_json = os.path.join(WORK_DIR, 'ror_data.json')
     if os.path.exists(ror_json):
-        print("ROR data already at {}, skipping download.".format(ror_json))
+        print("ROR data already cached, skipping download.")
         return ror_json
-
-    api_url = 'https://zenodo.org/api/records/?communities=ror-data&sort=mostrecent&size=1'
     print("Fetching latest ROR record from Zenodo...")
-
-    # Allow unverified SSL for older Python/container environments
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
-
-    try:
-        req = urllib.request.Request(api_url, headers={'Accept': 'application/json'})
-        with urllib.request.urlopen(req, timeout=60, context=ctx) as resp:
-            data = json.loads(resp.read().decode('utf-8'))
-    except Exception as e:
-        print("urllib failed ({}), trying wget...".format(e))
-        tmp = os.path.join(WORK_DIR, '_zenodo_api.json')
-        subprocess.run(['wget', '-q', '-O', tmp, api_url], check=True)
-        with open(tmp) as f:
-            data = json.load(f)
-
+    data = json.loads(_url_fetch(
+        'https://zenodo.org/api/records/?communities=ror-data&sort=mostrecent&size=1',
+        {'Accept': 'application/json'}
+    ))
     hits = data.get('hits', {}).get('hits', [])
     if not hits:
-        sys.exit("ERROR: No ROR records found on Zenodo")
-
+        sys.exit("ERROR: No ROR records on Zenodo")
     record = hits[0]
-    title = record.get('metadata', {}).get('title', 'unknown')
-    print("  Record: {}".format(title))
-
-    zip_info = None
-    for f in record.get('files', []):
-        if f.get('key', '').endswith('.zip'):
-            zip_info = f
-            break
+    print("  Record: {}".format(record.get('metadata', {}).get('title', '?')))
+    zip_info = next((f for f in record.get('files', []) if f['key'].endswith('.zip')), None)
     if not zip_info:
-        sys.exit("ERROR: No zip file in ROR record")
-
-    zip_url = zip_info['links']['self']
+        sys.exit("ERROR: No zip in ROR record")
     zip_path = os.path.join(WORK_DIR, 'ror_data.zip')
-    size_mb = zip_info.get('size', 0) / 1e6
-    print("  Downloading {} ({:.1f} MB)...".format(zip_info['key'], size_mb))
-
-    try:
-        urllib.request.urlretrieve(zip_url, zip_path)
-    except Exception:
-        subprocess.run(['wget', '-q', '-O', zip_path, zip_url], check=True)
-
+    print("  Downloading {:.1f} MB...".format(zip_info.get('size', 0) / 1e6), flush=True)
+    with open(zip_path, 'wb') as f:
+        f.write(_url_fetch(zip_info['links']['self']))
     print("  Extracting...")
-    with zipfile.ZipFile(zip_path, 'r') as z:
-        json_files = [n for n in z.namelist()
-                      if n.endswith('.json') and not n.startswith('__')]
-        if not json_files:
-            sys.exit("ERROR: No JSON in ROR zip")
-        json_files.sort(key=lambda n: z.getinfo(n).file_size, reverse=True)
-        target = json_files[0]
-        print("  Extracting {} ({:.1f} MB)...".format(
-            target, z.getinfo(target).file_size / 1e6))
-        with z.open(target) as jf, open(ror_json, 'wb') as out:
-            out.write(jf.read())
-
+    with zipfile.ZipFile(zip_path) as z:
+        jf = sorted([n for n in z.namelist() if n.endswith('.json') and not n.startswith('__')],
+                     key=lambda n: z.getinfo(n).file_size, reverse=True)[0]
+        with z.open(jf) as src, open(ror_json, 'wb') as dst:
+            dst.write(src.read())
     print("  Saved to {}".format(ror_json))
     return ror_json
 
 
 def parse_ror(path):
-    """Parse ROR JSON. Return list of org dicts."""
-    global _ror_countries
+    global _known_countries
     print("Parsing ROR data...")
     with open(path) as f:
         records = json.load(f)
-
-    sample = records[0] if records else {}
-    is_v2 = 'names' in sample
-    print("  Schema: {}".format('v2' if is_v2 else 'v1'))
-
+    is_v2 = 'names' in (records[0] if records else {})
     orgs = []
     for rec in records:
         ror_id = rec.get('id', '')
@@ -249,29 +224,176 @@ def parse_ror(path):
             primary = rec.get('name', '')
             names = [primary] + rec.get('aliases', [])
             for lbl in rec.get('labels', []):
-                l = lbl.get('label', '')
-                if l:
-                    names.append(l)
+                if lbl.get('label'):
+                    names.append(lbl['label'])
             addrs = rec.get('addresses', [])
             city = addrs[0].get('city', '') if addrs else ''
-            ci = rec.get('country', {})
-            country = ci.get('country_name', '')
-
+            country = rec.get('country', {}).get('country_name', '')
         all_lower = list(set(n.lower().strip() for n in names if n.strip()))
         c_low = country.lower().strip()
-        _ror_countries.add(c_low)
-
+        _known_countries.add(c_low)
         orgs.append({
-            'ror_id': ror_id,
-            'name': primary,
-            'all_names_lower': all_lower,
-            'city': city,
-            'city_lower': city.lower().strip(),
-            'country': country,
-            'country_lower': c_low,
+            'org_id': ror_id, 'name': primary, 'all_names_lower': all_lower,
+            'city': city, 'city_lower': city.lower().strip(),
+            'country': country, 'country_lower': c_low,
         })
+    print("  {} organizations".format(len(orgs)))
+    return orgs
 
-    print("  {} organizations, {} countries".format(len(orgs), len(_ror_countries)))
+
+# ============================================================
+# Source: OpenAlex
+# ============================================================
+
+def download_openalex():
+    cache = os.path.join(WORK_DIR, 'openalex_data.json')
+    if os.path.exists(cache):
+        print("OpenAlex data already cached, skipping download.")
+        return cache
+    print("Downloading OpenAlex institutions (paginated API)...", flush=True)
+    all_results = []
+    cursor = '*'
+    page = 0
+    while True:
+        page += 1
+        url = ('https://api.openalex.org/institutions'
+               '?per_page=200&cursor={}'
+               '&select=id,display_name,alternate_names,country_code,geo'
+               '&mailto=curation@caltech.edu').format(cursor)
+        try:
+            data = json.loads(_url_fetch(url, {'Accept': 'application/json'}))
+        except Exception as e:
+            print("  OpenAlex API error at page {}: {}".format(page, e))
+            break
+        results = data.get('results', [])
+        if not results:
+            break
+        all_results.extend(results)
+        cursor = data.get('meta', {}).get('next_cursor')
+        if not cursor:
+            break
+        if page % 50 == 0:
+            print("  Page {} — {} institutions so far...".format(page, len(all_results)), flush=True)
+    print("  Downloaded {} institutions in {} pages".format(len(all_results), page))
+    with open(cache, 'w') as f:
+        json.dump(all_results, f)
+    return cache
+
+
+def parse_openalex(path):
+    global _known_countries
+    print("Parsing OpenAlex data...")
+    with open(path) as f:
+        records = json.load(f)
+    orgs = []
+    for rec in records:
+        oa_id = rec.get('id', '')
+        primary = rec.get('display_name', '')
+        names = [primary] + (rec.get('alternate_names') or [])
+        geo = rec.get('geo') or {}
+        city = geo.get('city', '') or ''
+        country = geo.get('country', '') or ''
+        all_lower = list(set(n.lower().strip() for n in names if n and n.strip()))
+        c_low = country.lower().strip()
+        if c_low:
+            _known_countries.add(c_low)
+        orgs.append({
+            'org_id': oa_id, 'name': primary, 'all_names_lower': all_lower,
+            'city': city, 'city_lower': city.lower().strip(),
+            'country': country, 'country_lower': c_low,
+        })
+    print("  {} organizations".format(len(orgs)))
+    return orgs
+
+
+# ============================================================
+# Source: Wikidata
+# ============================================================
+
+WIKIDATA_TYPES = [
+    ('Q3918', 'university'),
+    ('Q875538', 'public university'),
+    ('Q902104', 'private university'),
+    ('Q1664720', 'institute of technology'),
+    ('Q15936437', 'research university'),
+    ('Q38723', 'higher education institution'),
+    ('Q31855', 'research institute'),
+    ('Q7315155', 'research center'),
+    ('Q16917', 'hospital'),
+    ('Q2467461', 'medical school'),
+    ('Q1391145', 'government agency'),
+    ('Q4830453', 'business enterprise'),
+    ('Q43229', 'organization'),
+]
+
+
+def download_wikidata():
+    cache = os.path.join(WORK_DIR, 'wikidata_data.json')
+    if os.path.exists(cache):
+        print("Wikidata data already cached, skipping download.")
+        return cache
+    print("Downloading Wikidata organizations via SPARQL...", flush=True)
+    endpoint = 'https://query.wikidata.org/sparql'
+    all_orgs = {}  # keyed by item URI to deduplicate
+    for qid, label in WIKIDATA_TYPES:
+        sparql = """
+SELECT ?item ?itemLabel ?countryLabel WHERE {{
+  ?item wdt:P31 wd:{qid} .
+  OPTIONAL {{ ?item wdt:P17 ?country . }}
+  SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en" . }}
+}}
+LIMIT 100000""".format(qid=qid)
+        url = '{}?query={}&format=json'.format(
+            endpoint, urllib.request.quote(sparql))
+        print("  Querying {} ({})...".format(label, qid), flush=True)
+        try:
+            data = json.loads(_url_fetch(url, {
+                'Accept': 'application/sparql-results+json',
+                'User-Agent': 'CaltechCurationBot/1.0 (curation@caltech.edu)'
+            }))
+        except Exception as e:
+            print("    FAILED: {}".format(e))
+            continue
+        bindings = data.get('results', {}).get('bindings', [])
+        for b in bindings:
+            uri = b.get('item', {}).get('value', '')
+            if uri and uri not in all_orgs:
+                all_orgs[uri] = {
+                    'id': uri,
+                    'name': b.get('itemLabel', {}).get('value', ''),
+                    'country': b.get('countryLabel', {}).get('value', ''),
+                }
+        print("    {} results, {} unique orgs total".format(len(bindings), len(all_orgs)),
+              flush=True)
+        time.sleep(2)  # Be polite to Wikidata
+    print("  Total: {} unique Wikidata organizations".format(len(all_orgs)))
+    with open(cache, 'w') as f:
+        json.dump(list(all_orgs.values()), f)
+    return cache
+
+
+def parse_wikidata(path):
+    global _known_countries
+    print("Parsing Wikidata data...")
+    with open(path) as f:
+        records = json.load(f)
+    orgs = []
+    for rec in records:
+        wd_id = rec.get('id', '')
+        primary = rec.get('name', '')
+        if not primary or primary == wd_id:
+            continue  # Skip items without English labels
+        country = rec.get('country', '') or ''
+        all_lower = [primary.lower().strip()] if primary.strip() else []
+        c_low = country.lower().strip()
+        if c_low:
+            _known_countries.add(c_low)
+        orgs.append({
+            'org_id': wd_id, 'name': primary, 'all_names_lower': all_lower,
+            'city': '', 'city_lower': '',  # Wikidata query doesn't fetch city
+            'country': country, 'country_lower': c_low,
+        })
+    print("  {} organizations".format(len(orgs)))
     return orgs
 
 
@@ -280,108 +402,69 @@ def parse_ror(path):
 # ============================================================
 
 def build_name_index(orgs):
-    """lowercase_name -> [org indices]"""
     idx = defaultdict(list)
     for i, o in enumerate(orgs):
         for n in o['all_names_lower']:
             idx[n].append(i)
     return dict(idx)
 
-
 def build_country_index(orgs):
-    """country_lower -> [org indices]"""
     idx = defaultdict(list)
     for i, o in enumerate(orgs):
         if o['country_lower']:
             idx[o['country_lower']].append(i)
     return dict(idx)
 
-
 def build_city_country_index(orgs):
-    """(city_lower, country_lower) -> [org indices]"""
     idx = defaultdict(list)
     for i, o in enumerate(orgs):
         if o['city_lower'] and o['country_lower']:
             idx[(o['city_lower'], o['country_lower'])].append(i)
     return dict(idx)
 
-
-# Words to skip in word-index (too common to be discriminating)
 _STOP_WORDS = frozenset([
     'of', 'the', 'and', 'for', 'de', 'du', 'des', 'la', 'le', 'les', 'di',
     'del', 'da', 'das', 'dos', 'den', 'der', 'die', 'van', 'von', 'und',
     'e', 'y', 'a', 'in', 'en', 'et', 'al', 'el', 'i',
 ])
 
-
 def _tokenize(name):
-    """Extract significant words (>= 3 chars, not stop words) from a name."""
-    return set(
-        w for w in re.findall(r'[a-z]{3,}', name.lower())
-        if w not in _STOP_WORDS
-    )
-
+    return set(w for w in re.findall(r'[a-z]{3,}', name.lower()) if w not in _STOP_WORDS)
 
 def build_word_country_index(orgs):
-    """(word, country_lower) -> set of org indices.
-    Used to pre-filter fuzzy matching: only compare orgs sharing >= 1 word.
-    """
     idx = defaultdict(set)
     for i, o in enumerate(orgs):
         c = o['country_lower']
         for name in o['all_names_lower']:
             for w in _tokenize(name):
                 idx[(w, c)].add(i)
-    # Convert to regular dict of sets for faster lookups
     return dict(idx)
 
-
 def get_word_filtered_candidates(query_name, country_norm, word_country_idx, country_index):
-    """Get candidate org indices that share words with query_name in the same country.
-    Uses word frequency weighting: common words (matching >500 orgs) are deprioritized.
-    Requires 2+ shared words if any single word returns too many hits.
-    Falls back to full country list if no word overlap found.
-    """
     words = _tokenize(query_name)
     if not words:
-        return country_index.get(country_norm, [])
-
-    # Gather per-word candidate sets with sizes
+        return []
     word_sets = []
     for w in words:
         key = (w, country_norm)
         if key in word_country_idx:
-            s = word_country_idx[key]
-            word_sets.append((w, s))
-
+            word_sets.append((w, word_country_idx[key]))
     if not word_sets:
-        # No tokenizable words (abbreviation/acronym) - don't search entire country
         return []
-
-    # If we have multiple words, intersect specific words first
-    # Sort by set size (ascending) — smaller sets are more discriminating
     word_sets.sort(key=lambda x: len(x[1]))
-
     if len(word_sets) >= 2:
-        # Use intersection of 2 most specific words
         candidates = word_sets[0][1] & word_sets[1][1]
-        # If intersection is empty, union the 2 smallest
         if not candidates:
             candidates = word_sets[0][1] | word_sets[1][1]
     else:
         candidates = word_sets[0][1]
-
-    # Cap at 500 to keep fuzzy matching fast
     if len(candidates) > 500:
-        # Further intersect with more words if available
         for _, s in word_sets[2:]:
             candidates = candidates & s
             if len(candidates) <= 500:
                 break
-        # If still too large, just take the first 500
         if len(candidates) > 500:
             candidates = set(list(candidates)[:500])
-
     return list(candidates)
 
 
@@ -390,28 +473,21 @@ def get_word_filtered_candidates(query_name, country_norm, word_country_idx, cou
 # ============================================================
 
 def normalize_country(name):
-    """Normalize a country name to match ROR country_lower values."""
     if not name:
         return ''
     c = name.strip().lower()
     if c in _country_cache:
         return _country_cache[c]
-
-    # Check aliases
     if c in COUNTRY_ALIASES:
         result = COUNTRY_ALIASES[c]
         _country_cache[c] = result
         return result
-
-    # Already a known ROR country?
-    if c in _ror_countries:
+    if c in _known_countries:
         _country_cache[c] = c
         return c
-
-    # Fuzzy match against ROR countries
     best_score = 0.0
     best = c
-    for rc in _ror_countries:
+    for rc in _known_countries:
         s = difflib.SequenceMatcher(None, c, rc).ratio()
         if s > best_score:
             best_score = s
@@ -419,13 +495,11 @@ def normalize_country(name):
     if best_score >= 0.85:
         _country_cache[c] = best
         return best
-
     _country_cache[c] = c
     return c
 
 
 def parse_two_institution(value):
-    """Parse 'Name; City State, Country'. Return (name, city, state, country)."""
     if ';' in value:
         parts = value.split(';', 1)
         name = parts[0].strip()
@@ -443,8 +517,6 @@ def parse_two_institution(value):
         return (value, '', '', '')
     else:
         return (value, '', '', '')
-
-    # Parse location: "City State, Country"
     if ',' in location:
         loc_parts = [p.strip() for p in location.rsplit(',', 1)]
         city_state = loc_parts[0]
@@ -452,7 +524,6 @@ def parse_two_institution(value):
     else:
         city_state = location
         country = ''
-
     m = re.match(r'^(.+?)\s+([A-Z]{2})$', city_state)
     if m:
         return (name, m.group(1), m.group(2), country)
@@ -460,7 +531,6 @@ def parse_two_institution(value):
 
 
 def fuzzy_match_name(query, candidate_indices, orgs, threshold=FUZZY_THRESHOLD, top_n=TOP_N):
-    """Fuzzy-match a name against ROR orgs. Return [(org_idx, score)] desc by score."""
     q = query.lower().strip()
     if not q:
         return []
@@ -490,35 +560,25 @@ def fuzzy_match_name(query, candidate_indices, orgs, threshold=FUZZY_THRESHOLD, 
 
 
 # ============================================================
-# Method A: Institution name -> ROR
+# Method A: Institution name matching
 # ============================================================
 
-def run_method_a(institutions, orgs, name_index, country_index, word_country_idx):
-    """Match two_institution values to ROR by name.
-    Return dict: two_institution -> ('exact'|'fuzzy'|'none', [(org_idx, score)])
-    """
+def run_method_a(institutions, orgs, name_index, country_index, word_country_idx, out_dir, source):
     print("\n" + "=" * 60)
-    print("METHOD A: Institution Name Matching")
+    print("[{}] METHOD A: Institution Name Matching".format(source))
     print("=" * 60)
     t0 = time.time()
-
-    exact = []    # (two_inst, org_idx, pcount)
-    fuzzy = []    # (two_inst, [(idx, score)], pcount)
-    nomatch = []  # (two_inst, pcount)
-    mapping = {}  # two_inst -> (type, [(idx, score)])
-
+    exact = []
+    fuzzy = []
+    nomatch = []
+    mapping = {}
     total = len(institutions)
     for i, (two_inst, pcount) in enumerate(institutions):
         if (i + 1) % 2000 == 0 or i + 1 == total:
-            elapsed = time.time() - t0
-            print("  {}/{} ({:.0f}s)".format(i + 1, total, elapsed),
-                  flush=True)
-
+            print("  {}/{} ({:.0f}s)".format(i + 1, total, time.time() - t0), flush=True)
         name, city, state, country = parse_two_institution(two_inst)
         name_lower = name.lower().strip()
         country_norm = normalize_country(country)
-
-        # --- Exact match ---
         if name_lower in name_index:
             candidates = name_index[name_lower]
             best = candidates[0]
@@ -530,15 +590,10 @@ def run_method_a(institutions, orgs, name_index, country_index, word_country_idx
             exact.append((two_inst, best, pcount))
             mapping[two_inst] = ('exact', [(best, 1.0)])
             continue
-
-        # --- Fuzzy match (word-filtered candidates for speed) ---
         if country_norm:
-            cands = get_word_filtered_candidates(
-                name, country_norm, word_country_idx, country_index)
+            cands = get_word_filtered_candidates(name, country_norm, word_country_idx, country_index)
         else:
-            # No country info — skip fuzzy (too expensive without filtering)
             cands = []
-
         matches = fuzzy_match_name(name, cands, orgs)
         if matches:
             fuzzy.append((two_inst, matches, pcount))
@@ -547,37 +602,33 @@ def run_method_a(institutions, orgs, name_index, country_index, word_country_idx
             nomatch.append((two_inst, pcount))
             mapping[two_inst] = ('none', [])
 
-    # --- Write files ---
-    p = os.path.join(WORK_DIR, 'institution_match_exact.tsv')
-    print("\n  Writing {} ({} rows)".format(p, len(exact)))
+    # Write files
+    id_col = '{}_id'.format(source)
+    name_col = '{}_name'.format(source)
+    p = os.path.join(out_dir, 'institution_match_exact.tsv')
     with open(p, 'w', newline='') as f:
         w = csv.writer(f, delimiter='\t')
-        w.writerow(['two_institution', 'ror_id', 'ror_name', 'person_count'])
+        w.writerow(['two_institution', id_col, name_col, 'person_count'])
         for inst, idx, pc in sorted(exact, key=lambda x: -x[2]):
             o = orgs[idx]
-            w.writerow([inst, o['ror_id'], o['name'], pc])
-
-    p = os.path.join(WORK_DIR, 'institution_match_fuzzy.tsv')
-    print("  Writing {} ({} rows)".format(p, len(fuzzy)))
+            w.writerow([inst, o['org_id'], o['name'], pc])
+    p = os.path.join(out_dir, 'institution_match_fuzzy.tsv')
     with open(p, 'w', newline='') as f:
         w = csv.writer(f, delimiter='\t')
         hdr = ['two_institution']
         for n in range(1, TOP_N + 1):
-            hdr += ['ror_id_{}'.format(n), 'ror_name_{}'.format(n), 'score_{}'.format(n)]
+            hdr += ['{}_id_{}'.format(source, n), '{}_name_{}'.format(source, n), 'score_{}'.format(n)]
         hdr.append('person_count')
         w.writerow(hdr)
         for inst, matches, pc in sorted(fuzzy, key=lambda x: -x[2]):
             row = [inst]
             for idx, sc in matches:
-                o = orgs[idx]
-                row += [o['ror_id'], o['name'], '{:.4f}'.format(sc)]
+                row += [orgs[idx]['org_id'], orgs[idx]['name'], '{:.4f}'.format(sc)]
             while len(row) < 1 + TOP_N * 3:
                 row.append('')
             row.append(pc)
             w.writerow(row)
-
-    p = os.path.join(WORK_DIR, 'institution_no_match.tsv')
-    print("  Writing {} ({} rows)".format(p, len(nomatch)))
+    p = os.path.join(out_dir, 'institution_no_match.tsv')
     with open(p, 'w', newline='') as f:
         w = csv.writer(f, delimiter='\t')
         w.writerow(['two_institution', 'person_count'])
@@ -588,41 +639,34 @@ def run_method_a(institutions, orgs, name_index, country_index, word_country_idx
     fz_p = sum(pc for _, _, pc in fuzzy)
     nm_p = sum(pc for _, pc in nomatch)
     elapsed = time.time() - t0
-    print("\n  Method A done in {:.0f}s".format(elapsed))
+    print("\n  [{}] Method A done in {:.0f}s".format(source, elapsed))
     print("  Exact:    {:>6} institutions  {:>6} persons".format(len(exact), ex_p))
     print("  Fuzzy:    {:>6} institutions  {:>6} persons".format(len(fuzzy), fz_p))
     print("  No match: {:>6} institutions  {:>6} persons".format(len(nomatch), nm_p))
-
-    return mapping
+    stats = {'exact_inst': len(exact), 'exact_pers': ex_p,
+             'fuzzy_inst': len(fuzzy), 'fuzzy_pers': fz_p,
+             'nomatch_inst': len(nomatch), 'nomatch_pers': nm_p}
+    return mapping, stats
 
 
 # ============================================================
-# Method B: Address fields -> ROR
+# Method B: Address field matching
 # ============================================================
 
-def run_method_b(addresses, orgs, name_index, city_country_index, country_index):
-    """Match persons by address fields.
-    Return dict: joinkey -> ('exact'|'fuzzy'|'none', [(org_idx, score)], matched_line)
-    """
+def run_method_b(addresses, orgs, name_index, city_country_index, country_index, out_dir, source):
     print("\n" + "=" * 60)
-    print("METHOD B: Address Field Matching")
+    print("[{}] METHOD B: Address Field Matching".format(source))
     print("=" * 60)
     t0 = time.time()
-
-    exact = []    # (jk, org_idx, line, city, country)
-    fuzzy = []    # (jk, [(idx,sc)], line, city, country)
-    nomatch = []  # (jk, lines_str, city, state, post, country)
+    exact = []
+    fuzzy = []
+    nomatch = []
     mapping = {}
-
     keys = sorted(addresses.keys())
     total = len(keys)
-
     for i, jk in enumerate(keys):
         if (i + 1) % 10000 == 0 or i + 1 == total:
-            elapsed = time.time() - t0
-            print("  {}/{} ({:.0f}s)".format(i + 1, total, elapsed),
-                  flush=True)
-
+            print("  {}/{} ({:.0f}s)".format(i + 1, total, time.time() - t0), flush=True)
         addr = addresses[jk]
         lines = [ln for _, ln in sorted(addr['street_lines'])]
         city = addr['city']
@@ -631,15 +675,12 @@ def run_method_b(addresses, orgs, name_index, city_country_index, country_index)
         country = addr['country']
         country_norm = normalize_country(country)
         city_lower = city.lower().strip()
-
-        # --- Exact name match on any street line ---
         found = False
         for ln in lines:
             ln_lower = ln.lower().strip()
             if ln_lower in name_index:
                 candidates = name_index[ln_lower]
                 best = candidates[0]
-                # Prefer same city+country
                 for idx in candidates:
                     o = orgs[idx]
                     if o['city_lower'] == city_lower and o['country_lower'] == country_norm:
@@ -656,19 +697,13 @@ def run_method_b(addresses, orgs, name_index, city_country_index, country_index)
                 break
         if found:
             continue
-
-        # --- Fuzzy: get candidates by city+country ---
-        # (Don't fall back to entire country — too slow and imprecise)
         cands = []
         if city_lower and country_norm:
             cands = city_country_index.get((city_lower, country_norm), [])
-
         if not cands:
             nomatch.append((jk, ' | '.join(lines), city, state, post, country))
             mapping[jk] = ('none', [], '')
             continue
-
-        # Fuzzy match each street line, keep best
         best_matches = []
         best_line = ''
         for ln in lines:
@@ -683,37 +718,32 @@ def run_method_b(addresses, orgs, name_index, city_country_index, country_index)
             nomatch.append((jk, ' | '.join(lines), city, state, post, country))
             mapping[jk] = ('none', [], '')
 
-    # --- Write files ---
-    p = os.path.join(WORK_DIR, 'address_match_exact.tsv')
-    print("\n  Writing {} ({} rows)".format(p, len(exact)))
+    # Write files
+    id_col = '{}_id'.format(source)
+    name_col = '{}_name'.format(source)
+    p = os.path.join(out_dir, 'address_match_exact.tsv')
     with open(p, 'w', newline='') as f:
         w = csv.writer(f, delimiter='\t')
-        w.writerow(['joinkey', 'ror_id', 'ror_name', 'matched_street_line', 'city', 'country'])
+        w.writerow(['joinkey', id_col, name_col, 'matched_street_line', 'city', 'country'])
         for jk, idx, ln, ci, co in exact:
-            o = orgs[idx]
-            w.writerow([jk, o['ror_id'], o['name'], ln, ci, co])
-
-    p = os.path.join(WORK_DIR, 'address_match_fuzzy.tsv')
-    print("  Writing {} ({} rows)".format(p, len(fuzzy)))
+            w.writerow([jk, orgs[idx]['org_id'], orgs[idx]['name'], ln, ci, co])
+    p = os.path.join(out_dir, 'address_match_fuzzy.tsv')
     with open(p, 'w', newline='') as f:
         w = csv.writer(f, delimiter='\t')
         hdr = ['joinkey']
         for n in range(1, TOP_N + 1):
-            hdr += ['ror_id_{}'.format(n), 'ror_name_{}'.format(n), 'score_{}'.format(n)]
+            hdr += ['{}_id_{}'.format(source, n), '{}_name_{}'.format(source, n), 'score_{}'.format(n)]
         hdr += ['matched_street_line', 'city', 'country']
         w.writerow(hdr)
         for jk, matches, ln, ci, co in fuzzy:
             row = [jk]
             for idx, sc in matches:
-                o = orgs[idx]
-                row += [o['ror_id'], o['name'], '{:.4f}'.format(sc)]
+                row += [orgs[idx]['org_id'], orgs[idx]['name'], '{:.4f}'.format(sc)]
             while len(row) < 1 + TOP_N * 3:
                 row.append('')
             row += [ln, ci, co]
             w.writerow(row)
-
-    p = os.path.join(WORK_DIR, 'address_no_match.tsv')
-    print("  Writing {} ({} rows)".format(p, len(nomatch)))
+    p = os.path.join(out_dir, 'address_no_match.tsv')
     with open(p, 'w', newline='') as f:
         w = csv.writer(f, delimiter='\t')
         w.writerow(['joinkey', 'street_lines', 'city', 'state', 'post', 'country'])
@@ -721,148 +751,161 @@ def run_method_b(addresses, orgs, name_index, city_country_index, country_index)
             w.writerow(row_data)
 
     elapsed = time.time() - t0
-    print("\n  Method B done in {:.0f}s".format(elapsed))
+    print("\n  [{}] Method B done in {:.0f}s".format(source, elapsed))
     print("  Exact:    {:>6} persons".format(len(exact)))
     print("  Fuzzy:    {:>6} persons".format(len(fuzzy)))
     print("  No match: {:>6} persons".format(len(nomatch)))
-
-    return mapping
+    stats = {'exact_pers': len(exact), 'fuzzy_pers': len(fuzzy), 'nomatch_pers': len(nomatch)}
+    return mapping, stats
 
 
 # ============================================================
-# Cross-comparison
+# Run one source end-to-end
 # ============================================================
 
-def run_cross_compare(inst_mapping, addr_mapping, person_insts, addresses, orgs):
-    """Compare Method A and B results per person. Write summary + extra lines."""
-    print("\n" + "=" * 60)
-    print("CROSS-COMPARISON")
-    print("=" * 60)
-    t0 = time.time()
+def run_source(source_name, orgs, institutions, person_insts, addresses):
+    """Run full matching pipeline for one source.
+    Returns (inst_mapping, addr_mapping, method_a_stats, method_b_stats)
+    """
+    out_dir = os.path.join(WORK_DIR, source_name)
+    os.makedirs(out_dir, exist_ok=True)
 
-    both_agree = 0
-    both_disagree = 0
-    a_only = 0
-    b_only = 0
-    neither = 0
-    disagree_details = []  # (jk, a_org_name, b_org_name)
+    print("\n\n" + "#" * 60)
+    print("# SOURCE: {}  ({} orgs)".format(source_name.upper(), len(orgs)))
+    print("#" * 60)
 
-    extra_lines = []  # (jk, line, matched_ror_name)
+    print("\n  Building indices...", flush=True)
+    ni = build_name_index(orgs)
+    ci = build_country_index(orgs)
+    cci = build_city_country_index(orgs)
+    wci = build_word_country_index(orgs)
+    print("  Name: {}  Country: {}  City+Country: {}  Word+Country: {}".format(
+        len(ni), len(ci), len(cci), len(wci)))
+
+    inst_map, a_stats = run_method_a(institutions, orgs, ni, ci, wci, out_dir, source_name)
+    addr_map, b_stats = run_method_b(addresses, orgs, ni, cci, ci, out_dir, source_name)
+
+    return inst_map, addr_map, a_stats, b_stats
+
+
+# ============================================================
+# Combined summary
+# ============================================================
+
+def write_combined_summary(all_results, person_insts, addresses):
+    """Write combined_summary.txt comparing all sources."""
+    print("\n\n" + "#" * 60)
+    print("# COMBINED SUMMARY")
+    print("#" * 60)
 
     all_jk = sorted(set(person_insts.keys()) | set(addresses.keys()))
-    total = len(all_jk)
+    total_persons = len(all_jk)
 
-    for i, jk in enumerate(all_jk):
-        if (i + 1) % 10000 == 0 or i + 1 == total:
-            elapsed = time.time() - t0
-            print("  {}/{} ({:.0f}s)".format(i + 1, total, elapsed))
-
-        # Method A result for this person
-        a_idx = None
-        inst = person_insts.get(jk)
-        if inst and inst in inst_mapping:
-            _, cands = inst_mapping[inst]
-            if cands:
-                a_idx = cands[0][0]
-
-        # Method B result
-        b_idx = None
-        if jk in addr_mapping:
-            _, cands, _ = addr_mapping[jk]
-            if cands:
-                b_idx = cands[0][0]
-
-        # Classify
-        if a_idx is not None and b_idx is not None:
-            if a_idx == b_idx:
-                both_agree += 1
-            else:
-                both_disagree += 1
-                disagree_details.append((
-                    jk, orgs[a_idx]['name'], orgs[b_idx]['name']))
-        elif a_idx is not None:
-            a_only += 1
-        elif b_idx is not None:
-            b_only += 1
-        else:
-            neither += 1
-
-        # Extra address lines
-        best_idx = a_idx if a_idx is not None else b_idx
-        if best_idx is not None and jk in addresses:
-            org = orgs[best_idx]
-            org_names = set(org['all_names_lower'])
-            org_names.add(org['city_lower'])
-            addr = addresses[jk]
-            for _, ln in sorted(addr['street_lines']):
-                ln_low = ln.lower().strip()
-                matched = False
-                for on in org_names:
-                    if not on:
-                        continue
-                    # Quick check: substring
-                    if on in ln_low or ln_low in on:
-                        matched = True
-                        break
-                    sm = difflib.SequenceMatcher(None, ln_low, on)
-                    if sm.real_quick_ratio() >= 0.7 and sm.ratio() >= 0.7:
-                        matched = True
-                        break
-                if not matched:
-                    extra_lines.append((jk, ln, org['name']))
-
-    # --- Write extra lines ---
-    p = os.path.join(WORK_DIR, 'address_extra_lines.tsv')
-    print("\n  Writing {} ({} rows)".format(p, len(extra_lines)))
-    with open(p, 'w', newline='') as f:
-        w = csv.writer(f, delimiter='\t')
-        w.writerow(['joinkey', 'extra_street_line', 'matched_ror_institution'])
-        for row_data in extra_lines:
-            w.writerow(row_data)
-
-    # --- Write summary ---
-    p = os.path.join(WORK_DIR, 'summary.txt')
     lines = [
-        "=== Person-Institution ROR Matching Summary ===",
+        "=== Combined Institution Matching Summary ===",
         "Generated: {}".format(time.strftime('%Y-%m-%d %H:%M:%S')),
+        "Total persons: {}".format(total_persons),
         "",
-        "--- Data Volume ---",
-        "Persons in two_institution:  {}".format(len(person_insts)),
-        "Persons in two_street:       {}".format(len(addresses)),
-        "Total unique persons (union): {}".format(total),
-        "",
-        "--- Cross-Comparison ({} persons) ---".format(total),
-        "Both matched, SAME ROR org:       {:>6}  ({:.1f}%)".format(
-            both_agree, 100 * both_agree / max(total, 1)),
-        "Both matched, DIFFERENT ROR org:  {:>6}  ({:.1f}%)".format(
-            both_disagree, 100 * both_disagree / max(total, 1)),
-        "Method A only (institution name): {:>6}  ({:.1f}%)".format(
-            a_only, 100 * a_only / max(total, 1)),
-        "Method B only (address fields):   {:>6}  ({:.1f}%)".format(
-            b_only, 100 * b_only / max(total, 1)),
-        "Neither method matched:           {:>6}  ({:.1f}%)".format(
-            neither, 100 * neither / max(total, 1)),
-        "",
-        "--- Address Extra Lines ---",
-        "Total extra street lines: {}".format(len(extra_lines)),
-        "Distinct persons with extras: {}".format(
-            len(set(j for j, _, _ in extra_lines))),
     ]
 
-    if disagree_details:
-        lines += [
-            "",
-            "--- Sample Disagreements (first 20) ---",
-        ]
-        for jk, a_name, b_name in disagree_details[:20]:
-            lines.append("  {} : A={} | B={}".format(jk, a_name, b_name))
+    # Per-source Method A stats
+    lines.append("--- Method A: Institution Name Matching ---")
+    lines.append("{:<12} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10}".format(
+        'Source', 'ExactInst', 'ExactPers', 'FuzzyInst', 'FuzzyPers', 'NoInst', 'NoPers'))
+    for src, (_, _, a_stats, _) in sorted(all_results.items()):
+        lines.append("{:<12} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10}".format(
+            src,
+            a_stats['exact_inst'], a_stats['exact_pers'],
+            a_stats['fuzzy_inst'], a_stats['fuzzy_pers'],
+            a_stats['nomatch_inst'], a_stats['nomatch_pers']))
 
+    # Per-source Method B stats
+    lines.append("")
+    lines.append("--- Method B: Address Field Matching ---")
+    lines.append("{:<12} {:>10} {:>10} {:>10}".format(
+        'Source', 'Exact', 'Fuzzy', 'NoMatch'))
+    for src, (_, _, _, b_stats) in sorted(all_results.items()):
+        lines.append("{:<12} {:>10} {:>10} {:>10}".format(
+            src, b_stats['exact_pers'], b_stats['fuzzy_pers'], b_stats['nomatch_pers']))
+
+    # Per-person cross-source analysis using Method A (institution mapping)
+    lines.append("")
+    lines.append("--- Per-Person Coverage (Method A, via institution) ---")
+
+    source_names = sorted(all_results.keys())
+    # For each person, check if their institution matched (exact or fuzzy) in each source
+    person_matched = {src: set() for src in source_names}
+    for src, (inst_map, _, _, _) in all_results.items():
+        for jk, inst in person_insts.items():
+            if inst in inst_map:
+                mtype, cands = inst_map[inst]
+                if mtype in ('exact', 'fuzzy') and cands:
+                    person_matched[src].add(jk)
+
+    # Also add Method B matches
+    person_matched_ab = {src: set(person_matched[src]) for src in source_names}
+    for src, (_, addr_map, _, _) in all_results.items():
+        for jk, val in addr_map.items():
+            mtype = val[0]
+            cands = val[1]
+            if mtype in ('exact', 'fuzzy') and cands:
+                person_matched_ab[src].add(jk)
+
+    for src in source_names:
+        lines.append("  {} matched (A+B): {:>6} ({:.1f}%)".format(
+            src, len(person_matched_ab[src]),
+            100 * len(person_matched_ab[src]) / max(total_persons, 1)))
+
+    # Union
+    union_matched = set()
+    for src in source_names:
+        union_matched |= person_matched_ab[src]
+    lines.append("  ANY source:       {:>6} ({:.1f}%)".format(
+        len(union_matched), 100 * len(union_matched) / max(total_persons, 1)))
+    lines.append("  NO source:        {:>6} ({:.1f}%)".format(
+        total_persons - len(union_matched),
+        100 * (total_persons - len(union_matched)) / max(total_persons, 1)))
+
+    # Venn-style breakdown (which sources matched)
+    lines.append("")
+    lines.append("--- Venn Breakdown (A+B combined) ---")
+    from itertools import combinations
+    combos = defaultdict(int)
+    for jk in all_jk:
+        key = tuple(src for src in source_names if jk in person_matched_ab[src])
+        if not key:
+            key = ('none',)
+        combos[key] += 1
+    for key in sorted(combos.keys(), key=lambda k: -combos[k]):
+        label = ' + '.join(key) if key != ('none',) else 'NO MATCH'
+        lines.append("  {:<40} {:>6} ({:.1f}%)".format(
+            label, combos[key], 100 * combos[key] / max(total_persons, 1)))
+
+    # ROR-unmatched rescued by other sources
+    if 'ror' in all_results and len(source_names) > 1:
+        lines.append("")
+        lines.append("--- ROR-Unmatched Institutions Rescued ---")
+        ror_inst_map = all_results['ror'][0]
+        ror_nomatch_insts = set(
+            inst for inst, (mtype, _) in ror_inst_map.items() if mtype == 'none')
+        for src in source_names:
+            if src == 'ror':
+                continue
+            other_inst_map = all_results[src][0]
+            rescued = 0
+            for inst in ror_nomatch_insts:
+                if inst in other_inst_map:
+                    mtype, cands = other_inst_map[inst]
+                    if mtype in ('exact', 'fuzzy') and cands:
+                        rescued += 1
+            lines.append("  {} rescued {:>5} of {} ROR-unmatched institutions".format(
+                src, rescued, len(ror_nomatch_insts)))
+
+    p = os.path.join(WORK_DIR, 'combined_summary.txt')
     with open(p, 'w') as f:
         f.write('\n'.join(lines) + '\n')
 
-    elapsed = time.time() - t0
-    print("\n  Cross-comparison done in {:.0f}s".format(elapsed))
-    print("\n  SUMMARY:")
+    print("\n  COMBINED SUMMARY:")
     for ln in lines:
         print("  " + ln)
 
@@ -873,40 +916,35 @@ def run_cross_compare(inst_mapping, addr_mapping, person_insts, addresses, orgs)
 
 def main():
     print("=" * 60)
-    print("Person-Institution ROR Matching")
+    print("Person-Institution Multi-Source Matching")
     print("=" * 60)
     t_start = time.time()
-
     os.makedirs(WORK_DIR, exist_ok=True)
 
-    # ROR data
+    # Download all sources
     ror_path = download_ror()
-    orgs = parse_ror(ror_path)
+    openalex_path = download_openalex()
+    wikidata_path = download_wikidata()
 
-    # Indices
-    print("\nBuilding indices...", flush=True)
-    name_idx = build_name_index(orgs)
-    country_idx = build_country_index(orgs)
-    cc_idx = build_city_country_index(orgs)
-    wc_idx = build_word_country_index(orgs)
-    print("  Name index:           {} unique names".format(len(name_idx)))
-    print("  Country index:        {} countries".format(len(country_idx)))
-    print("  City+country index:   {} combinations".format(len(cc_idx)))
-    print("  Word+country index:   {} entries".format(len(wc_idx)))
+    # Parse all sources
+    ror_orgs = parse_ror(ror_path)
+    openalex_orgs = parse_openalex(openalex_path)
+    wikidata_orgs = parse_wikidata(wikidata_path)
 
-    # DB data
+    # Load DB data (once)
     institutions = load_institutions()
     person_insts = load_person_institutions()
     addresses = load_addresses()
 
-    # Method A
-    inst_mapping = run_method_a(institutions, orgs, name_idx, country_idx, wc_idx)
+    # Run matching for each source
+    all_results = {}
+    for source_name, orgs in [('ror', ror_orgs), ('openalex', openalex_orgs), ('wikidata', wikidata_orgs)]:
+        inst_map, addr_map, a_stats, b_stats = run_source(
+            source_name, orgs, institutions, person_insts, addresses)
+        all_results[source_name] = (inst_map, addr_map, a_stats, b_stats)
 
-    # Method B
-    addr_mapping = run_method_b(addresses, orgs, name_idx, cc_idx, country_idx)
-
-    # Cross-compare
-    run_cross_compare(inst_mapping, addr_mapping, person_insts, addresses, orgs)
+    # Combined summary
+    write_combined_summary(all_results, person_insts, addresses)
 
     elapsed = time.time() - t_start
     print("\n" + "=" * 60)
