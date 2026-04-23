@@ -97,6 +97,8 @@
 # getCurrentDate instead of getPgDate  pg date doesn't zero pad hours, and API rejects it.  2026 03 19
 # 
 # get rid of  outputAfpCurData  we've moved the afp cur data into cfp entries on caltech prod, don't need this anymore  2026 03 25
+#
+# ack humandisease data can also have json, but could also have strings, so need to process both.  2026 04 23
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -253,6 +255,7 @@ my $mod = 'WB';
 # my @wbpapers = qw( 00031697 );	# 2026 01 07	# afp_newstrains was creating negated for genetics, but we should skip it instead 
 # my @wbpapers = qw( 00033469 00034702 00034707 );	# 2026 01 28	# afp_extvariation has entries but empty string for first two and note for third
 # my @wbpapers = qw( 00000499 );	# 2026 01 30	# topic variation ATP:0000285 and method curation status form, where is it coming from
+# my @wbpapers = qw( 00068736 );		# 2026 04 23	# afp_humdis
 my @wbpapers = qw( 00001084 00004952 00031697 00032245 00032467 00032959 00033036 00033206 00033406 00034728 00035977 00040400 00053203 00054648 00059003 00059712 00060296 00065201 00067387 00067433 00068170 00068172 00068343 );	# 2025 11 07
 
 # 00004952 00005199 00026609 00030933 00035427 00046571 00057043 00064676 
@@ -534,11 +537,7 @@ sub outputAfpAutData {
 
 sub convertAckToNote {
   my ($origdata, $datatype) = @_;
-  if ($datatype ne 'otherantibody') {	# most data is just the data, but otherantibody needs to process json
-    my $negated = 1;
-    if ($origdata) { $negated = 0; }
-    return ($origdata, $negated); }
-  else {
+  if ($datatype eq 'otherantibody') {	# most data is just the data, but otherantibody needs to process json
     my $json = eval { decode_json($origdata) };
     return ('', 1) if $@ or ref($json) ne 'ARRAY';
     my @parts;
@@ -553,7 +552,31 @@ sub convertAckToNote {
     my $data = join(' | ', @parts);
     my $negated = $data eq '' ? 1 : 0;
     return ($data, $negated); }
+  elsif ($datatype eq 'humandisease') {	# most data is just the data, but humandisease needs to process json
+    return ('', 1) if $origdata eq '';
+    my $json = eval { decode_json($origdata) };
+    return ($origdata, 0) if $@ or ref($json) ne 'HASH';
+    my $negated = $json->{checked} ? 0 : 1;
+
+    # Build comment: original comment + diseases array
+    my @parts;
+    push @parts, $json->{comment}
+        if defined $json->{comment} && $json->{comment} ne '' && $json->{comment} ne 'checked';
+    if (ref($json->{diseases}) eq 'ARRAY') {
+        for my $d (@{ $json->{diseases} }) {
+            next unless defined $d && $d ne '';
+            $d =~ s/\s+$//;	# 1. strip trailing whitespace
+            $d =~ s/\(\s+/(/g;	# 2. remove space right after '(' and before ')'
+            $d =~ s/\s+\)/)/g;
+            push @parts, $d; } }
+    my $comment = join(', ', @parts);
+    return ($comment, $negated); }
+  else {			# any datatype that is not otherantibody or humandisease
+    my $negated = 1;
+    if ($origdata) { $negated = 0; }
+    return ($origdata, $negated); }
 } # sub convertAckToNote
+
 
 sub populateAfpData {
   &populateTfpData();
@@ -598,7 +621,7 @@ sub populateAfpData {
           $afpAutData{$datatype}{$joinkey}{source}    = 'author_first_pass';
           $afpAutData{$datatype}{$joinkey}{timestamp} = $row[2]; } }
       else {
-        if ( ($datatype eq 'disease') || ($datatype eq 'humdis') ) {	# ranjana wants to treat ACK afp_humdis as parent level disease  2025 11 11
+        if ( ($datatype eq 'humandisease') || ($datatype eq 'humdis') ) {	# ranjana wants to treat ACK afp_humdis as parent level disease  2025 11 11
           $afpAutData{'humandisease'}{$joinkey}{note}      = $data;  
           $afpAutData{'humandisease'}{$joinkey}{negated}   = $negated;
           $afpAutData{'humandisease'}{$joinkey}{source}    = 'ack';
