@@ -200,6 +200,8 @@
 # Added premadeComments 17 18 19 for disease values for Ranjana.  2023 07 18
 #
 # Add abstract as a column option for specific paper page, for Ranjana.  2025 01 23
+#
+# disabling writes for ABC transfer 2026 05 06
 
 
 
@@ -342,7 +344,8 @@ sub firstPage {
   print qq(<tr><td>Check Specific Paper or Topic</td>\n);
   print qq(<td><input type="submit" name="action" value="Specific Paper Page"></td></tr>\n);
   print qq(<tr><td>Enter Curator Results</td>\n);
-  print qq(<td><input type="submit" name="action" value="Add Results Page"></td></tr>\n);
+#   print qq(<td><input type="submit" name="action" value="Add Results Page"></td></tr>\n);	# 2026 05 06 disabling writes for ABC transfer
+  print qq(<td colspan=2>New Results are disabled, please use ABC</td></tr>\n);
   print qq(<tr><td>Curation Statistics</td>\n);
   print qq(<td><input type="submit" name="action" value="Curation Statistics Page"></td>\n);
   print qq(<input type="hidden" name="checkbox_all_datatypes"  value="all">);		# if looking at statistics page from front page use all datatypes
@@ -350,13 +353,14 @@ sub firstPage {
   print qq(<td><input type="submit" name="action" value="Curation Statistics Options Page"></td></tr>\n);
   print qq(<tr><td>Documentation</td><td colspan="2"><font size="-1"><a href="http://wiki.wormbase.org/index.php/New_2012_Curation_Status">http://wiki.wormbase.org/index.php/New_2012_Curation_Status</a></font></td></tr>\n);
   print qq(<tr><td>&nbsp;</td></tr>\n);
-  print qq(<tr><td>Parasite</td></tr>\n);
-  print qq(<tr><td>Check Specific Parasite Paper</td>\n);
-  print qq(<td colspan="2"><input type="submit" name="action" value="Specific Parasite Paper Page"></td></tr>\n);
-  print qq(<tr><td>Enter Curator Parasite Results</td>\n);
-  print qq(<td colspan="2"><input type="submit" name="action" value="Add Parasite Results Page"></td></tr>\n);
-  print qq(<tr><td>Curation Parasite Statistics</td>\n);
-  print qq(<td colspan="2"><input type="submit" name="action" value="Curation Parasite Statistics Page"></td>\n);
+# 2026 05 06  Parasite long gone, remove this section
+#   print qq(<tr><td>Parasite</td></tr>\n);
+#   print qq(<tr><td>Check Specific Parasite Paper</td>\n);
+#   print qq(<td colspan="2"><input type="submit" name="action" value="Specific Parasite Paper Page"></td></tr>\n);
+#   print qq(<tr><td>Enter Curator Parasite Results</td>\n);
+#   print qq(<td colspan="2"><input type="submit" name="action" value="Add Parasite Results Page"></td></tr>\n);
+#   print qq(<tr><td>Curation Parasite Statistics</td>\n);
+#   print qq(<td colspan="2"><input type="submit" name="action" value="Curation Parasite Statistics Page"></td>\n);
   print qq(</table>\n);
   &printFormClose();
 } # sub firstPage
@@ -2438,8 +2442,9 @@ sub processResultDataDuplicateData {
     push @pgcommands, $pgcommand;
     foreach my $pgcommand (@pgcommands) {
       print qq($pgcommand<br/>\n);
+      print qq(New Results are disabled, please use ABC<br/>\n);
 # UNCOMMENT TO POPULATE
-      $dbh->do( $pgcommand );
+#       $dbh->do( $pgcommand );	# 2026 05 06 disabling writes for ABC transfer
     }
     my $trData = join"</td>$tdDot", @line;
     print qq(<tr>${tdDot}$trData</td></tr>\n);
@@ -2591,8 +2596,9 @@ sub overwriteSelectedResults {
   } # for my $i (1 .. $overwriteCount)
   foreach my $pgcommand (@pgcommands) {
     print "$pgcommand<br />\n";
+    print qq(New Results are disabled, please use ABC<br/>\n);
 # UNCOMMENT TO POPULATE
-    $dbh->do( $pgcommand );
+#     $dbh->do( $pgcommand );	# 2026 05 06 disabling writes for ABC transfer
   } # foreach my $pgcommand (@pgcommands)
 } # sub overwriteSelectedResults
 
@@ -2777,7 +2783,8 @@ sub getResults {
 
       $curatorSelectCurator .= qq(<input type="hidden" name="joinkey_$trCounter"  value="$joinkey" >);	# these are required, arbitrarily added here
       $curatorSelectCurator .= qq(<input type="hidden" name="datatype_$trCounter" value="$datatype">);	# these are required, arbitrarily added here
-      push @dataRow, $curatorSelectCurator; 
+#       push @dataRow, $curatorSelectCurator; 	# 2026 05 06 disabling writes for ABC transfer
+      push @dataRow, $curators{$thisCurator};
 
       my $thisDonPosNeg = ''; if ( $curData{$datatype}{$joinkey}{donposneg} ) { $thisDonPosNeg = $curData{$datatype}{$joinkey}{donposneg}; }
       my $curatorSelectDonposneg = qq(<select name="select_curator_donposneg_$trCounter">);
@@ -2785,7 +2792,8 @@ sub getResults {
         if ($thisDonPosNeg eq $donposneg) { $curatorSelectDonposneg .= qq(<option value="$donposneg" selected="selected">$donPosNegOptions{$donposneg}</option>\n); }
           else {                            $curatorSelectDonposneg .= qq(<option value="$donposneg"                    >$donPosNegOptions{$donposneg}</option>\n); } }
       $curatorSelectDonposneg .= qq(</select>);
-      push @dataRow, $curatorSelectDonposneg; 
+#       push @dataRow, $curatorSelectDonposneg; 	# 2026 05 06 disabling writes for ABC transfer
+      push @dataRow, $donPosNegOptions{$thisDonPosNeg};
 
       my $thisSelComment = ''; if ( $curData{$datatype}{$joinkey}{selcomment} ) { $thisSelComment = $curData{$datatype}{$joinkey}{selcomment}; }
       my $curatorSelectComment = qq(<select name="select_curator_comment_$trCounter">);
@@ -2794,7 +2802,8 @@ sub getResults {
         if ($thisSelComment eq $comment) { $curatorSelectComment .= qq(<option value="$comment" selected="selected">$premadeComments{$comment}</option>\n); }
           else {                           $curatorSelectComment .= qq(<option value="$comment"                    >$premadeComments{$comment}</option>\n); } }
       $curatorSelectComment .= qq(</select>);
-      push @dataRow, $curatorSelectComment; 
+#       push @dataRow, $curatorSelectComment; 	# 2026 05 06 disabling writes for ABC transfer
+      push @dataRow, $premadeComments{$thisSelComment};
 
       my $txtcomment = ''; if ( $curData{$datatype}{$joinkey}{txtcomment} ) { $txtcomment = $curData{$datatype}{$joinkey}{txtcomment}; }
       my $shortTxtComment = $txtcomment;  unless ($shortTxtComment) { $shortTxtComment = '&nbsp;'; }
@@ -2802,7 +2811,8 @@ sub getResults {
       my $curatorTextareaComment = qq(<div id="div_curator_comment_$trCounter" onclick="document.getElementById('div_curator_comment_$trCounter').style.display = 'none'; document.getElementById('textarea_curator_comment_$trCounter').style.display = ''; document.getElementById('textarea_curator_comment_$trCounter').focus();" >$shortTxtComment</div>\n);
       $curatorTextareaComment .= qq(<textarea rows="4" cols="80" id="textarea_curator_comment_$trCounter" name="textarea_curator_comment_$trCounter" style="display:none" onblur="document.getElementById('div_curator_comment_$trCounter').style.display = ''; document.getElementById('textarea_curator_comment_$trCounter').style.display = 'none'; var divValue = document.getElementById('textarea_curator_comment_$trCounter').value; if (divValue === '') { divValue = '&nbsp;'; } document.getElementById('div_curator_comment_$trCounter').innerHTML = divValue; ">$txtcomment</textarea>\n);
 #       $curatorTextareaComment .= qq(<textarea rows="4" cols="80" id="textarea_curator_comment_$trCounter" name="textarea_curator_comment_$trCounter" style="display:none" onblur="document.getElementById('div_curator_comment_$trCounter').style.display = ''; document.getElementById('textarea_curator_comment_$trCounter').style.display = 'none'; document.getElementById('div_curator_comment_$trCounter').innerHTML = document.getElementById('textarea_curator_comment_$trCounter').value.substring(0,20)">$txtcomment</textarea>\n);			# to get the first 20 characters without adding ...
-      push @dataRow, $curatorTextareaComment; 
+#       push @dataRow, $curatorTextareaComment; 	# 2026 05 06 disabling writes for ABC transfer
+      push @dataRow, $shortTxtComment;
 
       $paperPosNegOkay{$joinkey}++; 				# all papers always okay for pos/neg since we no longer have pos/neg filtering  2012 11 08
 
@@ -2852,7 +2862,8 @@ sub getResults {
     foreach my $tr (@{ $trs{$joinkey} }) { print qq(<tr>$tr\n); } }	# print other table rows without paper info
   print qq(</table>\n);
 
-  print qq(<input type="submit" name="action" value="Submit New Results"><br/>\n);
+  print qq(New Results are disabled, please use ABC<br/>\n);
+#   print qq(<input type="submit" name="action" value="Submit New Results"><br/>\n);	# 2026 05 06 disabling writes for ABC transfer
     
   &printFormClose();
 } # sub getResults
