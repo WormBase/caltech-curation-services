@@ -34,6 +34,8 @@
 # When creating negative data from ACK, first check that it's not from before the ACK timestamp.  2026 01 07
 #
 # Allow posting to 4005  2026 01 28
+#
+# prod run  2026 05 15
 
 
 # If reloading, drop all TET from WB sources manually (don't have an API for delete with sql), make sure it's the correct database.
@@ -66,9 +68,10 @@ my $start_time = time;
 my $dbh = DBI->connect ( "dbi:Pg:dbname=$ENV{PSQL_DATABASE};host=$ENV{PSQL_HOST};port=$ENV{PSQL_PORT}", "$ENV{PSQL_USERNAME}", "$ENV{PSQL_PASSWORD}") or die "Cannot connect to database!\n";
 my $result;
 
-my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
-# my $baseUrl = 'https://dev4005-literature-rest.alliancegenome.org/';
+# my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
+my $baseUrl = 'https://dev4005-literature-rest.alliancegenome.org/';
 # my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
+# my $baseUrl = 'https://literature-rest.alliancegenome.org/';
 
 my $output_format = 'json';
 # my $output_format = 'api';
@@ -112,7 +115,7 @@ my %ackNeg;
 my $abc_location = 'stage';
 if ($baseUrl =~ m/dev4002/) { $abc_location = '4002'; }
 elsif ($baseUrl =~ m/dev4005/) { $abc_location = '4005'; }
-elsif ($baseUrl =~ m/prod/) { $abc_location = 'prod'; }
+elsif ($baseUrl eq 'https://literature-rest.alliancegenome.org/') { $abc_location = 'prod'; }
 
 my $date = &getSimpleSecDate();
 my $outfile = 'populate_strain_topic_entity.' . $date . '.' . $output_format . '.' . $abc_location;

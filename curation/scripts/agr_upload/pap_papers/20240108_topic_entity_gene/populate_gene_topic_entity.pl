@@ -53,6 +53,8 @@
 # better note attribution to ack vs old afp.  2025 12 17
 #
 # query old afp topics from afp_genestudied, output as topics only.  2026 02 24
+#
+# prod run  2026 05 15
 
 
 
@@ -96,6 +98,7 @@ my $result;
 # my $baseUrl = 'https://stage-literature-rest.alliancegenome.org/';
 # my $baseUrl = 'https://dev4002-literature-rest.alliancegenome.org/';
 my $baseUrl = 'https://dev4005-literature-rest.alliancegenome.org/';
+# my $baseUrl = 'https://literature-rest.alliancegenome.org/';
 
 my $output_format = 'json';
 # my $output_format = 'api';
@@ -203,7 +206,7 @@ my %curNegGeneTopic;
 my $abc_location = 'stage';
 if ($baseUrl =~ m/dev4002/) { $abc_location = '4002'; }
 elsif ($baseUrl =~ m/dev4005/) { $abc_location = '4005'; }
-elsif ($baseUrl =~ m/prod/) { $abc_location = 'prod'; }
+elsif ($baseUrl eq 'https://literature-rest.alliancegenome.org/') { $abc_location = 'prod'; }
 
 my $date = &getSimpleSecDate();
 my $outfile = 'populate_gene_topic_entity.' . $date . '.' . $output_format . '.' . $abc_location;
