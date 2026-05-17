@@ -227,8 +227,8 @@ my $cognito_token = &generateCognitoToken();
 my $geneTopic = 'ATP:0000005';
 my $entityType = 'ATP:0000005';
 
-foreach my $joinkey (@wbpapers) { $chosenPapers{$joinkey}++; }
-# $chosenPapers{all}++;
+# foreach my $joinkey (@wbpapers) { $chosenPapers{$joinkey}++; }
+$chosenPapers{all}++;
 
 
 # This was to extract gene objects from gene name strings for old afp, but Kimberly decided not to do this, since it's going into the note.
