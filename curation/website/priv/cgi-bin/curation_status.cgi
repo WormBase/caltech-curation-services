@@ -202,6 +202,8 @@
 # Add abstract as a column option for specific paper page, for Ranjana.  2025 01 23
 #
 # disabling writes for ABC transfer 2026 05 06
+#
+# Added  Rahi Navelkar  for ACK.  2026 06 02
 
 
 
@@ -3470,6 +3472,7 @@ sub populateCurators {
   $curators{"two363"}    = 'Raymond Lee';
   $curators{"two38202"}  = 'Shayda Maher';
   $curators{"two1"}      = 'Cecilia Nakamura';
+  $curators{"two73872"}  = 'Rahi Navelkar';
   $curators{"two4055"}   = 'Michael Paulini';
   $curators{"two480"}    = 'Tuco';
   $curators{"two12028"}  = 'Daniela Raciti';
