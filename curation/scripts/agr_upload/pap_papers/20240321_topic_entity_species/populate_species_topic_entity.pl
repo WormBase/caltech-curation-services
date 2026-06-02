@@ -47,6 +47,9 @@
 # use cognito instead of okta.  enhanced retry and error logging.  query timestamps as UTC for api.  2025 12 12
 #
 # pap_species from author first pass should have a note that it's from ACKnowledge  2025 12 17
+#
+# ABC API has been changed to use http status codes and whole objects when doing POST, instead of wrapped json messages.
+# claude code update the processing to work with it   2026 06 01
 
 
 # cronjob
@@ -794,42 +797,87 @@ sub createTag {
   print LOG qq(create $object_json\n);
   my $api_json = $res->decoded_content;
   print LOG qq($api_json\n);
-  if ($res->is_success) {
-    if ($api_json =~ /"status":"success"/) {
-      $success_counter++;
-      $retry_counter = 0;
-    }
-    elsif ($api_json =~ /"status":"exists"/) {
-      $exists_counter++;
-      print LOG qq(ERROR_API create $object_json\n);
-      print LOG qq(EXISTS	$api_json\n);
-      $retry_counter = 0;
-    }
-    elsif ($api_json =~ /"detail":"Invalid or expired token: Signature has expired."/) {
-      print LOG qq(ERROR_API create $object_json\n);
-      print LOG qq(EXPIRED TOKEN	$api_json\n);
-      $cognito_token = &generateCognitoToken();
-      print LOG qq(NEW TOKEN	$cognito_token\n);
-      &retryCreateTag($object_json);
-    }
-    elsif ($api_json =~ /"detail":"invalid request"/) {
-      $invalid_counter++;
-      print LOG qq(ERROR_API create $object_json\n);
-      print LOG qq(INVALID	$api_json\n);
-      $retry_counter = 0;
-    }
-    else {
-      $unexpected_counter++;
-      print LOG qq(ERROR_API create $object_json\n);
-      print LOG qq(UNEXPECTED	$api_json\n);
-      &retryCreateTag($object_json);
-    }
-  } else {
+
+  # claude code for new API process   2026 06 01
+  my $code = $res->code;
+  if ($code == 201) {                  # new tag created, body is the full TopicEntityTagSchemaShow
+    $success_counter++;
+    $retry_counter = 0;
+  }
+  elsif ($code == 200) {               # idempotent upsert: an existing tag absorbed your new note
+    $exists_counter++;                 # (the returned tag has the appended note value)
+    print LOG qq(UPSERTED     $api_json\n);
+    $retry_counter = 0;
+  }
+  elsif ($code == 409) {               # duplicate / opposite_negation / different_creator
+    $exists_counter++;                 # body: {"detail":{"reason":"...","message":"...","existing_tag_id":...,...}}
+    print LOG qq(ERROR_API create $object_json\n);
+    print LOG qq(EXISTS       $api_json\n);
+    $retry_counter = 0;
+  }
+  elsif ($code == 401) {               # bad / expired token
+    print LOG qq(ERROR_API create $object_json\n);
+    print LOG qq(EXPIRED TOKEN        $api_json\n);
+    $cognito_token = &generateCognitoToken();
+    print LOG qq(NEW TOKEN    $cognito_token\n);
+    &retryCreateTag($object_json);
+  }
+  elsif ($code == 404 || $code == 422) {  # missing reference/source/data_novelty (404), or Pydantic/ATP/ml_model validation (422)
+    $invalid_counter++;
+    print LOG qq(ERROR_API create $object_json\n);
+    print LOG qq(INVALID      $api_json\n);
+    $retry_counter = 0;
+  }
+  elsif ($res->is_success) {           # 2xx other than 200/201, shouldn't happen, but track it
+    $unexpected_counter++;
+    print LOG qq(ERROR_API create $object_json\n);
+    print LOG qq(UNEXPECTED 2xx $api_json\n);
+    $retry_counter = 0;
+  }
+  else {                               # 5xx and other failures
     $failure_counter++;
     print LOG qq(ERROR_API create $object_json\n);
     print LOG "HTTP Error: ", $res->status_line, "\n", $api_json, "\n";
     &retryCreateTag($object_json);
   }
+
+# for old ABC api before 2026 06 01
+#   if ($res->is_success) {
+#     if ($api_json =~ /"status":"success"/) {
+#       $success_counter++;
+#       $retry_counter = 0;
+#     }
+#     elsif ($api_json =~ /"status":"exists"/) {
+#       $exists_counter++;
+#       print LOG qq(ERROR_API create $object_json\n);
+#       print LOG qq(EXISTS	$api_json\n);
+#       $retry_counter = 0;
+#     }
+#     elsif ($api_json =~ /"detail":"Invalid or expired token: Signature has expired."/) {
+#       print LOG qq(ERROR_API create $object_json\n);
+#       print LOG qq(EXPIRED TOKEN	$api_json\n);
+#       $cognito_token = &generateCognitoToken();
+#       print LOG qq(NEW TOKEN	$cognito_token\n);
+#       &retryCreateTag($object_json);
+#     }
+#     elsif ($api_json =~ /"detail":"invalid request"/) {
+#       $invalid_counter++;
+#       print LOG qq(ERROR_API create $object_json\n);
+#       print LOG qq(INVALID	$api_json\n);
+#       $retry_counter = 0;
+#     }
+#     else {
+#       $unexpected_counter++;
+#       print LOG qq(ERROR_API create $object_json\n);
+#       print LOG qq(UNEXPECTED	$api_json\n);
+#       &retryCreateTag($object_json);
+#     }
+#   } else {
+#     $failure_counter++;
+#     print LOG qq(ERROR_API create $object_json\n);
+#     print LOG "HTTP Error: ", $res->status_line, "\n", $api_json, "\n";
+#     &retryCreateTag($object_json);
+#   }
 } # sub createTag
 
 sub retryCreateTag {
