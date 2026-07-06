@@ -15,6 +15,8 @@
 #
 # Delete pap_identifier AGRKB before populating because we still need to work out how updates should work,
 # for now wipe and reload is straightforward.  With Valerio and Kimberly.  2023 11 30
+#
+# Add cognito token for caltech dev and abc dev.  2026 07 06
 
 # 0 4 * * * /usr/lib/scripts/pgpopulation/pap_papers/20230322_agr_xrefs/populate_pap_identifier_agrkb.pl
 
@@ -54,19 +56,32 @@ sub generateOktaToken {
   return $okta_token;
 }
 
+sub generateCognitoToken {
+  my $cognito_result = `curl -X POST "$ENV{COGNITO_TOKEN_URL}" \ -H "Content-Type: application/x-www-form-urlencoded" \ -d "grant_type=client_credentials" \ -d "client_id=$ENV{COGNITO_ADMIN_CLIENT_ID}" \ -d "client_secret=$ENV{COGNITO_ADMIN_CLIENT_SECRET}"`;
+  my $hash_ref = decode_json $cognito_result;
+  my $cognito_token = $$hash_ref{'access_token'};
+#   print $cognito_token;
+  print qq(GENERATE TOKEN $cognito_token\n);
+  print OUT qq(GENERATE TOKEN $cognito_token\n);
+  return $cognito_token;
+}
+
 sub generateXrefJsonFile {
-  my $okta_token = &generateOktaToken();
-  `curl -X 'GET' 'https://literature-rest.alliancegenome.org/bulk_download/references/external_ids/' -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json'  > $xref_file_path`;
-  print qq(curl -X 'GET' 'https://literature-rest.alliancegenome.org/bulk_download/references/external_ids/' -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json'\n);
+  my $cognito_token = &generateCognitoToken();
+  `curl -X 'GET' 'https://literature-rest.alliancegenome.org/bulk_download/references/external_ids/' -H 'accept: application/json' -H 'Authorization: Bearer $cognito_token' -H 'Content-Type: application/json'  > $xref_file_path`;
+  print qq(curl -X 'GET' 'https://literature-rest.alliancegenome.org/bulk_download/references/external_ids/' -H 'accept: application/json' -H 'Authorization: Bearer $cognito_token' -H 'Content-Type: application/json'\n);
+#   my $okta_token = &generateOktaToken();
+#   `curl -X 'GET' 'https://dev4002-literature-rest.alliancegenome.org/bulk_download/references/external_ids/' -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json'  > $xref_file_path`;
+#   print qq(curl -X 'GET' 'https://dev4002-literature-rest.alliancegenome.org/bulk_download/references/external_ids/' -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json'\n);
 #   `curl -X 'GET' 'https://stage-literature-rest.alliancegenome.org/bulk_download/references/external_ids/' -H 'accept: application/json' -H 'Authorization: Bearer $okta_token' -H 'Content-Type: application/json'  > files/ref_xref.json`;
 }
 
 sub populateFromAbcXrefs {
-  # this requires getting the most recent cross_references from ABC, needs okta token
+  # this requires getting the most recent cross_references from ABC, needs cognito token
   #  %curl -X 'GET' \
   #    'https://literature-rest.alliancegenome.org/bulk_download/references/external_ids/' \
   #    -H 'accept: application/json' \
-  #    -H 'Authorization: Bearer <okta_token>' \
+  #    -H 'Authorization: Bearer <cognito_token>' \
   #    -H 'Content-Type: application/json'  >  ref_xref.json
   # optionally to make more readable version
   #  % cat ref_xref.json | json_pp > ref_xref.json_pp
