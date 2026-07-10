@@ -3,6 +3,7 @@
 # Check against state dept list that other entries are good
 # https://2009-2017.state.gov/misc/list/index.htm
 # but we found out this list does not have Turkiye nor United States of America
+# list copy pasted below, wget not working on it.
 #
 # Was going to update entries with Czech Republic to Czechia, but Ceci might do them manually, it's about 180
 # 2026 07 09
