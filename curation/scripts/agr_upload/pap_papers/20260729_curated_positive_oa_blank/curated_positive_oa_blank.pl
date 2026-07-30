@@ -8,16 +8,19 @@
 # curation/website/priv/cgi-bin/curation_status.cgi  (a paper-datatype is oa_blank
 # when populateOaData does not set $oaData{datatype}{paper}).
 #
-# Only datatypes that &populateOaData has an OA source for are processed.  A
-# datatype with no OA source has no OA data for any paper, so every paper would
-# be oa_blank for it, which says nothing.  Those datatypes are counted in the
-# .excluded_datatypes file.
+# All datatypes are included, not only the ones &populateOaData has an OA source
+# for, because curation_status.cgi shows oa_blank for any row it does not have OA
+# data for, including datatypes that have no OA source at all.  For the curator
+# 2026 07 30.  The oa_source column flags which is which, 1 when the datatype has
+# an OA source and this paper is missing from it, 0 when the datatype has no OA
+# source so every paper of that datatype is oa_blank.
 #
 # Output is tab delimited :
-#   cur_paper  cur_datatype  atp  cur_curator  cur_selcomment  cur_txtcomment  cur_timestamp
+#   cur_paper  cur_datatype  atp  cur_curator  cur_selcomment  cur_txtcomment
+#   cur_timestamp  oa_source  in_curation_status
 #
-# Any processed cur_datatype without an ATP mapping is reported to STDOUT and to
-# the .unmapped_datatypes file.
+# Any cur_datatype without an ATP mapping is reported to STDOUT and to the
+# .unmapped_datatypes file.
 #
 # CC wrote this script
 # https://agr-jira.atlassian.net/browse/SCRUM-6130
@@ -45,19 +48,23 @@ open (SKIP, ">$skipfile") or die "Cannot create $skipfile : $!";
 
 my $unmappedfile = 'curated_positive_oa_blank.' . $date . '.unmapped_datatypes';
 
-my $excludedfile = 'curated_positive_oa_blank.' . $date . '.excluded_datatypes';
+my $nooafile = 'curated_positive_oa_blank.' . $date . '.datatypes_without_oa_source';
 
+my %datatypes;				# all allowed datatypes, from &populateDatatypes
+my %datatypesAfpCfp;
 my %oaDatatypes;			# datatypes &populateOaData has an OA source for
 my %oaData;				# $oaData{datatype}{paper} = 'curated'
 my %curatablePapers;			# papers curation_status.cgi will display
 my %datatypeToAtp;			# cur_datatype to ATP term
-my %unmappedDatatypes;			# processed cur_datatype values without an ATP mapping
-my %excludedDatatypes;			# curated entries whose datatype has no OA source
+my %unmappedDatatypes;			# cur_datatype values queried without an ATP mapping
+my %noOaSourceDatatypes;		# oa_blank entries whose datatype has no OA source at all
 my %premadeComments;			# cur_selcomment number to text, from &populatePremadeComments
 my %unmappedSelcomments;		# cur_selcomment values without a premade comment text
+my %seenDatatypes;			# every cur_datatype seen in cur_curdata, for the unused mapping check
 
 &populateDatatypeToAtp();
 &populatePremadeComments();
+&populateDatatypes();
 &populateCuratablePapers();
 &populateOaData();
 
@@ -65,23 +72,20 @@ my $total_curated  = 0;
 my $oa_blank_count = 0;
 my $skipped_count  = 0;
 
-print OUT join("\t", qw( cur_paper cur_datatype atp cur_curator cur_selcomment cur_txtcomment cur_timestamp )) . "\n";
-print SKIP join("\t", qw( skip_reason cur_paper cur_datatype atp cur_curator cur_selcomment cur_txtcomment cur_timestamp )) . "\n";
+print OUT join("\t", qw( cur_paper cur_datatype atp cur_curator cur_selcomment cur_txtcomment cur_timestamp oa_source in_curation_status )) . "\n";
+print SKIP join("\t", qw( skip_reason cur_paper cur_datatype atp cur_curator cur_selcomment cur_txtcomment cur_timestamp oa_source in_curation_status )) . "\n";
 
 my %curatedRows;			# $curatedRows{paper}{datatype} = \@row , keep latest timestamp like &populateCurCurData
 $result = $dbh->prepare( "SELECT cur_paper, cur_datatype, cur_site, cur_curator, cur_curdata, cur_selcomment, cur_txtcomment, cur_timestamp FROM cur_curdata WHERE cur_site = '$datatypeSource' AND cur_curdata = 'curated' ORDER BY cur_timestamp" );
 $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
 while (my @row = $result->fetchrow) {
   $total_curated++;
+  $seenDatatypes{$row[1]}++;
   $curatedRows{$row[0]}{$row[1]} = [ @row ];
 }
 
 foreach my $paper (sort { $a <=> $b } keys %curatedRows) {
   foreach my $datatype (sort keys %{ $curatedRows{$paper} }) {
-    unless ($oaDatatypes{$datatype}) {			# no OA source for this datatype, so oa_blank is meaningless for it
-      $excludedDatatypes{$datatype}++;
-      next; }
-
     my @row = @{ $curatedRows{$paper}{$datatype} };
     my ($cur_curator, $cur_selcomment, $cur_txtcomment, $cur_timestamp) = ($row[3], $row[5], $row[6], $row[7]);
     foreach ($cur_curator, $cur_selcomment, $cur_txtcomment, $cur_timestamp) { unless (defined $_) { $_ = ''; } }
@@ -92,7 +96,9 @@ foreach my $paper (sort { $a <=> $b } keys %curatedRows) {
     if ($cur_selcomment ne '') {			# show the premade comment text instead of its number, like curation_status.cgi does
       if (defined $premadeComments{$cur_selcomment}) { $cur_selcomment = $premadeComments{$cur_selcomment}; }
         else { $unmappedSelcomments{$cur_selcomment}++; } }
-    my @outRow = ($paper, $datatype, $atp, $cur_curator, $cur_selcomment, $cur_txtcomment, $cur_timestamp);
+    my $oa_source = 0;  if ($oaDatatypes{$datatype}) { $oa_source = 1; }		# 0 means the datatype has no OA source, so every paper of it is oa_blank
+    my $in_curation_status = 0;  if ($datatypes{$datatype}) { $in_curation_status = 1; }	# 0 means curation_status.cgi draws no row for this datatype
+    my @outRow = ($paper, $datatype, $atp, $cur_curator, $cur_selcomment, $cur_txtcomment, $cur_timestamp, $oa_source, $in_curation_status);
 
     next if ($oaData{$datatype}{$paper});		# has OA data, so not oa_blank
 
@@ -101,6 +107,7 @@ foreach my $paper (sort { $a <=> $b } keys %curatedRows) {
       print SKIP join("\t", "paper_not_curatable", @outRow) . "\n";
       next; }
 
+    unless ($oa_source) { $noOaSourceDatatypes{$datatype}++; }
     $oa_blank_count++;
     print OUT join("\t", @outRow) . "\n";
   } # foreach my $datatype (sort keys %{ $curatedRows{$paper} })
@@ -109,24 +116,24 @@ foreach my $paper (sort { $a <=> $b } keys %curatedRows) {
 close (OUT) or die "Cannot close $outfile : $!";
 close (SKIP) or die "Cannot close $skipfile : $!";
 
-foreach my $datatype (sort keys %oaDatatypes) {			# datatypes processed, whether or not they had curated entries
+foreach my $datatype (sort keys %datatypes) {			# datatypes curation_status.cgi draws rows for
   next if ($datatypeToAtp{$datatype});
-  $unmappedDatatypes{$datatype}{'oa_datatype'}++; }
+  $unmappedDatatypes{$datatype}{'curation_status_datatypes'}++; }
 
-my $excluded_count = 0;
-open (EXCLUDED, ">$excludedfile") or die "Cannot create $excludedfile : $!";
-print EXCLUDED join("\t", qw( cur_datatype curated_entries_excluded )) . "\n";
-foreach my $datatype (sort keys %excludedDatatypes) {
-  $excluded_count += $excludedDatatypes{$datatype};
-  print EXCLUDED join("\t", $datatype, $excludedDatatypes{$datatype}) . "\n"; }
-close (EXCLUDED) or die "Cannot close $excludedfile : $!";
+my $no_oa_source_count = 0;
+open (NOOA, ">$nooafile") or die "Cannot create $nooafile : $!";
+print NOOA join("\t", qw( cur_datatype oa_blank_entries )) . "\n";
+foreach my $datatype (sort keys %noOaSourceDatatypes) {
+  $no_oa_source_count += $noOaSourceDatatypes{$datatype};
+  print NOOA join("\t", $datatype, $noOaSourceDatatypes{$datatype}) . "\n"; }
+close (NOOA) or die "Cannot close $nooafile : $!";
 
 print "cur_curdata entries with cur_curdata 'curated' : $total_curated\n";
-print "of those, excluded because their datatype has no OA source : $excluded_count -> $excludedfile\n";
 print "of those, oa_blank and displayed by curation_status.cgi : $oa_blank_count -> $outfile\n";
 print "of those, oa_blank but not displayed by curation_status.cgi : $skipped_count -> $skipfile\n";
-foreach my $datatype (sort keys %excludedDatatypes) {
-  print "excluded cur_datatype '$datatype' , no OA source in populateOaData ($excludedDatatypes{$datatype} curated entries)\n"; }
+print "of the oa_blank entries, from datatypes with no OA source at all (oa_source 0) : $no_oa_source_count -> $nooafile\n";
+foreach my $datatype (sort keys %noOaSourceDatatypes) {
+  print "cur_datatype '$datatype' has no OA source in populateOaData , so all $noOaSourceDatatypes{$datatype} of its curated entries are oa_blank\n"; }
 
 open (UNMAPPED, ">$unmappedfile") or die "Cannot create $unmappedfile : $!";
 print UNMAPPED join("\t", qw( cur_datatype source count )) . "\n";
@@ -145,9 +152,11 @@ foreach my $selcomment (sort keys %unmappedSelcomments) {	# left as the raw valu
     # ATP mappings for datatypes that are not processed here, in case a mapping key is misspelled
 my @unusedMappings;
 foreach my $datatype (sort keys %datatypeToAtp) {
-  next if ($oaDatatypes{$datatype});
+  next if ($datatypes{$datatype});		# a datatype curation_status.cgi draws rows for
+  next if ($oaDatatypes{$datatype});		# a datatype with an OA source
+  next if ($seenDatatypes{$datatype});		# a datatype that exists in cur_curdata
   push @unusedMappings, "$datatype ($datatypeToAtp{$datatype})"; }
-if (scalar @unusedMappings > 0) { print "ATP mappings not matching any OA datatype : " . join(", ", @unusedMappings) . "\n"; }
+if (scalar @unusedMappings > 0) { print "ATP mappings not matching any datatype in the database : " . join(", ", @unusedMappings) . "\n"; }
 
 
 sub populatePremadeComments {		# from &populatePremadeComments in curation_status.cgi
@@ -200,6 +209,30 @@ sub populateDatatypeToAtp {		# cur_datatype to ATP term, from Juancarlos 2026 07
   $datatypeToAtp{'newmutant'}      = 'ATP:0000083';
 } # sub populateDatatypeToAtp
 
+
+sub populateDatatypes {			# from &populateDatatypes in curation_status.cgi
+  $result = $dbh->prepare( "SELECT DISTINCT(cur_datatype) FROM cur_nncdata" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) { $datatypesAfpCfp{$row[0]} = $row[0]; }
+  $datatypesAfpCfp{'chemicals'}     = 'chemicals';
+  $datatypesAfpCfp{'blastomere'}    = 'cellfunc';
+  $datatypesAfpCfp{'exprmosaic'}    = 'siteaction';
+  $datatypesAfpCfp{'geneticmosaic'} = 'mosaic';
+  $datatypesAfpCfp{'laserablation'} = 'ablationdata';
+  $datatypesAfpCfp{'humandisease'}  = 'humdis';
+  $datatypesAfpCfp{'rnaseq'}        = 'rnaseq';
+  $datatypesAfpCfp{'chemphen'}      = 'chemphen';
+  $datatypesAfpCfp{'envpheno'}      = 'envpheno';
+  $datatypesAfpCfp{'timeaction'}    = 'timeaction';
+  $datatypesAfpCfp{'siteaction'}    = 'siteaction';
+  foreach my $datatype (keys %datatypesAfpCfp) { $datatypes{$datatype}++; }
+  $datatypes{'geneticablation'}++;
+  $datatypes{'picture'}++;
+  $datatypes{'optogenetic'}++;
+  $result = $dbh->prepare( "SELECT DISTINCT(cur_datatype) FROM cur_strdata" );	# from string search data
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) { $datatypes{$row[0]} = $row[0]; }
+} # sub populateDatatypes
 
 sub populateCuratablePapers {		# from &populateCuratablePapers in curation_status.cgi
   my %papersByTaxon;
