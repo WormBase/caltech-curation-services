@@ -19,7 +19,11 @@
 # Any processed cur_datatype without an ATP mapping is reported to STDOUT and to
 # the .unmapped_datatypes file.
 #
+# CC wrote this script
+# https://agr-jira.atlassian.net/browse/SCRUM-6130
+#
 # 2026 07 29
+
 
 use strict;
 use diagnostics;
