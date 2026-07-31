@@ -19,8 +19,9 @@
 #   cur_paper  cur_datatype  atp  cur_curator  cur_selcomment  cur_txtcomment
 #   cur_timestamp  oa_source  in_curation_status
 #
-# Any cur_datatype without an ATP mapping is reported to STDOUT and to the
-# .unmapped_datatypes file.
+# Entries whose cur_datatype has no ATP mapping are kept out of the .tsv and go to
+# the .skipped file with an atp_unmapped reason instead, for the curator 2026 07 31.
+# The datatypes involved are reported to STDOUT and to the .unmapped_datatypes file.
 #
 # CC wrote this script
 # https://agr-jira.atlassian.net/browse/SCRUM-6130
@@ -71,6 +72,7 @@ my %seenDatatypes;			# every cur_datatype seen in cur_curdata, for the unused ma
 my $total_curated  = 0;
 my $oa_blank_count = 0;
 my $skipped_count  = 0;
+my $atp_unmapped_count = 0;
 
 print OUT join("\t", qw( cur_paper cur_datatype atp cur_curator cur_selcomment cur_txtcomment cur_timestamp oa_source in_curation_status )) . "\n";
 print SKIP join("\t", qw( skip_reason cur_paper cur_datatype atp cur_curator cur_selcomment cur_txtcomment cur_timestamp oa_source in_curation_status )) . "\n";
@@ -107,6 +109,12 @@ foreach my $paper (sort { $a <=> $b } keys %curatedRows) {
       print SKIP join("\t", "paper_not_curatable", @outRow) . "\n";
       next; }
 
+    if ($atp eq '') {					# no ATP term for this datatype, so it only goes to the reports.  for the curator 2026 07 31
+      $skipped_count++;
+      $atp_unmapped_count++;
+      print SKIP join("\t", "atp_unmapped", @outRow) . "\n";
+      next; }
+
     unless ($oa_source) { $noOaSourceDatatypes{$datatype}++; }
     $oa_blank_count++;
     print OUT join("\t", @outRow) . "\n";
@@ -130,7 +138,8 @@ close (NOOA) or die "Cannot close $nooafile : $!";
 
 print "cur_curdata entries with cur_curdata 'curated' : $total_curated\n";
 print "of those, oa_blank and displayed by curation_status.cgi : $oa_blank_count -> $outfile\n";
-print "of those, oa_blank but not displayed by curation_status.cgi : $skipped_count -> $skipfile\n";
+print "of those, oa_blank but kept out of the tsv : $skipped_count -> $skipfile\n";
+print "  of those, kept out because their cur_datatype has no ATP mapping : $atp_unmapped_count\n";
 print "of the oa_blank entries, from datatypes with no OA source at all (oa_source 0) : $no_oa_source_count -> $nooafile\n";
 foreach my $datatype (sort keys %noOaSourceDatatypes) {
   print "cur_datatype '$datatype' has no OA source in populateOaData , so all $noOaSourceDatatypes{$datatype} of its curated entries are oa_blank\n"; }
@@ -203,6 +212,7 @@ sub populateDatatypeToAtp {		# cur_datatype to ATP term, from Juancarlos 2026 07
   $datatypeToAtp{'genereg'}        = 'ATP:0000070';
   $datatypeToAtp{'rnai'}           = 'ATP:0000082';
   $datatypeToAtp{'siteaction'}     = 'ATP:0000033';
+  $datatypeToAtp{'exprmosaic'}     = 'ATP:0000033';	# treated like siteaction, which is also how %datatypesAfpCfp in curation_status.cgi aliases it.  from the curator 2026 07 31
   $datatypeToAtp{'timeaction'}     = 'ATP:0000349';
   $datatypeToAtp{'transporter'}    = 'ATP:0000062';
   $datatypeToAtp{'seqchange'}      = 'ATP:0000056';
