@@ -61,13 +61,13 @@ my $too_many_matches;	# global (I'm being lazy) for people whose name has too ma
 
 sub process {
 #   my $result = $dbh->prepare( "SELECT two_othername FROM two_lineage WHERE two_number IS NULL;" );
-  my $result = $dbh->prepare( "SELECT two_othername FROM two_lineage WHERE two_number IS NULL or two_number = 'NO';" );
+  my $result = $dbh->prepare( "SELECT two_othername FROM two_lineage WHERE two_number IS NULL OR two_number NOT LIKE 'two%';" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while ( my @row = $result->fetchrow ) { 
     my $main = $row[0];
     $names{$main}++; }
 #   $result = $dbh->prepare( "SELECT two_sentname FROM two_lineage WHERE joinkey IS NULL;" );
-  $result = $dbh->prepare( "SELECT two_sentname FROM two_lineage WHERE joinkey IS NULL OR two_number = 'NO';" );
+  $result = $dbh->prepare( "SELECT two_sentname FROM two_lineage WHERE joinkey IS NULL OR joinkey NOT LIKE 'two%';" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while ( my @row = $result->fetchrow ) { 
     my $main = $row[0];
@@ -103,10 +103,10 @@ sub process {
       $names{$name} =~ s/WBPerson/two/g;
 #       print OUT "NAME : $name\t$names{$name}\n"; 
       if ($name =~ m/\'/) { $name =~ s/\'/''/g; }
-#       print OUT "UPDATE two_lineage SET two_number = '$names{$name}' WHERE two_othername = '$name' AND two_number IS NULL;\n";
-#       print OUT "UPDATE two_lineage SET joinkey = '$names{$name}' WHERE two_sentname = '$name' AND joinkey IS NULL;\n";
-      my $result = $dbh->do( "UPDATE two_lineage SET two_number = '$names{$name}' WHERE two_othername = '$name' AND two_number IS NULL;" );
-      $result = $dbh->do( "UPDATE two_lineage SET joinkey = '$names{$name}' WHERE two_sentname = '$name' AND joinkey IS NULL;" );
+#       print OUT "UPDATE two_lineage SET two_number = '$names{$name}' WHERE two_othername = '$name' AND (two_number IS NULL OR two_number NOT LIKE 'two%');\n";
+#       print OUT "UPDATE two_lineage SET joinkey = '$names{$name}' WHERE two_sentname = '$name' AND (joinkey IS NULL OR joinkey NOT LIKE 'two%');\n";
+      my $result = $dbh->do( "UPDATE two_lineage SET two_number = '$names{$name}' WHERE two_othername = '$name' AND (two_number IS NULL OR two_number NOT LIKE 'two%');" );
+      $result = $dbh->do( "UPDATE two_lineage SET joinkey = '$names{$name}' WHERE two_sentname = '$name' AND (joinkey IS NULL OR joinkey NOT LIKE 'two%');" );
     }
   } # foreach my $name (sort keys %names)
 
@@ -138,7 +138,7 @@ sub checkIfBadEntry {
 	# otherwise email Cecilia and output to ``not_found''
   my ($name, $cecilia_mail) = @_;
     # Need to get all info for each missing entry regardless of good or bad
-  my $result = $dbh->prepare( "SELECT * FROM two_lineage WHERE two_sentname = '$name';" );
+  my $result = $dbh->prepare( "SELECT * FROM two_lineage WHERE two_sentname = '$name' AND (joinkey IS NULL OR joinkey NOT LIKE 'two%');" );
   $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
   while (my @row = $result->fetchrow) {
     my $joinkey = $row[0];
@@ -156,21 +156,21 @@ sub checkIfBadEntry {
     } elsif ( $role =~ m/^Collaborated/ ) {	# Collaboration, probably not in worms
         # fix this entry (Reversed)
 #       print OUT "IGNORE $name\n";
-#       print OUT "UPDATE two_lineage SET joinkey = 'NO' WHERE two_sentname = '$name' AND two_othername = '$othername' AND two_role = '$role' AND two_sender = '$sender';\n"; 
-      my $result2 = $dbh->do( "UPDATE two_lineage SET joinkey = 'NO' WHERE two_sentname = '$name' AND two_othername = '$othername' AND two_role = '$role' AND two_sender = '$sender';" ); 
+#       print OUT "UPDATE two_lineage SET joinkey = 'NO' WHERE two_sentname = '$name' AND two_othername = '$othername' AND two_role = '$role' AND two_sender = '$sender' AND (joinkey IS NULL OR joinkey NOT LIKE 'two%');\n"; 
+      my $result2 = $dbh->do( "UPDATE two_lineage SET joinkey = 'NO' WHERE two_sentname = '$name' AND two_othername = '$othername' AND two_role = '$role' AND two_sender = '$sender' AND (joinkey IS NULL OR joinkey NOT LIKE 'two%');" ); 
       $sender =~ s/REV - //g;		# fix sender to non-reversed
         # fix non-reversed entry
-#       print OUT "UPDATE two_lineage SET two_number = 'NO' WHERE two_othername = '$name' AND two_sentname = '$othername' AND two_role = '$role' AND two_sender = '$sender';\n"; 
-      $result2 = $dbh->do( "UPDATE two_lineage SET two_number = 'NO' WHERE two_othername = '$name' AND two_sentname = '$othername' AND two_role = '$role' AND two_sender = '$sender';" ); 
+#       print OUT "UPDATE two_lineage SET two_number = 'NO' WHERE two_othername = '$name' AND two_sentname = '$othername' AND two_role = '$role' AND two_sender = '$sender' AND (two_number IS NULL OR two_number NOT LIKE 'two%');\n"; 
+      $result2 = $dbh->do( "UPDATE two_lineage SET two_number = 'NO' WHERE two_othername = '$name' AND two_sentname = '$othername' AND two_role = '$role' AND two_sender = '$sender' AND (two_number IS NULL OR two_number NOT LIKE 'two%');" ); 
     } elsif ( $role !~ m/^with/ ) {		# Trainer, probably not in worms
 #       print OUT "IGNORE $name\n";
-#       print OUT "UPDATE two_lineage SET joinkey = 'NO' WHERE two_sentname = '$name' AND two_othername = '$othername' AND two_role = '$role' AND two_sender = '$sender';\n"; 
-      my $result2 = $dbh->do( "UPDATE two_lineage SET joinkey = 'NO' WHERE two_sentname = '$name' AND two_othername = '$othername' AND two_role = '$role' AND two_sender = '$sender';" ); 
+#       print OUT "UPDATE two_lineage SET joinkey = 'NO' WHERE two_sentname = '$name' AND two_othername = '$othername' AND two_role = '$role' AND two_sender = '$sender' AND (joinkey IS NULL OR joinkey NOT LIKE 'two%');\n"; 
+      my $result2 = $dbh->do( "UPDATE two_lineage SET joinkey = 'NO' WHERE two_sentname = '$name' AND two_othername = '$othername' AND two_role = '$role' AND two_sender = '$sender' AND (joinkey IS NULL OR joinkey NOT LIKE 'two%');" ); 
       $role = "with$role";
       $sender =~ s/REV - //g;		# fix sender to non-reversed
         # fix non-reversed entry
-#       print OUT "UPDATE two_lineage SET two_number = 'NO' WHERE two_othername = '$name' AND two_sentname = '$othername' AND two_role = '$role' AND two_sender = '$sender';\n"; 
-      my $result2 = $dbh->do( "UPDATE two_lineage SET two_number = 'NO' WHERE two_othername = '$name' AND two_sentname = '$othername' AND two_role = '$role' AND two_sender = '$sender';" ); 
+#       print OUT "UPDATE two_lineage SET two_number = 'NO' WHERE two_othername = '$name' AND two_sentname = '$othername' AND two_role = '$role' AND two_sender = '$sender' AND (two_number IS NULL OR two_number NOT LIKE 'two%');\n"; 
+      my $result2 = $dbh->do( "UPDATE two_lineage SET two_number = 'NO' WHERE two_othername = '$name' AND two_sentname = '$othername' AND two_role = '$role' AND two_sender = '$sender' AND (two_number IS NULL OR two_number NOT LIKE 'two%');" ); 
     } else {					# Trainee, need WBPerson entry
 #       print NOT "NAME : $name\t$names{$name}\n"; 
       $cecilia_mail .= "$name with $othername ($othernum) role $role sent by $sender\n\n";
