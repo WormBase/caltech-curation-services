@@ -7,6 +7,7 @@ use Mail::Mailer;
 use Email::Simple;
 use Email::Sender::Simple qw(sendmail);
 use Net::SMTP::SSL;
+use Encode qw(encode);
 
 use CGI::Cookie;
 
@@ -298,13 +299,17 @@ sub mailer {                    # send non-attachment mail
   my ($user, $email, $subject, $body) = @_;
   $email =~ s/\s+//g;
   my @recipients = split/,/, $email;
+  if (utf8::is_utf8($body))    { $body    = encode('UTF-8', $body); }		# else Email::Simple warns 'Body with wide characters' and sends mangled bytes
+  if (utf8::is_utf8($subject)) { $subject = encode('MIME-Header', $subject); }	# rfc 2047 for a non-ascii subject
   my $email_object = Email::Simple->create(
       header => [
-          From    => $ENV{MAILER_USERNAME},
-          To      => join(', ', @recipients),
+          From           => $ENV{MAILER_USERNAME},
+          To             => join(', ', @recipients),
 #           To      => $email,				# if one email
 #           Cc      => join(', ', @cc_recipients),	# if cc values
-          Subject => $subject,
+          Subject        => $subject,
+          'MIME-Version' => '1.0',
+          'Content-Type' => 'text/plain; charset=UTF-8',
       ],
       body => $body,
   );
