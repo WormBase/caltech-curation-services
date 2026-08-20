@@ -96,6 +96,8 @@
 # 
 # Changed messaging about when changes will happen, because of WormBase moving to
 # Alliance.  For Cecilia.  2025 10 30
+#
+# removed link to acefile that no longer exists.  2026 08 20
 
 
 # removing acefile in dockerized, Cecilia doesn't use it.  2023 03 01
@@ -295,8 +297,8 @@ sub process {			# see if anything clicked
           print "Please note that WS298 will be the final major WormBase release. This release includes Person and person_lineage data updated through August 19, 2025.<br/>\n";
           print "In lieu of generating new WormBase releases, we will be accelerating our efforts to incorporate existing data and services into the Alliance of Genome Resources. Your updates will be accessible through the Alliance of Genome Resources in early 2026.<br/>\n";
           print "Thank you for your understanding<br/>\n";
-          print "If you wish to modify your submitted information, please go back and resubmit.<BR><P> 
-                 See all <A HREF=\"${baseUrl}/../data/person_lineage.ace\">new submissions</A>.<P>\n";
+          print "If you wish to modify your submitted information, please go back and resubmit.<BR><P>\n";
+#                  See all <A HREF=\"${baseUrl}/../data/person_lineage.ace\">new submissions</A>.<P>\n";	# this broke when dockerized and acefile removed 2023 03 01
 #           print "If you wish to modify your submitted information, please go back and resubmit.<BR><P> 
 #                  See all <A HREF=\"http://tazendra.caltech.edu/~azurebrd/cgi-bin/data/person_lineage.ace\">new submissions</A>.<P>\n";
         } # else # unless ($genotype =~ m/\S/)
