@@ -49,6 +49,7 @@ my %hash_collab;	# key collaborator1, key collaborator2, value role
 my %names;		# key name, value WBPerson#
 
 my $too_many_matches;	# global (I'm being lazy) for people whose name has too many matches
+my %too_many;		# key name, for names with more than one match ; leave their rows alone
 
     my %standard_name;
     my $result = $dbh->prepare ( "SELECT * FROM two_standardname;" );
@@ -96,7 +97,8 @@ sub process {
   } # foreach my $name (sort keys %names)
 
   my $cecilia_mail = '';
-  foreach my $name (sort keys %names) { 
+  foreach my $name (sort keys %names) {
+    if ($too_many{$name}) { next; }	# more than one WBPerson matches ; leave joinkey and two_number as they are
     if ($names{$name} =~ m/^\d+/) { 	# if only a number (no match) check it and email Cecilia if needed
       $cecilia_mail = &checkIfBadEntry($name, $cecilia_mail);
     } else { 				# if entry, change joinkey and two_number (forward and reverse)
@@ -229,6 +231,7 @@ sub processAkaSearch {			# get generated aka's and try to find exact match
     if (scalar(@stuff) > 1) { 
       my $twos = join", ", @stuff;
 #       print OUT "TOO MANY $search_name matches : $twos\n";
+      $too_many{$name_backup}++;		# too many matches, don't touch this name's rows
       $too_many_matches .= "TOO MANY $search_name matches : $twos\n"; }
     else {
       foreach $_ (@stuff) { 		# add url link
