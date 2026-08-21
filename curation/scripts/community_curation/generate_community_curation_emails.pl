@@ -20,12 +20,16 @@
 # 2023 03 19
 
 
+# Email now goes out through AWS SES with Jex::mailer, which reads
+# EMAIL_SMTP_USER and EMAIL_PASSWD from .env.  The outreach@wormbase.org
+# password file is no longer read: SES cannot sign for wormbase.org, so the
+# visible sender is EMAIL_FROM and the outreach account stays as the Reply-To.
+# Google stopped accepting the gmail app password some time between 2026 05 02
+# and 2026 05 12, and regenerating it did not help.  2026 08 21
+
 use strict;
 use Jex;		
 use DBI;
-use Email::Send;
-use Email::Send::Gmail;
-use Email::Simple::Creator;
 
 use Dotenv -load => '/usr/lib/.env';
 
@@ -153,8 +157,6 @@ sub sendIndividualMassEmail {
   my $wbperson = $two; $wbperson =~ s/two/WBPerson/;
   my $pgcommand = qq(INSERT INTO com_massemail VALUES ('$paper', '$two', '$email'););
   $toprint .= qq($pgcommand\n);
-# UNCOMMENT TO UPDATE postgres
-  $dbh->do( $pgcommand );
 
 #   my $emailaddress = 'closertothewake@gmail.com';
 #   my $emailaddress = 'cgrove@caltech.edu';
@@ -175,36 +177,19 @@ sub sendIndividualMassEmail {
   $body =~ s/\n/<br\/>\n/g;
 
 
-  my $sender = 'outreach@wormbase.org';
   my $replyto = 'curation@wormbase.org';
-  my $email = Email::Simple->create(
-    header => [
-        From       => 'outreach@wormbase.org',
-        'Reply-to' => 'curation@wormbase.org',
-        To         => "$emailaddress",
-        Subject    => "$subject",
-        'Content-Type' => 'text/html', 
-    ],
-    body => "$body",
-  );
+  # com_massemail is what marks an author as already contacted, so it is only
+  # written after the send succeeded.  Recording it first would burn the author
+  # on a failed send and they would never be asked again.  Jex::mailer sends
+  # through AWS SES and returns false when the message did not go out.
+  unless (&mailer('', $emailaddress, $subject, $body, '', 'text/html', $replyto)) {
+    $toprint .= qq(ERROR : email to $emailaddress was not sent, see the mailer: line in the log.  Not recorded in com_massemail.\n);
+    return $toprint;
+  }
+# UNCOMMENT TO UPDATE postgres
+  $dbh->do( $pgcommand );
   $body =~ s/\n/ /g;
-  $toprint .= qq(send email to $emailaddress\nfrom $sender\nreplyto $replyto\nsubject $subject\nbody $body\n);
-
-  my $passfile = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/insecure/outreachwormbase';
-  # my $passfile = '/home/postgres/insecure/outreachwormbase';
-  open (IN, "<$passfile") or die "Cannot open $passfile : $!";
-  my $password = <IN>; chomp $password;
-  close (IN) or die "Cannot close $passfile : $!";
-  my $sender = Email::Send->new(
-    {   mailer      => 'Gmail',
-        mailer_args => [
-           username => 'outreach@wormbase.org',
-           password => "$password",
-        ]
-    }
-  );
-  eval { $sender->send($email) };
-  die "Error sending email: $@" if $@;
+  $toprint .= qq(send email to $emailaddress\nreplyto $replyto\nsubject $subject\nbody $body\n);
 
   return $toprint;
 } # sub sendIndividualMassEmail
