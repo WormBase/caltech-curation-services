@@ -20,6 +20,13 @@
 
 
 
+# Email now goes out through AWS SES with Jex::mailer, which reads
+# EMAIL_SMTP_USER and EMAIL_PASSWD from .env.  The outreach@wormbase.org
+# password file is no longer read: SES cannot sign for wormbase.org, so the
+# visible sender is EMAIL_FROM and the outreach account stays as the Reply-To.
+# Google stopped accepting the gmail app password some time between 2026 05 02
+# and 2026 05 12, and regenerating it did not help.  2026 08 21
+
 use Jex;			# untaint, getHtmlVar, cshlNew
 use strict;
 use CGI;
@@ -29,9 +36,6 @@ use Tie::IxHash;
 use LWP::Simple;
 use File::Basename;		# fileparse
 # use Mail::Sendmail;
-use Email::Send;
-use Email::Send::Gmail;
-use Email::Simple::Creator;
 use Net::Domain qw(hostname hostfqdn hostdomain);
 use Dotenv -load => '/usr/lib/.env';
 
@@ -969,53 +973,10 @@ sub checkIpBlock {
 
 sub mailSendmail {
   my ($user, $email, $subject, $body) = @_;
-
-# EMAIL locally
-#   $user = 'wormbase-webinar@mangolassi.caltech.edu';
-#   my %mail;
-#   $mail{from}           = $user;
-#   $mail{to}             = $email;
-#   $mail{subject}        = $subject;
-#   $mail{body}           = $body;
-#   $mail{'content-type'} = 'text/html; charset="iso-8859-1"';
-# # UNCOMMENT TO SEND EMAIL
-#   sendmail(%mail) || print qq(<span style="color:red">Error, confirmation email failed</span> : $Mail::Sendmail::error<br/>\n);
-
-# GMAIL way 
-  my $emailaddress = $email;
-#   ($var, my $emailaddress)   = &getHtmlVar($query, 'email');
-#   ($var, my $subject)        = &getHtmlVar($query, 'subject');
-#   ($var, my $body)           = &getHtmlVar($query, 'body');
-  my $sender = 'outreach@wormbase.org';
-#   my $replyto = 'curation@wormbase.org';
-#   print qq(send email to $emailaddress<br/>from $sender<br/>replyto $replyto<br/>subject $subject<br/>body $body<br/>);
-#   print qq(send email to $emailaddress<br/>from $sender<br/>subject $subject<br/>body $body<br/>);
-  my $email = Email::Simple->create(
-    header => [
-        From       => 'outreach@wormbase.org',
-        To         => "$emailaddress",
-        Subject    => "$subject",
-        'Content-Type' => 'text/html',
-    ],
-    body => "$body",
-  );
-
-  my $passfile = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/insecure/outreachwormbase';
-  # my $passfile = '/home/postgres/insecure/outreachwormbase';
-  open (IN, "<$passfile") or die "Cannot open $passfile : $!";
-  my $password = <IN>; chomp $password;
-  close (IN) or die "Cannot close $passfile : $!";
-  my $sender = Email::Send->new(
-    {   mailer      => 'Gmail',
-        mailer_args => [
-           username => 'outreach@wormbase.org',
-           password => "$password",
-        ]
-    }
-  );
-  eval { $sender->send($email) };
-  die "Error sending email: $@" if $@;
-
+  # Jex::mailer sends through AWS SES.  The visible sender is EMAIL_FROM rather
+  # than outreach@wormbase.org, which SES cannot sign for, but replies still go
+  # to the outreach account through the Reply-To that mailer sets.
+  return &mailer($user, $email, $subject, $body, '', 'text/html');
 } # sub mailSendmail
 
 sub autocompleteXHR {                                           # when typing in an autocomplete field xhr call to this CGI for values

@@ -94,15 +94,19 @@
 
 
 
+# Email now goes out through AWS SES with Jex::mailer, which reads
+# EMAIL_SMTP_USER and EMAIL_PASSWD from .env.  The outreach@wormbase.org
+# password file is no longer read: SES cannot sign for wormbase.org, so the
+# visible sender is EMAIL_FROM and the outreach account stays as the Reply-To.
+# Google stopped accepting the gmail app password some time between 2026 05 02
+# and 2026 05 12, and regenerating it did not help.  2026 08 21
+
 use strict;
 use CGI;
 use Jex;		# printHeader printFooter getHtmlVar getDate getSimpleDate mailer
 use LWP::UserAgent;	# getting sanger files for querying
 use LWP::Simple;	# get the PhenOnt.obo from a cgi
 use DBI;
-use Email::Send;
-use Email::Send::Gmail;
-use Email::Simple::Creator;
 use Tie::IxHash;
 use Dotenv -load => '/usr/lib/.env';
 
@@ -852,34 +856,15 @@ sub sendEmail {
   ($var, my $subject)        = &getHtmlVar($query, 'subject');
   ($var, my $body)           = &getHtmlVar($query, 'body');
   ($var, my $datatype)       = &getHtmlVar($query, 'datatype');
-  my $sender = 'outreach@wormbase.org';
   my $replyto = 'curation@wormbase.org';
-  print qq(send email to $emailaddress<br/>from $sender<br/>replyto $replyto<br/>subject $subject<br/>body $body<br/>);
-  my $email = Email::Simple->create(
-    header => [
-        From       => 'outreach@wormbase.org',
-        'Reply-to' => 'curation@wormbase.org',
-        To         => "$emailaddress",
-        Subject    => "$subject",
-    ],
-    body => "$body",
-  );
-
-  my $passfile = $ENV{CALTECH_CURATION_FILES_INTERNAL_PATH} . '/insecure/outreachwormbase';
-  # my $passfile = '/home/postgres/insecure/outreachwormbase';
-  open (IN, "<$passfile") or die "Cannot open $passfile : $!";
-  my $password = <IN>; chomp $password;
-  close (IN) or die "Cannot close $passfile : $!";
-  my $sender = Email::Send->new(
-    {   mailer      => 'Gmail',
-        mailer_args => [
-           username => 'outreach@wormbase.org',
-           password => "$password",
-        ]
-    }
-  );
-  eval { $sender->send($email) };
-  die "Error sending email: $@" if $@;
+  print qq(send email to $emailaddress<br/>replyto $replyto<br/>subject $subject<br/>body $body<br/>);
+  # Jex::mailer sends through AWS SES and returns false if the send failed, so
+  # a paper is only flagged as emailed when the mail actually went out.
+  unless (&mailer('', $emailaddress, $subject, $body, '', 'text/plain', $replyto)) {
+    print qq(<span style="color:red">Error, the email was not sent, see the apache log for the reason.  This paper has not been marked as emailed.</span><br/>);
+    print qq(<a href="community_curation_tracker.cgi">back to start</a><br/>);
+    return;
+  }
   my @pgcommands;
   push @pgcommands, qq(DELETE FROM com_${datatype}_emailsent WHERE joinkey = '$papid';);
   push @pgcommands, qq(INSERT INTO com_${datatype}_emailsent VALUES ( '$papid', '$emailaddress'););

@@ -295,43 +295,128 @@ sub getHtmlVarFree {            # get variables from html form and do not untain
   } # else # if ($query->param("$var"))
 } # sub getHtmlVarFree
 
-sub mailer {                    # send non-attachment mail
-  my ($user, $email, $subject, $body) = @_;
+# AWS SES SMTP settings.  Only EMAIL_SMTP_USER and EMAIL_PASSWD have to be set
+# in /usr/lib/.env - the same two variables the ACKnowledge and barista backends
+# read.  The other four are optional overrides.
+# Gmail used to double as the sender address, but the SES SMTP username is an
+# opaque credential rather than an address, so the visible sender now comes from
+# EMAIL_FROM.  EMAIL_FROM has to be an SES-verified identity; textpressolab.com
+# is verified as a parent domain, so any subdomain of it sends without further
+# DNS setup.
+my $DEFAULT_EMAIL_HOST = 'email-smtp.us-east-1.amazonaws.com';
+my $DEFAULT_EMAIL_PORT = 465;
+my $DEFAULT_EMAIL_FROM = 'WormBase Curation <no-reply@caltech-curation.textpressolab.com>';
+
+sub bareEmailAddress {		# 'Some Name <a@b.org>' becomes 'a@b.org' for the smtp envelope
+  my $address = shift;
+  if ($address =~ m/<([^>]+)>/) { $address = $1; }
+  $address =~ s/^\s+//; $address =~ s/\s+$//;
+  return $address;
+} # sub bareEmailAddress
+
+sub mailer {                    # send non-attachment mail through AWS SES
+  # $user is accepted but unused, so that the existing call sites keep working.
+  # The visible sender must be an SES-verified identity now, it can no longer be
+  # whatever address the caller happened to pass in.
+  my ($user, $email, $subject, $body, $cc, $content_type, $reply_to) = @_;
+  my $host = $ENV{EMAIL_HOST} || $DEFAULT_EMAIL_HOST;
+  my $port = $ENV{EMAIL_PORT} || $DEFAULT_EMAIL_PORT;
+  my $from = $ENV{EMAIL_FROM} || $DEFAULT_EMAIL_FROM;
+  unless (defined $email)   { $email   = ''; }
+  unless (defined $cc)      { $cc      = ''; }
+  unless (defined $body)    { $body    = ''; }
+  unless (defined $subject) { $subject = ''; }
+  unless ($content_type)    { $content_type = 'text/plain'; }
+  unless ($content_type =~ m/charset/i) { $content_type .= '; charset=UTF-8'; }
   $email =~ s/\s+//g;
-  my @recipients = split/,/, $email;
+  $cc    =~ s/\s+//g;
+  my @recipients    = grep { m/\S/ } split/,/, $email;
+  my @cc_recipients = grep { m/\S/ } split/,/, $cc;
+  unless (@recipients || @cc_recipients) {
+    warn qq(mailer: no recipients for "$subject", nothing sent\n); return 0; }
+  # Reply-To defaults to everyone the message went to, so that a submitter
+  # hitting reply reaches all the curators on the thread, which is how these
+  # forms have always been read.  It cannot just be left off: the old From was
+  # outreach@wormbase.org, a mailbox somebody watches, but EMAIL_FROM is a
+  # no-reply address because SES will only sign for a domain it has verified, so
+  # with no Reply-To a plain reply would go nowhere.  An explicit argument wins,
+  # then EMAIL_REPLY_TO from .env when it is set to a fixed address on purpose.
+  unless ($reply_to) { $reply_to = $ENV{EMAIL_REPLY_TO}; }
+  if ($reply_to) {			# tidy a list that came in with stray spaces or a trailing comma
+    my @replyToAddresses;
+    foreach my $address (split/,/, $reply_to) {
+      $address =~ s/^\s+//; $address =~ s/\s+$//;	# trim around only, a display name may contain spaces
+      if ($address =~ m/\S/) { push @replyToAddresses, $address; }
+    }
+    $reply_to = join(', ', @replyToAddresses);
+  }
+  unless ($reply_to) { $reply_to = join(', ', @recipients, @cc_recipients); }
   if (utf8::is_utf8($body))    { $body    = encode('UTF-8', $body); }		# else Email::Simple warns 'Body with wide characters' and sends mangled bytes
   if (utf8::is_utf8($subject)) { $subject = encode('MIME-Header', $subject); }	# rfc 2047 for a non-ascii subject
+  my @header = ( From => $from, To => join(', ', @recipients) );
+  if (@cc_recipients) { push @header, ( Cc => join(', ', @cc_recipients) ); }
+  if ($reply_to)      { push @header, ( 'Reply-To' => $reply_to ); }
+  push @header, ( Subject        => $subject,
+                  'MIME-Version' => '1.0',
+                  'Content-Type' => $content_type );
   my $email_object = Email::Simple->create(
-      header => [
-          From           => $ENV{MAILER_USERNAME},
-          To             => join(', ', @recipients),
-#           To      => $email,				# if one email
-#           Cc      => join(', ', @cc_recipients),	# if cc values
-          Subject        => $subject,
-          'MIME-Version' => '1.0',
-          'Content-Type' => 'text/plain; charset=UTF-8',
-      ],
-      body => $body,
+      header => \@header,
+      body   => $body,
   );
-  my $smtp = Net::SMTP::SSL->new(
-    'smtp.gmail.com',                       # Gmail SMTP server address
-    Port => 465,                            # Gmail SMTP SSL port
-#     Debug => 1,                             # Enable debugging if needed
-  ) or die "Could not connect to Gmail SMTP server";
 
-  $smtp->auth($ENV{MAILER_USERNAME}, $ENV{MAILER_PASSWORD});
-  $smtp->mail($ENV{MAILER_USERNAME});
-  # $smtp->to(@recipients);                     # might be an alternate way to send
-  $smtp->recipient(@recipients);
-  # $smtp->cc(@cc_recipients);                  # don't send cc here
-  $smtp->data();
+  unless ($ENV{EMAIL_SMTP_USER} && $ENV{EMAIL_PASSWD}) {
+    warn qq(mailer: EMAIL_SMTP_USER / EMAIL_PASSWD not set in .env, "$subject" not sent\n); return 0; }
+
+  # Send failures are logged and returned, not fatal.  Form submissions are
+  # already written to postgres by the time the confirmation mail goes out, so
+  # dying here would show the submitter an error page for data that did save.
+  # Callers that care can check the return value; every outcome lands in the
+  # apache or cron log with a 'mailer:' prefix so an outage is visible.
+  my $smtp = Net::SMTP::SSL->new( $host, Port => $port );
+  unless ($smtp) {
+    warn qq(mailer: cannot connect to $host:$port, "$subject" not sent\n); return 0; }
+  unless ($smtp->auth($ENV{EMAIL_SMTP_USER}, $ENV{EMAIL_PASSWD})) {
+    warn qq(mailer: smtp auth failed at $host, "$subject" not sent : ) . &smtpError($smtp);
+    $smtp->quit; return 0; }
+  unless ($smtp->mail(&bareEmailAddress($from))) {
+    warn qq(mailer: sender $from rejected by $host, "$subject" not sent : ) . &smtpError($smtp);
+    $smtp->quit; return 0; }
+  # SkipBad, because Net::SMTP::recipient otherwise fails the whole call on the
+  # first rejected address.  Forms put a submitter-typed address in To and the
+  # curators in Cc, so one typo would drop the curators' copy too, which the
+  # gmail code did deliver.  Only give up when nothing at all was accepted.
+  my @allRecipients = (@recipients, @cc_recipients);
+  my @accepted = $smtp->recipient(@allRecipients, { SkipBad => 1 });
+  unless (@accepted) {
+    warn qq(mailer: every recipient rejected by $host, "$subject" not sent : ) . &smtpError($smtp);
+    $smtp->quit; return 0; }
+  if (scalar(@accepted) < scalar(@allRecipients)) {
+    my %isAccepted; foreach my $address (@accepted) { $isAccepted{$address}++; }
+    my @rejected = grep { ! $isAccepted{$_} } @allRecipients;
+    warn qq(mailer: $host rejected ) . join(', ', @rejected) . qq( for "$subject", sending to the others\n); }
+  unless ($smtp->data()) {
+    warn qq(mailer: $host refused DATA, "$subject" not sent : ) . &smtpError($smtp);
+    $smtp->quit; return 0; }			# else datasend writes the body where the server expects commands
   $smtp->datasend($email_object->as_string);
-  $smtp->dataend();
+  unless ($smtp->dataend()) {
+    warn qq(mailer: $host refused the message, "$subject" not sent : ) . &smtpError($smtp);
+    $smtp->quit; return 0; }
   $smtp->quit;
+  warn qq(mailer: sent "$subject" to ) . join(', ', @accepted) . qq(\n);
+  return 1;
 
   # sample use
   # if ( $send_email) { &mailer($user, $email, $subject, $body); }
+  # html with a cc and a form specific reply-to :
+  # &mailer($user, $email, $subject, $body, $cc, 'text/html', 'curation@wormbase.org');
 } # sub mailer
+
+sub smtpError {			# last response from the smtp server, for the log line
+  my $smtp = shift;
+  my $message = $smtp->message(); unless (defined $message) { $message = ''; }
+  $message =~ s/\s+/ /g; $message =~ s/\s+$//;
+  return $smtp->code() . qq( $message\n);
+} # sub smtpError
 
 sub old_tazendra_mailer {            	# send non-attachment mail
   my ($user, $email, $subject, $body) = @_;

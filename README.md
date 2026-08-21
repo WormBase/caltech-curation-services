@@ -22,3 +22,84 @@ $ make start-acedb
 Create grafana/grafana.ini file and modify it with custom config. For example, modify the smtp section to be able to send out email alert notifications. 
 
 grafana/grafana_original.ini contains the original default settings.
+
+### Email (AWS SES)
+
+All outgoing mail - form confirmations, curator notifications, cron job error
+reports, the webinar and community curation mailings - goes through
+`Jex::mailer` in `curation/scripts/perl_modules/Jex.pm`, which talks to AWS SES
+over SMTP.
+
+Set these two in the `.env` file that `ENV_FILE_PATH` points at, using the SES
+SMTP credentials from the textpresso AWS account:
+
+```
+EMAIL_SMTP_USER=<SES smtp username>
+EMAIL_PASSWD=<SES smtp password>
+```
+
+`EMAIL_SMTP_USER` is an opaque SES credential, not an address, so the visible
+sender comes from `EMAIL_FROM` instead. `EMAIL_HOST`, `EMAIL_PORT` and
+`EMAIL_FROM` are optional; when empty, `Jex.pm` uses
+`email-smtp.us-east-1.amazonaws.com`, port 465 and
+`WormBase Curation <no-reply@caltech-curation.textpressolab.com>`. `EMAIL_FROM`
+has to be an SES-verified identity - `textpressolab.com` is verified as a parent
+domain, so any subdomain of it works without further DNS setup.
+
+Because that From is a `no-reply@` address, `mailer` always sets a `Reply-To`,
+and by default it is **every address the message went to** - the form submitter
+plus the curators in To and Cc - so a submitter hitting reply reaches all the
+curators on the thread, which is how these forms have always been read. Leaving
+the Reply-To off is not an option: the old From was `outreach@wormbase.org`, a
+mailbox somebody watches, so a plain reply used to arrive somewhere. With a
+no-reply From and no Reply-To it would go nowhere. Set `EMAIL_REPLY_TO` only to
+pin every reply to one fixed mailbox instead; an individual call can also pass
+its own, as the community curation tracker and mass mailer do with
+`curation@wormbase.org`.
+
+`Jex.pm` is copied into the image by `curation/Dockerfile`, it is not bind
+mounted, so a change to the mailer needs a rebuild rather than a restart:
+
+```bash
+docker compose up -d --build curation
+```
+
+To check the credentials, send a test message through the same code path the
+forms use:
+
+```bash
+make test-mailer TO=you@example.org                        # on the server
+make test-mailer TO=you@example.org COMPOSE_ARGS='--env-file .env.local'   # on a laptop
+```
+
+`make test-mailer` uses `run --rm --no-deps`, so it works whether or not the
+curation service is up. The equivalent by hand, and the way to reproduce the
+shape a form actually sends - submitter in To, curators in Cc, reply reaching
+all of them. `-e`, `-c` and `-r` each take a list: repeat the flag, pass one
+comma separated value, or mix the two.
+
+```bash
+docker compose run --rm --no-deps \
+  curation /usr/lib/scripts/test_mailer.pl \
+    -e submitter@example.org \
+    -c cgrove@caltech.edu -c garys@caltech.edu -H
+```
+
+`test_mailer.pl -h` lists the rest. `TO=` on the make target also accepts a
+comma separated list.
+
+To try credentials without editing the env file first, pass them straight in.
+`Dotenv` does not overwrite variables that are already in the environment, so
+these win over the file:
+
+```bash
+docker compose exec -e EMAIL_SMTP_USER -e EMAIL_PASSWD \
+  curation /usr/lib/scripts/test_mailer.pl -e you@example.org
+```
+
+Do not add the `EMAIL_*` variables to the `curation` service's `environment:`
+block in `docker-compose.yml`. Because `Dotenv` yields to whatever is already
+set, an empty value there would shadow the real one in the env file.
+
+Every send is logged to the apache or cron log with a `mailer:` prefix, whether
+it succeeded or failed, so an outage is visible instead of silent.

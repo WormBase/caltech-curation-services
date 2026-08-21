@@ -14,9 +14,6 @@ use Jex;		# printHeader printFooter getHtmlVar getDate getSimpleDate mailer
 use LWP::UserAgent;	# getting sanger files for querying
 use LWP::Simple;	# get the PhenOnt.obo from a cgi
 use DBI;
-use Email::Send;
-use Email::Send::Gmail;
-use Email::Simple::Creator;
 use Tie::IxHash;
 use Dotenv -load => '/usr/lib/.env';
 
