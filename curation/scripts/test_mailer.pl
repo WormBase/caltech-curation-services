@@ -93,7 +93,7 @@ sub showConfiguration {
   my $host     = $ENV{EMAIL_HOST}     || '(default in Jex.pm)';
   my $port     = $ENV{EMAIL_PORT}     || '(default in Jex.pm)';
   my $from     = $ENV{EMAIL_FROM}     || '(default in Jex.pm)';
-  my $replyto  = $ENV{EMAIL_REPLY_TO} || '(default in Jex.pm)';
+  my $replyto  = $ENV{EMAIL_REPLY_TO} || '(not set, so the reply goes to every recipient of the message)';
   # Never print the credentials themselves, this runs on a shared server and
   # the output gets pasted into tickets and emails.
   my $user     = $ENV{EMAIL_SMTP_USER} ? 'set (' . length($ENV{EMAIL_SMTP_USER}) . ' characters)' : 'NOT SET';

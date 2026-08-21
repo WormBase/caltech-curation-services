@@ -302,11 +302,10 @@ sub getHtmlVarFree {            # get variables from html form and do not untain
 # opaque credential rather than an address, so the visible sender now comes from
 # EMAIL_FROM.  EMAIL_FROM has to be an SES-verified identity; textpressolab.com
 # is verified as a parent domain, so any subdomain of it sends without further
-# DNS setup.  no-reply@ is unattended, which is why a Reply-To is always set.
-my $DEFAULT_EMAIL_HOST     = 'email-smtp.us-east-1.amazonaws.com';
-my $DEFAULT_EMAIL_PORT     = 465;
-my $DEFAULT_EMAIL_FROM     = 'WormBase Curation <no-reply@caltech-curation.textpressolab.com>';
-my $DEFAULT_EMAIL_REPLY_TO = 'outreach@wormbase.org';
+# DNS setup.
+my $DEFAULT_EMAIL_HOST = 'email-smtp.us-east-1.amazonaws.com';
+my $DEFAULT_EMAIL_PORT = 465;
+my $DEFAULT_EMAIL_FROM = 'WormBase Curation <no-reply@caltech-curation.textpressolab.com>';
 
 sub bareEmailAddress {		# 'Some Name <a@b.org>' becomes 'a@b.org' for the smtp envelope
   my $address = shift;
@@ -323,7 +322,6 @@ sub mailer {                    # send non-attachment mail through AWS SES
   my $host = $ENV{EMAIL_HOST} || $DEFAULT_EMAIL_HOST;
   my $port = $ENV{EMAIL_PORT} || $DEFAULT_EMAIL_PORT;
   my $from = $ENV{EMAIL_FROM} || $DEFAULT_EMAIL_FROM;
-  unless ($reply_to) { $reply_to = $ENV{EMAIL_REPLY_TO} || $DEFAULT_EMAIL_REPLY_TO; }
   unless (defined $email)   { $email   = ''; }
   unless (defined $cc)      { $cc      = ''; }
   unless (defined $body)    { $body    = ''; }
@@ -336,6 +334,15 @@ sub mailer {                    # send non-attachment mail through AWS SES
   my @cc_recipients = grep { m/\S/ } split/,/, $cc;
   unless (@recipients || @cc_recipients) {
     warn qq(mailer: no recipients for "$subject", nothing sent\n); return 0; }
+  # Reply-To defaults to everyone the message went to, so that a submitter
+  # hitting reply reaches all the curators on the thread, which is how these
+  # forms have always been read.  It cannot just be left off: the old From was
+  # outreach@wormbase.org, a mailbox somebody watches, but EMAIL_FROM is a
+  # no-reply address because SES will only sign for a domain it has verified, so
+  # with no Reply-To a plain reply would go nowhere.  An explicit argument wins,
+  # then EMAIL_REPLY_TO from .env when it is set to a fixed address on purpose.
+  unless ($reply_to) { $reply_to = $ENV{EMAIL_REPLY_TO}; }
+  unless ($reply_to) { $reply_to = join(', ', @recipients, @cc_recipients); }
   if (utf8::is_utf8($body))    { $body    = encode('UTF-8', $body); }		# else Email::Simple warns 'Body with wide characters' and sends mangled bytes
   if (utf8::is_utf8($subject)) { $subject = encode('MIME-Header', $subject); }	# rfc 2047 for a non-ascii subject
   my @header = ( From => $from, To => join(', ', @recipients) );

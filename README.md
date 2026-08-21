@@ -39,13 +39,23 @@ EMAIL_PASSWD=<SES smtp password>
 ```
 
 `EMAIL_SMTP_USER` is an opaque SES credential, not an address, so the visible
-sender comes from `EMAIL_FROM` instead. `EMAIL_HOST`, `EMAIL_PORT`,
-`EMAIL_FROM` and `EMAIL_REPLY_TO` are optional; when empty, `Jex.pm` uses
-`email-smtp.us-east-1.amazonaws.com`, port 465,
-`WormBase Curation <no-reply@caltech-curation.textpressolab.com>` and
-`outreach@wormbase.org`. `EMAIL_FROM` has to be an SES-verified identity -
-`textpressolab.com` is verified as a parent domain, so any subdomain of it
-works without further DNS setup.
+sender comes from `EMAIL_FROM` instead. `EMAIL_HOST`, `EMAIL_PORT` and
+`EMAIL_FROM` are optional; when empty, `Jex.pm` uses
+`email-smtp.us-east-1.amazonaws.com`, port 465 and
+`WormBase Curation <no-reply@caltech-curation.textpressolab.com>`. `EMAIL_FROM`
+has to be an SES-verified identity - `textpressolab.com` is verified as a parent
+domain, so any subdomain of it works without further DNS setup.
+
+Because that From is a `no-reply@` address, `mailer` always sets a `Reply-To`,
+and by default it is **every address the message went to** - the form submitter
+plus the curators in To and Cc - so a submitter hitting reply reaches all the
+curators on the thread, which is how these forms have always been read. Leaving
+the Reply-To off is not an option: the old From was `outreach@wormbase.org`, a
+mailbox somebody watches, so a plain reply used to arrive somewhere. With a
+no-reply From and no Reply-To it would go nowhere. Set `EMAIL_REPLY_TO` only to
+pin every reply to one fixed mailbox instead; an individual call can also pass
+its own, as the community curation tracker and mass mailer do with
+`curation@wormbase.org`.
 
 `Jex.pm` is copied into the image by `curation/Dockerfile`, it is not bind
 mounted, so a change to the mailer needs a rebuild rather than a restart:
