@@ -24,30 +24,45 @@
 
 use strict;
 use Getopt::Long;
+Getopt::Long::Configure('no_ignore_case');	# else -H for html collides with -h for help
 $| = 1;				# unbuffered, so the mailer: lines on stderr stay in order with this output
 use Jex;			# mailer getSimpleSecDate
 use Dotenv -load => '/usr/lib/.env';
 
-my $recipient    = '';
-my $cc           = '';
+# -e, -c and -r each take a list of addresses.  Repeat the flag, or pass one
+# comma separated value, or mix the two - the forms do the same thing, since
+# Jex::mailer takes comma separated lists.
+my @recipientArgs;
+my @ccArgs;
+my @replyToArgs;
 my $subject      = '';
 my $content_type = 'text/plain';
-my $reply_to     = '';
 my $help         = 0;
 
-GetOptions( 'email|e=s'    => \$recipient,
-            'cc|c=s'       => \$cc,
+GetOptions( 'email|e=s@'   => \@recipientArgs,
+            'cc|c=s@'      => \@ccArgs,
             'subject|s=s'  => \$subject,
             'html|H'       => sub { $content_type = 'text/html'; },
-            'replyto|r=s'  => \$reply_to,
+            'replyto|r=s@' => \@replyToArgs,
             'help|h'       => \$help,
           ) or &usage(1);
 
 if ($help) { &usage(0); }
-unless ($recipient) { print qq(\nERROR : -e <recipient> is required\n); &usage(1); }
+
+my @recipientList = &addressList(@recipientArgs);
+my @ccList        = &addressList(@ccArgs);
+my @replyToList   = &addressList(@replyToArgs);
+unless (@recipientList) { print qq(\nERROR : at least one -e <recipient> is required\n); &usage(1); }
+
+my $recipient = join(', ', @recipientList);
+my $cc        = join(', ', @ccList);
+my $reply_to  = join(', ', @replyToList);
 
 &checkJexIsCurrent();
 &showConfiguration();
+
+my $replyToForBody = $reply_to;
+unless ($replyToForBody) { $replyToForBody = 'every recipient of this message'; }
 
 my $timestamp = &getSimpleSecDate();
 unless ($subject) { $subject = qq(WormBase curation mailer test $timestamp); }
@@ -59,14 +74,16 @@ If you are reading it, Jex::mailer reached AWS SES with the credentials in
 
 sent at       : $timestamp
 content type  : $content_type
-recipients    : $recipient
+to            : $recipient
 cc            : $cc
+reply-to      : $replyToForBody
 );
 if ($content_type eq 'text/html') { $body =~ s/\n/<br\/>\n/g; }
 
-print qq(sending $content_type to $recipient);
-if ($cc) { print qq( , cc $cc); }
-print qq( ...\n\n);
+print qq(sending $content_type to ) . scalar(@recipientList) . qq( recipient(s) : $recipient\n);
+if ($cc)       { print qq(              cc ) . scalar(@ccList) . qq( : $cc\n); }
+if ($reply_to) { print qq(        reply-to ) . scalar(@replyToList) . qq( : $reply_to\n); }
+print qq(\n);
 
 # Same call the forms make.  $user is the first argument and is ignored by
 # mailer, it is only still there so the old call sites did not have to change.
@@ -106,6 +123,7 @@ sub showConfiguration {
   print qq(  EMAIL_SMTP_USER : $user\n);
   print qq(  EMAIL_PASSWD    : $passwd\n);
   if ($reply_to) { print qq(  Reply-To for this message, from -r : $reply_to\n); }
+  else           { print qq(  Reply-To for this message          : the To and Cc addresses below\n); }
   print qq(\n);
 } # sub showConfiguration
 
@@ -126,6 +144,18 @@ sub checkJexIsCurrent {
   print qq(          and then this script again, otherwise you are testing the old mailer.\n);
 } # sub checkJexIsCurrent
 
+sub addressList {		# flatten repeated flags and comma separated values into one list
+  my @values = @_;
+  my @addresses;
+  foreach my $value (@values) {
+    foreach my $address (split /,/, $value) {
+      $address =~ s/^\s+//; $address =~ s/\s+$//;	# trim around, but keep any display name intact
+      if ($address =~ m/\S/) { push @addresses, $address; }
+    }
+  }
+  return @addresses;
+} # sub addressList
+
 sub slurp {
   my $file = shift;
   open (IN, "<$file") or return undef;
@@ -140,18 +170,34 @@ sub usage {
   print qq(
 usage : test_mailer.pl -e <recipient> [options]
 
-  -e, --email <address>     where to send the test message.  Comma separated for
-                            more than one recipient.  Required.
-  -c, --cc <address>        comma separated cc recipients.
+  -e, --email <list>        where to send the test message.  Required.
+  -c, --cc <list>           cc recipients.
+  -r, --replyto <list>      Reply-To for this message.  Without it, Jex::mailer
+                            defaults the Reply-To to every recipient of the
+                            message, which is what the forms rely on so that a
+                            reply reaches all the curators on the thread.
   -s, --subject <text>      subject line.  Defaults to a timestamped one.
   -H, --html                send as text/html instead of text/plain.
-  -r, --replyto <address>   override the Reply-To for this message only.
   -h, --help                this message.
+
+Each <list> is one or more addresses.  Repeat the flag, or pass a comma
+separated value, or mix the two.
 
 examples :
 
   docker compose exec curation /usr/lib/scripts/test_mailer.pl -e you\@example.org
-  docker compose exec curation /usr/lib/scripts/test_mailer.pl -e you\@example.org -H
+
+  # the shape a form sends : submitter in To, curators in Cc, reply reaches all
+  docker compose exec curation /usr/lib/scripts/test_mailer.pl \\
+    -e submitter\@example.org \\
+    -c cgrove\@caltech.edu -c garys\@caltech.edu -H
+
+  # same thing with comma separated lists, and a fixed Reply-To
+  docker compose exec curation /usr/lib/scripts/test_mailer.pl \\
+    -e 'submitter\@example.org, second\@example.org' \\
+    -c 'cgrove\@caltech.edu, garys\@caltech.edu' \\
+    -r 'curation\@wormbase.org, outreach\@wormbase.org'
+
   make test-mailer TO=you\@example.org
 
 );

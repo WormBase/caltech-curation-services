@@ -342,6 +342,14 @@ sub mailer {                    # send non-attachment mail through AWS SES
   # with no Reply-To a plain reply would go nowhere.  An explicit argument wins,
   # then EMAIL_REPLY_TO from .env when it is set to a fixed address on purpose.
   unless ($reply_to) { $reply_to = $ENV{EMAIL_REPLY_TO}; }
+  if ($reply_to) {			# tidy a list that came in with stray spaces or a trailing comma
+    my @replyToAddresses;
+    foreach my $address (split/,/, $reply_to) {
+      $address =~ s/^\s+//; $address =~ s/\s+$//;	# trim around only, a display name may contain spaces
+      if ($address =~ m/\S/) { push @replyToAddresses, $address; }
+    }
+    $reply_to = join(', ', @replyToAddresses);
+  }
   unless ($reply_to) { $reply_to = join(', ', @recipients, @cc_recipients); }
   if (utf8::is_utf8($body))    { $body    = encode('UTF-8', $body); }		# else Email::Simple warns 'Body with wide characters' and sends mangled bytes
   if (utf8::is_utf8($subject)) { $subject = encode('MIME-Header', $subject); }	# rfc 2047 for a non-ascii subject

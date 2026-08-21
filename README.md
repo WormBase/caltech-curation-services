@@ -73,12 +73,20 @@ make test-mailer TO=you@example.org COMPOSE_ARGS='--env-file .env.local'   # on 
 ```
 
 `make test-mailer` uses `run --rm --no-deps`, so it works whether or not the
-curation service is up. The equivalent by hand:
+curation service is up. The equivalent by hand, and the way to reproduce the
+shape a form actually sends - submitter in To, curators in Cc, reply reaching
+all of them. `-e`, `-c` and `-r` each take a list: repeat the flag, pass one
+comma separated value, or mix the two.
 
 ```bash
 docker compose run --rm --no-deps \
-  curation /usr/lib/scripts/test_mailer.pl -e you@example.org
+  curation /usr/lib/scripts/test_mailer.pl \
+    -e submitter@example.org \
+    -c cgrove@caltech.edu -c garys@caltech.edu -H
 ```
+
+`test_mailer.pl -h` lists the rest. `TO=` on the make target also accepts a
+comma separated list.
 
 To try credentials without editing the env file first, pass them straight in.
 `Dotenv` does not overwrite variables that are already in the environment, so
