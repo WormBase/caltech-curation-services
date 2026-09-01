@@ -16,6 +16,8 @@
 #
 # Changed messaging about when changes will happen, because of WormBase moving to
 # Alliance.  For Cecilia.  2025 10 30
+#
+# Changed message form early 2026 to late 2026.  2026 09 01
 
 
 use strict;
@@ -177,7 +179,7 @@ sub submit {
   print qq(Thank you for your updates.<br />\n);
   print qq(Please note that WS298 will be the final major WormBase release. This release includes Person and person\_lineage data updated through August 19, 2025.<br />\n);
   print qq(In lieu of generating new releases of WormBase, we will accelerate our efforts to incorporate existing data and services into the Alliance of Genome Resources.<br />\n);
-  print qq(Your updates will be available through the Alliance of Genome Resources in early 2026.<br />\n);
+  print qq(Your updates will be available through the Alliance of Genome Resources in late 2026.<br />\n);
   print qq(Thank you for your understanding.<br /><br />\n);
 #   print qq(Thank you for submitting this data.<br />\n);
 #   print qq(Updates will show in the next release of WormBase.<br />\n);
@@ -200,7 +202,7 @@ sub submit {
   if ($joinkey) { $body .= "$person updates :\n$dataDiff\n"; }
 #   $body .= "\n\nThank you very much for updating your contact information.\n\nUpdates will appear in the next release of WormBase in your WBPerson page under author/Person search http://www.wormbase.org . The full release schedule is available here:\n\nhttps://www.wormbase.org/about/release_schedule#0--10\n\nPlease do not hesitate to contact me if you have any questions.\n\nHave a great day,\n\nCecilia";
   if ($user_standard_name) { $body .= "\n\nDear ${user_standard_name},"; }
-  $body .= "\n\nThank you for your updates.\n\nPlease note that WS298 will be the final major WormBase release. This release includes Person and person\_lineage data updated through August 19, 2025.\n\nIn lieu of generating new releases of WormBase, we will accelerate our efforts to incorporate existing data and services into the Alliance of Genome Resources.\n\nYour updates will be available through the Alliance of Genome Resources in early 2026.\n\nThank you for your understanding.\n\nThanks,\nCecilia\ncecnak\@wormbase.org";
+  $body .= "\n\nThank you for your updates.\n\nPlease note that WS298 will be the final major WormBase release. This release includes Person and person\_lineage data updated through August 19, 2025.\n\nIn lieu of generating new releases of WormBase, we will accelerate our efforts to incorporate existing data and services into the Alliance of Genome Resources.\n\nYour updates will be available through the Alliance of Genome Resources in late 2026.\n\nThank you for your understanding.\n\nThanks,\nCecilia\ncecnak\@wormbase.org";
   &mailer($user, $email, $subject, $body);    # email CGI to user
   &printHtmlFooter();
 } # sub submit
