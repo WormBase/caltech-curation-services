@@ -513,8 +513,6 @@ the real forms, before pulling on production.
 
 ## Known rough edges
 
-* `.env` is committed to the repository. It is the local-development default, but it
-  means the file is a poor place for anything secret — the real ones live on the servers.
 * Curator lists and some configuration are hardcoded in several places.
 * The `agr_reffile_upload.cgi` permissions model does not fully work for supplemental
   files in subdirectories (noted in the script itself).
