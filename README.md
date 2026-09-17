@@ -634,4 +634,3 @@ the real forms, before pulling on production.
 
 * WormBase — <https://wormbase.org>
 * Alliance of Genome Resources — <https://www.alliancegenome.org>
-* AceDB — <http://www.acedb.org>
