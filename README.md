@@ -3,8 +3,7 @@
 The curation platform the WormBase group at Caltech runs for *C. elegans* literature
 and biological data. It is the software behind the forms curators use every day, the
 public submission forms the worm community fills in, and the nightly and weekly jobs
-that push curated data out to **citace** (and from there into the WormBase release)
-and to the **Alliance of Genome Resources**.
+that push curated data out to the **Alliance of Genome Resources**.
 
 | | |
 | --- | --- |
@@ -40,12 +39,11 @@ write into it, scheduled jobs read out of it and ship the data onward.
              │   (+ *_hst history)    │
              └───────────┬────────────┘
                          │  nightly / weekly cron jobs
-        ┌────────────────┼─────────────────┬──────────────────┐
-        ▼                ▼                 ▼                  ▼
-   .ace dumps       Alliance (ABC)     PubMed / ORCID     email to curators
-   → citace         literature +       CrossRef ingest    and submitters
-   → WormBase       topic/entity       (incoming)
-     release        tags
+  ┌──────────────────────┼──────────────────────┐
+  ▼                      ▼                      ▼
+  Alliance (ABC)         PubMed / ORCID         email to curators
+  literature +           CrossRef ingest        and submitters
+  topic/entity tags      (incoming)
 ```
 
 Two properties are worth knowing because they shape everything else:
@@ -54,7 +52,7 @@ Two properties are worth knowing because they shape everything else:
   records who changed what and when. If an annotation looks wrong, its history is
   still there.
 * **There is no "save and publish" step.** Data leaves the database on a schedule —
-  the citace dumps and the Alliance uploads run from cron, mostly overnight
+  the Alliance uploads run from cron, mostly overnight
   (see [Where curated data goes](#where-curated-data-goes)).
 
 ## Two doors into the system
@@ -147,7 +145,6 @@ Developer-facing documentation for the OA lives next to the code, in
 
 | Destination | How | Roughly when |
 | --- | --- | --- |
-| **citace** (→ AceDB → WormBase release) | `.ace` files written by `curation/scripts/citace_upload/*` | papers Tue–Sat 02:00; other datatypes on their own schedules |
 | **Alliance (ABC / literature service)** | `curation/scripts/agr_upload/pap_papers/*`, plus reference-file uploads | literature dump Tue–Sat 05:00; topic/entity jobs weekly |
 | **Incoming papers** | PubMed XML download and matching | nightly 01:00 |
 | **Ontologies** | OBO refresh into `obo_*` tables | nightly 20:00 |
@@ -163,8 +160,8 @@ the production host** — the dev host deliberately runs no cron jobs.
   report it with the URL and roughly the time, so the Apache log can be matched up.
 * An annotation is missing or looks wrong → the `_hst` history tables can say who
   changed it and when; ask a developer to look it up.
-* Something you curated has not appeared in WormBase → check the schedule above
-  first; most exports run overnight and the release itself is monthly.
+* Something you curated has not reached the Alliance → check the schedule above
+  first; the exports run overnight.
 
 ---
 
@@ -203,7 +200,8 @@ curation/
       ace/                       AceDB-backed browse/query CGIs
   scripts/
     perl_modules/                Jex.pm, ace_dumper.pm, pap_match.pm
-    citace_upload/               .ace dumpers, one directory per datatype
+    citace_upload/               .ace dumpers, one per datatype — legacy, see
+                                 "Known rough edges"
     agr_upload/                  Alliance literature and topic/entity uploads
     pgpopulation/                jobs that populate/refresh database tables
     cronjobs/                    pg dumps, stats, lineage, header refresh
@@ -513,6 +511,12 @@ the real forms, before pulling on production.
 
 ## Known rough edges
 
+* **citace is no longer built**, because there are no new WormBase releases, so the
+  `.ace` dump pipeline no longer has a consumer. Most of the per-datatype dumpers in
+  `curation/scripts/citace_upload/` are already commented out in `curation/crontab`;
+  what still runs on a schedule is the papers wrapper (Tue–Sat 02:00) and Cecilia's
+  wrapper under `/usr/caltech_curation_files/` (Thursdays). Those two, and the
+  `citace_upload/` tree itself, are candidates for retirement.
 * Curator lists and some configuration are hardcoded in several places.
 * The `agr_reffile_upload.cgi` permissions model does not fully work for supplemental
   files in subdirectories (noted in the script itself).
