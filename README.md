@@ -175,6 +175,12 @@ Everything else under `/usr/caltech_curation_files/` is reachable on the server 
 **<https://caltech-curation.textpressolab.com/files/pub/gene_descriptions/>** — one
 directory per WormBase release, `WS268` through `WS298`, about 39 GB in total.
 
+These are the output of the WormBase
+[gene description pipeline](#the-gene-description-pipeline), which is installed on the
+instance but is no longer being run: WormBase is frozen, so **WS298 is the last release
+here** and no more will be added. Generation itself has moved to the Alliance, where it
+runs on every Alliance build. The files below stay where they are.
+
 Each release is laid out as `WS<nnn>/{pre-release,release}/<YYYYMMDD>/`. Inside, the
 descriptions are written once per species — *C. elegans*, *C. briggsae*,
 *C. brenneri*, *C. japonica*, *C. remanei*, *B. malayi*, *O. volvulus*,
@@ -282,6 +288,26 @@ four `entity-extraction-*` pipelines; the dev host runs the same set with `-dev`
 building `*_test` images. Jenkins runs `privileged`, as `root`, with the host's Docker
 socket and binary mounted in — that is how a job restarts containers on the host, and
 it also means a job there has full control of the Docker daemon.
+
+### The gene description pipeline
+
+One more service is installed on the instance without being part of any of the above:
+the **gene description generation pipeline**, a checkout of
+[`alliance-genome/agr_genedescriptions`](https://github.com/alliance-genome/agr_genedescriptions).
+The repository holds two pipelines, and only one of them ever ran here:
+
+* `pipelines/wormbase/` — the WormBase one (`exec_all_pipelines.sh`, its own
+  `Dockerfile` and `config_wb.yml`). This is the copy installed on this instance. It
+  **never ran automatically** — no cron entry, no Jenkins job — it was launched by hand
+  for each release, and it is **not being run any more**, because WormBase is frozen and
+  there are no new releases to generate descriptions for. What it produced is still on
+  disk and still served: [the gene description files](#gene-descriptions), through WS298.
+* `pipelines/alliance/` — where the work happens now. **Gene description generation has
+  moved to the Alliance**, where it runs automatically as part of every Alliance build.
+  Nothing on this instance is involved in it.
+
+So the checkout here is best read as the retired half of a pipeline whose live half runs
+elsewhere.
 
 ## Repository layout
 
