@@ -11,7 +11,7 @@ that push curated data out to the **Alliance of Genome Resources**.
 | Staging / dev | <https://caltech-curation-dev.textpressolab.com> |
 | Legacy alias | <http://caltech.wormbase.org> (static files, FTP `pub/`, virtualworm) |
 | Repository | `WormBase/caltech-curation-services` |
-| Hosting | two AWS EC2 instances (`us-east-1`), Docker Compose, no CI/CD |
+| Hosting | two AWS EC2 instances (`us-east-1`), Docker Compose |
 
 **If you curate data**, read [Part 1](#part-1--what-the-services-are). It describes what
 the services are, how they fit together and where your annotations end up.
@@ -236,7 +236,7 @@ are the application.
 | `reverse_proxy` | built from `reverse_proxy/Dockerfile` | nginx + certbot, terminates TLS for this **and other Textpresso services on the same box** |
 | `grafana`, `prometheus`, `alertmanager` | upstream images | dashboards and alerting |
 | `postgres_prom_exporter`, `grok_exporter_*` | upstream / local build | Postgres metrics; log-scraping metrics for AFP, VFP, antibody, expression-cluster, e-mail-extraction pipelines |
-| `jenkins` | `jenkins/jenkins:lts` | shared build server for *other* WormBase/Textpresso projects, not for this repo |
+| `jenkins` | `jenkins/jenkins:lts` | CI/CD for the sibling Textpresso/WormBase services on this host — see [Jenkins](#jenkins) |
 | `acedb` | built from `acedb/` | optional local AceDB GUI (Linux + X11 only) |
 
 ## Repository layout
@@ -356,9 +356,10 @@ example an `smtp` section so alert notifications can be sent.
 
 ## Deploying
 
-There is **no CI/CD** for this repository. Deployment is a `git pull` plus a Compose
-command over SSH. (The Jenkins container on the box builds other projects —
-ACKnowledge, WormiCloud, anatomy-function — not this one.)
+**This repository has no pipeline of its own**: deploying it is a `git pull` plus a
+Compose command over SSH, done by hand. That is not true of the host in general —
+the [Jenkins](#jenkins) instance in this same Compose stack builds and deploys the
+sibling services automatically. It just has no job for this repository.
 
 ### The hosts
 
@@ -432,6 +433,33 @@ unrelated Textpresso apps. Apache then maps `/pub` → `/usr/lib/pub/`, `/priv` 
 TLS certificates are Let's Encrypt, renewed by a certbot cron **inside the
 reverse_proxy container** (hourly `certbot renew && nginx -s reload`), with the
 certificates on a host volume under `VOLUMES_DIR/certbot`.
+
+### Jenkins
+
+The `jenkins` service in this stack is the CI/CD server for the *other* Textpresso and
+WormBase projects that run on the same box. It is reachable on host port **49001**
+(`50000` is the agent port); nginx does not proxy it, so it is reached by the host
+address and port rather than through `caltech-curation.textpressolab.com`.
+
+Each job polls its own GitHub repository, builds the images from that checkout, and
+replaces the running containers — so those services really are deployed automatically
+on commit. Jobs configured on production:
+
+| Job | Repository it tracks | Containers it runs |
+| --- | --- | --- |
+| `acknowledge` | `WormBase/ACKnowledge` | the author-first-pass stack: `afp_api`, `afp_submission_form`, `afp_curator_dashboard`, `afp_author_portal`, `afp_pipeline` |
+| `barista` | `WormBase/barista` | `barista_ui`, `barista_api` |
+| `wormicloud` | `WormBase/wormicloud` | `wormicloud_ui`, `wormicloud_api` |
+| `anatomy-function` | the anatomy-function repo | the anatomy-function app and its API |
+| `variant-first-pass` | the VFP repo | `vfp_pipeline` |
+| `entity-extraction-antibody`, `-email-addresses`, `-expression-cluster`, `-transgene` | the entity-extraction repos | the `ntt_extr_*` pipelines |
+
+The dev host runs the same set with `-dev` names, building `*_test` images. Jenkins runs `privileged`, as `root`,
+with the host's Docker socket and binary mounted in — that is how a job rebuilds and
+restarts containers on the host, and it also means a job in Jenkins has full control of
+the Docker daemon.
+
+None of these jobs touch this repository; the curation service is deployed by hand.
 
 ### Backups
 
