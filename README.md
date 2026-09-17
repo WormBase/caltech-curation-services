@@ -233,11 +233,55 @@ are the application.
 | --- | --- | --- |
 | `curation` | built from `curation/Dockerfile` | Apache + all CGI scripts, cron jobs, AceDB & AcePerl, restic, sshd |
 | `db` | `postgres:11` | the `caltech_curation` database |
-| `reverse_proxy` | built from `reverse_proxy/Dockerfile` | nginx + certbot, terminates TLS for this **and other Textpresso services on the same box** |
+| `reverse_proxy` | built from `reverse_proxy/Dockerfile` | nginx + certbot, terminates TLS for this **and every other application on the box** |
 | `grafana`, `prometheus`, `alertmanager` | upstream images | dashboards and alerting |
 | `postgres_prom_exporter`, `grok_exporter_*` | upstream / local build | Postgres metrics; log-scraping metrics for AFP, VFP, antibody, expression-cluster, e-mail-extraction pipelines |
-| `jenkins` | `jenkins/jenkins:lts` | CI/CD for the sibling Textpresso/WormBase services on this host — see [Jenkins](#jenkins) |
+| `jenkins` | `jenkins/jenkins:lts` | CI/CD for the other applications on this box — see [Other services on this instance](#other-services-on-this-instance) |
 | `acedb` | built from `acedb/` | optional local AceDB GUI (Linux + X11 only) |
+
+## Other services on this instance
+
+The box is not dedicated to curation. A set of applications developed separately from
+the curation system, each with its own repository and release cycle, runs on the same
+EC2 instance behind the same nginx reverse proxy:
+
+| Application | Reached at | Containers |
+| --- | --- | --- |
+| ACKnowledge (author first pass) | `acknowledge.textpressolab.com`, plus `api.`, `dashboard.` and `acp.` subdomains | `afp_submission_form` :3010, `afp_api` :8001, `afp_curator_dashboard` :3011, `afp_author_portal` :3012, `afp_pipeline` |
+| WormiCloud | `wormicloud.textpressolab.com`, `wormicloud-api.textpressolab.com` | `wormicloud_ui` :5010, `wormicloud_api` :8011 |
+| Barista | `barista.textpressolab.com`, `barista-api.textpressolab.com` | `barista_ui` :5011, `barista_api` :8012 |
+| Anatomy function | `caltech-curation.textpressolab.com/anatomy-function` and `/anatomy-function-api/` | :5013, :8013 |
+| Variant first pass | no web interface | `vfp_pipeline` |
+| Entity extraction | no web interface | `ntt_extr_transgene_pipeline`, `ntt_extr_expression_cluster_pipeline`, `ntt_extr_email_addr_pipeline` |
+
+They are not part of the curation system and this repository does not build them, but
+they share enough with it to matter when you work on either side:
+
+* **The reverse proxy is shared.** Recreating `reverse_proxy` takes all of them down
+  with it.
+* **The database is shared.** The ACKnowledge and WormiCloud backends connect to the
+  same `caltech_curation` database, across the Docker bridge, rather than keeping
+  their own.
+* **The disk is shared**, and it is [tight](#known-rough-edges). Several of them write
+  under `/usr/caltech_curation_files/pub/`.
+* **Anatomy function is served from the curation hostname**, under a path, so an nginx
+  change for one can affect the other.
+
+### How they are deployed
+
+The `jenkins` service in this Compose stack is the CI/CD for those applications — and
+only for those. Each job polls its application's GitHub repository, builds the images
+from that checkout and replaces the running containers, so they deploy automatically on
+commit. **The curation system has no job and is deployed by hand**
+(see [Deploying](#deploying)).
+
+Jenkins is on host port **49001** (`50000` is the agent port) and is not proxied by
+nginx, so it is reached by host address and port. Production runs jobs for
+`acknowledge`, `barista`, `wormicloud`, `anatomy-function`, `variant-first-pass` and
+four `entity-extraction-*` pipelines; the dev host runs the same set with `-dev` names,
+building `*_test` images. Jenkins runs `privileged`, as `root`, with the host's Docker
+socket and binary mounted in — that is how a job restarts containers on the host, and
+it also means a job there has full control of the Docker daemon.
 
 ## Repository layout
 
@@ -357,9 +401,9 @@ example an `smtp` section so alert notifications can be sent.
 ## Deploying
 
 **This repository has no pipeline of its own**: deploying it is a `git pull` plus a
-Compose command over SSH, done by hand. That is not true of the host in general —
-the [Jenkins](#jenkins) instance in this same Compose stack builds and deploys the
-sibling services automatically. It just has no job for this repository.
+Compose command over SSH, done by hand. The Jenkins instance in this stack deploys the
+[other applications on the box](#other-services-on-this-instance) automatically, but it
+has no job for the curation system.
 
 ### The hosts
 
@@ -407,8 +451,8 @@ docker compose --env-file /usr/share/caltech-curation-services/env_files/.env rm
 docker compose --env-file /usr/share/caltech-curation-services/env_files/.env up -d --build reverse_proxy
 ```
 
-Restarting `reverse_proxy` interrupts the other Textpresso services it fronts
-(ACKnowledge, WormiCloud, Barista, anatomy-function), so do it deliberately.
+Restarting `reverse_proxy` interrupts every other application it fronts — ACKnowledge,
+WormiCloud, Barista, anatomy function — so do it deliberately.
 
 ### After deploying
 
@@ -425,7 +469,7 @@ curl -so /dev/null -w '%{http_code}\n' https://caltech-curation.textpressolab.co
 
 nginx in `reverse_proxy` owns :80 and :443 on the host and proxies to services on the
 Docker bridge address: the curation Apache on `:8080`, Grafana on `:3000`, plus the
-unrelated Textpresso apps. Apache then maps `/pub` → `/usr/lib/pub/`, `/priv` →
+[other applications on the box](#other-services-on-this-instance). Apache then maps `/pub` → `/usr/lib/pub/`, `/priv` →
 `/usr/lib/priv/` (Basic auth) and `/files` → the shared curation files directory.
 `caltech.wormbase.org` is a separate Apache vhost serving static content, the FTP
 `pub/` tree and virtualworm.
@@ -433,33 +477,6 @@ unrelated Textpresso apps. Apache then maps `/pub` → `/usr/lib/pub/`, `/priv` 
 TLS certificates are Let's Encrypt, renewed by a certbot cron **inside the
 reverse_proxy container** (hourly `certbot renew && nginx -s reload`), with the
 certificates on a host volume under `VOLUMES_DIR/certbot`.
-
-### Jenkins
-
-The `jenkins` service in this stack is the CI/CD server for the *other* Textpresso and
-WormBase projects that run on the same box. It is reachable on host port **49001**
-(`50000` is the agent port); nginx does not proxy it, so it is reached by the host
-address and port rather than through `caltech-curation.textpressolab.com`.
-
-Each job polls its own GitHub repository, builds the images from that checkout, and
-replaces the running containers — so those services really are deployed automatically
-on commit. Jobs configured on production:
-
-| Job | Repository it tracks | Containers it runs |
-| --- | --- | --- |
-| `acknowledge` | `WormBase/ACKnowledge` | the author-first-pass stack: `afp_api`, `afp_submission_form`, `afp_curator_dashboard`, `afp_author_portal`, `afp_pipeline` |
-| `barista` | `WormBase/barista` | `barista_ui`, `barista_api` |
-| `wormicloud` | `WormBase/wormicloud` | `wormicloud_ui`, `wormicloud_api` |
-| `anatomy-function` | the anatomy-function repo | the anatomy-function app and its API |
-| `variant-first-pass` | the VFP repo | `vfp_pipeline` |
-| `entity-extraction-antibody`, `-email-addresses`, `-expression-cluster`, `-transgene` | the entity-extraction repos | the `ntt_extr_*` pipelines |
-
-The dev host runs the same set with `-dev` names, building `*_test` images. Jenkins runs `privileged`, as `root`,
-with the host's Docker socket and binary mounted in — that is how a job rebuilds and
-restarts containers on the host, and it also means a job in Jenkins has full control of
-the Docker daemon.
-
-None of these jobs touch this repository; the curation service is deployed by hand.
 
 ### Backups
 
