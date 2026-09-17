@@ -154,6 +154,62 @@ Developer-facing documentation for the OA lives next to the code, in
 All of these run inside the curation container from `curation/crontab`, and **only on
 the production host** — the dev host deliberately runs no cron jobs.
 
+## Files on disk
+
+Not everything lives in the database. A large shared directory,
+`/usr/caltech_curation_files` (roughly 730 GB), holds the files the forms and scripts
+read and write, and the data products this group has generated over the years. It is
+mounted into the curation container, and Apache publishes it, so in most cases you can
+browse to a file in a browser instead of asking someone to fetch it off the server:
+
+| On disk | Browse at | Who can read it |
+| --- | --- | --- |
+| `/usr/caltech_curation_files/pub/` | <https://caltech-curation.textpressolab.com/files/pub/> | anyone |
+| `/usr/caltech_curation_files/priv/` | <https://caltech-curation.textpressolab.com/files/priv/> | curator password |
+
+Everything else under `/usr/caltech_curation_files/` is reachable on the server itself
+(and inside the curation container at the same path), but is not published over the web.
+
+### Gene descriptions
+
+**<https://caltech-curation.textpressolab.com/files/pub/gene_descriptions/>** — one
+directory per WormBase release, `WS268` through `WS298`, about 39 GB in total.
+
+Each release is laid out as `WS<nnn>/{pre-release,release}/<YYYYMMDD>/`. Inside, the
+descriptions are written once per species — *C. elegans*, *C. briggsae*,
+*C. brenneri*, *C. japonica*, *C. remanei*, *B. malayi*, *O. volvulus*,
+*P. pacificus*, *S. ratti*, *T. muris* — in three formats, alongside a few files that
+cover the whole run:
+
+| File | What it is |
+| --- | --- |
+| `<date>_<species>.txt` | the descriptions as readable text |
+| `<date>_<species>.tsv` | tab-separated, one row per gene |
+| `<date>_<species>.json` | structured, with the evidence behind each sentence |
+| `<date>_automatedesc.ace` | all automated descriptions for the run, as `.ace` |
+| `<date>_manualdesc.ace` | all manually curated descriptions for the run, as `.ace` |
+| `<date>_number_of_concise_descriptions.txt` | counts for the run |
+
+### What else is there
+
+| Directory | Size | What it holds |
+| --- | --- | --- |
+| `citace/` | 370 GB | citace and CitaceMinus AceDB builds, per-release `WS/` trees, archives, upload and dump logs. Legacy — see [Known rough edges](#known-rough-edges) |
+| `cronjobs/pgdumps/` | 144 GB | PostgreSQL dumps. The 5 most recent daily dumps sit at the top (~3.8 GB each, `…dump.latest` symlinks to the newest); the first dump of each month is archived in `old/` and kept indefinitely — 37 of them, back to April 2023 |
+| `pub/` | 103 GB | everything published over the web: gene descriptions, the `caltech.wormbase.org` site and its FTP `pub/` tree, ABC ML models, per-curator output |
+| `postgres/` | 24 GB | working output of the `pgpopulation`, `agr_upload` and `get_stuff` scripts |
+| `WSDump/` | 18 GB | `.ace` extracts from a WormBase release: Gene, Variation, RNAi, GO_annotation, Expr_pattern, Expression_cluster, Interaction, CDS |
+| `CitaceMirror/`, `Data_for_WS298/` | 11 GB, 1.4 GB | mirrors, and the per-release staging sets for citace, CitaceMinus and the ontologies |
+| per-curator directories | 19 GB down to 72 MB | `kimberly/`, `chris/`, `wen/`, `daniela/`, `karen/`, `cecilia/`, `daniel/`, `jae/`, `ranjana/` — each curator's working area: parsing scripts with their inputs and outputs, e.g. `ranjana/human_disease/` holds the human disease parse, its `.ace` output and its error reports |
+| `cronjobs/obo_oa_ontologies/` | 705 MB | the nightly OBO downloads that feed the OA autocompletes, one directory per ontology |
+| `cronjobs/dump_from_ws/`, `cronjobs/curation_stats/`, `cronjobs/author_person_possible/` | 2.5 GB, 26 MB, 40 MB | output of the other scheduled jobs |
+| `priv/` | 1.7 GB | password-protected: Alzheimer summaries, document-classification training sets, form uploads |
+| `insecure/` | small | password files that a few scripts read |
+
+If you cannot find something, the fastest route is usually to search the tree on the
+server rather than guess at the layout — much of it grew per curator and per project
+rather than to a plan.
+
 ## When something looks wrong
 
 * A form throws an error, or a page will not load → it is a server-side problem;
@@ -517,6 +573,10 @@ the real forms, before pulling on production.
   what still runs on a schedule is the papers wrapper (Tue–Sat 02:00) and Cecilia's
   wrapper under `/usr/caltech_curation_files/` (Thursdays). Those two, and the
   `citace_upload/` tree itself, are candidates for retirement.
+* The instance disk is **86% full** (833 GB of 969 GB). The two largest consumers are
+  `citace/` at 370 GB, which no longer feeds anything now that citace is not built, and
+  the monthly PostgreSQL dumps in `cronjobs/pgdumps/old/` at 124 GB, which are kept
+  indefinitely by design. Both are worth a decision before the disk forces one.
 * Curator lists and some configuration are hardcoded in several places.
 * The `agr_reffile_upload.cgi` permissions model does not fully work for supplemental
   files in subdirectories (noted in the script itself).
