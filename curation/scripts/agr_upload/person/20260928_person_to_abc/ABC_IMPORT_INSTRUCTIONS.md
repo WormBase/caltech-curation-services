@@ -70,18 +70,19 @@ Each run writes `person_to_abc.<YYYYMMDD_HHMMSS>.<suffix>`.
 - Set `date_created` and `date_updated` from the `timestamp` of each row, or from the record's
   `date_created` and `date_updated`. ABC's `before_insert` keeps explicit values.
 - Every curator is a WBPerson, and every exported WBPerson is created as an ABC person in step 2.
-  So after step 2, every curator can be its own ABC user:
-  1. Find the ABC person with cross reference `WB:<curator>`.
-  2. Use the `users` row whose `person_id` is that person. If there isn't one, create it the way
-     ABC registers person users: `users.id` = the person's curie, `person_id` = the person, and
-     `automation_username` null.
-  3. Use that `users.id` as `created_by` and `updated_by`.
+  Which ABC `users` row each curator becomes is ABC's decision. What WormBase knows:
+  - About 12,000 distinct WBPersons appear as curators, because authors who verified their own
+    papers are recorded as the curator.
+  - Earlier WormBase loads (topic entity tags) used `WBPerson<n>` directly as `created_by`, so some
+    curators already have a `users` row with that id and no person linked. Existing data points at
+    those rows.
+  - Some curators, mostly WormBase staff, also have a person-linked `users` row from logging into
+    ABC. That means ABC already has a person for them.
+  - ABC's login finds a user through `person_email` to `users.person_id`.
 
-  This won't duplicate anyone later: ABC's login finds a user through `person_email` to
-  `users.person_id`, so when that person first logs in, ABC picks up the row the importer made.
-- About 12,000 distinct WBPersons appear as curators, because authors who verified their own papers
-  are recorded as the curator. ABC already creates person `users` rows like this for WormBase topic
-  entity tag curators (about 1,400). This import does the same thing for more people.
+  The importer should end with one `users` row per human where it can, and should not create a
+  second ABC person for someone who already has one. Matching an existing ABC person by its
+  `WB:WBPerson<n>` cross reference, then by email, is one way to find them.
 - A curator WBPerson that wasn't exported (Invalid and never merged) has no ABC person. Use the
   import's default user for those.
 - `person_lineage` has no WormBase curator at all; see step 4.
@@ -290,7 +291,8 @@ importer should report those skips.
 
 ## Decisions left to ABC
 
-- The default user for `person_lineage.created_by`, and for curators that weren't exported.
+- Which `users` row each curator becomes, how to match persons ABC already has, the default user
+  for `person_lineage.created_by`, and the default user for curators that weren't exported.
 - `person.privacy` for persons WormBase didn't hide, and `laboratory.email_visibility`.
 - Whether to keep any of `unmapped`, for example as `person_note`.
 - What to do when an author row no longer matches `paper_author_person`.
