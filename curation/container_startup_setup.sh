@@ -48,6 +48,10 @@ grep "^X11UseLocalhost" /etc/ssh/sshd_config || echo "X11UseLocalhost no" >> /et
 # set ssh host key to mounted volume
 echo "HostKey ${CALTECH_CURATION_FILES_INTERNAL_PATH}/ssh_host_key/id_rsa" >> /etc/ssh/sshd_config
 
+# remove stale apache pid/cgid socket left by an unclean container shutdown,
+# otherwise mod_cgid fails to bind and all CGIs return 503
+rm -f /var/run/apache2/apache2.pid /var/run/apache2/cgisock.*
+
 # start services
 service apache2 start
 service ssh start
