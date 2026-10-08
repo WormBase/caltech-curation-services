@@ -26,6 +26,8 @@ RUN a2enmod proxy_http
 
 RUN git clone https://github.com/WormBase/acedb.git acedb && cd acedb && ln -s wmake/makefile Makefile && export ACEDB_MACHINE=LINUX_64 && make
 RUN git clone https://github.com/WormBase/AcePerl && cd AcePerl && echo "3 n" | perl Makefile.PL && make && make install
+# bust the build cache whenever agr_literature_service main moves, so the bulk uploader is never stale
+ADD https://api.github.com/repos/alliance-genome/agr_literature_service/git/refs/heads/main /tmp/agr_literature_service_main.json
 RUN git clone https://github.com/alliance-genome/agr_literature_service.git agr_literature_service
 RUN cp agr_literature_service/file_uploader/upload_files.sh /bin/agr_referencefile_bulk_uploader
 RUN chmod +x /bin/agr_referencefile_bulk_uploader
