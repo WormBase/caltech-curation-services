@@ -1,4 +1,5 @@
-FROM nginx:1.21.5
+# nginx 1.21.x images are Debian bullseye, whose security repo is gone after its LTS ended (Aug 2026)
+FROM nginx:1.28.0
 
 RUN apt-get update && \
     apt-get install -y \
