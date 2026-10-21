@@ -541,8 +541,11 @@ sub outputAfpAutData {
 
 sub convertAckToNote {
   my ($origdata, $datatype) = @_;
+  # DBD::Pg returns decoded character strings, but decode_json wants UTF-8 bytes and dies with "Wide character"
+  # on any non-ASCII text (e.g. Anti-\x{3b2}-actin), which made the eval below fall back to negated with no note.
+  my $json_bytes = is_utf8($origdata) ? Encode::encode('UTF-8', $origdata) : $origdata;
   if ($datatype eq 'otherantibody') {	# most data is just the data, but otherantibody needs to process json
-    my $json = eval { decode_json($origdata) };
+    my $json = eval { decode_json($json_bytes) };
     return ('', 1) if $@ or ref($json) ne 'ARRAY';
     my @parts;
     for my $entry (@$json) {
@@ -558,7 +561,7 @@ sub convertAckToNote {
     return ($data, $negated); }
   elsif ($datatype eq 'humandisease') {	# most data is just the data, but humandisease needs to process json
     return ('', 1) if $origdata eq '';
-    my $json = eval { decode_json($origdata) };
+    my $json = eval { decode_json($json_bytes) };
     return ($origdata, 0) if $@ or ref($json) ne 'HASH';
     my $negated = $json->{checked} ? 0 : 1;
 
