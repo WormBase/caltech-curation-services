@@ -46,32 +46,40 @@
 #                                                joined with newlines, ABC holds one string )
 #   two_comment                               -> notes ( person_note, internal notes )
 #   two_unsubscribe                           -> unsubscribe true
-#   two_hide                                  -> privacy fully_hidden  ( the .ace dump hides these )
+#   two_hide                                  -> privacy fully_hidden  ( the .ace dump hides these ),
+#                                                and the reason as a note
+#   two_privacy                               -> emails, with privacy hide_email
 #   two_left_field                            -> active_status deceased or retired when the text
-#                                                says so, the raw text is always kept under unmapped
+#                                                says so ( detail kept as a note ) ;  plain 'Left the
+#                                                field' and 'Not in the field' become the note 'Not
+#                                                in Worm Field' ;  anything else is a note as it is
 #   two_lab two_oldlab two_pis two_oldpis     -> laboratories ( laboratory_person ) : two_lab is a
 #                                                current member, two_oldlab sets alum, two_pis sets
 #                                                is_pi, two_oldpis sets former_pi, each to the
 #                                                timestamp of the WormBase row.  Numeric two_pis are
-#                                                CGC numeric PI ids with no lab object, they go
-#                                                under unmapped.cgc_numeric_pi
-#   under unmapped, exported but with no ABC field :  left_field hide privacy unable_to_contact
-#                                                usefulwebpage cgc_numeric_pi
-#   not exported :  the phone and fax tables, two_contactdata two_curator_ip two_user_ip two_paper
+#                                                CGC numeric PI ids with no lab object, not sent
+#   not exported, approved by WormBase ( see not_loaded.tsv ) :  the phone and fax tables,
+#                                                two_contactdata two_curator_ip two_user_ip two_paper
+#                                                two_unable_to_contact two_usefulwebpage frm_*_skip
 #
 # Person lineage, from two_lineage.  WormBase stores each relationship on both persons ( Phd on the
 # supervisor, withPhd on the student, the mirror usually has a 'REV - ' sender ) and has no record
 # of who resolved a row.  So :
 #   every two_lineage row -> one person_lineage_submission, with two_sender as who_sent_this, the
-#     names as sent, and status validated ( both sides are Valid WBPersons ), partially_resolved
-#     ( one side, e.g. two_number NO when the other person is not a WBPerson ) or pending ( neither ).
+#     names as sent, and status validated ( both sides are Valid WBPersons ), rejected ( a curator set
+#     one side to NO, that person is not and will not be a WBPerson ), partially_resolved
+#     ( one side resolved ) or pending ( neither ).
 #   every validated relationship -> one person_lineage row, the mirrored pair collapsed into one.
 #     person_lineage has no sender field and WormBase has no resolving curator, so created_by is
 #     left to the importer ;  the sender survives only on the submissions.
 #   Direction is what ABC expects, the subject is the supervisor :  role X on a row means the row's
 #   person ( joinkey ) is the supervisor, withX means the other person ( two_number ) is.
 #   Collaborated is symmetric, subject is the lower WBPerson number.
-#   two_date1 two_date2 are years ( or 'present' for an end ) and are written as the year.
+#   two_date1 two_date2 are years ( or 'present' for an end ), written as dates :  a year is January 1st,
+#     a year and month the 1st of the month, other text is read when it can be and left empty when not.  When the
+#     submissions for one relationship disagree, person_lineage gets the years of the latest submission
+#     that has any, start and end together ( the newest is taken to be the most up to date )
+#     and the relationship is listed in .person_lineage_date_conflicts.tsv .
 #
 # Paper-author-person, from pap_author pap_author_index pap_author_possible pap_author_verified,
 # the latest row per author_id and pap_join.  Only YES verifications are exported, who and when
@@ -95,10 +103,15 @@
 #   person_to_abc.<date>.person.jsonl                    one person per line
 #   person_to_abc.<date>.person_lineage.tsv
 #   person_to_abc.<date>.person_lineage_submission.tsv
+#   person_to_abc.<date>.person_lineage_date_conflicts.tsv  relationships whose submissions give different years,
+#                                                        one line each for a curator to review
 #   person_to_abc.<date>.paper_author_person.tsv
+#   person_to_abc.<date>.paper_author_corresponding.tsv  corresponding authors, by paper and author order
 #   person_to_abc.<date>.not_loaded.tsv                  every WormBase field ABC cannot hold, with counts
-#   person_to_abc.<date>.problems.tsv                    row level issues, to resolve before transfer, under a
-#                                                        commented summary of each kind :  severity, count and why
+#   person_to_abc.<date>.problems.tsv                    row level issues that still need addressing before the
+#                                                        transfer, under a commented summary of each kind :
+#                                                        severity, count and why
+#   person_to_abc.<date>.problems_accounted_for.tsv      row level issues WormBase reviewed and agreed to, same format
 #   person_to_abc.<date>.character_fixes.tsv             every value whose mojibake was repaired ( see &fixMojibake ),
 #                                                        before and after, under a summary of each kind of repair
 #   person_to_abc.<date>.counts.tsv                      rows exported and skipped, for the importer to check against
@@ -127,7 +140,7 @@ make_path($outdir) unless (-d $outdir);
 my $date   = &getSimpleSecDate();
 my $prefix = "$outdir/person_to_abc.$date";
 my @suffixes = qw( ABC_IMPORT_INSTRUCTIONS.md laboratory.jsonl person.jsonl person_lineage.tsv person_lineage_submission.tsv
-                   paper_author_person.tsv not_loaded.tsv problems.tsv counts.tsv character_fixes.tsv );
+                   person_lineage_date_conflicts.tsv paper_author_person.tsv paper_author_corresponding.tsv not_loaded.tsv problems.tsv problems_accounted_for.tsv counts.tsv character_fixes.tsv );
 
 copy("$scriptdir/ABC_IMPORT_INSTRUCTIONS.md", "$prefix.ABC_IMPORT_INSTRUCTIONS.md") or die "Cannot copy ABC_IMPORT_INSTRUCTIONS.md : $!";
 
@@ -157,7 +170,8 @@ my $mojibakeRun   = qr/(?:$mojibakeClass){2,}/;
 
     # why each kind of problem matters, matched against the problem text.  blocks import means the
     # ABC insert will fail until a curator fixes it in WormBase ;  info means the exporter already
-    # handled it and it is listed so nothing changes silently.
+    # handled it and it is listed so nothing changes silently ;  accounted for means WormBase reviewed
+    # it and agreed, and it goes to .problems_accounted_for.tsv instead of .problems.tsv
 my @problemWhy = (
   [ qr/^same person verified on more than one author position/, 'blocks import', 'ABC has a unique index on author (reference_id, person_id), so a person can be on a paper once' ],
   [ qr/^ORCID on more than one person/,                         'blocks import', 'ABC person_cross_reference curie must be unique among live cross references ;  usually two WBPersons that are one person and should be merged' ],
@@ -167,7 +181,7 @@ my @problemWhy = (
   [ qr/^no standard name/,                                      'fix or importer default', 'ABC person.display_name is required ;  the importer can build it from the primary name' ],
   [ qr/^lab code not ABC/,                                      'fix or importer default', 'ABC validates laboratory WB cross references as WB:<2 or 3 capital letters>' ],
   [ qr/^ORCID not in ABC format/,                               'info', 'ABC validates ORCID:<0000-0000-0000-000X> ;  the value is left out of the export' ],
-  [ qr/^Invalid and not merged/,                                'info', 'only Valid persons are exported, and this one was not merged into a Valid person' ],
+  [ qr/^Invalid and not merged/,                                'accounted for', 'only Valid persons are exported, and this one was not merged into a Valid person' ],
   [ qr/^not Valid, not exported/,                               'info', 'only Valid labs are exported' ],
   [ qr/^two_acqmerge/,                                          'info', 'merge history that does not match two_mergedinto or a Valid person, so no obsolete cross reference was made from it' ],
   [ qr/^aka name without a last name/,                          'info', 'ABC person_name.last_name is required, so this also known as name is left out' ],
@@ -176,14 +190,16 @@ my @problemWhy = (
   [ qr/^role has no ABC relationship/,                          'info', 'the two_role has no person_person_relationship term' ],
   [ qr/is not a person id, left unresolved/,                    'info', 'a typo in the person id, so that side of the submission stays unresolved' ],
   [ qr/^person is Invalid and not merged, left unresolved/,     'info', 'that side of the submission stays unresolved' ],
-  [ qr/was merged, used the person it was merged into/,         'info', 'the merged person does not exist at ABC, the person it was merged into does' ],
-  [ qr/^date is not a year/,                                    'info', 'lineage dates are expected to be four digit years' ],
+  [ qr/was merged, used the person it was merged into/,         'accounted for', 'the merged person does not exist at ABC, the person it was merged into does' ],
+  [ qr/^date could not be read/,                                'info', 'start_date and end_date are optional at ABC, so the date is left empty' ],
   [ qr/^relationship with self/,                                'info', 'both sides are the same person, exported as a rejected submission' ],
-  [ qr/differs between rows, used the non REV one/,             'info', 'the original submission and its REV mirror disagree ;  the original sender wins' ],
-  [ qr/differs between rows, kept the first/,                   'info', 'repeat submissions disagree ;  the earliest is kept' ],
-  [ qr/^author id on more than one paper/,                      'info', 'a WormBase author id should be on one paper ;  the connection is exported for each' ],
-  [ qr/^verified author id is on no paper/,                     'info', 'the author was removed from its paper after it was verified, so there is nothing to connect' ],
-  [ qr/^verified person is Invalid and not merged/,             'info', 'the person is not exported, so the connection cannot be' ],
+  [ qr/^two_hide is not a reason for hiding/,                    'curator review', 'the two_hide text is sent as a person_note giving the reason for hiding ;  an email address or job title there belongs in two_comment' ],
+  [ qr/^two_privacy is not an email address/,                   'curator review', 'two_privacy entries are sent as private emails, so other text is left out' ],
+  [ qr/^submissions give different years/,                      'accounted for', 'ABC person_lineage holds one start and end date, so by Cecilia\'s rule the latest submission with years is used ;  every version is still a person_lineage_submission.  One line per relationship, also in .person_lineage_date_conflicts.tsv' ],
+  [ qr/^author id on more than one paper/,                      'blocks import', 'a WormBase author id is one author position on one paper, so being on two papers is broken data ;  the person connection would be sent to each paper and can land on the wrong author, a curator must fix pap_author before transfer' ],
+  [ qr/^verified author id is on no paper/,                     'accounted for', 'the author was removed from its paper after it was verified, so there is nothing to connect ;  Cecilia looked and could not place them' ],
+  [ qr/^corresponding author id is on no paper/,                'accounted for', 'the author was removed from its paper after it was marked corresponding, so there is nothing to mark ;  Kimberly and Cecilia agreed to ignore them' ],
+  [ qr/^verified person is Invalid and not merged/,             'curator review', 'the person is not exported, so the connection cannot be' ],
   [ qr/^verified on a paper that is not valid/,                 'info', 'invalid papers are not transferred' ],
   [ qr/^no two_status/,                                         'info', 'persons with no status are not exported' ],
 );
@@ -232,11 +248,15 @@ my %obsoleteXrefs;	# $obsoleteXrefs{joinkey}{merged joinkey} = { curator, timest
 &exportPaperAuthorPerson();
 
 
-&addNotLoaded('two_mainphone two_labphone two_officephone two_otherphone two_fax', 'phone numbers', &countRows(qw( two_mainphone two_labphone two_officephone two_otherphone two_fax )), '', 'no', 'no ABC field, the .ace dump dropped them in 2022');
-&addNotLoaded('two_contactdata', 'contact attempt notes', &countRows('two_contactdata'), '', 'no', 'internal contact tracking, no ABC field');
-&addNotLoaded('two_curator_ip two_user_ip', 'form ip addresses', &countRows(qw( two_curator_ip two_user_ip )), '', 'no', 'form bookkeeping');
-&addNotLoaded('two_paper', 'legacy person paper list', &countRows('two_paper'), '', 'no', 'superseded by the pap_author tables, which go in paper_author_person');
-&addNotLoaded('lab_phone lab_fax', 'lab phone numbers', &countRows(qw( lab_phone lab_fax )), '', 'no', 'no ABC laboratory field');
+&addNotLoaded('two_mainphone two_labphone two_officephone two_otherphone two_fax', 'phone numbers', &countRows(qw( two_mainphone two_labphone two_officephone two_otherphone two_fax )), '', 'no', 'not needed ;  no ABC field, the .ace dump dropped them in 2022', 'Cecilia 2026-10-22');
+&addNotLoaded('two_contactdata', 'contact attempt notes', &countRows('two_contactdata'), '', 'no', 'not needed ;  internal contact tracking, no ABC field', 'Cecilia 2026-10-22');
+&addNotLoaded('two_curator_ip two_user_ip', 'form ip addresses', &countRows(qw( two_curator_ip two_user_ip )), '', 'no', 'not needed ;  form bookkeeping', 'WormBase Caltech call 2026-10-22');
+&addNotLoaded('frm_email_skip frm_wbperson_skip', 'form mailing skip lists', &countRows(qw( frm_email_skip frm_wbperson_skip )), '', 'no', 'not needed ;  emails and persons the WormBase forms should not mail, with a reason', 'WormBase Caltech call 2026-10-22');
+&addNotLoaded('two_paper', 'legacy person paper list', &countRows('two_paper'), '', 'no', 'not needed ;  superseded by the pap_author tables, which go in paper_author_person', 'Cecilia 2026-10-22');
+&addNotLoaded('two_fullname', 'legacy full name table', &countRows('two_fullname'), '', 'no', 'not needed ;  the names are sent from the first, middle and last name tables', 'Cecilia 2026-10-22');
+&addNotLoaded('frm_ip_block frm_user_save', 'form ip blocks and saved form input', &countRows(qw( frm_ip_block frm_user_save )), '', 'no', 'not needed', 'WormBase Caltech call 2026-10-22');
+&addNotLoaded('h_two_* lab_*_hst h_pap_*', 'edit history tables', '', '', 'no', 'not needed ;  the current values are sent, with the curator and timestamp of each', 'Juancarlos 2026-10-22');
+&addNotLoaded('lab_phone lab_fax', 'lab phone numbers', &countRows(qw( lab_phone lab_fax )), '', 'no', 'not needed ;  no ABC laboratory field', 'Cecilia 2026-10-22');
 
 &writeNotLoaded();
 &writeProblems();
@@ -300,7 +320,7 @@ sub exportLabs {
   my $invalid = 0;
   foreach my $joinkey (sort { &numOf($a) <=> &numOf($b) } keys %{ $lab{name} }) {
     my $code = $lab{name}{$joinkey}{1}{value};
-    unless ($labs{$code} && $labs{$code} eq $joinkey) {
+    unless ($labs{$code} && $labs{$code} eq $joinkey) {	# only Valid labs are exported
       $invalid++;
       &problem('laboratory', $joinkey, 'not Valid, not exported', $code);
       next; }
@@ -321,7 +341,7 @@ sub exportLabs {
     print LAB $json->encode(\%rec) . "\n";
     $counts{'laboratory exported'}++; }
   close (LAB) or die "Cannot close $prefix.laboratory.jsonl : $!";
-  &addNotLoaded('lab_status', 'Invalid labs', $invalid, $invalid, 'no', 'only Valid labs are exported, listed in problems');
+  &addNotLoaded('lab_status', 'Invalid labs', $invalid, $invalid, 'no', 'only Valid labs are exported ;  the one Invalid lab with a code, lab796 Not_deposited, was deleted 2026-10-23', 'Juancarlos 2026-10-23');
 } # sub exportLabs
 
 sub buildMerges {
@@ -330,7 +350,7 @@ sub buildMerges {
     my ($final, $problem) = &resolvePerson($joinkey);
     unless ($final) {
       &problem('person', &wbPerson($joinkey), 'Invalid and not merged, not exported', $problem);
-      $counts{'person invalid not merged'}++;
+      $counts{'person Invalid and not merged, not exported'}++;
       next; }
     my ($order) = sort { $a <=> $b } keys %{ $two{mergedinto}{$joinkey} };
     $obsoleteXrefs{$final}{$joinkey} = { curator => $two{mergedinto}{$joinkey}{$order}{curator}, timestamp => $two{mergedinto}{$joinkey}{$order}{timestamp} }; }
@@ -369,9 +389,10 @@ sub resolvePerson {		# returns the Valid joinkey a person ends up as, following 
 
 sub exportPersons {
   open (PER, ">:raw", "$prefix.person.jsonl") or die "Cannot create $prefix.person.jsonl : $!";
-  my %unmappedCount;		# $unmappedCount{field}{rows,persons}
-  my ($numericPi, $numericPiPersons) = (0, 0);
-  my %leftFieldUnmapped;
+  my $numericPi = 0;
+  my %numericPiPersons;
+  my %leftField;		# $leftField{what it became} = rows
+  my %privacyCount;		# $privacyCount{emailed,duplicate,not_email} = rows
   my %orcidPersons;		# $orcidPersons{ORCID curie} = [ WBPerson ids ], ABC needs each live curie on one person
   foreach my $joinkey (sort { &numOf($a) <=> &numOf($b) } keys %personStatus) {
     next unless ($personStatus{$joinkey} eq 'Valid');
@@ -412,6 +433,15 @@ sub exportPersons {
 
     my @emails = map { { email_address => $_->{value}, date_made_old_email => undef, curator => $_->{curator}, timestamp => $_->{timestamp} } } @{ &orderedValues(\%two, 'email', $joinkey) || [] };
     push @emails, @{ &oldValues($joinkey, 'old_email', 'old_email_date', 'email_address', 'date_made_old_email') };
+    my %haveEmail = map { (lc $_->{email_address}, 1) } @emails;	# ABC has a unique index on person and lower(email_address)
+    my $privacy = &orderedValues(\%two, 'privacy', $joinkey);
+    foreach my $entry (@{ $privacy || [] }) {	# two_privacy holds addresses kept off the public page, sent as current emails under privacy hide_email
+      (my $address = $entry->{value}) =~ s/^\s+|\s+$//g;
+      unless ($address =~ m/^\S+@\S+\.\S+$/) {
+        &problem('person', $wbid, 'two_privacy is not an email address, not exported', $address); $privacyCount{not_email}++; next; }
+      if ($haveEmail{lc $address}++) { $privacyCount{duplicate}++; next; }
+      push @emails, { email_address => $address, date_made_old_email => undef, curator => $entry->{curator}, timestamp => $entry->{timestamp} };
+      $privacyCount{emailed}++; }
     $rec{emails} = \@emails if (@emails);
     my @institutions = map { { institution => $_->{value}, date_made_old_institution => undef, curator => $_->{curator}, timestamp => $_->{timestamp} } } @{ &orderedValues(\%two, 'institution', $joinkey) || [] };
     push @institutions, @{ &oldValues($joinkey, 'old_institution', 'old_inst_date', 'institution', 'date_made_old_institution') };
@@ -424,35 +454,37 @@ sub exportPersons {
     $rec{country}        = &joinedValue(\%two, 'country', $joinkey, ', ');
     $rec{webpage}        = &orderedValues(\%two, 'webpage', $joinkey);
     $rec{biography_research_interest} = &joinedValue(\%two, 'wormbase_comment', $joinkey, "\n");
-    my $notes = &orderedValues(\%two, 'comment', $joinkey);
-    $rec{notes} = [ map { { note => $_->{value}, curator => $_->{curator}, timestamp => $_->{timestamp} } } @$notes ] if ($notes);
+    my @notes = map { { note => $_->{value}, curator => $_->{curator}, timestamp => $_->{timestamp} } } @{ &orderedValues(\%two, 'comment', $joinkey) || [] };
     if ($two{unsubscribe}{$joinkey}) { $rec{unsubscribe} = { %{ $two{unsubscribe}{$joinkey}{1} }, value => JSON::XS::true }; }
-    if (my $hide = &orderedValues(\%two, 'hide', $joinkey)) { $rec{privacy} = { %{ $hide->[-1] }, value => 'fully_hidden' }; }
-    if (my $left = &orderedValues(\%two, 'left_field', $joinkey)) {
-      my $text = $left->[-1]{value};
-      if    ($text =~ m/deceased/i) { $rec{active_status} = { %{ $left->[-1] }, value => 'deceased' }; }
-      elsif ($text =~ m/retired/i)  { $rec{active_status} = { %{ $left->[-1] }, value => 'retired' }; }
-      else  { $leftFieldUnmapped{rows}++; } }
-
-    my %unmapped;
-    foreach my $field (qw( left_field hide privacy unable_to_contact )) {
-      if (my $values = &orderedValues(\%two, $field, $joinkey)) {
-        $unmapped{$field} = $values;
-        $unmappedCount{$field}{rows} += scalar(@$values); $unmappedCount{$field}{persons}++; } }
-    foreach my $order (sort { $a <=> $b } keys %{ $two{usefulwebpage}{$joinkey} }) {
-      my $web = ($two{webpage}{$joinkey}{$order}) ? $two{webpage}{$joinkey}{$order}{value} : '';
-      push @{ $unmapped{usefulwebpage} }, { %{ $two{usefulwebpage}{$joinkey}{$order} }, value => $web };
-      $unmappedCount{usefulwebpage}{rows}++; }
-    $unmappedCount{usefulwebpage}{persons}++ if ($unmapped{usefulwebpage});
+    $rec{privacy} = { %{ $privacy->[-1] }, value => 'hide_email' } if ($privacy);
+    if (my $hide = &orderedValues(\%two, 'hide', $joinkey)) {	# the reason for hiding goes in a note
+      $rec{privacy} = { %{ $hide->[-1] }, value => 'fully_hidden' };
+      foreach my $entry (@$hide) {
+        unless ($entry->{value} =~ m/remove|delete|unsubsc|\bnot\b|n't|no longer|contact|stop|listed|include/i) {
+          &problem('person', $wbid, 'two_hide is not a reason for hiding, a curator should move it to two_comment', $entry->{value}); }
+        push @notes, { note => $entry->{value}, curator => $entry->{curator}, timestamp => $entry->{timestamp} }; } }
+    foreach my $entry (@{ &orderedValues(\%two, 'left_field', $joinkey) || [] }) {
+        # deceased or retired set active_status, keeping any detail ( a date of death ) as a note ;  the plain
+        # 'Left the field' 'Not in the field' and their typos become one note ;  anything else is a note as it is
+      (my $text = $entry->{value}) =~ s/^\s+|\s+$//g;
+      my ($status, $note) = ('', $text);
+      if    ($text =~ m/deceased|passed away/i)      { $status = 'deceased'; }
+      elsif ($text =~ m/retired|emerit|emertus/i)    { $status = 'retired'; }
+      if ($status) {
+        $rec{active_status} = { %$entry, value => $status };
+        $note = '' if ($text =~ m/^(deceased|retired)\.?$/i);
+        $leftField{"active_status $status" . (($note eq '') ? '' : ' and a note')}++; }
+      elsif ($text =~ m/^(left|let|not in) the fie\w*( any ?more)?\s*\.?$/i) { $note = 'Not in Worm Field'; $leftField{'note Not in Worm Field'}++; }
+      else { $leftField{'note as it is'}++; }
+      push @notes, { note => $note, curator => $entry->{curator}, timestamp => $entry->{timestamp} } if ($note ne ''); }
+    $rec{notes} = \@notes if (@notes);
 
     my %labMember;		# $labMember{code} = laboratory_person record
     foreach my $pair ( [ 'lab', 'member' ], [ 'oldlab', 'alum' ], [ 'pis', 'is_pi' ], [ 'oldpis', 'former_pi' ] ) {
       my ($table, $field) = @$pair;
       foreach my $value (@{ &orderedValues(\%two, $table, $joinkey) || [] }) {
         my $code = $value->{value};
-        if ($code =~ m/^\d+$/) {
-          push @{ $unmapped{cgc_numeric_pi} }, { %$value, source => "two_$table" };
-          $numericPi++; next; }
+        if ($code =~ m/^\d+$/) { $numericPi++; $numericPiPersons{$joinkey}++; next; }	# CGC numeric PI ids, not sent
         unless ($labMember{$code}) {
           $labMember{$code} = { laboratory => "WB:$code", curator => $value->{curator}, timestamp => $value->{timestamp},
                                 is_pi => undef, former_pi => undef, alum => undef };
@@ -460,9 +492,7 @@ sub exportPersons {
             &problem('person', $wbid, "two_$table lab code has no Valid WB lab", $code); } }
         next if ($field eq 'member');
         $labMember{$code}{$field} = $value->{timestamp}; } }
-    $numericPiPersons++ if ($unmapped{cgc_numeric_pi});
     $rec{laboratories} = [ map { $labMember{$_} } sort keys %labMember ] if (%labMember);
-    $rec{unmapped} = \%unmapped if (%unmapped);
 
     foreach my $key (keys %rec) { delete $rec{$key} unless (defined $rec{$key}); }
     my (undef, $updated) = &dateRange(\%rec);
@@ -476,15 +506,17 @@ sub exportPersons {
     $counts{'person ORCID on more than one person'}++;
     &problem('person', $curie, 'ORCID on more than one person, ABC allows it on one, a curator must resolve before transfer', join(' ', @{ $orcidPersons{$curie} })); }
 
-  &addNotLoaded('two_left_field', 'left the field text', $unmappedCount{left_field}{rows} || 0, $unmappedCount{left_field}{persons} || 0, 'unmapped', ($leftFieldUnmapped{rows} || 0) . ' are not deceased or retired and set no active_status ;  for the rest the text ( e.g. a year of death ) is lost');
-  &addNotLoaded('two_hide', 'reason for hiding', $unmappedCount{hide}{rows} || 0, $unmappedCount{hide}{persons} || 0, 'unmapped', 'privacy is set to fully_hidden, the reason text has no ABC field');
-  &addNotLoaded('two_privacy', 'privacy entries', $unmappedCount{privacy}{rows} || 0, $unmappedCount{privacy}{persons} || 0, 'unmapped', 'mostly email addresses, some requests not to be listed ;  no ABC field, the importer decides');
-  &addNotLoaded('two_unable_to_contact', 'unable to contact', $unmappedCount{unable_to_contact}{rows} || 0, $unmappedCount{unable_to_contact}{persons} || 0, 'unmapped', 'no ABC field');
-  &addNotLoaded('two_usefulwebpage', 'useful webpage flag', $unmappedCount{usefulwebpage}{rows} || 0, $unmappedCount{usefulwebpage}{persons} || 0, 'unmapped', 'the webpage itself is exported, ABC webpage has no flag');
-  &addNotLoaded('two_pis two_oldpis', 'CGC numeric PI ids', $numericPi, $numericPiPersons, 'unmapped', 'numeric PI ids with no lab object, ABC laboratory_person needs a laboratory');
-  &addNotLoaded('two_wormbase_comment', 'curator and timestamp of each comment', &countRows('two_wormbase_comment'), '', 'text yes', 'the comment text is all exported, joined with newlines into biography_research_interest ;  ABC holds one string, so only the latest curator and timestamp survive, not one per comment');
-  &addNotLoaded('two_street', 'curator and timestamp of each street line', &countRows('two_street'), '', 'text yes', 'the street lines are all exported, joined with newlines into street_address ;  only the latest curator and timestamp survive, not one per line');
-  &addNotLoaded('two_status', 'Invalid persons not merged', $counts{'person invalid not merged'} || 0, $counts{'person invalid not merged'} || 0, 'no', 'listed in problems');
+  $counts{"person left_field $_"} = $leftField{$_} foreach (keys %leftField);
+  $counts{"person two_privacy $_"} = $privacyCount{$_} foreach (keys %privacyCount);
+  &addNotLoaded('two_left_field', 'left the field wording', &countRows('two_left_field'), '', 'yes', 'deceased ( or passed away ) and retired ( or emeritus ) set active_status, with any detail such as a date of death kept as a note ;  the plain "Left the field" "Not in the field" and their typos become the note "Not in Worm Field", so that exact wording is lost ;  everything else is a note as it is', 'Cecilia 2026-10-22');
+  &addNotLoaded('two_hide', 'reason for hiding', &countRows('two_hide'), '', 'yes', 'privacy is fully_hidden and the reason is a note', 'Cecilia 2026-10-22');
+  &addNotLoaded('two_privacy', 'private email addresses', &countRows('two_privacy'), '', 'yes', 'sent as current emails with privacy hide_email ;  ABC hides by person, not by address, so if the person is later set to show_all these addresses show too.  ' . ($privacyCount{duplicate} || 0) . ' already in two_email or two_old_email are not repeated', 'Cecilia 2026-10-22');
+  &addNotLoaded('two_unable_to_contact', 'unable to contact', &countRows('two_unable_to_contact'), '', 'no', 'not needed', 'Cecilia 2026-10-22');
+  &addNotLoaded('two_usefulwebpage', 'useful webpage flag', &countRows('two_usefulwebpage'), '', 'no', 'not needed ;  a curator checkbox on a webpage, the webpage itself is exported', 'Cecilia 2026-10-22');
+  &addNotLoaded('two_pis two_oldpis', 'CGC numeric PI ids', $numericPi, scalar(keys %numericPiPersons), 'no', 'not needed ;  numeric PI ids with no lab object.  Lab code PIs are exported', 'Cecilia 2026-10-22');
+  &addNotLoaded('two_wormbase_comment', 'curator and timestamp of each comment', &countRows('two_wormbase_comment'), '', 'text yes', 'the comment text is all exported, joined with newlines into biography_research_interest ;  ABC holds one string, so only the latest curator and timestamp survive, not one per comment', 'Cecilia 2026-10-22');
+  &addNotLoaded('two_street', 'curator and timestamp of each street line', &countRows('two_street'), '', 'text yes', 'the street lines are all exported, joined with newlines into street_address ;  only the latest curator and timestamp survive, not one per line', 'Cecilia 2026-10-22');
+  &addNotLoaded('two_status', 'Invalid persons not merged', $counts{'person Invalid and not merged, not exported'} || 0, $counts{'person Invalid and not merged, not exported'} || 0, 'no', 'checked, correct as they are ;  listed in problems', 'Cecilia 2026-10-22');
 } # sub exportPersons
 
 sub nameRecord {
@@ -530,7 +562,7 @@ sub exportLineage {
 
   open (SUB, ">:utf8", "$prefix.person_lineage_submission.tsv") or die "Cannot create $prefix.person_lineage_submission.tsv : $!";
   print SUB join("\t", qw( submission_id person_subject_name person_object_name person_subject person_object relationship
-                           who_sent_this start_date end_date status person_lineage_key date_created
+                           who_sent_this start_date end_date status created_by updated_by person_lineage_key date_created
                            wb_joinkey wb_number wb_role )) . "\n";
 
   my %canonical;		# $canonical{key} = { subject, object, relationship, start_date, end_date, date_created, date_updated, submissions }
@@ -562,10 +594,8 @@ sub exportLineage {
       ($othername, $sentname, $otherPerson, $rowPerson) : ($sentname, $othername, $rowPerson, $otherPerson);
     if ($rel eq 'Collaborator of' && $subject && $object && &numOf($object) < &numOf($subject)) {
       ($subjectName, $objectName, $subject, $object) = ($objectName, $subjectName, $object, $subject); }
-    my $end = ($date2 eq 'present') ? '' : $date2;
-    foreach my $year ($date1, $end) {
-      if ($year ne '' && $year !~ m/^\d{4}$/) {
-        &problem('person_lineage_submission', $submissionId, 'date is not a year', $year); } }
+    my $start = &lineageDate($date1, $submissionId);
+    my $end   = ($date2 =~ m/^present$/i) ? '' : &lineageDate($date2, $submissionId);
     if ($sender eq '') {
       &problem('person_lineage_submission', $submissionId, 'no two_sender, ABC who_sent_this is required', ($joinkey || 'no joinkey') . " $row[4] " . ($number || '')); }
 
@@ -583,35 +613,59 @@ sub exportLineage {
       my $canon = $canonical{$key};
       $canon->{submissions}++;
       $canon->{date_updated} = $iso if ($iso gt $canon->{date_updated});
-      my $isRev = ($sender =~ m/^REV\b/) ? 1 : 0;
-      foreach my $pair ( [ 'start_date', $date1 ], [ 'end_date', $end ] ) {
+      if ($date1 ne '' || $date2 ne '') {	# rows come by timestamp, so the latest submission with any year sets both, as a pair
+        ($canon->{start_date}, $canon->{end_date}) = ($start, $end); }
+      foreach my $pair ( [ 'start_date', $start ], [ 'end_date', $end ] ) {
         my ($field, $year) = @$pair;
-        next if ($year eq '');
-        if ($canon->{$field} eq '') { $canon->{$field} = $year; $canon->{"${field}_rev"} = $isRev; }
-        elsif ($canon->{$field} ne $year) {
-          if ($canon->{"${field}_rev"} && !$isRev) {	# the original submission wins over a REV mirror
-            &problem('person_lineage', $key, "$field differs between rows, used the non REV one", "$canon->{$field} replaced by $year");
-            $canon->{$field} = $year; $canon->{"${field}_rev"} = 0; }
-          else {
-            &problem('person_lineage', $key, "$field differs between rows, kept the first", "$canon->{$field} kept, $year not used"); } } } }
+        $canon->{"${field}_seen"}{$year}++ unless ($year eq ''); }
+      my $version = (($date1 ne '') ? $date1 : '?') . '-' . (($date2 ne '') ? $date2 : '?');
+      unless ($canon->{versions}{$version}) { push @{ $canon->{versionOrder} }, $version; }
+      (my $plainSender = $sender) =~ s/^\s*(?:REV\s*-\s*)?//;	# a REV mirror is the same submission as its original
+      $plainSender =~ s/\s+$//;
+      $canon->{versions}{$version}{senders}{$plainSender}++;
+      push @{ $canon->{versions}{$version}{ids} }, $submissionId; }
+    elsif ($joinkey eq 'NO' || $number eq 'NO') { $status = 'rejected'; }	# a curator decided that side is not and will not be a WBPerson
     elsif ($subject || $object) { $status = 'partially_resolved'; }
+      # every row is created by the import ;  Cecilia does every validation and every NO, so she set those statuses.
+      # a relationship with oneself is rejected by this export, so it stays with the import
+    my $updatedBy = (($status eq 'validated') || ($status eq 'rejected' && ($joinkey eq 'NO' || $number eq 'NO'))) ? 'WBPerson1' : 'wormbase_initial_import';
     $counts{"person_lineage_submission $status"}++;
 
     print SUB join("\t", map { &tsv($_) } $submissionId, $subjectName, $objectName, ($subject) ? &wbPerson($subject) : '', ($object) ? &wbPerson($object) : '',
-                   $rel, $sender, $date1, $end, $status, $key, &isoTs($timestamp), $joinkey, $number, $row[4]) . "\n"; }
+                   $rel, $sender, $start, $end, $status, 'wormbase_initial_import', $updatedBy, $key, &isoTs($timestamp), $joinkey, $number, $row[4]) . "\n"; }
   close (SUB) or die "Cannot close $prefix.person_lineage_submission.tsv : $!";
 
   open (LIN, ">:utf8", "$prefix.person_lineage.tsv") or die "Cannot create $prefix.person_lineage.tsv : $!";
-  print LIN join("\t", qw( person_lineage_key person_subject person_object relationship start_date end_date date_created date_updated submissions )) . "\n";
-  foreach my $key (sort keys %canonical) {
+  print LIN join("\t", qw( person_lineage_key person_subject person_object relationship start_date end_date created_by date_created date_updated submissions )) . "\n";
+  foreach my $key (sort keys %canonical) {	# Cecilia verifies every lineage connection, so she created each validated relationship
     my $c = $canonical{$key};
-    print LIN join("\t", map { &tsv($_) } $key, @$c{qw( subject object relationship start_date end_date date_created date_updated submissions )}) . "\n";
+    print LIN join("\t", map { &tsv($_) } $key, @$c{qw( subject object relationship start_date end_date )}, 'WBPerson1', @$c{qw( date_created date_updated submissions )}) . "\n";
     $counts{'person_lineage exported'}++; }
   close (LIN) or die "Cannot close $prefix.person_lineage.tsv : $!";
 
-  &addNotLoaded('two_lineage', 'lineage sender on the relationship', $counts{'person_lineage exported'} || 0, '', 'submission only',
-                'person_lineage has no sender field and WormBase records no curator who resolved a row, so created_by is left to the importer ;  two_sender is kept on person_lineage_submission.who_sent_this');
-  &addNotLoaded('two_lineage', 'two_date1 two_date2', '', '', 'yes', 'years only, ABC start_date end_date are dates ;  written as the year for the importer to convert');
+    # relationships whose submissions disagree on the years, one line each for a curator to review.
+    # person_lineage holds one start and end, the latest submission's ;  every version is still on
+    # its own person_lineage_submission row.
+  open (CON, ">:utf8", "$prefix.person_lineage_date_conflicts.tsv") or die "Cannot create $prefix.person_lineage_date_conflicts.tsv : $!";
+  print CON "# Validated lineage relationships whose submissions give different years.  person_lineage keeps the years of the\n";
+  print CON "# latest submission with years ( start_date end_date below ) ;  each version is still sent on its own\n";
+  print CON "# person_lineage_submission row.  versions :  years as sent, the senders ( REV - mirrors folded into their\n";
+  print CON "# original ) and the submission_ids, in the order received.  Cecilia's rule :  the latest is the most up to date.\n";
+  print CON join("\t", qw( person_lineage_key start_date end_date versions )) . "\n";
+  foreach my $key (sort keys %canonical) {
+    my $c = $canonical{$key};
+    next unless (grep { scalar(keys %{ $c->{"${_}_seen"} || {} }) > 1 } qw( start_date end_date ));
+    my @versions = map { my $v = $c->{versions}{$_};
+                         "$_ " . join(', ', sort keys %{ $v->{senders} }) . ' (submissions ' . join(', ', @{ $v->{ids} }) . ')' } @{ $c->{versionOrder} };
+    my $versions = join(' ; ', @versions);
+    print CON join("\t", map { &tsv($_) } $key, $c->{start_date}, $c->{end_date}, $versions) . "\n";
+    &problem('person_lineage', $key, 'submissions give different years, kept the latest', $versions);
+    $counts{'person_lineage date conflicts'}++; }
+  close (CON) or die "Cannot close $prefix.person_lineage_date_conflicts.tsv : $!";
+
+  &addNotLoaded('two_lineage', 'when each relationship was verified', $counts{'person_lineage exported'} || 0, '', 'no',
+                'Cecilia verifies every lineage connection, so person_lineage created_by is WBPerson1, but WormBase does not record when she did ;  date_created is the first submission\'s time, and this cannot be tracked.  The senders are on person_lineage_submission.who_sent_this', 'Juancarlos 2026-10-22');
+  &addNotLoaded('two_lineage', 'two_date1 two_date2', '', '', 'yes', 'ABC start_date end_date are dates :  a year is sent as January 1st, a year and month as the 1st of the month, other text is read as a date when it can be and otherwise left empty ( listed in problems )', 'Cecilia 2026-10-22');
 } # sub exportLineage
 
 sub exportPaperAuthorPerson {
@@ -647,7 +701,7 @@ sub exportPaperAuthorPerson {
     $verified{$row[0]}{$row[1] || 0} = { text => (defined $row[2]) ? $row[2] : '', curator => &wbPerson($row[3]), timestamp => &isoTs($row[4]) }; }
 
   open (PAP, ">:utf8", "$prefix.paper_author_person.tsv") or die "Cannot create $prefix.paper_author_person.tsv : $!";
-  print PAP join("\t", qw( reference author_order author_name person verified verification_method curator timestamp wb_author_id wb_pap_join )) . "\n";
+  print PAP join("\t", qw( reference author_order author_name person verified verification_method created_by curator timestamp wb_author_id wb_pap_join )) . "\n";
   my %paperPerson;		# $paperPerson{paper}{person} = [ author positions ], for the duplicate check
   my %possibleOnly;
   foreach my $authorId (sort { $a <=> $b } keys %possible) {
@@ -658,15 +712,20 @@ sub exportPaperAuthorPerson {
       unless ($v && $v->{text} =~ m/^(YES|NO)/) { $counts{'paper_author_person possible without verification'}++; $possibleOnly{$person}++; next; }
       if ($v->{text} =~ m/^NO/) { $counts{'paper_author_person NO not exported'}++; next; }
       unless ($authorPapers{$authorId}) {
-        &problem('paper_author_person', $authorId, 'verified author id is on no paper, not exported', &wbPerson($person)); next; }
+        &problem('paper_author_person', $authorId, 'verified author id is on no paper, not exported', &wbPerson($person));
+        $counts{'paper_author_person author id on no paper not exported'}++; next; }
       my ($final) = &resolvePerson($person);
       unless ($final) {
-        &problem('paper_author_person', $authorId, 'verified person is Invalid and not merged, not exported', &wbPerson($person)); next; }
+        if ($v->{text} =~ m/^YES {1,2}Raymond Lee\s*$/) {	# Raymond's lab or lineage inference onto an Invalid person :  not exported, and not a problem ( Cecilia )
+          $counts{'paper_author_person inferred connection to Invalid person not exported'}++; next; }
+        &problem('paper_author_person', $authorId, 'verified person is Invalid and not merged, not exported', &wbPerson($person));
+        $counts{'paper_author_person Invalid person not exported'}++; next; }
       if ($final ne $person) {
         &problem('paper_author_person', $authorId, 'verified person was merged, used the person it was merged into', &wbPerson($person) . ' -> ' . &wbPerson($final)); }
-      my $method = '';
-      if    ($v->{text} =~ m/^YES  Raymond Lee\s*$/) { $method = 'inferred lab raymond'; }
-      elsif ($v->{text} =~ m/^YES Raymond Lee\s*$/)  { $method = 'inferred lineage raymond'; }
+      my ($curatorFinal) = ($v->{curator} =~ m/^WBPerson(\d+)$/) ? &resolvePerson("two$1") : ('');	# a verifier merged since is the person they became
+      my ($method, $createdBy) = ('', ($curatorFinal) ? &wbPerson($curatorFinal) : $v->{curator});	# who made the connection :  the script, the person themself, or the curator
+      if    ($v->{text} =~ m/^YES  Raymond Lee\s*$/) { ($method, $createdBy) = ('inferred lab raymond', 'automated_via_person_laboratory'); }
+      elsif ($v->{text} =~ m/^YES Raymond Lee\s*$/)  { ($method, $createdBy) = ('inferred lineage raymond', 'automated_via_person_lineage'); }
       foreach my $paperOrder (@{ $authorPapers{$authorId} }) {
         my ($paper, $order) = @$paperOrder;
         unless ($paperValid{$paper}) {
@@ -674,8 +733,9 @@ sub exportPaperAuthorPerson {
           &problem('paper_author_person', "WBPaper$paper", 'verified on a paper that is not valid, not exported', &wbPerson($final) . " author $authorId"); next; }
         push @{ $paperPerson{$paper}{$final} }, $order;
         print PAP join("\t", map { &tsv($_) } "WB:WBPaper$paper", $order, $authorName{$authorId} || '', &wbPerson($final), $v->{text}, $method,
-                       $v->{curator}, $v->{timestamp}, $authorId, $join) . "\n";
+                       $createdBy, $v->{curator}, $v->{timestamp}, $authorId, $join) . "\n";
         $counts{'paper_author_person exported'}++;
+        $counts{'paper_author_person created_by ' . (($createdBy =~ m/^automated/) ? $createdBy : ($createdBy eq &wbPerson($final)) ? 'the person themself' : ($createdBy eq 'WBPerson1') ? 'Cecilia WBPerson1' : 'another curator')}++;
         $counts{"paper_author_person exported $method"}++ if ($method); } } }
   close (PAP) or die "Cannot close $prefix.paper_author_person.tsv : $!";
 
@@ -686,10 +746,36 @@ sub exportPaperAuthorPerson {
       &problem('paper_author_person', "WBPaper$paper", 'same person verified on more than one author position, a curator must resolve before transfer',
                       &wbPerson($person) . ' author_order ' . join(' ', sort { $a <=> $b } @{ $paperPerson{$paper}{$person} })); } }
 
-  &addNotLoaded('pap_author_possible', 'possible matches not verified', $counts{'paper_author_person possible without verification'} || 0, scalar(keys %possibleOnly), 'no', 'only verified YES connections are sent');
-  &addNotLoaded('pap_author_verified', 'NO verifications', $counts{'paper_author_person NO not exported'} || 0, '', 'no', 'ABC author has no field for a person who is not this author');
-  &addNotLoaded('pap_author_possible', 'who proposed a match and when', '', '', 'no', 'ABC author has one person_id ;  the verification curator and timestamp are sent, the proposal ones are not');
-  &addNotLoaded('pap_author_verified', 'verification method', ($counts{'paper_author_person exported inferred lab raymond'} || 0) + ($counts{'paper_author_person exported inferred lineage raymond'} || 0), '', 'yes', 'in verification_method, ABC author has no field for it, the importer decides');
+    # corresponding authors, from pap_author_corresponding.  The flag is on the author position, not the person
+  my %corresponding;		# $corresponding{author_id} = { curator, timestamp }, the latest
+  $result = $dbh->prepare( "SELECT author_id, pap_author_corresponding, pap_curator, pap_timestamp FROM pap_author_corresponding ORDER BY pap_timestamp" );
+  $result->execute() or die "Cannot prepare statement: $DBI::errstr\n";
+  while (my @row = $result->fetchrow) {
+    next unless (defined $row[1] && $row[1] eq 'corresponding');
+    $corresponding{$row[0]} = { curator => &wbPerson($row[2]), timestamp => &isoTs($row[3]) }; }
+  open (COR, ">:utf8", "$prefix.paper_author_corresponding.tsv") or die "Cannot create $prefix.paper_author_corresponding.tsv : $!";
+  print COR join("\t", qw( reference author_order author_name corresponding_author curator timestamp wb_author_id )) . "\n";
+  foreach my $authorId (sort { $a <=> $b } keys %corresponding) {
+    unless ($authorPapers{$authorId}) {
+      &problem('paper_author_corresponding', $authorId, 'corresponding author id is on no paper, not exported', '');
+      $counts{'paper_author_corresponding author id on no paper not exported'}++; next; }
+    foreach my $paperOrder (@{ $authorPapers{$authorId} }) {
+      my ($paper, $order) = @$paperOrder;
+      unless ($paperValid{$paper}) { $counts{'paper_author_corresponding on invalid paper not exported'}++; next; }
+      print COR join("\t", map { &tsv($_) } "WB:WBPaper$paper", $order, $authorName{$authorId} || '', 'true',
+                     $corresponding{$authorId}{curator}, $corresponding{$authorId}{timestamp}, $authorId) . "\n";
+      $counts{'paper_author_corresponding exported'}++; } }
+  close (COR) or die "Cannot close $prefix.paper_author_corresponding.tsv : $!";
+
+  &addNotLoaded('pap_author_verified', 'verified connections whose author id is on no paper', $counts{'paper_author_person author id on no paper not exported'} || 0, '', 'no', 'the author was removed from its paper after it was verified, so there is nothing to connect ;  Cecilia looked and could not place them ;  listed in problems_accounted_for', 'Cecilia 2026-10-22');
+  &addNotLoaded('pap_author_corresponding', 'corresponding authors whose author id is on no paper', $counts{'paper_author_corresponding author id on no paper not exported'} || 0, '', 'no', 'the author was removed from its paper after it was marked corresponding, so there is nothing to mark ;  Kimberly and Cecilia agreed to ignore them ;  listed in problems_accounted_for', 'Kimberly and Cecilia 2026-10-23');
+  &addNotLoaded('pap_author_verified', 'inferred lab or lineage connections to an Invalid person', $counts{'paper_author_person inferred connection to Invalid person not exported'} || 0, '', 'no', 'Raymond Lee lab or lineage inferences onto a person that is Invalid and not merged :  the person is not exported, so neither is the connection, and it is not listed as a problem', 'Cecilia 2026-10-23');
+  &addNotLoaded('pap_author_verified', 'verified connections to an Invalid person not merged', $counts{'paper_author_person Invalid person not exported'} || 0, '', 'no', 'the person is not exported, so the connection cannot be ;  listed in problems');
+  &addNotLoaded('pap_author_sent', 'log of author verification emails sent', &countRows('pap_author_sent'), '', 'no', 'not needed', 'Cecilia 2026-10-22');
+  &addNotLoaded('pap_author_possible', 'possible matches not verified', $counts{'paper_author_person possible without verification'} || 0, scalar(keys %possibleOnly), 'no', 'ABC cannot hold a possible match ;  only verified YES connections are sent', 'Cecilia 2026-10-22');
+  &addNotLoaded('pap_author_verified', 'NO verifications', $counts{'paper_author_person NO not exported'} || 0, '', 'no', 'ABC cannot hold a NO ;  author has no field for a person who is not this author', 'Cecilia 2026-10-22');
+  &addNotLoaded('pap_author_possible', 'who proposed a match and when', '', '', 'no', 'not important ;  the verification curator and timestamp are sent, the proposal ones are not', 'Cecilia 2026-10-22');
+  &addNotLoaded('pap_author_verified', 'verification method', ($counts{'paper_author_person exported inferred lab raymond'} || 0) + ($counts{'paper_author_person exported inferred lineage raymond'} || 0), '', 'yes', 'resolved :  in verification_method, and as created_by automated_via_person_laboratory or automated_via_person_lineage', 'Cecilia 2026-10-22');
 } # sub exportPaperAuthorPerson
 
 
@@ -736,20 +822,40 @@ sub countRows {
   return $total;
 } # sub countRows
 
-sub addNotLoaded {
-  my ($source, $field, $rows, $objects, $exported, $note) = @_;
+sub lineageDate {		# a two_lineage year or date as YYYY-MM-DD :  a year is January 1st, a year and month the 1st, '' when it cannot be read
+  my ($value, $submissionId) = @_;
+  return '' if ($value eq '');
+  my %month;
+  my @names = qw( jan feb mar apr may jun jul aug sep oct nov dec );
+  @month{@names} = (1 .. 12);
+  my $mon = join('|', @names);
+  my ($y, $m, $d);
+  if    ($value =~ m/^(\d{4})$/)                                       { ($y, $m, $d) = ($1, 1, 1); }
+  elsif ($value =~ m/^(\d{4})[-\/.](\d{1,2})$/)                         { ($y, $m, $d) = ($1, $2, 1); }
+  elsif ($value =~ m/^(\d{1,2})[-\/.](\d{4})$/)                         { ($y, $m, $d) = ($2, $1, 1); }
+  elsif ($value =~ m/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})$/)            { ($y, $m, $d) = ($1, $2, $3); }
+  elsif ($value =~ m/^($mon)\w*\.?,?\s+(\d{4})$/i)                       { ($y, $m, $d) = ($2, $month{lc $1}, 1); }
+  elsif ($value =~ m/^($mon)\w*\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})$/i) { ($y, $m, $d) = ($3, $month{lc $1}, $2); }
+  elsif ($value =~ m/^(\d{1,2})(?:st|nd|rd|th)?\s+($mon)\w*\.?,?\s+(\d{4})$/i) { ($y, $m, $d) = ($3, $month{lc $2}, $1); }
+  if (defined $y && $m >= 1 && $m <= 12 && $d >= 1 && $d <= 31) { return sprintf('%04d-%02d-%02d', $y, $m, $d); }
+  &problem('person_lineage_submission', $submissionId, 'date could not be read, left empty', $value);
+  return '';
+} # sub lineageDate
+
+sub addNotLoaded {		# $approved :  who at WormBase agreed it need not reach ABC as it is, and when
+  my ($source, $field, $rows, $objects, $exported, $note, $approved) = @_;
   push @notLoadedOrder, [ $source, $field ];
-  $notLoaded{$source}{$field} = { rows => $rows, objects => $objects, exported => $exported, note => $note };
+  $notLoaded{$source}{$field} = { rows => $rows, objects => $objects, exported => $exported, note => $note, approved => $approved };
 } # sub addNotLoaded
 
 sub writeNotLoaded {
   open (NOT, ">:utf8", "$prefix.not_loaded.tsv") or die "Cannot create $prefix.not_loaded.tsv : $!";
-  print NOT join("\t", qw( wormbase_source data rows objects exported note )) . "\n";
-  print NOT "#\texported : no = not in any file,  unmapped = in the person unmapped section,  yes = exported but changed,  text yes = the text is exported and only its per value curator and timestamp are lost,  submission only = on person_lineage_submission\n";
+  print NOT join("\t", qw( wormbase_source data rows objects exported note approved )) . "\n";
+  print NOT "#\texported : no = not in any file,  yes = exported but changed,  text yes = the text is exported and only its per value curator and timestamp are lost.  approved :  who at WormBase agreed and when, empty = not reviewed yet\n";
   foreach my $pair (@notLoadedOrder) {
     my ($source, $field) = @$pair;
     my $n = $notLoaded{$source}{$field};
-    print NOT join("\t", map { &tsv($_) } $source, $field, $n->{rows}, $n->{objects}, $n->{exported}, $n->{note}) . "\n"; }
+    print NOT join("\t", map { &tsv($_) } $source, $field, $n->{rows}, $n->{objects}, $n->{exported}, $n->{note}, $n->{approved}) . "\n"; }
   close (NOT) or die "Cannot close $prefix.not_loaded.tsv : $!";
 } # sub writeNotLoaded
 
@@ -830,27 +936,42 @@ sub problem {
   push @problems, [ $file, $key, $problem, (defined $detail) ? $detail : '' ];
 } # sub problem
 
-sub writeProblems {
-  open (PROB, ">:utf8", "$prefix.problems.tsv") or die "Cannot create $prefix.problems.tsv : $!";
+sub writeProblems {		# .problems.tsv still need addressing, .problems_accounted_for.tsv were reviewed and agreed
+  my %rule;		# $rule{problem} = [ severity, why ]
+  foreach my $p (@problems) {
+    next if ($rule{ $p->[2] });
+    $rule{ $p->[2] } = [ 'info', 'no explanation in @problemWhy, add one' ];
+    foreach my $r (@problemWhy) { if ($p->[2] =~ $r->[0]) { $rule{ $p->[2] } = [ $r->[1], $r->[2] ]; last; } } }
+  my @open      = grep { $rule{ $_->[2] }[0] ne 'accounted for' } @problems;
+  my @accounted = grep { $rule{ $_->[2] }[0] eq 'accounted for' } @problems;
+  &writeProblemFile('problems.tsv', \@open, \%rule,
+    "# Problems that still need addressing.  blocks import :  the ABC insert fails until a curator fixes it in WormBase\n" .
+    "# and the export is re-run.  fix or importer default :  fix it, or the importer has to supply a value.\n" .
+    "# curator review :  a curator should check these.  info :  handled by the exporter, listed so nothing changes silently.\n" .
+    "# Problems WormBase has reviewed and agreed to are in .problems_accounted_for.tsv\n");
+  &writeProblemFile('problems_accounted_for.tsv', \@accounted, \%rule,
+    "# Problems WormBase has reviewed and agreed to, so nothing more is needed :  listed so nothing changes silently.\n" .
+    "# Problems that still need addressing are in .problems.tsv\n");
+} # sub writeProblems
+
+sub writeProblemFile {		# a summary of each kind, then one line per problem
+  my ($suffix, $list, $rule, $header) = @_;
+  open (PROB, ">:utf8", "$prefix.$suffix") or die "Cannot create $prefix.$suffix : $!";
   my %summary;		# $summary{file}{problem} = count
-  foreach my $p (@problems) { $summary{ $p->[0] }{ $p->[2] }++; }
+  foreach my $p (@$list) { $summary{ $p->[0] }{ $p->[2] }++; }
   my @rows;
   foreach my $file (keys %summary) {
     foreach my $problem (keys %{ $summary{$file} }) {
-      my ($severity, $why) = ('info', 'no explanation in @problemWhy, add one');
-      foreach my $rule (@problemWhy) { if ($problem =~ $rule->[0]) { ($severity, $why) = ($rule->[1], $rule->[2]); last; } }
-      push @rows, [ $severity, $file, $problem, $summary{$file}{$problem}, $why ]; } }
-  my %severityOrder = ( 'blocks import' => 0, 'fix or importer default' => 1, 'info' => 2 );
-  print PROB "# Summary of the problems below.  blocks import :  the ABC insert fails until a curator fixes it in WormBase\n";
-  print PROB "# and the export is re-run.  fix or importer default :  fix it, or the importer has to supply a value.\n";
-  print PROB "# info :  already handled by the exporter, listed so nothing changes silently.\n";
+      push @rows, [ $rule->{$problem}[0], $file, $problem, $summary{$file}{$problem}, $rule->{$problem}[1] ]; } }
+  my %severityOrder = ( 'blocks import' => 0, 'fix or importer default' => 1, 'curator review' => 2, 'info' => 3, 'accounted for' => 4 );
+  print PROB $header;
   print PROB "#\t" . join("\t", qw( severity file problem count why )) . "\n";
   foreach my $row (sort { $severityOrder{$a->[0]} <=> $severityOrder{$b->[0]} || $a->[1] cmp $b->[1] || $b->[3] <=> $a->[3] } @rows) {
     print PROB "#\t" . join("\t", map { &tsv($_) } @$row) . "\n"; }
   print PROB join("\t", qw( file key problem detail )) . "\n";
-  foreach my $p (@problems) { print PROB join("\t", map { &tsv($_) } @$p) . "\n"; }
-  close (PROB) or die "Cannot close $prefix.problems.tsv : $!";
-} # sub writeProblems
+  foreach my $p (@$list) { print PROB join("\t", map { &tsv($_) } @$p) . "\n"; }
+  close (PROB) or die "Cannot close $prefix.$suffix : $!";
+} # sub writeProblemFile
 
 sub tsv {		# a value safe for a tab delimited line
   my ($value) = @_;

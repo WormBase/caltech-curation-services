@@ -29,10 +29,13 @@ Each run writes `person_to_abc.<YYYYMMDD_HHMMSS>.<suffix>`.
 | `person.jsonl` | one person per line, including their laboratory memberships |
 | `person_lineage.tsv` | one validated person-to-person relationship per line |
 | `person_lineage_submission.tsv` | one WormBase lineage row per line, the submitted claims |
+| `person_lineage_date_conflicts.tsv` | relationships whose submissions give different years, one line each. Nothing to import: `person_lineage.tsv` has the latest submission's years and every version is in `person_lineage_submission.tsv` |
 | `paper_author_person.tsv` | one verified author → person connection per line |
+| `paper_author_corresponding.tsv` | one corresponding author per line, by paper and author order |
 | `counts.tsv` | how many rows were exported or skipped, to check the import against |
 | `not_loaded.tsv` | WormBase data ABC can't hold: what it is, how many rows, and whether it is in the files |
-| `problems.tsv` | row-level issues for WormBase curators to fix before the final export, with a summary at the top |
+| `problems.tsv` | row-level issues that still need addressing before the final export, with a summary at the top |
+| `problems_accounted_for.tsv` | row-level issues WormBase has reviewed and agreed to, so nothing more is needed. Same format |
 | `character_fixes.tsv` | every value whose garbled characters the exporter repaired, before and after, with a summary at the top |
 
 ## General format
@@ -85,26 +88,35 @@ Each run writes `person_to_abc.<YYYYMMDD_HHMMSS>.<suffix>`.
   `WB:WBPerson<n>` cross reference, then by email, is one way to find them.
 - A curator WBPerson that wasn't exported (Invalid and never merged) has no ABC person. Use the
   import's default user for those.
-- `person_lineage` has no WormBase curator at all; see step 4.
+- `person_lineage` and `person_lineage_submission` use `WBPerson1` and `wormbase_initial_import`; see steps 4 and 5.
 
 ## Before loading
 
-1. **Resolve `problems.tsv`.** The commented summary at the top gives, for each kind of problem,
-   its severity, file, count and why it matters:
-   - `blocks import`: ABC will reject the rows.
-   - `fix or importer default`: the importer has to supply a value if WormBase doesn't fix it.
-   - `info`: already handled by the exporter, listed so nothing changes silently.
+1. **Resolve `problems.tsv`.** Problems come in two files, both with a commented summary at the
+   top giving, for each kind of problem, its severity, file, count and why it matters:
+   - `problems.tsv`: what still needs addressing.
+     - `blocks import`: ABC will reject the rows.
+     - `fix or importer default`: the importer has to supply a value if WormBase doesn't fix it.
+     - `curator review`: a WormBase curator still has to look at these.
+     - `info`: already handled by the exporter, listed so nothing changes silently.
+   - `problems_accounted_for.tsv`: problems WormBase has reviewed and agreed to (severity
+     `accounted for`), for example verified and corresponding authors no longer on any paper, merged persons replaced
+     by the person they were merged into, and lineage years where the latest submission was kept.
+     Nothing more is needed; they are listed so nothing changes silently.
 
    WormBase curators fix problems in WormBase and then re-run the export. The `blocks import` ones,
    which must all be zero for the final transfer, are:
    - **paper_author_person: same person on more than one author position.** ABC has a unique
      index on (reference_id, person_id), so this must be zero.
+   - **paper_author_person: author id on more than one paper.** A WormBase author id is one author
+     position on one paper, so these are broken WormBase data, and the verified person would be
+     connected to every paper the id is on. WormBase fixes `pap_author` first.
    - **person: ORCID on more than one person, and more than one ORCID on a person.** ABC has unique
      indexes on the live (non-obsolete) `curie`, and on (person_id, curie_prefix).
    - **person_lineage_submission: no two_sender.** ABC requires `who_sent_this`.
    - **person: no last name.** ABC requires `person_name.last_name`.
 
-   Everything else in the file is informational: rows skipped or adjusted, with the reason.
+   Everything else in `problems.tsv` is for WormBase curators or the importer, with the reason.
 2. Read `not_loaded.tsv`. It is the record of what WormBase data won't exist at ABC after the switch.
 3. Do a dry run against a copy of the ABC database, and compare against `counts.tsv`.
 4. Load each file in one transaction, so a failure leaves nothing half loaded. Every new person and
@@ -120,12 +132,13 @@ Each run writes `person_to_abc.<YYYYMMDD_HHMMSS>.<suffix>`.
 | 4 | `person_lineage.tsv` | person_lineage | step 2 |
 | 5 | `person_lineage_submission.tsv` | person_lineage_submission | steps 2 and 4 |
 | 6 | `paper_author_person.tsv` | author.person_id | step 2, and WormBase references already in ABC |
+| 7 | `paper_author_corresponding.tsv` | author.corresponding_author | WormBase references already in ABC |
 
 Steps 2 and 3 can share one pass over `person.jsonl`, since all laboratories exist after step 1.
 
 ## Step 1: laboratory.jsonl
 
-Only labs that are Valid in WormBase are exported.
+Only labs that are Valid in WormBase are exported, with status `active`.
 
 | JSON key | ABC | notes |
 |---|---|---|
@@ -152,33 +165,19 @@ person. It appears as an obsolete `WB:WBPerson` cross reference on the person it
 | `cross_references[]` | `person_cross_reference` | `curie` and `is_obsolete`. One live `WB:WBPerson<n>`, obsolete `WB:WBPerson<n>` for merged persons, and `ORCID:<id>` |
 | `display_name.value` | `person.display_name` | the WormBase standard name. If it's missing, listed in problems; build it from the primary name |
 | `names[]` | `person_name` | `first_name`, `middle_name`, `last_name`, `is_primary`. One primary; the rest are also-known-as names |
-| `emails[]` | `person_email` | `email_address`, and `date_made_old_email` (null = current) |
+| `emails[]` | `person_email` | `email_address`, and `date_made_old_email` (null = current). Includes the addresses WormBase kept private (`two_privacy`); those persons have `privacy` `hide_email` |
 | `institutions[]` | `person_institution` | `institution`, and `date_made_old_institution` (null = current) |
 | `street_address.value` | `person.street_address` | WormBase street lines joined with newlines |
 | `city` `state` `postal_code` `country` (`.value`) | same-named `person` columns | |
 | (address timestamps) | `person.address_last_updated` | the latest timestamp of the address fields |
 | `webpage[].value` | `person.webpage` (array) | |
 | `biography_research_interest.value` | `person.biography_research_interest` | the WormBase public comments, joined with newlines |
-| `notes[]` | `person_note.note` | internal curator notes, one row each |
-| `active_status.value` | `person.active_status` | `deceased` or `retired`. Absent means `active` |
-| `privacy.value` | `person.privacy` | `fully_hidden` for persons who asked not to be shown. Absent leaves ABC's default (`hide_email`); whether WormBase's other persons should get `show_all` is a decision for WormBase and ABC |
+| `notes[]` | `person_note.note` | internal notes, one row each: curator comments, the reason a person asked to be hidden, and the left-the-field text (`Not in Worm Field`, or the text as written, e.g. `Now in a fly lab`, `Deceased June 23, 2009`) |
+| `active_status.value` | `person.active_status` | `deceased` or `retired`, from WormBase's left-the-field text. Absent means `active` |
+| `privacy.value` | `person.privacy` | `fully_hidden` for persons who asked not to be shown, `hide_email` for persons with private email addresses. **Absent means `show_all`**: set it explicitly, since ABC's default is `hide_email` |
 | `unsubscribe.value` | `person.unsubscribe` | `true` |
 | `laboratories[]` | `laboratory_person` | step 3 |
-| `unmapped` | not stored | see below |
 | `date_created` `date_updated` | audit fields | |
-
-`unmapped` holds WormBase data with no ABC field, each a list of value wrappers. It is exported
-so ABC can decide whether to keep any of it, for example as a `person_note`. Its counts are in
-`not_loaded.tsv`.
-
-| key | what it is |
-|---|---|
-| `left_field` | "Left the field", "Deceased 2010" and similar. When it says deceased or retired, `active_status` is also set |
-| `hide` | the reason the person asked to be hidden |
-| `privacy` | mostly email addresses the person wanted kept private, a few free-text requests |
-| `unable_to_contact` | "No current address available" and similar |
-| `usefulwebpage` | WormBase's flag on a webpage; `value` is the webpage it flags |
-| `cgc_numeric_pi` | CGC numeric PI ids (`source` two_pis or two_oldpis). These PIs have no lab code and no lab object, so there is no laboratory to attach them to |
 
 ## Step 3: laboratory_person (from person.jsonl `laboratories`)
 
@@ -199,8 +198,8 @@ One entry per person and laboratory:
 ## Step 4: person_lineage.tsv
 
 ```
-person_lineage_key  person_subject  person_object  relationship  start_date  end_date  date_created  date_updated  submissions
-WBPerson10009|WBPerson22573|Postdoc Supervisor of  WBPerson10009  WBPerson22573  Postdoc Supervisor of  2016    2019-04-11T08:24:06.889895-07:00  2019-04-11T08:24:06.915976-07:00  2
+person_lineage_key  person_subject  person_object  relationship  start_date  end_date  created_by  date_created  date_updated  submissions
+WBPerson10009|WBPerson22573|Postdoc Supervisor of  WBPerson10009  WBPerson22573  Postdoc Supervisor of  2016-01-01    WBPerson1  2019-04-11T08:24:06.889895-07:00  2019-04-11T08:24:06.915976-07:00  2
 ```
 
 - `person_subject`, `person_object`: WBPerson ids. Resolve them through `WB:WBPerson<n>`. Persons
@@ -208,13 +207,15 @@ WBPerson10009|WBPerson22573|Postdoc Supervisor of  WBPerson10009  WBPerson22573 
 - `relationship`: the exact name of a `vocabulary_term_abc` term in the `person_person_relationship`
   vocabulary. The subject is the supervisor, so `A  B  PhD Supervisor of` means A supervised B's
   PhD. For `Collaborator of` (symmetric) the subject is the lower WBPerson number.
-- `start_date`, `end_date`: four-digit years, or empty. WormBase stores only the year; convert to
-  `YYYY-01-01` (the precision loss is in `not_loaded.tsv`). An ongoing relationship has an empty
-  `end_date`.
+- `start_date`, `end_date`: dates, `YYYY-MM-DD`, or empty. WormBase stores years, so a year is
+  sent as January 1st (`2016-01-01`) and a year and month as the 1st of the month. Text that can't
+  be read as a date is left empty and listed in `problems.tsv`; the fields are optional. An
+  ongoing relationship has an empty `end_date`.
 - `date_created`, `date_updated`: earliest and latest WormBase row behind the relationship.
-- `created_by`: WormBase has no record of who validated a relationship. Every row sent by a person
-  was accepted once both people resolved to WBPersons. So use the import's default user; the sender
-  is kept on the submissions.
+- `created_by`: always `WBPerson1`, Cecilia Nakamura. A script connects the submitted names to
+  WBPersons and Cecilia verifies the connections, so she validated every relationship. WormBase
+  doesn't record when, so `date_created` is the first submission's time. Who sent each claim is on
+  the submissions (`who_sent_this`).
 - `person_lineage_key`: the line's identity, `subject|object|relationship`. Step 5 uses it to link
   submissions. It matches ABC's unique constraint, so it is unique in the file.
 - `submissions`: how many submission rows point at this relationship. It is usually 2: WormBase
@@ -225,9 +226,8 @@ WBPerson10009|WBPerson22573|Postdoc Supervisor of  WBPerson10009  WBPerson22573 
 Every WormBase lineage row, including the mirrored copies and repeat submissions:
 
 ```
-submission_id  person_subject_name  person_object_name  person_subject  person_object  relationship  who_sent_this  start_date  end_date  status  person_lineage_key  date_created  wb_joinkey  wb_number  wb_role
-1     Andrew Chisholm     Ian Chin-Sang      WBPerson105  WBPerson103  Unknown Role Supervisor of  Original - Andrew Hallman    validated  WBPerson105|WBPerson103|Unknown Role Supervisor of  2003-08-21T00:00:00-07:00  two103  two105  withUnknown
-1845  Katherine L. Wilson Yosef Gruenbaum                WBPerson222  Collaborator of             REV - GRU@VMSHUJIACIL  partially_resolved  2003-11-07T14:37:36.632912-08:00  two 2503  two222  Collaborated
+submission_id  person_subject_name  person_object_name  person_subject  person_object  relationship  who_sent_this  start_date  end_date  status  created_by  updated_by  person_lineage_key  date_created  wb_joinkey  wb_number  wb_role
+1     Andrew Chisholm     Ian Chin-Sang      WBPerson105  WBPerson103  Unknown Role Supervisor of  Original - Andrew Hallman    validated  wormbase_initial_import  WBPerson1  WBPerson105|WBPerson103|Unknown Role Supervisor of  2003-08-21T00:00:00-07:00  two103  two105  withUnknown
 ```
 
 | column | ABC | notes |
@@ -236,24 +236,31 @@ submission_id  person_subject_name  person_object_name  person_subject  person_o
 | `person_subject` `person_object` | `person_subject_id` `person_object_id` | WBPerson ids, empty when unresolved |
 | `relationship` | `relationship_vocab_term_abc_id` | as in step 4 |
 | `who_sent_this` | `who_sent_this` | WormBase `two_sender` exactly as stored: an email, a name, or a curator note such as `YO from lab webpage`. `REV - ` at the start marks the mirror copy WormBase made for the other person |
-| `start_date` `end_date` | same-named columns | years, as in step 4 |
-| `status` | `status` | `validated` (both persons resolved), `partially_resolved` (one side), `pending` (neither), `rejected` (a relationship with oneself) |
+| `start_date` `end_date` | same-named columns | dates, as in step 4 |
+| `status` | `status` | `validated` (both persons resolved), `rejected` (a curator set one side to `NO`, or a relationship with oneself), `partially_resolved` (one side), `pending` (neither) |
+| `created_by` | `created_by` | always `wormbase_initial_import`, an automation user for this load. Who sent the claim is `who_sent_this` |
+| `updated_by` | `updated_by` | `WBPerson1` (Cecilia) on `validated` rows and on `rejected` rows with a `NO`: she does every validation and rejection. `wormbase_initial_import` otherwise |
 | `person_lineage_key` | `person_lineage_id` | the step 4 row with this key. Empty unless `validated` |
 | `date_created` | `date_created` | when WormBase received the row |
 | `submission_id` | | line identity within this file |
 | `wb_joinkey` `wb_number` `wb_role` | | the raw WormBase values, for tracing |
 
 In `wb_joinkey` or `wb_number`, `NO` means a curator decided that person is not and won't be a
-WBPerson. Those rows stay `partially_resolved`.
+WBPerson. Those rows are `rejected`, and the other side is still filled in when it is a WBPerson.
+
+`partially_resolved` and `pending` rows are submissions WormBase curators had not finished: a
+submitted name was never connected to a WBPerson, nor marked `NO`. They are not problems. Load
+them with that status, so they arrive in ABC as submissions that still need a curator to resolve
+them, the same as a new submission would.
 
 ## Step 6: paper_author_person.tsv
 
 Only connections verified as YES are exported, one row per author position.
 
 ```
-reference  author_order  author_name  person  verified  verification_method  curator  timestamp  wb_author_id  wb_pap_join
-WB:WBPaper00000003  1  Abdul Kader N  WBPerson24444  YES  Cecilia Nakamura      WBPerson1    2014-01-24T17:19:21.338866-08:00  1    1
-WB:WBPaper00000088  1  Deppe U        WBPerson2515   YES  Raymond Lee  inferred lab raymond  WBPerson363  2007-03-16T15:57:30.78249-07:00   126  1
+reference  author_order  author_name  person  verified  verification_method  created_by  curator  timestamp  wb_author_id  wb_pap_join
+WB:WBPaper00000003  1  Abdul Kader N  WBPerson24444  YES  Cecilia Nakamura                        WBPerson1                 WBPerson1    2014-01-24T17:19:21.338866-08:00  1    1
+WB:WBPaper00000088  1  Deppe U        WBPerson2515   YES  Raymond Lee  inferred lab raymond  automated_via_person_laboratory  WBPerson363  2007-03-16T15:57:30.78249-07:00   126  1
 ```
 
 1. Find the reference by the cross reference in `reference`.
@@ -261,20 +268,41 @@ WB:WBPaper00000088  1  Deppe U        WBPerson2515   YES  Raymond Lee  inferred 
    `author_name`. WormBase writes author names as last name and initials (`Abdul Kader N`); ABC
    may hold them differently.
 3. If it matches, set `author.person_id` to the person found through `WB:<person>`.
-   Set `updated_by` from `curator` and `date_updated` from `timestamp`: they say who verified
-   the connection and when.
+   Set the connection's `created_by` from `created_by` and its date from `timestamp`:
+   - `automated_via_person_laboratory` and `automated_via_person_lineage`: the two Raymond Lee script inferences,
+     from lab membership and from lineage. These are automation users.
+   - the author's own WBPerson, when the person verified their own paper.
+   - otherwise the curator who verified it, almost always Cecilia (`WBPerson1`).
+
+   `curator` is the WormBase curator on the row, for tracing.
 4. If the author row is missing, or the names don't match because ABC's author list has changed,
-   ABC decides what to do. ABC already supports linking a person straight to a reference: an
-   `author` row with `person_id` set and `author_order` null.
+   connect the person directly to the reference: an `author` row with `person_id` set and
+   `author_order` null. The connection is never dropped.
 5. `verified` is WormBase's verification text, and `verification_method` marks the two Raymond Lee
    script inferences: `inferred lab raymond` and `inferred lineage raymond`. Empty means verified
-   by a curator or by the person. ABC's `author` has no field for either; the importer decides
-   whether to keep them.
+   by a curator or by the person. ABC's `author` has no field for either; `created_by` carries the
+   difference.
 
 `wb_author_id` and `wb_pap_join` are WormBase's keys, for tracing.
 
 Not exported: NO verifications, possible matches that were never verified, and verifications on
 papers that aren't valid. All are counted in `not_loaded.tsv` and `counts.tsv`.
+
+## Step 7: paper_author_corresponding.tsv
+
+```
+reference  author_order  author_name  corresponding_author  curator  timestamp  wb_author_id
+```
+
+1. Find the reference by `reference`, and its `author` row with `author_order`. Check that the
+   name matches `author_name`, as in step 6.
+2. If it matches, set `author.corresponding_author` to true, with `updated_by` from `curator` and
+   `date_updated` from `timestamp`.
+3. If the author row is missing or the name doesn't match, don't set it. **Write the line to a
+   report and send it back to WormBase**, so a curator can find the right author.
+
+WormBase has no first author flag: the first author is author order 1, which ABC already has.
+
 
 ## Checking the import
 
@@ -283,17 +311,48 @@ papers that aren't valid. All are counted in `not_loaded.tsv` and `counts.tsv`.
 - `laboratory exported`
 - `person exported`
 - `person_lineage exported`
-- `person_lineage_submission validated`, `partially_resolved`, `pending`
+- `person_lineage_submission validated`, `rejected`, `partially_resolved`, `pending`
 - `paper_author_person exported`, including the two inferred counts
+- `paper_author_corresponding exported`
 
 After loading, ABC's counts should match, apart from rows the importer deliberately skipped. The
 importer should report those skips.
 
+## Not sent, approved by WormBase
+
+WormBase has reviewed this data and agreed it does not need to reach ABC as it is. Each item is
+also a row in `not_loaded.tsv`, with `approved` saying who agreed and when.
+
+| WormBase data | what happens | approved |
+|---|---|---|
+| `two_unable_to_contact` | not sent | Cecilia, 2026-10-22 |
+| `two_usefulwebpage`, a curator checkbox on a webpage | not sent; the webpage itself is sent | Cecilia, 2026-10-22 |
+| CGC numeric PI ids in `two_pis` and `two_oldpis` | not sent; PIs with a lab code are sent | Cecilia, 2026-10-22 |
+| curator and timestamp of each `two_wormbase_comment` and `two_street` line | the text is all sent, joined into one ABC value with the latest curator and timestamp | Cecilia, 2026-10-22 |
+| Invalid persons that were not merged | not sent; checked, and correct as they are | Cecilia, 2026-10-22 |
+| possible author matches never verified | not sent; ABC cannot hold a possible match | Cecilia, 2026-10-22 |
+| NO author verifications | not sent; ABC cannot hold a NO | Cecilia, 2026-10-22 |
+| who proposed an author match, and when | not sent, not important | Cecilia, 2026-10-22 |
+| author verification method | resolved: sent as `verification_method` and as `created_by` (`automated_via_person_laboratory`, `automated_via_person_lineage`) | Cecilia, 2026-10-22 |
+| the exact wording of "Left the field", "Not in the field" and their typos | sent as the note `Not in Worm Field` | Cecilia, 2026-10-22 |
+| phone and fax numbers (`two_mainphone`, `two_labphone`, `two_officephone`, `two_otherphone`, `two_fax`, `lab_phone`, `lab_fax`) | not sent | Cecilia, 2026-10-22 |
+| `two_contactdata`, contact attempt notes | not sent | Cecilia, 2026-10-22 |
+| `two_paper`, the legacy person paper list | not sent | Cecilia, 2026-10-22 |
+| `two_curator_ip`, `two_user_ip`, form ip addresses | not sent | WormBase Caltech call, 2026-10-22 |
+| `frm_email_skip`, `frm_wbperson_skip`, form mailing skip lists | not sent | WormBase Caltech call, 2026-10-22 |
+| `frm_ip_block`, `frm_user_save`, form ip blocks and saved input | not sent | WormBase Caltech call, 2026-10-22 |
+| `pap_author_sent`, log of author verification emails sent | not sent | Cecilia, 2026-10-22 |
+| verified author connections whose author id is on no paper | not sent: the author was removed from the paper after it was verified, and Cecilia couldn't place them | Cecilia, 2026-10-22 |
+| corresponding authors whose author id is on no paper | not sent: the author was removed from the paper after it was marked corresponding | Kimberly and Cecilia, 2026-10-23 |
+| Raymond Lee lab or lineage inferences onto a person who is Invalid and not merged | not sent, since the person isn't sent | Cecilia, 2026-10-23 |
+| `two_fullname`, a legacy full name table | not sent; the names come from the first, middle and last name tables | Cecilia, 2026-10-22 |
+| edit history tables (`h_two_*`, `lab_*_hst`, `h_pap_*`) | not sent; the current values are sent with their curator and timestamp | Juancarlos, 2026-10-22 |
+| when Cecilia verified each lineage relationship | can't be tracked: WormBase doesn't record it. `date_created` is the first submission's time | Juancarlos, 2026-10-22 |
+| the character repairs in `character_fixes.tsv` | sent repaired | Cecilia, 2026-10-22 |
+
 ## Decisions left to ABC
 
-- Which `users` row each curator becomes, how to match persons ABC already has, the default user
-  for `person_lineage.created_by`, and the default user for curators that weren't exported.
-- `person.privacy` for persons WormBase didn't hide, and `laboratory.email_visibility`.
-- Whether to keep any of `unmapped`, for example as `person_note`.
+- Which `users` row each curator becomes, how to match persons ABC already has, and the default
+  user for curators that weren't exported.
+- `laboratory.email_visibility`.
 - What to do when an author row no longer matches `paper_author_person`.
-- Whether to store `verified` and `verification_method`.
