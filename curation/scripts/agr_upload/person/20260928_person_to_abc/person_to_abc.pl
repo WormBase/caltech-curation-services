@@ -400,7 +400,8 @@ sub exportPersons {
     my %rec;
     $rec{wb_person_id} = $wbid;
 
-    my @xrefs = ( { curie => "WB:$wbid", is_obsolete => JSON::XS::false, curator => '', timestamp => $twoCreated{$joinkey} || '' } );
+    # the two table has no curator ;  Cecilia creates every person, even when the person editor recorded another curator
+    my @xrefs = ( { curie => "WB:$wbid", is_obsolete => JSON::XS::false, curator => 'WBPerson1', timestamp => $twoCreated{$joinkey} || '' } );
     foreach my $merged (sort { &numOf($a) <=> &numOf($b) } keys %{ $obsoleteXrefs{$joinkey} }) {
       push @xrefs, { curie => 'WB:' . &wbPerson($merged), is_obsolete => JSON::XS::true, %{ $obsoleteXrefs{$joinkey}{$merged} } }; }
     foreach my $orcid (@{ &orderedValues(\%two, 'orcid', $joinkey) || [] }) {

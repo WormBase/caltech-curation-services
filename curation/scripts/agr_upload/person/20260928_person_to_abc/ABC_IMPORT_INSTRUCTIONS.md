@@ -162,7 +162,7 @@ person. It appears as an obsolete `WB:WBPerson` cross reference on the person it
 | JSON key | ABC | notes |
 |---|---|---|
 | `wb_person_id` | | the WBPerson id, also in `cross_references` |
-| `cross_references[]` | `person_cross_reference` | `curie` and `is_obsolete`. One live `WB:WBPerson<n>`, obsolete `WB:WBPerson<n>` for merged persons, and `ORCID:<id>` |
+| `cross_references[]` | `person_cross_reference` | `curie` and `is_obsolete`. One live `WB:WBPerson<n>`, obsolete `WB:WBPerson<n>` for merged persons, and `ORCID:<id>`. The live `WB:WBPerson<n>` curator is always `WBPerson1`, Cecilia Nakamura, who creates every person; its `timestamp` is when the person was made |
 | `display_name.value` | `person.display_name` | the WormBase standard name. If it's missing, listed in problems; build it from the primary name |
 | `names[]` | `person_name` | `first_name`, `middle_name`, `last_name`, `is_primary`. One primary; the rest are also-known-as names |
 | `emails[]` | `person_email` | `email_address`, and `date_made_old_email` (null = current). Includes the addresses WormBase kept private (`two_privacy`); those persons have `privacy` `hide_email` |
