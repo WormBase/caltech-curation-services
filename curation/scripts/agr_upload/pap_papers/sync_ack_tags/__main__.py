@@ -76,7 +76,7 @@ def plan_paper(joinkey: str, curie: str, data: CaltechData, existing: List[dict]
     return actions, [(joinkey, curie, message) for _topic, message in problems]
 
 
-AUTHOR_CREATED_BY = re.compile(r"WBPerson\w+|unknown_author")  # format only: WBPersonundefined is replaced as stale
+AUTHOR_CREATED_BY = re.compile(r"WBPerson\w+|unknown_author")  # format only (WBPersonundefined -> unknown_author)
 
 
 def check_created_by(existing: Dict[str, List[dict]]):

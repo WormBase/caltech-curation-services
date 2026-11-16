@@ -163,7 +163,9 @@ def build_data(rows: Dict[str, List[tuple]]) -> CaltechData:
             data.lasttouched[valid] = utc_iso(ts)
     for joinkey, who, ts in rows.get("contributors_afp", []):
         valid = valid_paper(data, joinkey)
-        if who and valid:
+        # ACKnowledge saved "twoundefined" for a few submissions: no known person, so such a paper's tags go to
+        # unknown_author like those of a paper without a contributor
+        if who and valid and re.fullmatch(r"two\d+", who.strip()):
             data.contributors.setdefault(valid, {})[_person(who)] = utc_iso(ts)
     for table in ENTITY_TABLES + FLAG_TABLES:
         data.tables[table] = _keep_rows(data, rows.get(table, []))

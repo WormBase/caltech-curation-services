@@ -92,6 +92,12 @@ def test_contributors_come_from_afp_contributor_only():
     assert data.contributors == {"00000001": {"WBPerson5": "2024-01-01T00:00:00"}}
 
 
+def test_undefined_contributor_is_dropped():
+    assert build_data(rows(contributors_afp=[("00000001", "twoundefined", T0)])).contributors == {}
+    data = build_data(rows(contributors_afp=[("00000001", "twoundefined", T0), ("00000001", "two7", T0)]))
+    assert data.contributors == {"00000001": {"WBPerson7": "2024-01-01T00:00:00"}}
+
+
 def test_curator_removal_of_an_author_entry():
     data = build_data(rows(history_gene=history(
         ("00000830;%;ctl-1", 1, "two5", AUTHOR),
