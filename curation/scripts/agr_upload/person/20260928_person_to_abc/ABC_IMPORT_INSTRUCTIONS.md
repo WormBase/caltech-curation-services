@@ -44,8 +44,8 @@ Each run writes `person_to_abc.<YYYYMMDD_HHMMSS>.<suffix>`.
   was once read as Latin-1 or Windows-1252, so an apostrophe was stored as `â` plus two invisible
   control characters. The exporter repairs these, writing repaired apostrophes, dashes, double quotes and spaces as plain `'`, `-`, `"` and space. Each
   repair is listed in `character_fixes.tsv`, and the importer doesn't need to do anything.
-- **Line breaks:** values that hold several lines (`street_address`, `biography_research_interest`,
-  `additional_information`, `private_note`) separate the lines with a newline. In JSONL that is the
+- **Line breaks:** values that hold several lines (`street_address`, `additional_information`,
+  `private_note`, a `note`) separate the lines with a newline. In JSONL that is the
   `\n` escape, which a JSON parser already turns into a line break, so store the string as it is.
 - **JSONL:** one complete JSON object per line, so the files can be read a line at a time.
   Report errors by line number.
@@ -171,8 +171,7 @@ person. It appears as an obsolete `WB:WBPerson` cross reference on the person it
 | `city` `state` `postal_code` `country` (`.value`) | same-named `person` columns | |
 | (address timestamps) | `person.address_last_updated` | the latest timestamp of the address fields |
 | `webpage[].value` | `person.webpage` (array) | |
-| `biography_research_interest.value` | `person.biography_research_interest` | the WormBase public comments, joined with newlines |
-| `notes[]` | `person_note.note` | internal notes, one row each: curator comments, the reason a person asked to be hidden, and the left-the-field text (`Not in Worm Field`, or the text as written, e.g. `Now in a fly lab`, `Deceased June 23, 2009`) |
+| `notes[]` | `person_note` | `note` and `internal`, one row each. `internal: false` are the WormBase public comments (shown on the WormBase person page). `internal: true` are curator comments, the reason a person asked to be hidden, and the left-the-field text (`Not in Worm Field`, or the text as written, e.g. `Now in a fly lab`, `Deceased June 23, 2009`). **Set `internal` from the file on every row**: the column defaults to `false`, so a note loaded without it becomes public. `internal` is an AuditedObject column that ABC's person_note API schemas don't accept yet, so write it directly |
 | `active_status.value` | `person.active_status` | `deceased` or `retired`, from WormBase's left-the-field text. Absent means `active` |
 | `privacy.value` | `person.privacy` | `fully_hidden` for persons who asked not to be shown, `hide_email` for persons with private email addresses. **Absent means `show_all`**: set it explicitly, since ABC's default is `hide_email` |
 | `unsubscribe.value` | `person.unsubscribe` | `true` |
@@ -328,7 +327,7 @@ also a row in `not_loaded.tsv`, with `approved` saying who agreed and when.
 | `two_unable_to_contact` | not sent | Cecilia, 2026-10-22 |
 | `two_usefulwebpage`, a curator checkbox on a webpage | not sent; the webpage itself is sent | Cecilia, 2026-10-22 |
 | CGC numeric PI ids in `two_pis` and `two_oldpis` | not sent; PIs with a lab code are sent | Cecilia, 2026-10-22 |
-| curator and timestamp of each `two_wormbase_comment` and `two_street` line | the text is all sent, joined into one ABC value with the latest curator and timestamp | Cecilia, 2026-10-22 |
+| curator and timestamp of each `two_street` line | the text is all sent, joined into one ABC value with the latest curator and timestamp | Cecilia, 2026-10-22 |
 | Invalid persons that were not merged | not sent; checked, and correct as they are | Cecilia, 2026-10-22 |
 | possible author matches never verified | not sent; ABC cannot hold a possible match | Cecilia, 2026-10-22 |
 | NO author verifications | not sent; ABC cannot hold a NO | Cecilia, 2026-10-22 |

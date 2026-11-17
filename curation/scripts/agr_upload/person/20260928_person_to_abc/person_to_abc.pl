@@ -42,17 +42,20 @@
 #   two_street ( lines joined with newlines ) two_city two_state two_post two_country -> address fields
 #   two_webpage                               -> webpage
 #   two_orcid                                 -> ORCID:<id> cross reference
-#   two_wormbase_comment                      -> biography_research_interest ( public notes,
-#                                                joined with newlines, ABC holds one string )
-#   two_comment                               -> notes ( person_note, internal notes )
+#   two_wormbase_comment                      -> notes ( person_note ) with internal false, public
+#                                                notes, one each with its own curator and timestamp
+#   two_comment                               -> notes ( person_note ) with internal true
 #   two_unsubscribe                           -> unsubscribe true
 #   two_hide                                  -> privacy fully_hidden  ( the .ace dump hides these ),
-#                                                and the reason as a note
+#                                                and the reason as a note with internal true
 #   two_privacy                               -> emails, with privacy hide_email
 #   two_left_field                            -> active_status deceased or retired when the text
 #                                                says so ( detail kept as a note ) ;  plain 'Left the
 #                                                field' and 'Not in the field' become the note 'Not
-#                                                in Worm Field' ;  anything else is a note as it is
+#                                                in Worm Field' ;  anything else is a note as it is ;
+#                                                these notes have internal true
+#   person_note internal defaults to false ( public ) in ABC, so every note says internal explicitly.
+#   Cecilia 2026-11-17
 #   two_lab two_oldlab two_pis two_oldpis     -> laboratories ( laboratory_person ) : two_lab is a
 #                                                current member, two_oldlab sets alum, two_pis sets
 #                                                is_pi, two_oldpis sets former_pi, each to the
@@ -454,8 +457,8 @@ sub exportPersons {
     $rec{postal_code}    = &joinedValue(\%two, 'post', $joinkey, ', ');
     $rec{country}        = &joinedValue(\%two, 'country', $joinkey, ', ');
     $rec{webpage}        = &orderedValues(\%two, 'webpage', $joinkey);
-    $rec{biography_research_interest} = &joinedValue(\%two, 'wormbase_comment', $joinkey, "\n");
-    my @notes = map { { note => $_->{value}, curator => $_->{curator}, timestamp => $_->{timestamp} } } @{ &orderedValues(\%two, 'comment', $joinkey) || [] };
+    my @notes = map { { note => $_->{value}, internal => JSON::XS::false, curator => $_->{curator}, timestamp => $_->{timestamp} } } @{ &orderedValues(\%two, 'wormbase_comment', $joinkey) || [] };	# public
+    push @notes, map { { note => $_->{value}, internal => JSON::XS::true, curator => $_->{curator}, timestamp => $_->{timestamp} } } @{ &orderedValues(\%two, 'comment', $joinkey) || [] };
     if ($two{unsubscribe}{$joinkey}) { $rec{unsubscribe} = { %{ $two{unsubscribe}{$joinkey}{1} }, value => JSON::XS::true }; }
     $rec{privacy} = { %{ $privacy->[-1] }, value => 'hide_email' } if ($privacy);
     if (my $hide = &orderedValues(\%two, 'hide', $joinkey)) {	# the reason for hiding goes in a note
@@ -463,7 +466,7 @@ sub exportPersons {
       foreach my $entry (@$hide) {
         unless ($entry->{value} =~ m/remove|delete|unsubsc|\bnot\b|n't|no longer|contact|stop|listed|include/i) {
           &problem('person', $wbid, 'two_hide is not a reason for hiding, a curator should move it to two_comment', $entry->{value}); }
-        push @notes, { note => $entry->{value}, curator => $entry->{curator}, timestamp => $entry->{timestamp} }; } }
+        push @notes, { note => $entry->{value}, internal => JSON::XS::true, curator => $entry->{curator}, timestamp => $entry->{timestamp} }; } }
     foreach my $entry (@{ &orderedValues(\%two, 'left_field', $joinkey) || [] }) {
         # deceased or retired set active_status, keeping any detail ( a date of death ) as a note ;  the plain
         # 'Left the field' 'Not in the field' and their typos become one note ;  anything else is a note as it is
@@ -477,7 +480,7 @@ sub exportPersons {
         $leftField{"active_status $status" . (($note eq '') ? '' : ' and a note')}++; }
       elsif ($text =~ m/^(left|let|not in) the fie\w*( any ?more)?\s*\.?$/i) { $note = 'Not in Worm Field'; $leftField{'note Not in Worm Field'}++; }
       else { $leftField{'note as it is'}++; }
-      push @notes, { note => $note, curator => $entry->{curator}, timestamp => $entry->{timestamp} } if ($note ne ''); }
+      push @notes, { note => $note, internal => JSON::XS::true, curator => $entry->{curator}, timestamp => $entry->{timestamp} } if ($note ne ''); }
     $rec{notes} = \@notes if (@notes);
 
     my %labMember;		# $labMember{code} = laboratory_person record
@@ -510,12 +513,11 @@ sub exportPersons {
   $counts{"person left_field $_"} = $leftField{$_} foreach (keys %leftField);
   $counts{"person two_privacy $_"} = $privacyCount{$_} foreach (keys %privacyCount);
   &addNotLoaded('two_left_field', 'left the field wording', &countRows('two_left_field'), '', 'yes', 'deceased ( or passed away ) and retired ( or emeritus ) set active_status, with any detail such as a date of death kept as a note ;  the plain "Left the field" "Not in the field" and their typos become the note "Not in Worm Field", so that exact wording is lost ;  everything else is a note as it is', 'Cecilia 2026-10-22');
-  &addNotLoaded('two_hide', 'reason for hiding', &countRows('two_hide'), '', 'yes', 'privacy is fully_hidden and the reason is a note', 'Cecilia 2026-10-22');
+  &addNotLoaded('two_hide', 'reason for hiding', &countRows('two_hide'), '', 'yes', 'privacy is fully_hidden and the reason is an internal note', 'Cecilia 2026-10-22');
   &addNotLoaded('two_privacy', 'private email addresses', &countRows('two_privacy'), '', 'yes', 'sent as current emails with privacy hide_email ;  ABC hides by person, not by address, so if the person is later set to show_all these addresses show too.  ' . ($privacyCount{duplicate} || 0) . ' already in two_email or two_old_email are not repeated', 'Cecilia 2026-10-22');
   &addNotLoaded('two_unable_to_contact', 'unable to contact', &countRows('two_unable_to_contact'), '', 'no', 'not needed', 'Cecilia 2026-10-22');
   &addNotLoaded('two_usefulwebpage', 'useful webpage flag', &countRows('two_usefulwebpage'), '', 'no', 'not needed ;  a curator checkbox on a webpage, the webpage itself is exported', 'Cecilia 2026-10-22');
   &addNotLoaded('two_pis two_oldpis', 'CGC numeric PI ids', $numericPi, scalar(keys %numericPiPersons), 'no', 'not needed ;  numeric PI ids with no lab object.  Lab code PIs are exported', 'Cecilia 2026-10-22');
-  &addNotLoaded('two_wormbase_comment', 'curator and timestamp of each comment', &countRows('two_wormbase_comment'), '', 'text yes', 'the comment text is all exported, joined with newlines into biography_research_interest ;  ABC holds one string, so only the latest curator and timestamp survive, not one per comment', 'Cecilia 2026-10-22');
   &addNotLoaded('two_street', 'curator and timestamp of each street line', &countRows('two_street'), '', 'text yes', 'the street lines are all exported, joined with newlines into street_address ;  only the latest curator and timestamp survive, not one per line', 'Cecilia 2026-10-22');
   &addNotLoaded('two_status', 'Invalid persons not merged', $counts{'person Invalid and not merged, not exported'} || 0, $counts{'person Invalid and not merged, not exported'} || 0, 'no', 'checked, correct as they are ;  listed in problems', 'Cecilia 2026-10-22');
 } # sub exportPersons
