@@ -11,7 +11,10 @@ deleted.
   `cur_blackbox`. Compared tag by tag: missing tags are created, stale ones deleted, duplicates left alone.
 - **Author tags** (every ACKnowledge submission, final or partial): the entities, "other" answers and data-type
   flags of `afp_*`, as entered, one set per contributor in `afp_contributor` (`unknown_author` if none). Compared tag by tag as well (notes count
-  for topic-only tags), so unchanged tags keep their ids and validations; exact duplicates are left alone.
+  for topic-only tags), so unchanged tags keep their ids and validations; exact duplicates are left alone. An entity
+  tag is matched without its note, and a matching tag whose note differs (none, or the Perl scripts' `from
+  ACKnowledge ...`) gets the sync's note, the entities the author entered, by a PATCH that leaves `updated_by` and
+  `date_updated` as they are, so every contributor's tag of a submission carries the same note.
 - **Curator removals**: an author gene or species a curator removed in the paper editor (an `h_pap_gene` /
   `h_pap_species` row with no value at the author entry's `pap_order`) and that is not back in `pap_gene` /
   `pap_species` gets a negated tag of the paper editor source, by that curator on the date of the removal, as long as
@@ -50,8 +53,9 @@ python3 -m sync_ack_tags --pipeline-cutoff 2026-11-01 ...        # after the ABC
 
 Report files in `--out-dir`:
 
-- `actions.tsv`: every delete and create, with its reason; deletes carry the tag's id and validation values, and a
-  `VALIDATED; ` prefix when a curator or an author had validated it
+- `actions.tsv`: every delete, note update and create, with its reason; deletes and updates carry the tag's id and
+  validation values (an update its current `note` and the `new_note`), and deletes a `VALIDATED; ` prefix when a
+  curator or an author had validated it
 - `problems.tsv`: papers without an AGRKB curie (in `pap_identifier` or, by `WB:WBPaper…`, in the ABC),
   unresolved names, entities without a taxon
 - `results.tsv` (`--apply`): the status of every action; a paper stops at its first error and the next run fixes it
@@ -62,7 +66,7 @@ Report files in `--out-dir`:
 
 1. Dry run; read `summary.txt` and check `actions.tsv` (review the production dry run with the curators).
 2. `--apply`. No separate revalidation is needed: the ABC API validates each created tag on insert and revalidates
-   the reference on each delete.
+   the reference on each delete and note update.
 3. Dry run again: it must report no actions.
 
 ## Tests

@@ -40,6 +40,7 @@ def pipeline_key(tag: dict) -> Tuple[Optional[object], ...]:
 
 def author_key(tag: dict) -> Tuple[Optional[object], ...]:
     """the note counts for topic-only tags (flags, "other" answers), so an edited answer is synced; entity tags
-    carry list notes the Perl scripts wrote differently, so their notes are not compared"""
+    are matched without it, so a tag the Perl scripts created keeps its id and validations, and its note is
+    updated in place (diff._entity_note_updates)"""
     note = None if _value(tag, "entity") else _value(tag, "note")
     return pipeline_key(tag)[:-1] + (source_method(tag), _value(tag, "created_by"), note)

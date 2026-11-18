@@ -7,7 +7,7 @@ from typing import List, Optional, Tuple
 TAG_FIELDS = ("topic_entity_tag_id", "topic", "entity_type", "entity", "species", "negated", "data_novelty",
               "data_context", "confidence_level", "created_by", "date_created", "note", "validation_by_author",
               "validation_by_professional_biocurator")
-ACTION_FIELDS = ("source", "action", "wb_paper", "curie", "reason")
+ACTION_FIELDS = ("source", "action", "wb_paper", "curie", "reason", "new_note")
 RESULT_FIELDS = ("status", "http_status", "detail")
 
 

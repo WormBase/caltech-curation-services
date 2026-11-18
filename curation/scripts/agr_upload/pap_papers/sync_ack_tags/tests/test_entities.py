@@ -24,7 +24,7 @@ def test_strain_by_id_name_and_stripped_name():
                                    "WB:WBStrain00000003": ELEGANS})
     entities, problems = parse_entities("strain", "WBStrain00000003;%;JK1 | N2 | CB 4856 | nonsense", data)
     assert [e.curie for e in entities] == ["WB:WBStrain00000003", "WB:WBStrain00000001", "WB:WBStrain00000002"]
-    assert entities[0].published_as == "JK1"
+    assert [e.published_as for e in entities] == ["JK1", "N2", "CB 4856"]
     assert problems == ["unresolved strain name nonsense"]
 
 
@@ -32,7 +32,7 @@ def test_transgene_defaults_to_elegans_and_resolves_names():
     data = make_data(transgene_by_name={"oxEx1578": "WBTransgene00014794"})
     entities, _ = parse_entities("transgene", "WBTransgene00020977;%;ltSi560 | oxEx1578", data)
     assert entities == [Entity("WB:WBTransgene00020977", "ltSi560", ELEGANS),
-                        Entity("WB:WBTransgene00014794", None, ELEGANS)]
+                        Entity("WB:WBTransgene00014794", "oxEx1578", ELEGANS)]
 
 
 def test_variation_needs_a_taxon():

@@ -59,14 +59,18 @@ class FakeAbc:
         self.calls.append(("delete", tag_id))
         return ("error", 500, "boom") if tag_id == self.fail_on else ("ok", 204, "")
 
+    def update_note(self, tag, note):
+        self.calls.append(("update", tag["topic_entity_tag_id"]))
+        return "ok", 200, ""
+
     def create(self, tag):
         self.calls.append(("create", tag["n"]))
         return "ok", 201, ""
 
 
 def action(kind, curie, n):
-    tag = {"topic_entity_tag_id": n} if kind == "delete" else {"n": n}
-    return {"action": kind, "source": "ACKnowledge_form", "reason": "r", "tag": tag, "curie": curie,
+    tag = {"n": n} if kind == "create" else {"topic_entity_tag_id": n}
+    return {"action": kind, "new_note": "", "source": "ACKnowledge_form", "reason": "r", "tag": tag, "curie": curie,
             "wb_paper": "WBPaper" + curie[-8:]}
 
 
@@ -88,3 +92,10 @@ def test_apply_deletes_first_and_stops_a_paper_on_error():
     results = apply(abc, actions)
     assert abc.calls == [("delete", 10), ("delete", 20), ("create", 2)]
     assert [r["status"] for r in results] == ["error", "not run", "not run", "ok", "ok"]
+
+
+def test_apply_runs_deletes_then_note_updates_then_creates():
+    actions = [action("create", "AGRKB:1", 1), action("update", "AGRKB:1", 30), action("delete", "AGRKB:1", 10)]
+    abc = FakeAbc()
+    apply(abc, actions)
+    assert abc.calls == [("delete", 10), ("update", 30), ("create", 1)]

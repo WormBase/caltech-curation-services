@@ -82,3 +82,36 @@ def test_validated_deletes_are_flagged():
     assert actions[0]["reason"] == "VALIDATED; stale"
     author_stale = abc_author(1, "WBPerson1", **NEG_STRAIN, validation_by_author="validated_wrong")
     assert diff_author([], [author_stale])[0]["reason"].startswith("VALIDATED; ")
+
+
+GENE = {"topic": "ATP:0000005", "entity_type": "ATP:0000005", "entity": "WB:WBGene1", "negated": False,
+        "data_novelty": "ATP:0000334", "species": "NCBITaxon:6239"}
+LIST_NOTE = "dpy-5 ( WB:WBGene1 )"
+
+
+def test_author_entity_note_is_updated_in_place():
+    exp = [author("WBPerson1", note=LIST_NOTE, **GENE), author("WBPerson2", note=LIST_NOTE, **GENE)]
+    existing = [abc_author(1, "WBPerson1", note="from ACKnowledge afp_genestudied", **GENE),
+                abc_author(2, "WBPerson2", **GENE),
+                abc_author(3, "WBPerson2", note=LIST_NOTE, **GENE)]
+    actions = diff_author(exp, existing)
+    assert [(a["action"], a["tag"]["topic_entity_tag_id"], a["new_note"]) for a in actions] == [
+        ("update", 1, LIST_NOTE), ("update", 2, LIST_NOTE)]
+
+
+def test_author_entity_note_matching_gives_no_update():
+    assert diff_author([author("WBPerson1", note=LIST_NOTE, **GENE)],
+                       [abc_author(1, "WBPerson1", note=LIST_NOTE, **GENE)]) == []
+
+
+def test_author_entity_without_expected_note_clears_the_note():
+    removed = dict(GENE, negated=True)
+    actions = diff_author([author("WBPerson1", **removed)],
+                          [abc_author(1, "WBPerson1", note="from ACKnowledge", **removed)])
+    assert [(a["action"], a["new_note"]) for a in actions] == [("update", "")]
+
+
+def test_stale_entity_tag_is_deleted_not_updated():
+    actions = diff_author([author("WBPerson1", note=LIST_NOTE, **GENE)],
+                          [abc_author(1, "WBPerson2", note="x", **GENE)])
+    assert [a["action"] for a in actions] == ["delete", "create"]

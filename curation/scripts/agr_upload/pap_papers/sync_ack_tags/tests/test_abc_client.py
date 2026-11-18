@@ -89,3 +89,19 @@ def test_delete_ok():
     abc, session = make([Response(204)])
     assert abc.delete(7) == ("ok", 204, "")
     assert session.calls[0][:2] == ("DELETE", "https://abc.example.org/topic_entity_tag/7")
+
+
+def test_update_note_patches_only_the_note_and_keeps_the_audit_fields():
+    abc, session = make([Response(200)])
+    tag = {"topic_entity_tag_id": 9, "created_by": "WBPerson1", "updated_by": "WBPerson1",
+           "date_updated": "2021-06-24T00:00:00", "note": None}
+    assert abc.update_note(tag, "dpy-5 ( WB:WBGene1 )") == ("ok", 200, "")
+    method, url, body, _ = session.calls[0]
+    assert (method, url) == ("PATCH", "https://abc.example.org/topic_entity_tag/9")
+    assert body == {"note": "dpy-5 ( WB:WBGene1 )", "updated_by": "WBPerson1", "date_updated": "2021-06-24T00:00:00"}
+
+
+def test_update_note_to_empty_sends_null():
+    abc, session = make([Response(200)])
+    abc.update_note({"topic_entity_tag_id": 9, "created_by": "WBPerson1"}, "")
+    assert session.calls[0][2] == {"note": None, "updated_by": "WBPerson1"}

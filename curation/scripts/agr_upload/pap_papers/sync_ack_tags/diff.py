@@ -23,6 +23,10 @@ def _create(source: str, tag: dict, reason: str) -> dict:
     return {"action": "create", "source": source, "tag": tag, "reason": reason}
 
 
+def _update_note(source: str, tag: dict, note: Optional[str]) -> dict:
+    return {"action": "update", "source": source, "tag": tag, "new_note": note or "", "reason": "note"}
+
+
 def _diff(source: str, key, expected: List[dict], existing: List[dict], stale_reason: str,
           protect: Optional[Set[str]] = None) -> List[dict]:
     """per tag: delete ABC tags no expected tag matches, create expected tags no ABC tag matches; extra copies of a
@@ -50,7 +54,22 @@ def diff_author(expected: List[dict], existing: List[dict], protect: Optional[Se
     """per tag as well (not delete-all-and-recreate): the end state is the same and unchanged author tags keep
     their validations"""
     return _diff(ACK_FORM, author_key, expected, existing, "stale" if expected else "no ACKnowledge author data",
-                 protect)
+                 protect) + _entity_note_updates(expected, existing)
+
+
+def _entity_note_updates(expected: List[dict], existing: List[dict]) -> List[dict]:
+    """the author entity tags are matched without their note (author_key), so a tag the Perl scripts created keeps
+    its id and validations; its note (none, or e.g. "from ACKnowledge afp_genestudied") is then set to the sync's,
+    the entities the author entered, so every contributor's tag of a submission carries the same note. Every
+    matching copy is updated."""
+    notes = {author_key(tag): _note(tag) for tag in expected if tag.get("entity")}
+    return [_update_note(ACK_FORM, tag, notes[author_key(tag)])
+            for tag in sorted(existing, key=lambda t: t.get("topic_entity_tag_id") or 0)
+            if tag.get("entity") and author_key(tag) in notes and _note(tag) != notes[author_key(tag)]]
+
+
+def _note(tag: dict) -> Optional[str]:
+    return tag.get("note") or None
 
 
 def diff_paper_editor(source: str, expected: List[dict], existing: List[dict]) -> List[dict]:

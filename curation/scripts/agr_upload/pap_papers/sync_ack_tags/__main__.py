@@ -88,15 +88,21 @@ def check_created_by(existing: Dict[str, List[dict]]):
         sys.exit(f"ACKnowledge_form tags with an unexpected created_by, e.g. {odd[:5]}: stopping")
 
 
+ACTION_ORDER = {"delete": 0, "update": 1, "create": 2}
+
+
 def _apply_paper(abc, paper_actions: List[dict]) -> List[dict]:
-    """one paper's actions, deletes then creates; its first error stops the paper (the next run fixes it)"""
+    """one paper's actions, deletes, then note updates, then creates; its first error stops the paper (the next run
+    fixes it)"""
     results = []
     failed = False
-    for action in sorted(paper_actions, key=lambda a: a["action"] != "delete"):
+    for action in sorted(paper_actions, key=lambda a: ACTION_ORDER[a["action"]]):
         if failed:
             status, http_status, detail = "not run", "", ""
         elif action["action"] == "delete":
             status, http_status, detail = abc.delete(action["tag"]["topic_entity_tag_id"])
+        elif action["action"] == "update":
+            status, http_status, detail = abc.update_note(action["tag"], action["new_note"])
         else:
             status, http_status, detail = abc.create(action["tag"])
         failed = failed or status == "error"

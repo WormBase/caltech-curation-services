@@ -34,8 +34,8 @@ def _resolve(entity_type: str, item: str, data: CaltechData) -> Tuple[Optional[s
         return "WB:" + entity_id, name
     by_name = data.strain_by_name if entity_type == "strain" else data.transgene_by_name
     for candidate in (entity_id, re.sub(r"\s+", "", entity_id)):
-        if candidate in by_name:
-            return "WB:" + by_name[candidate], None
+        if candidate in by_name:  # the name as the author entered it, for the note
+            return "WB:" + by_name[candidate], entity_id
     return None, None
 
 

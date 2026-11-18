@@ -1,4 +1,4 @@
-"""The ABC API calls of the sync: tag sources, a paper's tags of the synced sources, delete and create."""
+"""The ABC API calls of the sync: tag sources, a paper's tags of the synced sources, delete, note update, create."""
 from typing import Callable, Dict, List, Optional, Tuple
 
 import requests
@@ -76,6 +76,14 @@ class Abc:
 
     def delete(self, tag_id: int) -> Tuple[str, int, str]:
         return self._status(lambda: self._call("DELETE", f"/topic_entity_tag/{tag_id}"))
+
+    def update_note(self, tag: dict, note: str) -> Tuple[str, int, str]:
+        """only the note changes: updated_by and date_updated are sent as they are, so the PATCH does not stamp the
+        sync's user and today's date on the tag (the ABC still records the change in db_date_updated)"""
+        payload = {"note": note or None, "updated_by": tag.get("updated_by") or tag.get("created_by")}
+        if tag.get("date_updated"):
+            payload["date_updated"] = tag["date_updated"]
+        return self._status(lambda: self._call("PATCH", f"/topic_entity_tag/{tag['topic_entity_tag_id']}", payload))
 
     def create(self, tag: dict) -> Tuple[str, int, str]:
         payload = {k: v for k, v in tag.items() if k != "source_method"}
