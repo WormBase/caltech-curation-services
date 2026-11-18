@@ -19,6 +19,13 @@
 # postcode in two_city and something else in two_post, their two_post is fixed.  Beeevler is Ankara, Kyoyo is Kyoto.
 # The rest of the uncertain values are in cecilia_review.tsv for Cecilia.
 #
+# 2026 11 18 Cecilia's answers from cecilia_review.tsv : unclear spellings, not a city, renamed Indian cities to the
+# new names ( Bengaluru, Mysuru, ... ), Pusan to Busan, one spelling for St. Louis, Mount Pleasant and Macau.  Ankara
+# stays for Beeevler.  The 3 Okubo street.  Leading / trailing spaces trimmed in two_street, two_post, two_institution
+# and two_old_institution too.  Hills Road was in two_city for three LMB people, the city becomes Cambridge and Hills
+# Road is added as their last street line, with the curator and timestamp of their city row ( the only new rows made ).
+# The city in wrong country rows Cecilia fixes in the person form herself.
+#
 # dry run by default, prints every value that would change.  ./fix_place_names.pl apply  to update.
 # run inside the curation container :
 # docker exec caltech-curation-services-main-curation-1 bash -c 'cd /usr/lib/scripts/pgpopulation/two_people/20261117_english_place_names && ./fix_place_names.pl'
@@ -49,7 +56,7 @@ sub cleanText {			# decode entities, drop invisible characters, trim, collapse d
   $v =~ s/^\s+|\s+$//g;
   return $v; }
 
-my %map = ( city => {}, state => {}, country => {} );
+my %map = ( city => {}, state => {}, country => {}, street => {} );
 foreach my $line (split /\n/, &mapText()) {
   next if ($line =~ m/^\s*(#|$)/);
   my ($table, $old, $new) = split /\t/, $line;
@@ -67,7 +74,7 @@ foreach my $table (qw( city state country )) {
 
 foreach my $table (qw( institution old_institution )) {
   foreach my $old (&distinctValues("two_$table")) {
-    my $clean = ($old =~ m/&#\d+;|$invisible/) ? &cleanText($old) : $old;
+    my $clean = &cleanText($old);
     $change{$table}{$old} = $clean unless ($clean eq $old);
     my @parts = split /;/, $clean, -1;
     next unless (@parts > 1);
@@ -77,14 +84,18 @@ foreach my $table (qw( institution old_institution )) {
     my $new = join(';', @parts);
     $change{$table}{$old} = $new unless ($new eq $old); } }
 
-foreach my $old (&distinctValues('two_street')) {		# street only for entities, not general trimming
-  next unless ($old =~ m/&#\d+;|$invisible/);
+foreach my $old (&distinctValues('two_street')) {		# entities, trimming, and the street mapping
   my $new = &cleanText($old);
+  $new = $map{street}{$new} if (defined $map{street}{$new});
   $change{street}{$old} = $new unless ($new eq $old); }
+
+foreach my $old (&distinctValues('two_post')) {		# post only trimmed
+  my $new = $old; $new =~ s/^\s+|\s+$//g;
+  $change{post}{$old} = $new unless ($new eq $old); }
 
 my %total;
 print join("\t", qw( table old new rows h_rows )) . "\n";
-foreach my $table (qw( city state country institution old_institution street )) {
+foreach my $table (qw( city state country institution old_institution street post )) {
   foreach my $old (sort keys %{ $change{$table} }) {
     my $new = $change{$table}{$old};
     my ($n)  = $dbh->selectrow_array( "SELECT count(*) FROM two_$table WHERE two_$table = ?", undef, $old );
@@ -107,6 +118,18 @@ foreach my $fix (@postFix) {
   if ($apply) {
     $dbh->do( "UPDATE two_post SET two_post = ? WHERE joinkey = ? AND two_post = ?", undef, $new, $joinkey, $old );
     $dbh->do( "UPDATE h_two_post SET two_post = ? WHERE joinkey = ? AND two_post = ?", undef, $new, $joinkey, $old ); } }
+
+my @streetAdd = qw( two1217 two1277 two3122 );	# Hills Road was their two_city, add it as their last street line
+foreach my $joinkey (@streetAdd) {
+  my ($have) = $dbh->selectrow_array( "SELECT count(*) FROM two_street WHERE joinkey = ? AND two_street = 'Hills Road'", undef, $joinkey );
+  next if $have;
+  my ($curator, $timestamp) = $dbh->selectrow_array( "SELECT two_curator, two_timestamp FROM two_city WHERE joinkey = ? ORDER BY two_order LIMIT 1", undef, $joinkey );
+  my ($order) = $dbh->selectrow_array( "SELECT COALESCE(MAX(two_order), 0) + 1 FROM two_street WHERE joinkey = ?", undef, $joinkey );
+  print join("\t", "two_street add $joinkey", '', "Hills Road order $order $curator $timestamp", 1, 1) . "\n";
+  $total{street_add}{values}++; $total{street_add}{rows}++; $total{street_add}{h_rows}++;
+  if ($apply) {
+    foreach my $t (qw( two_street h_two_street )) {
+      $dbh->do( "INSERT INTO $t (joinkey, two_order, two_street, two_curator, two_timestamp) VALUES (?, ?, 'Hills Road', ?, ?)", undef, $joinkey, $order, $curator, $timestamp ); } } }
 
 foreach my $table (sort keys %total) {
   print STDERR "two_$table\t$total{$table}{values} values\t$total{$table}{rows} rows\t$total{$table}{h_rows} h_rows\n"; }
@@ -306,7 +329,7 @@ city	A-1030 Vienna	Vienna
 city	AT.1190 Vienna	Vienna
 city	B-2470 Retie	Retie
 city	BE-3000 Leuven	Leuven
-city	Bangalore 560 058	Bangalore
+city	Bangalore 560 058	Bengaluru
 city	Bucharest 17	Bucharest
 city	CH-8057 Zurich	Zurich
 city	CH-8091 Zurich	Zurich
@@ -407,7 +430,7 @@ city	Betheada	Bethesda
 city	Rego park	Rego Park
 city	Rolling Hills E	Rolling Hills Estates
 city	Sta Cruz	Santa Cruz
-city	Saint-Louis	Saint Louis
+city	Saint-Louis	St. Louis
 city	Edinburg	Edinburgh
 city	East Lothain	East Lothian
 city	Newcastle Upon Tyne	Newcastle upon Tyne
@@ -435,5 +458,31 @@ city	Gelugo	Gelugor
 # decided 2026 11 17
 city	Beeevler	Ankara
 city	Kyoyo	Kyoto
+# Cecilia's answers 2026 11 18
+city	Fildelfia	Dianalund
+city	Fresco	Fresno
+city	Silver Springs	Silver Spring
+city	Pittsburg	Pittsburgh
+city	SE Minneapolis	Minneapolis
+city	Ciberned	Barcelona
+city	Caera	Ceara
+city	Hills Road	Cambridge
+city	Monterey Bay, Seaside	Seaside
+city	Bombay	Mumbai
+city	Calcutta	Kolkata
+city	Madras	Chennai
+city	Bangalore	Bengaluru
+city	Gurgaon	Gurugram
+city	Mysore	Mysuru
+city	Mangalore	Mangaluru
+city	Pondicherry	Puducherry
+city	Trivandrum	Thiruvananthapuram
+city	Pusan	Busan
+city	Saint Louis	St. Louis
+city	St Louis	St. Louis
+city	Mt Pleasant	Mount Pleasant
+city	Mt. Pleasant	Mount Pleasant
+city	Macao	Macau
+street	3Okubo	3 Okubo
 END
 }
