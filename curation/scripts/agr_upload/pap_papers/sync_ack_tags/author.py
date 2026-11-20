@@ -4,8 +4,8 @@ import re
 from typing import List, Optional, Tuple
 
 from sync_ack_tags.caltech import CaltechData
-from sync_ack_tags.constants import (ACK_FORM, ACK_START, DATATYPE_FLAGS, EMPTY_OTHER, ENTITY_TYPES,
-                                     NOVELTY_EXISTING, NOVELTY_NEW_TO_DB)
+from sync_ack_tags.constants import (ACK_FORM, ACK_START, DATATYPE_FLAGS, EMPTY_OTHER,
+                                                   ENTITY_TYPES, NOVELTY_EXISTING, NOVELTY_NEW_TO_DB)
 from sync_ack_tags.entities import other_names, other_note, parse_entities
 from sync_ack_tags.tags import author_key, make_tag
 
@@ -107,18 +107,30 @@ def _humandisease(value: Optional[str]) -> Tuple[bool, str]:
     try:
         parsed = json.loads(value)
     except ValueError:
-        return False, value
+        return False, _free_text(value)
     if not isinstance(parsed, dict):
-        return False, value
-    parts = []
+        return False, _free_text(value)
+    # SCRUM-4141: the first line is the comment (empty when there is none), each further line a disease, so the
+    # answer can be rebuilt from the note (reverse.py). The author's own newlines become spaces: a newline in the
+    # note is only ever a separator.
     comment = parsed.get("comment")
-    if comment not in (None, "", "checked"):
-        parts.append(str(comment))
+    comment = "" if comment in (None, "", "checked") else _one_line(str(comment))
+    diseases = []
     for disease in parsed.get("diseases") or []:
-        disease = re.sub(r"\s+\)", ")", re.sub(r"\(\s+", "(", str(disease).rstrip()))
+        disease = re.sub(r"\s+\)", ")", re.sub(r"\(\s+", "(", _one_line(str(disease))))
         if disease:
-            parts.append(disease)
-    return not parsed.get("checked"), ", ".join(parts)
+            diseases.append(disease)
+    return not parsed.get("checked"), "\n".join([comment] + diseases) if diseases else comment
+
+
+def _free_text(value: str) -> str:
+    """a disease answer that is not the form's JSON, on one line as every other flag note"""
+    note = value.replace("\n", " ")
+    return note[:-1] if note.endswith(" ") else note
+
+
+def _one_line(text: str) -> str:
+    return text.replace("\r", " ").replace("\n", " ").rstrip()
 
 
 def convert_flag(datatype: str, value: Optional[str]) -> Tuple[bool, str]:
@@ -126,7 +138,7 @@ def convert_flag(datatype: str, value: Optional[str]) -> Tuple[bool, str]:
     if datatype == "otherantibody":
         negated, note = _otherantibody(value or "")
     elif datatype == "humandisease":
-        negated, note = _humandisease(value)
+        return _humandisease(value)  # its newlines are separators; its text is already on one line
     else:
         negated = value in ("", None, "0")
         note = "" if negated else value

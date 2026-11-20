@@ -15,12 +15,18 @@ def test_otherantibody():
 
 
 def test_humandisease():
+    # SCRUM-4141: the first note line is the comment (empty when there is none), each further line a disease; the
+    # author's own newlines become spaces, so a newline in the note is only ever a separator
     assert convert_flag("humandisease", "") == (True, "")
     assert convert_flag("humandisease", None) == (True, "")
     assert convert_flag("humandisease", '{"checked":true,"comment":"checked","diseases":["Parkinson disease ( PD ) "]}'
-                        ) == (False, "Parkinson disease (PD)")
+                        ) == (False, "\nParkinson disease (PD)")
     assert convert_flag("humandisease", '{"checked":false,"comment":"model","diseases":[]}') == (True, "model")
     assert convert_flag("humandisease", "free text") == (False, "free text")
+    assert convert_flag("humandisease", '{"checked": true, "comment": "seen, in\\nmutants", '
+                                        '"diseases": ["ALS (DOID:332)", "PD\\n(DOID:14330)"]}'
+                        ) == (False, "seen, in mutants\nALS (DOID:332)\nPD (DOID:14330)")
+    assert convert_flag("humandisease", '{"checked": true, "comment": "", "diseases": []}') == (False, "")
 
 
 def test_plain_flags():
@@ -79,3 +85,7 @@ def test_flags_of_one_topic_with_different_negation_stay_apart():
                      ack_papers={PAPER}, contributors={PAPER: {"WBPerson5": "2024-02-01T00:00:00"}})
     expression = [t for t in author_flag_tags(PAPER, CURIE, data) if t["topic"] == "ATP:0000041"]
     assert sorted((t["negated"], t.get("note")) for t in expression) == [(False, "GFP"), (True, None)]
+
+
+def test_humandisease_free_text_has_no_newline():
+    assert convert_flag("humandisease", "line one\nline two") == (False, "line one line two")
