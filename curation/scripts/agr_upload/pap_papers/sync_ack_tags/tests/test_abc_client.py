@@ -105,3 +105,31 @@ def test_update_note_to_empty_sends_null():
     abc, session = make([Response(200)])
     abc.update_note({"topic_entity_tag_id": 9, "created_by": "WBPerson1"}, "")
     assert session.calls[0][2] == {"note": None, "updated_by": "WBPerson1"}
+
+
+KIMBERLY = "AGRKB:103000000000024"
+
+
+def test_tags_map_abc_persons_back_to_wb_person_ids():
+    """SCRUM-6729: a WB person the ABC knows is recorded under their ABC curie and shown by display name; the sync
+    compares authors and curators by WB person id, so the tags are read back with it (one lookup per person)."""
+    tags = [{"topic_entity_tag_id": 1, "created_by": "Kimberly Van Auken", "created_by_user_id": KIMBERLY,
+             "updated_by": "Kimberly Van Auken", "updated_by_user_id": KIMBERLY},
+            {"topic_entity_tag_id": 2, "created_by": "Kimberly Van Auken", "created_by_user_id": KIMBERLY,
+             "updated_by": "WBPerson13824", "updated_by_user_id": "WBPerson13824"},
+            {"topic_entity_tag_id": 3, "created_by": "unknown_author", "created_by_user_id": "unknown_author"}]
+    abc, session = make([Response(200, {"tags": {"c1": tags}}),
+                         Response(200, [{"curie": "ORCID:0000-0001", "is_obsolete": False},
+                                        {"curie": "WB:WBPerson1843", "is_obsolete": False}])])
+    read = abc.tags(["c1"])["c1"]
+    assert [(t["created_by"], t.get("updated_by")) for t in read] == [
+        ("WBPerson1843", "WBPerson1843"), ("WBPerson1843", "WBPerson13824"), ("unknown_author", None)]
+    assert read[0]["abc_created_by_user_id"] == KIMBERLY
+    gets = [call for call in session.calls if call[0] == "GET"]
+    assert len(gets) == 1 and gets[0][1].endswith(f"/person_cross_reference/person/{KIMBERLY}")
+
+
+def test_tags_keep_a_person_without_a_wb_id():
+    tags = [{"topic_entity_tag_id": 1, "created_by": "Some Curator", "created_by_user_id": KIMBERLY}]
+    abc, _ = make([Response(200, {"tags": {"c1": tags}}), Response(200, [{"curie": "ORCID:1", "is_obsolete": False}])])
+    assert abc.tags(["c1"])["c1"][0]["created_by"] == "Some Curator"

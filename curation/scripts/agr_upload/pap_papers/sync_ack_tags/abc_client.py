@@ -9,6 +9,7 @@ from sync_ack_tags.tags import ALLOWED_CREATE_FIELDS
 
 REQUEST_TIMEOUT = 300
 BATCH_SIZE = 100
+WB_PERSON_XREF_PREFIX = "WB:WBPerson"
 
 
 class AbcError(RuntimeError):
@@ -23,6 +24,8 @@ class Abc:
         self.token_fn = token_fn
         self.headers = generate_headers(token_fn())
         self.source_ids: Dict[str, int] = {}
+        # ABC person curie -> the person's bare WB person id (None: no WB cross reference)
+        self.wb_person_ids: Dict[str, Optional[str]] = {}
 
     def _call(self, method: str, path: str, body=None):
         """one request; on 401 a new token and one retry"""
@@ -60,8 +63,46 @@ class Abc:
             response = self._call("POST", "/topic_entity_tag/by_references", body)
             if response.status_code != 200:
                 raise AbcError(f"by_references: HTTP {response.status_code} {response.text[:200]}")
-            result.update(response.json()["tags"])
+            for curie, tags in response.json()["tags"].items():
+                result[curie] = [self._as_wb_persons(tag) for tag in tags]
         return result
+
+    def wb_person_id(self, person_curie: str) -> Optional[str]:
+        """the bare WB person id (WBPerson1843) of an ABC person, from their WB cross reference; None if they have
+        none. Looked up once per person."""
+        if person_curie not in self.wb_person_ids:
+            response = self._call("GET", f"/person_cross_reference/person/{person_curie}")
+            if response.status_code == 404:
+                self.wb_person_ids[person_curie] = None
+                return None
+            if response.status_code != 200:
+                raise AbcError(f"person cross references {person_curie}: HTTP {response.status_code} "
+                               f"{response.text[:200]}")
+            wb_ids = sorted(xref["curie"].split(":", 1)[1] for xref in response.json()
+                            if xref["curie"].startswith(WB_PERSON_XREF_PREFIX) and not xref.get("is_obsolete"))
+            self.wb_person_ids[person_curie] = wb_ids[0] if wb_ids else None
+        return self.wb_person_ids[person_curie]
+
+    def _as_wb_persons(self, tag: dict) -> dict:
+        """the tag with its created_by / updated_by as the WB person ids the sync writes
+
+        Since SCRUM-6729 the ABC records a WB person it knows under their ABC person curie (and returns their display
+        name in created_by), even when it was sent the WBPerson id. The sync compares authors and curators by WB
+        person id, so those are mapped back from the raw *_user_id; the ABC's value is kept in abc_<field>_user_id.
+        Anything else (WBPerson placeholders, unknown_author, ACKnowledge_pipeline, persons without a WB id) is
+        left as it is.
+        """
+        out = dict(tag)
+        for field in ("created_by", "updated_by"):
+            raw = tag.get(f"{field}_user_id") or tag.get(field)
+            if not isinstance(raw, str) or not raw.startswith("AGRKB:"):
+                continue
+            wb_id = self.wb_person_id(raw)
+            if wb_id is not None:
+                out[field] = wb_id
+                out[f"{field}_user_id"] = wb_id
+                out[f"abc_{field}_user_id"] = raw
+        return out
 
     def _status(self, call) -> Tuple[str, int, str]:
         try:
